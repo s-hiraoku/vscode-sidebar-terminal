@@ -111,7 +111,8 @@ jobs:
         run: |
           echo "🧪 Running unit tests on Linux..."
           # Run tests without nyc coverage (causes hangs on Ubuntu)
-          ./node_modules/.bin/mocha \
+          # Use timeout command to force kill after 5 minutes
+          timeout 300 ./node_modules/.bin/mocha \
             --require ./src/test/shared/xterm-mock.js \
             --require ./src/test/shared/setup-exit-handler.js \
             --require out/test/shared/TestSetup.js \
@@ -126,7 +127,7 @@ jobs:
           }
         env:
           NODE_PTY_SKIP_DOWNLOAD_BINARY: 1
-        timeout-minutes: 10
+        timeout-minutes: 6
 
       - name: Run unit tests with coverage (macOS/Windows)
         if: runner.os != 'Linux'
