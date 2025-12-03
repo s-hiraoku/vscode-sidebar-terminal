@@ -27,11 +27,13 @@ permissions:
 jobs:
   tdd-quality-check:
     runs-on: ubuntu-latest
-    
+    # Timeout after 10 minutes (known Ubuntu test timeout issue)
+    timeout-minutes: 10
+
     strategy:
       matrix:
         node-version: [18.x, 20.x]
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v6
