@@ -151,6 +151,15 @@ export class TerminalAddonManager {
           required: false,
           addonName: 'WebglAddon (GPU acceleration)',
         });
+
+        // 🔧 CRITICAL FIX: Force refresh after WebGL addon load
+        // WebGL initialization can silently fail on some environments (Rosetta/Volta x86)
+        // and a refresh ensures the cursor layer is properly rendered
+        if (addons.webglAddon) {
+          await new Promise(resolve => requestAnimationFrame(resolve));
+          terminal.refresh(0, terminal.rows - 1);
+          terminalLogger.debug(`🔧 Post-WebGL refresh triggered for terminal: ${terminalId}`);
+        }
       }
 
       if (config.enableUnicode11) {

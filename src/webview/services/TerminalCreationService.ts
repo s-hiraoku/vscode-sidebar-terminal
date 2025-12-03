@@ -14,7 +14,7 @@
  * @see openspec/changes/refactor-terminal-foundation/specs/split-lifecycle-manager/spec.md
  */
 
-import { Terminal } from '@xterm/xterm';
+import { Terminal, ITerminalOptions } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 
 import { TerminalConfig } from '../../types/shared';
@@ -166,10 +166,29 @@ export class TerminalCreationService implements Disposable {
           }
         }
 
+        // 🔧 CRITICAL FIX: Get font settings BEFORE creating terminal
+        // This ensures powerlevel10k icons and other Nerd Font characters display correctly
+        const configManager = this.coordinator.getManagers?.()?.config;
+        const currentFontSettings = configManager?.getCurrentFontSettings?.();
+
         // Merge config with defaults using TerminalConfigService
-        // Cast config to WebViewTerminalConfig compatible type
-        const terminalConfig = TerminalConfigService.mergeConfig(
-          config as Parameters<typeof TerminalConfigService.mergeConfig>[0]
+        // Include font settings in the merge to ensure they're applied from the start
+        // Note: fontWeight types need casting as WebViewFontSettings uses string but xterm.js uses FontWeight
+        const configWithFonts = {
+          ...(config as Parameters<typeof TerminalConfigService.mergeConfig>[0]),
+          ...(currentFontSettings && {
+            fontFamily: currentFontSettings.fontFamily,
+            fontSize: currentFontSettings.fontSize,
+            fontWeight: currentFontSettings.fontWeight as ITerminalOptions['fontWeight'],
+            fontWeightBold: currentFontSettings.fontWeightBold as ITerminalOptions['fontWeightBold'],
+            lineHeight: currentFontSettings.lineHeight,
+            letterSpacing: currentFontSettings.letterSpacing,
+          }),
+        };
+        const terminalConfig = TerminalConfigService.mergeConfig(configWithFonts);
+
+        terminalLogger.info(
+          `🔤 Terminal config with fonts: ${terminalConfig.fontFamily}, ${terminalConfig.fontSize}px`
         );
 
         // Create Terminal instance
@@ -179,7 +198,7 @@ export class TerminalCreationService implements Disposable {
         // Get link modifier from settings (VS Code standard behavior)
         // When multiCursorModifier is 'alt', links open with Cmd/Ctrl+Click
         // When multiCursorModifier is 'ctrlCmd', links open with Alt+Click
-        const configManager = this.coordinator.getManagers?.()?.config;
+        // Note: configManager was already retrieved above for font settings
         const currentSettings = configManager?.getCurrentSettings?.();
         const multiCursorModifier = currentSettings?.multiCursorModifier ?? 'alt';
         const linkModifier = multiCursorModifier === 'alt' ? 'alt' : 'ctrlCmd';
@@ -323,31 +342,27 @@ export class TerminalCreationService implements Disposable {
         terminal.open(terminalContent);
         terminalLogger.info(`✅ Terminal opened in container: ${terminalId}`);
 
-        // 🔧 CRITICAL FIX: Force initial refresh to ensure cursor is displayed on macOS
-        // xterm.js may not render the cursor layer correctly on initial open,
-        // especially on macOS with WebGL renderer. Immediate refresh fixes this.
-        terminal.refresh(0, terminal.rows - 1);
-        terminalLogger.debug(`🔧 Initial refresh triggered for cursor display: ${terminalId}`);
-
         // 🎯 VS Code Pattern: Apply font and visual settings AFTER terminal.open()
         // xterm.js requires the terminal to be attached to DOM before settings can be applied
+        // Note: configManager was already retrieved above; reuse it here
         try {
           const managers = this.coordinator.getManagers?.();
           const uiManager = managers?.ui;
-          const configManager = managers?.config;
 
           if (uiManager) {
-            const currentSettings = configManager?.getCurrentSettings?.();
-            const currentFontSettings = configManager?.getCurrentFontSettings?.();
+            // Use currentSettings already retrieved above, or get fresh copy
+            const settingsForVisuals = currentSettings ?? configManager?.getCurrentSettings?.();
+            // Use currentFontSettings already retrieved above, or get fresh copy
+            const fontSettingsForApply = currentFontSettings ?? configManager?.getCurrentFontSettings?.();
 
-            if (currentSettings) {
-              uiManager.applyAllVisualSettings(terminal, currentSettings);
+            if (settingsForVisuals) {
+              uiManager.applyAllVisualSettings(terminal, settingsForVisuals);
               terminalLogger.info(`✅ Visual settings applied to terminal: ${terminalId}`);
             }
 
-            if (currentFontSettings) {
-              uiManager.applyFontSettings(terminal, currentFontSettings);
-              terminalLogger.info(`✅ Font settings applied to terminal: ${terminalId} (${currentFontSettings.fontFamily}, ${currentFontSettings.fontSize}px)`);
+            if (fontSettingsForApply) {
+              uiManager.applyFontSettings(terminal, fontSettingsForApply);
+              terminalLogger.info(`✅ Font settings applied to terminal: ${terminalId} (${fontSettingsForApply.fontFamily}, ${fontSettingsForApply.fontSize}px)`);
             }
           }
         } catch (error) {
@@ -689,9 +704,11 @@ export class TerminalCreationService implements Disposable {
           // 🔧 CRITICAL FIX: Reset xterm inline styles BEFORE fit() to allow width expansion
           DOMUtils.resetXtermInlineStyles(container);
           fitAddon.fit();
-          // 🔧 CRITICAL FIX: Call refresh() after fit() to ensure cursor is displayed
-          // xterm.js needs a refresh after initial fit to properly render the cursor
+
+          // 🔧 FIX: Refresh terminal to ensure cursor and decorations are rendered
+          // Do NOT call terminal.clear() as it clears shell prompt output
           terminal.refresh(0, terminal.rows - 1);
+
           terminalLogger.debug(
             `Terminal initial size: ${terminalId} (${terminal.cols}x${terminal.rows}) after ${retryCount} retries`
           );
@@ -705,7 +722,7 @@ export class TerminalCreationService implements Disposable {
                 // 🔧 FIX: Reset xterm inline styles before delayed fit as well
                 DOMUtils.resetXtermInlineStyles(container);
                 fitAddon.fit();
-                // 🔧 CRITICAL FIX: Refresh again after delayed fit to ensure cursor visibility
+                // Refresh after delayed fit to ensure cursor visibility
                 terminal.refresh(0, terminal.rows - 1);
                 terminalLogger.debug(
                   `Terminal delayed resize: ${terminalId} (${terminal.cols}x${terminal.rows})`
@@ -732,7 +749,7 @@ export class TerminalCreationService implements Disposable {
             try {
               DOMUtils.resetXtermInlineStyles(container);
               fitAddon.fit();
-              // 🔧 CRITICAL FIX: Refresh to ensure cursor visibility even in forced fit
+              // Refresh to ensure cursor visibility (do NOT clear)
               terminal.refresh(0, terminal.rows - 1);
               terminalLogger.info(`Forced fit for small container: ${terminalId}`);
             } catch (e) {

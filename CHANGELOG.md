@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.156] - 2025-12-03
+
+### Fixed
+
+- **Cursor and Decoration Display on macOS**: Fix cursor/decoration not displaying on startup
+  - Remove CSS `max-width: 100%` on xterm canvas elements that broke cursor layer rendering
+  - Stop clearing canvas inline styles in `DOMUtils.resetXtermInlineStyles()`
+  - Add `terminal.refresh()` calls after terminal initialization
+  - Remove `terminal.clear()` calls that interfered with shell prompt positioning
+
+- **Volta/x86 Node.js WebGL Issues**: Add detection and fallback for problematic WebGL environments
+  - Detect Rosetta 2/x86 emulation environments on ARM macOS
+  - Check for software WebGL renderers (SwiftShader, llvmpipe)
+  - Automatically fallback to DOM renderer when WebGL may fail
+  - Add post-WebGL addon loading refresh to ensure cursor visibility
+
+- **Font Settings Not Applied**: Fix Nerd Font icons (Powerlevel10k) not displaying
+  - Apply font settings BEFORE terminal creation instead of after
+  - Get font settings from ConfigManager at terminal creation time
+  - Ensures Nerd Font families are set when xterm.js initializes
+
 ## [0.1.155] - 2025-12-01
 
 ### Fixed

@@ -152,11 +152,71 @@ export class RenderingOptimizer implements Disposable {
   }
 
   /**
+   * Check if running in a potentially problematic WebGL environment
+   * (e.g., x86 Node.js on ARM macOS via Rosetta, or Volta with x86 Node)
+   */
+  private isProblematicWebGLEnvironment(): boolean {
+    try {
+      // Check for macOS
+      const isMacOS = navigator.platform?.toLowerCase().includes('mac') ||
+                      navigator.userAgent?.toLowerCase().includes('mac');
+
+      if (!isMacOS) {
+        return false;
+      }
+
+      // Check WebGL context creation - if it fails silently, we're in trouble
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+
+      if (!gl) {
+        terminalLogger.warn('⚠️ WebGL context creation failed - problematic environment detected');
+        return true;
+      }
+
+      // Check for software renderer (indicates Rosetta/emulation issues)
+      const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+      if (debugInfo) {
+        const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+        const vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
+
+        terminalLogger.debug(`WebGL renderer: ${renderer}, vendor: ${vendor}`);
+
+        // Software renderers often indicate emulation issues
+        const isSoftwareRenderer = renderer?.toLowerCase().includes('swiftshader') ||
+                                   renderer?.toLowerCase().includes('llvmpipe') ||
+                                   renderer?.toLowerCase().includes('software');
+
+        if (isSoftwareRenderer) {
+          terminalLogger.warn(`⚠️ Software WebGL renderer detected: ${renderer}`);
+          return true;
+        }
+      }
+
+      // Clean up test canvas
+      canvas.remove();
+
+      return false;
+    } catch (error) {
+      terminalLogger.warn('⚠️ Error checking WebGL environment:', error);
+      return true; // Assume problematic if we can't check
+    }
+  }
+
+  /**
    * Enable WebGL rendering with auto-fallback
    */
   public async enableWebGL(terminal: Terminal, terminalId: string): Promise<boolean> {
     if (!this.options.enableWebGL) {
       terminalLogger.info(`WebGL disabled for terminal: ${terminalId}`);
+      return false;
+    }
+
+    // Check for problematic WebGL environment (Rosetta, Volta x86, etc.)
+    if (this.isProblematicWebGLEnvironment()) {
+      terminalLogger.info(
+        `⚠️ Skipping WebGL for terminal ${terminalId}: problematic environment detected (Rosetta/x86 on ARM)`
+      );
       return false;
     }
 
@@ -172,11 +232,18 @@ export class RenderingOptimizer implements Disposable {
           `⚠️ WebGL context lost for terminal ${terminalId}, falling back to DOM renderer`
         );
         this.fallbackToDOMRenderer(terminal, terminalId);
+        // Force refresh after fallback to ensure cursor is visible
+        terminal.refresh(0, terminal.rows - 1);
       });
 
       // Load WebGL addon
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       terminal.loadAddon(addon as any);
+
+      // 🔧 CRITICAL FIX: Verify WebGL is actually working after loading
+      // Some environments silently fail and need a refresh to trigger DOM fallback
+      await this.verifyWebGLRendering(terminal, terminalId);
+
       terminalLogger.info(`✅ WebGL renderer enabled for terminal: ${terminalId}`);
       return true;
     } catch (error) {
@@ -187,6 +254,23 @@ export class RenderingOptimizer implements Disposable {
       this.fallbackToDOMRenderer(terminal, terminalId);
       return false;
     }
+  }
+
+  /**
+   * Verify WebGL is actually rendering correctly
+   * Force a refresh and check if canvas layers are properly initialized
+   */
+  private async verifyWebGLRendering(terminal: Terminal, terminalId: string): Promise<void> {
+    // Wait a frame for WebGL to initialize
+    await new Promise(resolve => requestAnimationFrame(resolve));
+
+    // Force a refresh to ensure all layers render
+    terminal.refresh(0, terminal.rows - 1);
+
+    // Wait another frame
+    await new Promise(resolve => requestAnimationFrame(resolve));
+
+    terminalLogger.debug(`✅ WebGL rendering verified for terminal: ${terminalId}`);
   }
 
   /**
