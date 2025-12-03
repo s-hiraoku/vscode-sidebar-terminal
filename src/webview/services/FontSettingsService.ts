@@ -174,6 +174,10 @@ export class FontSettingsService {
 
   /**
    * Apply current font settings to all terminals
+   *
+   * 🔧 CRITICAL FIX: After applying font settings, call fitAddon.fit() to recalculate
+   * terminal dimensions based on the new font size. Without this, the terminal
+   * may not display correctly (e.g., Nerd Font icons may not show).
    */
   public applyToAllTerminals(terminals: Map<string, TerminalInstance>): void {
     if (!this.applicator) {
@@ -187,6 +191,19 @@ export class FontSettingsService {
     terminals.forEach((instance, terminalId) => {
       try {
         this.applicator!.applyFontSettings(instance.terminal, this.currentSettings);
+
+        // 🔧 CRITICAL FIX: Call fit() after applying font settings
+        // xterm.js needs to recalculate dimensions when font changes
+        if (instance.fitAddon) {
+          try {
+            instance.fitAddon.fit();
+            // Also refresh to ensure rendering is updated
+            instance.terminal.refresh(0, instance.terminal.rows - 1);
+          } catch (fitError) {
+            log(`⚠️ [FontSettingsService] fit() failed for terminal ${terminalId}:`, fitError);
+          }
+        }
+
         successCount++;
       } catch (error) {
         log(`❌ [FontSettingsService] Failed to apply font to terminal ${terminalId}:`, error);

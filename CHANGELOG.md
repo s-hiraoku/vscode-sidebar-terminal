@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.157] - 2025-12-03
+
+### Fixed
+
+- **Font Settings Not Applied After Terminal Creation**: Fix Nerd Font icons not displaying
+  - Call `fitAddon.fit()` and `terminal.refresh()` after applying font settings
+  - Ensures xterm.js recalculates dimensions when font changes
+  - Fixes issue where Extension sends font settings after terminal creation
+
 ## [0.1.156] - 2025-12-03
 
 ### Fixed
