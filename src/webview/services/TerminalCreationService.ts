@@ -984,13 +984,13 @@ export class TerminalCreationService implements Disposable {
    * @param terminalId - Terminal identifier for logging
    * @param container - Terminal container element
    * @param terminalContent - Terminal content element
-   * @param settings - Current terminal settings containing theme
+   * @param settings - Settings object containing theme property
    */
   private updateContainerBackgrounds(
     terminalId: string,
     container: HTMLElement | null,
     terminalContent: HTMLElement | null,
-    settings: TerminalConfig | null | undefined
+    settings: { theme?: string } | null | undefined
   ): void {
     if (!settings) {
       return;

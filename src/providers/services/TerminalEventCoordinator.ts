@@ -11,6 +11,7 @@ import { TerminalManager } from '../../terminals/TerminalManager';
 import { TERMINAL_CONSTANTS } from '../../constants';
 import { getTerminalConfig } from '../../utils/common';
 import { WebviewMessage } from '../../types/common';
+import { WebViewFontSettings } from '../../types/shared';
 import { TerminalInitializationStateMachine } from './TerminalInitializationStateMachine';
 import { getUnifiedConfigurationService } from '../../config/UnifiedConfigurationService';
 
@@ -376,7 +377,7 @@ export class TerminalEventCoordinator implements vscode.Disposable {
    * Get current font settings from VS Code configuration
    * Uses UnifiedConfigurationService for consistency with other settings sources
    */
-  private _getCurrentFontSettings(): Record<string, unknown> {
+  private _getCurrentFontSettings(): WebViewFontSettings {
     const configService = getUnifiedConfigurationService();
     return configService.getWebViewFontSettings();
   }
