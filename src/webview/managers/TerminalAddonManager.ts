@@ -146,21 +146,9 @@ export class TerminalAddonManager {
         });
       }
 
-      if (config.enableGpuAcceleration) {
-        addons.webglAddon = await AddonLoader.loadAddon(terminal, terminalId, WebglAddon, {
-          required: false,
-          addonName: 'WebglAddon (GPU acceleration)',
-        });
-
-        // 🔧 CRITICAL FIX: Force refresh after WebGL addon load
-        // WebGL initialization can silently fail on some environments (Rosetta/Volta x86)
-        // and a refresh ensures the cursor layer is properly rendered
-        if (addons.webglAddon) {
-          await new Promise(resolve => requestAnimationFrame(resolve));
-          terminal.refresh(0, terminal.rows - 1);
-          terminalLogger.debug(`🔧 Post-WebGL refresh triggered for terminal: ${terminalId}`);
-        }
-      }
+      // 🔧 FIX: WebGL addon is now loaded ONLY by RenderingOptimizer
+      // to avoid duplicate loading which causes rendering issues on macOS.
+      // RenderingOptimizer has better error handling and automatic DOM fallback.
 
       if (config.enableUnicode11) {
         addons.unicode11Addon = await AddonLoader.loadAddon(terminal, terminalId, Unicode11Addon, {

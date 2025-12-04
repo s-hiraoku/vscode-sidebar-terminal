@@ -22,10 +22,11 @@ export class ConfigManager implements IConfigManager {
   private fontSettingsService: FontSettingsService | null = null;
 
   // Current settings cache
+  // Default theme to 'auto' to detect VS Code theme instead of hardcoding dark
   private currentSettings: PartialTerminalSettings = {
     fontSize: 14,
     fontFamily: 'Consolas, "Courier New", monospace',
-    theme: 'dark',
+    theme: 'auto',
     cursorBlink: true,
     scrollback: 1000,
     bellSound: false,
@@ -54,10 +55,11 @@ export class ConfigManager implements IConfigManager {
   }
 
   // Settings validation schema
+  // Default theme to 'auto' to detect VS Code theme instead of hardcoding dark
   private readonly DEFAULTS: Required<PartialTerminalSettings> = {
     fontSize: 14,
     fontFamily: 'Consolas, "Courier New", monospace',
-    theme: 'dark',
+    theme: 'auto',
     cursorBlink: true,
     enableCliAgentIntegration: true,
 
