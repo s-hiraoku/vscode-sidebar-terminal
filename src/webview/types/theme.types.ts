@@ -124,7 +124,7 @@ export function detectVSCodeTheme(settings?: { theme?: string }): TerminalTheme 
     return DARK_THEME;
   }
 
-  // VS Code body class detection
+  // VS Code body class detection (only for 'auto' or undefined theme)
   const body = document.body;
   const classList = body.classList;
 

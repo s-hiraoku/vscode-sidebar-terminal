@@ -713,9 +713,27 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    * Handle webviewInitialized message from WebView
    * This is sent AFTER WebView's message handlers are fully set up
    */
-  private _handleWebviewInitialized(_message: WebviewMessage): void {
+  private async _handleWebviewInitialized(_message: WebviewMessage): Promise<void> {
     log('🔥 [TERMINAL-INIT] === _handleWebviewInitialized CALLED ===');
     log('🎯 [TERMINAL-INIT] WebView fully initialized - starting terminal initialization');
+
+    // 🔧 CRITICAL FIX: Send settings BEFORE creating terminals
+    // This ensures WebView has correct theme before first terminal is created
+    // Previously, terminals were created with default dark theme before settings arrived
+    const settings = this._settingsService.getCurrentSettings();
+    const fontSettings = this._settingsService.getCurrentFontSettings();
+
+    log(`📤 [TERMINAL-INIT] Sending settings to WebView FIRST (theme: ${settings.theme})`);
+    await this._sendMessage({
+      command: 'settingsResponse',
+      settings,
+    });
+
+    await this._sendMessage({
+      command: 'fontSettingsUpdate',
+      fontSettings,
+    });
+    log('✅ [TERMINAL-INIT] Settings sent to WebView before terminal creation');
 
     // 🔤 FIX: Send init message to WebView to trigger font settings request
     // This was missing - WebView needs init message to send getSettings request
@@ -736,6 +754,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     // Use SettingsSyncService for settings
     const settings = this._settingsService.getCurrentSettings();
     const fontSettings = this._settingsService.getCurrentFontSettings();
+    log(`📤 [SETTINGS] _handleGetSettings sending (theme: ${settings.theme})`);
 
     await this._sendMessage({
       command: 'settingsResponse',

@@ -12,6 +12,7 @@ import { TERMINAL_CONSTANTS } from '../../constants';
 import { getTerminalConfig } from '../../utils/common';
 import { WebviewMessage } from '../../types/common';
 import { TerminalInitializationStateMachine } from './TerminalInitializationStateMachine';
+import { getUnifiedConfigurationService } from '../../config/UnifiedConfigurationService';
 
 /**
  * Terminal Event Coordinator
@@ -236,6 +237,10 @@ export class TerminalEventCoordinator implements vscode.Disposable {
     log('✅ [EVENT-COORDINATOR] CLI Agent status listeners setup complete');
   }
 
+  // Debounce timer for config change events
+  private _configChangeDebounceTimer: NodeJS.Timeout | null = null;
+  private _lastSentTheme: string | null = null;
+
   /**
    * Set up configuration change listeners
    */
@@ -273,16 +278,54 @@ export class TerminalEventCoordinator implements vscode.Disposable {
         shouldUpdateFontSettings = true;
       }
 
-      // Configuration updates are handled by specific message handlers
-      // (settingsResponse and fontSettingsUpdate) in SecondaryTerminalProvider
+      // Send updated settings to WebView when configuration changes
+      // Use debounce to prevent rapid-fire updates with stale values
       if (shouldUpdateSettings || shouldUpdateFontSettings) {
-        log(
-          '⚙️ [EVENT-COORDINATOR] Configuration changed (settings:',
-          shouldUpdateSettings,
-          ', fonts:',
-          shouldUpdateFontSettings,
-          ')'
-        );
+        // Clear any pending debounce timer
+        if (this._configChangeDebounceTimer) {
+          clearTimeout(this._configChangeDebounceTimer);
+        }
+
+        // Debounce: wait 100ms for config to settle before sending update
+        this._configChangeDebounceTimer = setTimeout(() => {
+          log(
+            '⚙️ [EVENT-COORDINATOR] Configuration changed (settings:',
+            shouldUpdateSettings,
+            ', fonts:',
+            shouldUpdateFontSettings,
+            ')'
+          );
+
+          // Send updated settings to WebView
+          if (shouldUpdateSettings) {
+            const settings = this._getCurrentSettings();
+            const currentTheme = settings.theme as string;
+
+            // Only send if theme actually changed (prevents stale value spam)
+            if (currentTheme !== this._lastSentTheme) {
+              log(`📤 [EVENT-COORDINATOR] Sending settings (theme: ${currentTheme}, prev: ${this._lastSentTheme})`);
+              this._lastSentTheme = currentTheme;
+              this._sendMessage({
+                command: 'settingsResponse',
+                settings,
+              }).catch((err) => log('❌ [EVENT-COORDINATOR] Failed to send settings update:', err));
+              log('⚙️ [EVENT-COORDINATOR] Sent settings update to WebView');
+            } else {
+              log(`⏭️ [EVENT-COORDINATOR] Skipping duplicate theme update (${currentTheme})`);
+            }
+          }
+
+          if (shouldUpdateFontSettings) {
+            const fontSettings = this._getCurrentFontSettings();
+            this._sendMessage({
+              command: 'fontSettingsUpdate',
+              fontSettings,
+            }).catch((err) =>
+              log('❌ [EVENT-COORDINATOR] Failed to send font settings update:', err)
+            );
+            log('⚙️ [EVENT-COORDINATOR] Sent font settings update to WebView');
+          }
+        }, 100); // 100ms debounce
       }
     });
 
@@ -298,9 +341,45 @@ export class TerminalEventCoordinator implements vscode.Disposable {
   }
 
   /**
+   * Get current settings from VS Code configuration
+   * Uses UnifiedConfigurationService for consistency with other settings sources
+   */
+  private _getCurrentSettings(): Record<string, unknown> {
+    const configService = getUnifiedConfigurationService();
+    const settings = configService.getCompleteTerminalSettings();
+    const altClickSettings = configService.getAltClickSettings();
+
+    return {
+      cursorBlink: settings.cursorBlink,
+      theme: settings.theme || 'auto',
+      altClickMovesCursor: altClickSettings.altClickMovesCursor,
+      multiCursorModifier: altClickSettings.multiCursorModifier,
+      enableCliAgentIntegration: configService.isFeatureEnabled('cliAgentIntegration'),
+      highlightActiveBorder: configService.get('sidebarTerminal', 'highlightActiveBorder', true),
+      dynamicSplitDirection: configService.isFeatureEnabled('dynamicSplitDirection'),
+      panelLocation: configService.get('sidebarTerminal', 'panelLocation', 'auto'),
+    };
+  }
+
+  /**
+   * Get current font settings from VS Code configuration
+   * Uses UnifiedConfigurationService for consistency with other settings sources
+   */
+  private _getCurrentFontSettings(): Record<string, unknown> {
+    const configService = getUnifiedConfigurationService();
+    return configService.getWebViewFontSettings();
+  }
+
+  /**
    * Clean up resources
    */
   public dispose(): void {
+    // Clear config change debounce timer to prevent leak
+    if (this._configChangeDebounceTimer) {
+      clearTimeout(this._configChangeDebounceTimer);
+      this._configChangeDebounceTimer = null;
+    }
+
     this.clearTerminalEventListeners();
     this._disposables.forEach((d) => d.dispose());
     log('🧹 [EVENT-COORDINATOR] Disposed');

@@ -36,6 +36,7 @@ import { EventHandlerRegistry } from '../utils/EventHandlerRegistry';
 import { terminalLogger } from '../utils/ManagerLogger';
 import { TerminalHeaderElements } from '../factories/HeaderFactory';
 import { DOMUtils } from '../utils/DOMUtils';
+import { getWebviewTheme } from '../utils/WebviewThemeUtils';
 
 // Extracted services
 import {
@@ -325,9 +326,31 @@ export class TerminalCreationService implements Disposable {
             const currentSettings = configManager?.getCurrentSettings?.();
             const currentFontSettings = configManager?.getCurrentFontSettings?.();
 
+            terminalLogger.info(`🎨 [DEBUG] Immediate settings check - theme: ${currentSettings?.theme}`);
+
             if (currentSettings) {
               uiManager.applyAllVisualSettings(terminal, currentSettings);
               terminalLogger.info(`✅ Visual settings applied to terminal: ${terminalId}`);
+
+              // 🔧 CRITICAL FIX: Explicitly update container backgrounds immediately
+              // This ensures the correct theme is visible right away
+              const resolvedTheme = getWebviewTheme(currentSettings);
+              const backgroundColor = resolvedTheme.background;
+
+              if (terminalContent) {
+                terminalContent.style.backgroundColor = backgroundColor;
+              }
+              if (container) {
+                const xtermElement = container.querySelector<HTMLElement>('.xterm');
+                if (xtermElement) {
+                  xtermElement.style.backgroundColor = backgroundColor;
+                }
+                const viewport = container.querySelector<HTMLElement>('.xterm-viewport');
+                if (viewport) {
+                  viewport.style.backgroundColor = backgroundColor;
+                }
+              }
+              terminalLogger.info(`🎨 Immediate container backgrounds set: ${terminalId} (${backgroundColor})`);
             }
 
             if (currentFontSettings) {
@@ -476,6 +499,53 @@ export class TerminalCreationService implements Disposable {
             `▶️ Resumed all ResizeObservers after terminal creation: ${terminalId}`
           );
         }, 100);
+
+        // 🔧 CRITICAL FIX: Final refresh after all setup is complete
+        // This ensures text and cursor display correctly after WebGL/DOM renderer setup
+        // Theme must be re-applied after RenderingOptimizer setup to ensure correct colors
+        setTimeout(() => {
+          try {
+            const managers = this.coordinator.getManagers?.();
+            const uiManager = managers?.ui;
+            const configManager = managers?.config;
+            const currentSettings = configManager?.getCurrentSettings?.();
+
+            terminalLogger.info(`🎨 [DEBUG] Final theme check - currentSettings.theme: ${currentSettings?.theme}`);
+
+            if (uiManager && currentSettings) {
+              // Re-apply theme to ensure correct colors after WebGL setup
+              uiManager.applyTerminalTheme(terminal, currentSettings);
+              terminalLogger.info(`🎨 Final theme re-application for terminal: ${terminalId}`);
+
+              // 🔧 CRITICAL FIX: Explicitly update container backgrounds
+              // terminal.element may not be available when applyTerminalTheme tries to scope the update
+              // Use the container reference we have from terminal creation
+              const resolvedTheme = getWebviewTheme(currentSettings);
+              const backgroundColor = resolvedTheme.background;
+
+              if (terminalContent) {
+                terminalContent.style.backgroundColor = backgroundColor;
+              }
+              if (container) {
+                const xtermElement = container.querySelector<HTMLElement>('.xterm');
+                if (xtermElement) {
+                  xtermElement.style.backgroundColor = backgroundColor;
+                }
+                const viewport = container.querySelector<HTMLElement>('.xterm-viewport');
+                if (viewport) {
+                  viewport.style.backgroundColor = backgroundColor;
+                }
+              }
+              terminalLogger.info(`🎨 Explicitly set container backgrounds for terminal: ${terminalId} (${backgroundColor})`);
+            }
+
+            // Force a full terminal refresh
+            terminal.refresh(0, terminal.rows - 1);
+            terminalLogger.info(`🔄 Final terminal refresh completed: ${terminalId}`);
+          } catch (error) {
+            terminalLogger.warn(`⚠️ Final refresh failed for terminal ${terminalId}:`, error);
+          }
+        }, 200);
 
         return terminal;
       } catch (error) {

@@ -117,12 +117,15 @@ export class TerminalAddonManager {
         });
       }
 
-      if (config.enableGpuAcceleration) {
-        addons.webglAddon = await AddonLoader.loadAddon(terminal, terminalId, WebglAddon, {
-          required: false,
-          addonName: 'WebglAddon (GPU acceleration)',
-        });
-      }
+      // 🔧 FIX: WebGL addon is now loaded ONLY by RenderingOptimizer
+      // to avoid duplicate loading which causes rendering issues on macOS.
+      // RenderingOptimizer has better error handling and automatic DOM fallback.
+      // if (config.enableGpuAcceleration) {
+      //   addons.webglAddon = await AddonLoader.loadAddon(terminal, terminalId, WebglAddon, {
+      //     required: false,
+      //     addonName: 'WebglAddon (GPU acceleration)',
+      //   });
+      // }
 
       if (config.enableUnicode11) {
         addons.unicode11Addon = await AddonLoader.loadAddon(terminal, terminalId, Unicode11Addon, {
