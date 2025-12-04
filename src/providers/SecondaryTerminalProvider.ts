@@ -750,7 +750,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
       // Step 2: Send font settings BEFORE terminal creation
       const fontSettings = this._settingsService.getCurrentFontSettings();
-      log('📤 [TERMINAL-INIT] Step 2: Sending font settings BEFORE terminal creation:', fontSettings);
+      log('📤 [TERMINAL-INIT] Step 2: Sending font settings BEFORE terminal creation');
       await this._sendMessage({
         command: 'fontSettingsUpdate',
         fontSettings,

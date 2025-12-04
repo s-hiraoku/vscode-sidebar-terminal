@@ -166,40 +166,72 @@ export class TerminalCreationService implements Disposable {
           }
         }
 
-        // 🔧 CRITICAL FIX: Get font settings from config (sent by Extension) OR from ConfigManager
-        // Priority: config.fontSettings (from Extension message) > ConfigManager (from FontSettingsService)
+        // Get font settings from config (sent by Extension) OR from ConfigManager
+        // Priority: config direct properties > config.fontSettings > ConfigManager
         // This ensures powerlevel10k icons and other Nerd Font characters display correctly
         const configManager = this.coordinator.getManagers?.()?.config;
 
-        // 🔧 FIX: Use fontSettings from config if available (sent by Extension in terminalCreated message)
-        // This solves the timing issue where FontSettingsService hasn't received settings yet
+        // Check BOTH config.fontSettings AND direct config properties
+        // Extension sends fontFamily/fontSize directly in config, not nested in fontSettings
         const configFontSettings = (config as any)?.fontSettings;
-        const currentFontSettings = configFontSettings || configManager?.getCurrentFontSettings?.();
+        const directFontFamily = (config as any)?.fontFamily;
+        const directFontSize = (config as any)?.fontSize;
 
-        terminalLogger.info(`🔤 Font settings source: ${configFontSettings ? 'config (Extension)' : 'ConfigManager'}`);
+        // Use direct config values if available, otherwise fall back to fontSettings or ConfigManager
+        let currentFontSettings: any;
+        if (directFontFamily || directFontSize) {
+          // Extension sent font settings directly in config
+          currentFontSettings = {
+            fontFamily: directFontFamily || configFontSettings?.fontFamily || configManager?.getCurrentFontSettings?.()?.fontFamily,
+            fontSize: directFontSize || configFontSettings?.fontSize || configManager?.getCurrentFontSettings?.()?.fontSize,
+            fontWeight: (config as any)?.fontWeight || configFontSettings?.fontWeight || 'normal',
+            fontWeightBold: (config as any)?.fontWeightBold || configFontSettings?.fontWeightBold || 'bold',
+            lineHeight: (config as any)?.lineHeight || configFontSettings?.lineHeight || 1,
+            letterSpacing: (config as any)?.letterSpacing ?? configFontSettings?.letterSpacing ?? 0,
+          };
+        } else if (configFontSettings) {
+          currentFontSettings = configFontSettings;
+        } else {
+          currentFontSettings = configManager?.getCurrentFontSettings?.();
+        }
+
+        // Only apply non-empty font settings to prevent overwriting defaults with empty values
+        // This ensures powerlevel10k/Nerd Font settings are actually applied
+        const fontOverrides: Partial<ITerminalOptions> = {};
         if (currentFontSettings) {
-          terminalLogger.info(`🔤 Font settings: ${currentFontSettings.fontFamily}, ${currentFontSettings.fontSize}px`);
+          // Only include fontFamily if it's a non-empty string
+          if (typeof currentFontSettings.fontFamily === 'string' && currentFontSettings.fontFamily.trim()) {
+            fontOverrides.fontFamily = currentFontSettings.fontFamily.trim();
+          }
+          // Only include fontSize if it's a positive number
+          if (typeof currentFontSettings.fontSize === 'number' && currentFontSettings.fontSize > 0) {
+            fontOverrides.fontSize = currentFontSettings.fontSize;
+          }
+          // Only include fontWeight if it's a non-empty string
+          if (typeof currentFontSettings.fontWeight === 'string' && currentFontSettings.fontWeight.trim()) {
+            fontOverrides.fontWeight = currentFontSettings.fontWeight.trim() as ITerminalOptions['fontWeight'];
+          }
+          // Only include fontWeightBold if it's a non-empty string
+          if (typeof currentFontSettings.fontWeightBold === 'string' && currentFontSettings.fontWeightBold.trim()) {
+            fontOverrides.fontWeightBold = currentFontSettings.fontWeightBold.trim() as ITerminalOptions['fontWeightBold'];
+          }
+          // Only include lineHeight if it's a positive number
+          if (typeof currentFontSettings.lineHeight === 'number' && currentFontSettings.lineHeight > 0) {
+            fontOverrides.lineHeight = currentFontSettings.lineHeight;
+          }
+          // Only include letterSpacing if it's a number (can be 0 or negative)
+          if (typeof currentFontSettings.letterSpacing === 'number') {
+            fontOverrides.letterSpacing = currentFontSettings.letterSpacing;
+          }
         }
 
         // Merge config with defaults using TerminalConfigService
         // Include font settings in the merge to ensure they're applied from the start
-        // Note: fontWeight types need casting as WebViewFontSettings uses string but xterm.js uses FontWeight
         const configWithFonts = {
           ...(config as Parameters<typeof TerminalConfigService.mergeConfig>[0]),
-          ...(currentFontSettings && {
-            fontFamily: currentFontSettings.fontFamily,
-            fontSize: currentFontSettings.fontSize,
-            fontWeight: currentFontSettings.fontWeight as ITerminalOptions['fontWeight'],
-            fontWeightBold: currentFontSettings.fontWeightBold as ITerminalOptions['fontWeightBold'],
-            lineHeight: currentFontSettings.lineHeight,
-            letterSpacing: currentFontSettings.letterSpacing,
-          }),
+          ...fontOverrides,
         };
         const terminalConfig = TerminalConfigService.mergeConfig(configWithFonts);
-
-        terminalLogger.info(
-          `🔤 Terminal config with fonts: ${terminalConfig.fontFamily}, ${terminalConfig.fontSize}px`
-        );
 
         // Create Terminal instance
         const terminal = new Terminal(terminalConfig as any);

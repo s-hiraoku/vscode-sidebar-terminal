@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.160] - 2025-12-04
+
+### Fixed
+
+- **Font Settings Data Format Mismatch**: Fix font settings not being applied to terminals
+  - **Root Cause**: Extension sends `config.fontFamily`/`config.fontSize` directly, but WebView looked for `config.fontSettings.fontFamily`
+  - **Fix**: WebView now checks both direct config properties AND nested `fontSettings` object
+  - **Result**: MesloLGS NF and other Nerd Fonts now correctly applied on terminal startup
+  - Added validation to only apply non-empty font values (prevents overwriting with empty strings)
+  - Clear font setting cache before each access to ensure fresh values
+
 ## [0.1.159] - 2025-12-04
 
 ### Fixed

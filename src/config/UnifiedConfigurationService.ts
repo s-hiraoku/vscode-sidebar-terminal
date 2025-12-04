@@ -458,14 +458,27 @@ export class UnifiedConfigurationService implements Disposable {
     this.initialize();
 
     try {
+      // Clear cache for font settings to ensure fresh values
+      this._configurationCache.delete('secondaryTerminal.fontFamily');
+      this._configurationCache.delete('terminal.integrated.fontFamily');
+      this._configurationCache.delete('editor.fontFamily');
+
+      // Direct VS Code API call to ensure we get the latest value
+      const terminalConfig = vscode.workspace.getConfiguration('terminal.integrated');
+      const directTerminalFont = terminalConfig.get<string>('fontFamily');
+
       // 1. Extension-specific font (highest priority)
       const extensionFont = this.get('secondaryTerminal', 'fontFamily', '');
-      if (typeof extensionFont === 'string' && extensionFont.trim() && extensionFont.trim() !== 'monospace') {
+      if (
+        typeof extensionFont === 'string' &&
+        extensionFont.trim() &&
+        extensionFont.trim() !== 'monospace'
+      ) {
         return extensionFont.trim();
       }
 
-      // 2. Terminal-specific font
-      const terminalFont = this.get('terminal.integrated', 'fontFamily', '');
+      // 2. Terminal-specific font - use direct value if available
+      const terminalFont = directTerminalFont || this.get('terminal.integrated', 'fontFamily', '');
       if (typeof terminalFont === 'string' && terminalFont.trim()) {
         return terminalFont.trim();
       }
