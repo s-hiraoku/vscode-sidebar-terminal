@@ -279,7 +279,7 @@ export class WebViewResourceManager implements IWebViewResourceManager, Disposab
     if ('fonts' in document) {
       try {
         await (document as any).fonts.load(`1em ${resource.url}`);
-      } catch (error) {
+      } catch {
         throw new Error(`Failed to load font: ${resource.url}`);
       }
     } else {

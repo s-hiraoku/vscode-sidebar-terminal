@@ -714,6 +714,13 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
         this.terminalTabManager.setActiveTab(terminalId);
       }
 
+      // 🔧 FIX #188: Register terminal with persistence service for scrollback saving
+      // This was missing - terminals were never registered, so saveSession() saved nothing
+      if (this.webViewPersistenceService) {
+        this.webViewPersistenceService.addTerminal(terminalId, terminal, { autoSave: true });
+        log(`✅ [PERSISTENCE] Terminal ${terminalId} registered with persistence service`);
+      }
+
       // 🆕 SIMPLE: Save current session state after terminal creation
       // No complex serialization - just session metadata
       setTimeout(() => {
@@ -882,6 +889,12 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
     // CLI Agent状態もクリーンアップ
     this.cliAgentStateManager.removeTerminalState(terminalId);
+
+    // 🔧 FIX #188: Unregister terminal from persistence service
+    if (this.webViewPersistenceService) {
+      this.webViewPersistenceService.removeTerminal(terminalId);
+      log(`🗑️ [PERSISTENCE] Terminal ${terminalId} unregistered from persistence service`);
+    }
 
     // Step 1: タブを先に削除（UI即時反映のため）
     if (this.terminalTabManager) {
@@ -1500,9 +1513,10 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   /**
    * Queue terminal creation request
    * 委譲: TerminalOperationsCoordinator
+   * 🔧 FIX: IDはExtension側で生成されるため、名前のみを受け付ける
    */
-  public queueTerminalCreation(terminalId: string, terminalName: string): Promise<boolean> {
-    return this.terminalOperations.queueTerminalCreation(terminalId, terminalName);
+  public queueTerminalCreation(terminalName: string): Promise<boolean> {
+    return this.terminalOperations.queueTerminalCreation(terminalName);
   }
 
   /**

@@ -98,6 +98,8 @@ export interface ExtensionTerminalConfig
   readonly enableGpuAcceleration?: boolean;
   readonly enableSearchAddon?: boolean;
   readonly enableUnicode11?: boolean;
+  // Font settings sent from Extension to WebView
+  readonly fontSettings?: WebViewFontSettings;
 }
 
 /**
@@ -652,7 +654,7 @@ export interface WebviewMessage {
     | 'webviewInitialized' // WebView initialization complete
     | 'terminalInitializationComplete' // Terminal initialization complete
     | 'terminalReady'; // Terminal ready for use
-  config?: TerminalConfig;
+  config?: Partial<TerminalConfig>; // Allow partial config with fontSettings only
   data?: string | any[]; // Support both string and array data
   exitCode?: number;
   terminalId?: string;

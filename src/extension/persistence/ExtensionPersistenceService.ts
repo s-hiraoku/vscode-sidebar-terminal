@@ -218,7 +218,7 @@ export class ExtensionPersistenceService implements IExtensionPersistencePort {
         return 0;
       }
       return JSON.stringify(data).length;
-    } catch (error) {
+    } catch {
       return 0;
     }
   }

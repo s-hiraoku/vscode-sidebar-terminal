@@ -2,7 +2,10 @@
  * Terminal Link Manager
  *
  * Handles file path and URL link detection in terminal output.
- * Simplified implementation focusing on clarity and maintainability.
+ * Follows VS Code standard terminal link behavior:
+ * - Links require modifier key + click to activate (Cmd/Ctrl or Alt depending on settings)
+ * - Hover shows underline and pointer cursor when modifier key is pressed
+ * - Supports file paths with line:column navigation
  */
 
 import { Terminal, type ILink, type IDisposable } from '@xterm/xterm';
@@ -24,10 +27,20 @@ interface ParsedFileLink {
  *
  * Detects clickable file paths in terminal output and opens them in the editor.
  * URL links are handled separately by WebLinksAddon.
+ *
+ * VS Code Standard Behavior:
+ * - When multiCursorModifier is 'alt', Cmd/Ctrl+Click opens links
+ * - When multiCursorModifier is 'ctrlCmd', Alt+Click opens links
+ * - Hover shows underline when modifier key is pressed
  */
 export class TerminalLinkManager extends BaseManager {
   private readonly coordinator: IManagerCoordinator;
   private readonly linkProviderDisposables = new Map<string, IDisposable>();
+
+  // Current link modifier setting (updated when settings change)
+  // 'alt' means Alt is for multi-cursor, so Cmd/Ctrl opens links
+  // 'ctrlCmd' means Cmd/Ctrl is for multi-cursor, so Alt opens links
+  private linkModifier: 'alt' | 'ctrlCmd' = 'alt';
 
   // Simple regex to match file paths
   // Matches: /path/to/file, ./relative/path, ../parent/path, C:\windows\path
@@ -40,6 +53,33 @@ export class TerminalLinkManager extends BaseManager {
       enableErrorRecovery: true,
     });
     this.coordinator = coordinator;
+  }
+
+  /**
+   * Update link modifier setting
+   * Called when VS Code settings change
+   */
+  public setLinkModifier(modifier: 'alt' | 'ctrlCmd'): void {
+    this.linkModifier = modifier;
+    terminalLogger.info(`Link modifier updated to: ${modifier}`);
+  }
+
+  /**
+   * Check if the event has the required modifier key for link activation
+   * VS Code uses the OPPOSITE modifier for links:
+   * - When multiCursorModifier is 'alt', Cmd/Ctrl+Click opens links
+   * - When multiCursorModifier is 'ctrlCmd', Alt+Click opens links
+   */
+  private isValidLinkActivation(event: MouseEvent | undefined): boolean {
+    if (!event) return false;
+
+    if (this.linkModifier === 'alt') {
+      // Alt is for multi-cursor, so Cmd/Ctrl opens links
+      return event.metaKey || event.ctrlKey;
+    } else {
+      // Cmd/Ctrl is for multi-cursor, so Alt opens links
+      return event.altKey;
+    }
   }
 
   protected doInitialize(): void {
@@ -86,6 +126,10 @@ export class TerminalLinkManager extends BaseManager {
 
   /**
    * Extract file links from text
+   * Returns ILink objects with VS Code standard behavior:
+   * - activate: Opens file only when modifier key is pressed
+   * - decorations: Shows underline and pointer cursor
+   * - hover/leave: Visual feedback for link state
    */
   private extractFileLinks(text: string, lineNumber: number, terminalId: string): ILink[] {
     const links: ILink[] = [];
@@ -112,14 +156,45 @@ export class TerminalLinkManager extends BaseManager {
       const startX = match.index + 1;
       const endX = startX + cleaned.length;
 
-      links.push({
+      // Create link with VS Code standard behavior
+      const link: ILink = {
         text: cleaned,
         range: {
           start: { x: startX, y: lineNumber },
           end: { x: endX, y: lineNumber },
         },
-        activate: () => this.openFile(parsed, terminalId),
-      });
+        // VS Code standard: show underline and pointer cursor when hovering
+        decorations: {
+          pointerCursor: true,
+          underline: true,
+        },
+        // Activate only when modifier key is pressed (VS Code standard)
+        activate: (event: MouseEvent, linkText: string) => {
+          // Check if the correct modifier key is pressed
+          if (!this.isValidLinkActivation(event)) {
+            terminalLogger.debug(
+              `Link activation blocked - modifier key not pressed: ${linkText}`
+            );
+            return;
+          }
+
+          terminalLogger.info(
+            `🔗 File link activated: ${linkText} (meta=${event.metaKey}, ctrl=${event.ctrlKey}, alt=${event.altKey})`
+          );
+          this.openFile(parsed, terminalId);
+        },
+        // Optional: hover callback for additional visual feedback
+        hover: (_event: MouseEvent, _linkText: string) => {
+          // xterm.js handles the visual decorations automatically
+          // This callback can be used for additional hover effects if needed
+        },
+        // Optional: leave callback for cleanup
+        leave: (_event: MouseEvent, _linkText: string) => {
+          // Cleanup any additional hover effects if needed
+        },
+      };
+
+      links.push(link);
     }
 
     return links;

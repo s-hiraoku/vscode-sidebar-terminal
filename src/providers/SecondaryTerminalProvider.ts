@@ -303,7 +303,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           if (isDebugEnabled && isDebugEnabled()) {
             log('📨 [PROVIDER] Message data:', message);
           }
-        } catch {}
+        } catch {
+          // Silently ignore logger loading errors - debug logging is non-critical
+        }
 
         // Handle message using MessageRoutingFacade, with fallback for critical commands
         this._messageRouter
@@ -360,12 +362,22 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private _initializeWebviewContent(webviewView: vscode.WebviewView): void {
     log('🔧 [PROVIDER] Step 4: Setting webview HTML...');
 
+    // Check if simplified WebView is enabled
+    const useSimplifiedWebView = vscode.workspace
+      .getConfiguration('secondaryTerminal')
+      .get<boolean>('useSimplifiedWebView', false);
+
+    if (useSimplifiedWebView) {
+      log('🔄 [PROVIDER] Using simplified WebView implementation');
+    }
+
     // Generate HTML content
     const htmlContent = this._htmlGenerationService.generateMainHtml({
       webview: webviewView.webview,
       extensionUri: this._extensionContext.extensionUri,
-      includeSplitStyles: true,
-      includeCliAgentStyles: true,
+      includeSplitStyles: !useSimplifiedWebView,
+      includeCliAgentStyles: !useSimplifiedWebView,
+      useSimplifiedWebView,
     });
 
     // Set HTML using lifecycle manager
@@ -717,37 +729,56 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     log('🔥 [TERMINAL-INIT] === _handleWebviewInitialized CALLED ===');
     log('🎯 [TERMINAL-INIT] WebView fully initialized - starting terminal initialization');
 
-    // 🔧 CRITICAL FIX: Send settings BEFORE creating terminals
+    // 🔧 CRITICAL FIX: Send settings (including theme) BEFORE creating terminals
     // This ensures WebView has correct theme before first terminal is created
-    // Previously, terminals were created with default dark theme before settings arrived
-    const settings = this._settingsService.getCurrentSettings();
-    const fontSettings = this._settingsService.getCurrentFontSettings();
+    void this._initializeWithFontSettings();
+  }
 
-    log(`📤 [TERMINAL-INIT] Sending settings to WebView FIRST (theme: ${settings.theme})`);
-    await this._sendMessage({
-      command: 'settingsResponse',
-      settings,
-    });
+  /**
+   * Initialize WebView with settings and font settings before creating terminals
+   * This ensures theme and font settings are available when terminals are created
+   *
+   * 🔧 CRITICAL FIX: Send settings (including theme) BEFORE creating terminals
+   * Previously, terminals were created with default dark theme before settings arrived
+   */
+  private async _initializeWithFontSettings(): Promise<void> {
+    try {
+      // Step 1: Send init message
+      log('📤 [TERMINAL-INIT] Step 1: Sending init message to WebView...');
+      await this._sendMessage({
+        command: 'init',
+        timestamp: Date.now(),
+      });
+      log('✅ [TERMINAL-INIT] init message sent');
 
-    await this._sendMessage({
-      command: 'fontSettingsUpdate',
-      fontSettings,
-    });
-    log('✅ [TERMINAL-INIT] Settings sent to WebView before terminal creation');
+      // Step 2: Send settings (including theme) BEFORE terminal creation
+      // 🔧 CRITICAL: This ensures correct theme is applied from the start
+      const settings = this._settingsService.getCurrentSettings();
+      log(`📤 [TERMINAL-INIT] Step 2: Sending settings BEFORE terminal creation (theme: ${settings.theme})`);
+      await this._sendMessage({
+        command: 'settingsResponse',
+        settings,
+      });
+      log('✅ [TERMINAL-INIT] Settings sent');
 
-    // 🔤 FIX: Send init message to WebView to trigger font settings request
-    // This was missing - WebView needs init message to send getSettings request
-    log('📤 [TERMINAL-INIT] Sending init message to WebView...');
-    void this._sendMessage({
-      command: 'init',
-      timestamp: Date.now(),
-    }).then(() => {
-      log('✅ [TERMINAL-INIT] init message sent to WebView');
-    });
+      // Step 3: Send font settings BEFORE terminal creation
+      const fontSettings = this._settingsService.getCurrentFontSettings();
+      log('📤 [TERMINAL-INIT] Step 3: Sending font settings BEFORE terminal creation');
+      await this._sendMessage({
+        command: 'fontSettingsUpdate',
+        fontSettings,
+      });
+      log('✅ [TERMINAL-INIT] Font settings sent');
 
-    // Start initialization via orchestrator
-    // Now it's safe to create terminals because WebView can handle terminalCreated messages
-    void this._orchestrator.initialize();
+      // Step 4: Now create terminals - they will use the settings we just sent
+      log('📤 [TERMINAL-INIT] Step 4: Starting terminal initialization with settings ready');
+      await this._orchestrator.initialize();
+      log('✅ [TERMINAL-INIT] Terminal initialization complete');
+    } catch (error) {
+      log('❌ [TERMINAL-INIT] Error during initialization:', error);
+      // Still try to initialize terminals even if settings failed
+      void this._orchestrator.initialize();
+    }
   }
 
   private async _handleGetSettings(): Promise<void> {
@@ -801,7 +832,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         if (isDebugEnabled && isDebugEnabled()) {
           log('🎆 [TRACE] Message data:', message);
         }
-      } catch {}
+      } catch {
+        // Silently ignore logger loading errors - debug logging is non-critical
+      }
     }
   }
 
@@ -1025,15 +1058,23 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private async _performKillTerminal(terminalId: string): Promise<void> {
     log(`🗑️ [PROVIDER] Killing terminal: ${terminalId}`);
 
-    // 🔧 FIX: await killTerminal to ensure deletion completes before sending state
+    // 🔧 FIX: await killTerminal and properly handle errors
+    // Do NOT send terminalRemoved if deletion fails (e.g., last terminal protection)
     try {
       await this._terminalManager.killTerminal(terminalId);
     } catch (error) {
       log(`❌ [PROVIDER] Error killing terminal: ${error}`);
-      // Continue to send messages even if deletion had issues
+      // 🔧 FIX: Send failure response and do NOT continue with removal messages
+      await this._sendMessage({
+        command: 'deleteTerminalResponse',
+        terminalId: terminalId,
+        success: false,
+        reason: error instanceof Error ? error.message : 'Terminal deletion failed',
+      });
+      return; // Stop here - do not send terminalRemoved for failed deletion
     }
 
-    // Send terminalRemoved message first
+    // Send terminalRemoved message first (only on successful deletion)
     await this._sendMessage({
       command: 'terminalRemoved',
       terminalId: terminalId,
@@ -1063,6 +1104,11 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   public async _initializeTerminal(): Promise<void> {
     log('🔧 [PROVIDER] Initializing terminal...');
 
+    // 🔧 CRITICAL FIX: Include font settings in terminalCreated message
+    // This ensures font settings are available when WebView creates terminals
+    const fontSettings = this._settingsService.getCurrentFontSettings();
+    log('🔤 [PROVIDER] Font settings for terminal creation:', fontSettings);
+
     const terminals = this._terminalManager.getTerminals();
     for (const terminal of terminals) {
       await this._sendMessage({
@@ -1072,6 +1118,10 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           name: terminal.name,
           cwd: terminal.cwd || safeProcessCwd(),
           isActive: terminal.id === this._terminalManager.getActiveTerminalId(),
+        },
+        // 🔧 Include font settings directly in the message
+        config: {
+          fontSettings,
         },
       });
     }
@@ -1135,7 +1185,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
       log('[DEBUG] Sending message to WebView:', message);
       void this._sendMessage(message);
-    } catch (error) {
+    } catch {
       // Continue on error
     }
   }
@@ -1316,6 +1366,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         }
 
         if (restoredTerminals.length > 0) {
+          // 🔧 CRITICAL FIX: Include font settings in terminalCreated message for session restore
+          const fontSettings = this._settingsService.getCurrentFontSettings();
+
           // Send terminal creation notifications
           for (const mapping of terminalMappings) {
             await this._sendMessage({
@@ -1325,6 +1378,10 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
                 name: mapping.terminalData.name || `Terminal ${mapping.newId}`,
                 cwd: mapping.terminalData.cwd || safeProcessCwd(),
                 isActive: mapping.terminalData.isActive || false,
+              },
+              // 🔧 Include font settings directly in the message
+              config: {
+                fontSettings,
               },
             });
           }

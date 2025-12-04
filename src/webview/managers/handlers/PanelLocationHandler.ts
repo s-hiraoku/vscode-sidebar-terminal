@@ -374,7 +374,7 @@ export class PanelLocationHandler implements IMessageHandler {
             const settings = configManager.loadSettings();
             isDynamicSplitEnabled = settings.dynamicSplitDirection !== false;
           }
-        } catch (error) {
+        } catch {
           // Use default
         }
       }

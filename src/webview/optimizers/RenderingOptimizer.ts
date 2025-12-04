@@ -118,6 +118,9 @@ export class RenderingOptimizer implements Disposable {
         this.resetXtermInlineStyles(terminalId);
 
         fitAddon.fit();
+        // 🔧 CRITICAL FIX: Refresh terminal after fit to ensure cursor is displayed
+        // This is essential for cursor visibility after resize operations
+        terminal.refresh(0, terminal.rows - 1);
         terminalLogger.debug(`✅ Terminal ${terminalId} resized to ${width}x${height}`);
       } catch (error) {
         terminalLogger.error(`❌ Failed to resize terminal ${terminalId}:`, error);
@@ -149,126 +152,73 @@ export class RenderingOptimizer implements Disposable {
   }
 
   /**
-   * Check if WebGL environment is problematic
-   * Some macOS configurations with certain GPU drivers can cause
-   * rendering issues with WebGL in VS Code WebViews.
+   * Check if running in a potentially problematic WebGL environment
+   * (e.g., x86 Node.js on ARM macOS via Rosetta, or Volta with x86 Node)
    */
   private isProblematicWebGLEnvironment(): boolean {
     try {
-      // Check if we're in a VS Code WebView (limited WebGL support)
-      const isVSCodeWebView = typeof window !== 'undefined' &&
-        window.navigator.userAgent.includes('Electron');
+      // Check for macOS
+      const isMacOS = navigator.platform?.toLowerCase().includes('mac') ||
+                      navigator.userAgent?.toLowerCase().includes('mac');
 
-      // Check if we're on macOS
-      const isMacOS = typeof window !== 'undefined' &&
-        window.navigator.userAgent.includes('Mac');
+      if (!isMacOS) {
+        return false;
+      }
 
-      // Test WebGL context creation
+      // Check WebGL context creation - if it fails silently, we're in trouble
       const canvas = document.createElement('canvas');
       const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
 
       if (!gl) {
-        terminalLogger.warn('⚠️ WebGL not available in this environment');
+        terminalLogger.warn('⚠️ WebGL context creation failed - problematic environment detected');
         return true;
       }
 
-      // Check for known problematic configurations
-      const renderer = gl.getParameter(gl.RENDERER) || '';
-      const vendor = gl.getParameter(gl.VENDOR) || '';
+      // Check for software renderer (indicates Rosetta/emulation issues)
+      const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+      if (debugInfo) {
+        const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+        const vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
 
-      terminalLogger.debug(`WebGL Renderer: ${renderer}, Vendor: ${vendor}`);
+        terminalLogger.debug(`WebGL renderer: ${renderer}, vendor: ${vendor}`);
 
-      // Some integrated GPUs on macOS have issues with WebGL in WebViews
-      const problematicPatterns = [
-        /SwiftShader/i,    // Software renderer (indicates GPU issues)
-        /llvmpipe/i,       // Software renderer on Linux
-      ];
+        // Software renderers often indicate emulation issues
+        const isSoftwareRenderer = renderer?.toLowerCase().includes('swiftshader') ||
+                                   renderer?.toLowerCase().includes('llvmpipe') ||
+                                   renderer?.toLowerCase().includes('software');
 
-      for (const pattern of problematicPatterns) {
-        if (pattern.test(renderer) || pattern.test(vendor)) {
-          terminalLogger.warn(`⚠️ Detected problematic WebGL renderer: ${renderer}`);
+        if (isSoftwareRenderer) {
+          terminalLogger.warn(`⚠️ Software WebGL renderer detected: ${renderer}`);
           return true;
         }
       }
 
-      // Additional check: VS Code WebView on macOS can have WebGL issues
-      // when creating multiple terminals due to context limit
-      if (isVSCodeWebView && isMacOS) {
-        terminalLogger.info('ℹ️ macOS VS Code WebView detected - WebGL may be unstable');
-        // Don't return true here - let it try WebGL first, it will fallback if needed
-      }
+      // Clean up test canvas
+      canvas.remove();
 
       return false;
     } catch (error) {
       terminalLogger.warn('⚠️ Error checking WebGL environment:', error);
-      return true;
-    }
-  }
-
-  /**
-   * Verify WebGL rendering is working after addon load
-   */
-  private verifyWebGLRendering(terminal: Terminal, terminalId: string): boolean {
-    try {
-      // Check if the terminal has canvas layers
-      const element = terminal.element;
-      if (!element) {
-        terminalLogger.warn(`⚠️ Terminal ${terminalId} has no element for WebGL verification`);
-        return false;
-      }
-
-      // Look for WebGL canvas (xterm.js creates a canvas for WebGL rendering)
-      const canvases = element.querySelectorAll('canvas');
-      if (canvases.length === 0) {
-        terminalLogger.warn(`⚠️ No canvas elements found for terminal ${terminalId}`);
-        return false;
-      }
-
-      // Check if any canvas has WebGL context
-      for (const canvas of canvases) {
-        const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
-        if (gl && !gl.isContextLost()) {
-          terminalLogger.debug(`✅ WebGL context verified for terminal ${terminalId}`);
-          return true;
-        }
-      }
-
-      terminalLogger.warn(`⚠️ WebGL context not found or lost for terminal ${terminalId}`);
-      return false;
-    } catch (error) {
-      terminalLogger.warn(`⚠️ WebGL verification failed for terminal ${terminalId}:`, error);
-      return false;
+      return true; // Assume problematic if we can't check
     }
   }
 
   /**
    * Enable WebGL rendering with auto-fallback
-   *
-   * 🔧 TEMPORARILY DISABLED: WebGL causes rendering issues where text/cursor
-   * disappear after initial render, especially on macOS. The DOM renderer
-   * works correctly. This should be re-enabled once the WebGL timing issue
-   * is resolved.
    */
   public async enableWebGL(terminal: Terminal, terminalId: string): Promise<boolean> {
-    // 🔧 FIX: Temporarily disable WebGL to fix text/cursor visibility issues
-    // WebGL loads AFTER theme is applied and overwrites the terminal rendering
-    // causing black backgrounds and invisible text
-    terminalLogger.info(`🔧 WebGL disabled for terminal ${terminalId} (DOM renderer used for stability)`);
-    return false;
-
-    // Original code below - re-enable when WebGL timing is fixed
-    /*
     if (!this.options.enableWebGL) {
       terminalLogger.info(`WebGL disabled for terminal: ${terminalId}`);
       return false;
     }
 
-    // Check for problematic WebGL environments first
+    // Check for problematic WebGL environment (Rosetta, Volta x86, etc.)
     if (this.isProblematicWebGLEnvironment()) {
-      terminalLogger.info(`🔧 Skipping WebGL for terminal ${terminalId} due to problematic environment`);
+      terminalLogger.info(
+        `⚠️ Skipping WebGL for terminal ${terminalId}: problematic environment detected (Rosetta/x86 on ARM)`
+      );
       return false;
     }
-    */
 
     try {
       // Lazy load WebglAddon
@@ -282,23 +232,19 @@ export class RenderingOptimizer implements Disposable {
           `⚠️ WebGL context lost for terminal ${terminalId}, falling back to DOM renderer`
         );
         this.fallbackToDOMRenderer(terminal, terminalId);
+        // Force refresh after fallback to ensure cursor is visible
+        terminal.refresh(0, terminal.rows - 1);
       });
 
       // Load WebGL addon
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       terminal.loadAddon(addon as any);
+
+      // 🔧 CRITICAL FIX: Verify WebGL is actually working after loading
+      // Some environments silently fail and need a refresh to trigger DOM fallback
+      await this.verifyWebGLRendering(terminal, terminalId);
+
       terminalLogger.info(`✅ WebGL renderer enabled for terminal: ${terminalId}`);
-
-      // Verify WebGL is actually working after a short delay
-      setTimeout(() => {
-        if (!this.verifyWebGLRendering(terminal, terminalId)) {
-          terminalLogger.warn(`⚠️ WebGL verification failed for ${terminalId}, switching to DOM renderer`);
-          this.fallbackToDOMRenderer(terminal, terminalId);
-          // Force a terminal refresh to ensure DOM renderer redraws properly
-          terminal.refresh(0, terminal.rows - 1);
-        }
-      }, 100);
-
       return true;
     } catch (error) {
       terminalLogger.warn(
@@ -311,6 +257,23 @@ export class RenderingOptimizer implements Disposable {
   }
 
   /**
+   * Verify WebGL is actually rendering correctly
+   * Force a refresh and check if canvas layers are properly initialized
+   */
+  private async verifyWebGLRendering(terminal: Terminal, terminalId: string): Promise<void> {
+    // Wait a frame for WebGL to initialize
+    await new Promise(resolve => requestAnimationFrame(resolve));
+
+    // Force a refresh to ensure all layers render
+    terminal.refresh(0, terminal.rows - 1);
+
+    // Wait another frame
+    await new Promise(resolve => requestAnimationFrame(resolve));
+
+    terminalLogger.debug(`✅ WebGL rendering verified for terminal: ${terminalId}`);
+  }
+
+  /**
    * Fallback to DOM renderer when WebGL fails
    */
   private fallbackToDOMRenderer(terminal: Terminal, terminalId: string): void {
@@ -320,17 +283,6 @@ export class RenderingOptimizer implements Disposable {
         this.webglAddon = null;
       }
       terminalLogger.info(`✅ Terminal ${terminalId} using DOM renderer`);
-
-      // Force terminal refresh to ensure DOM renderer redraws text properly
-      // This is critical when switching from failed WebGL to DOM renderer
-      setTimeout(() => {
-        try {
-          terminal.refresh(0, terminal.rows - 1);
-          terminalLogger.debug(`🔄 Terminal ${terminalId} refreshed after DOM renderer fallback`);
-        } catch (error) {
-          terminalLogger.warn(`⚠️ Failed to refresh terminal ${terminalId}:`, error);
-        }
-      }, 50);
     } catch (error) {
       terminalLogger.error(`❌ Failed to dispose WebGL addon for terminal ${terminalId}:`, error);
     }
