@@ -11,7 +11,7 @@ import { TerminalManager } from '../../terminals/TerminalManager';
 import { TERMINAL_CONSTANTS } from '../../constants';
 import { getTerminalConfig } from '../../utils/common';
 import { WebviewMessage } from '../../types/common';
-import { WebViewFontSettings } from '../../types/shared';
+import { WebViewFontSettings, WebViewSettingsPayload } from '../../types/shared';
 import { TerminalInitializationStateMachine } from './TerminalInitializationStateMachine';
 import { getUnifiedConfigurationService } from '../../config/UnifiedConfigurationService';
 
@@ -219,7 +219,8 @@ export class TerminalEventCoordinator implements vscode.Disposable {
 
   // Debounce timer for config change events
   private _configChangeDebounceTimer: NodeJS.Timeout | null = null;
-  private _lastSentTheme: string | null = null;
+  // 🔧 FIX: Track entire settings payload to prevent dropping non-theme setting changes
+  private _lastSentSettingsKey: string | null = null;
   // 🔧 FIX: Persistent flags to accumulate update intent across debounce window
   // This prevents stale closure values when multiple config events fire rapidly
   private _pendingSettingsUpdate = false;
@@ -290,19 +291,20 @@ export class TerminalEventCoordinator implements vscode.Disposable {
           // Send updated settings to WebView
           if (shouldUpdateSettings) {
             const settings = this._getCurrentSettings();
-            const currentTheme = settings.theme as string;
+            // 🔧 FIX: Deduplicate on entire settings payload, not just theme
+            // This ensures non-theme settings (cursorBlink, altClickMovesCursor, etc.) are sent
+            const settingsKey = JSON.stringify(settings);
 
-            // Only send if theme actually changed (prevents stale value spam)
-            if (currentTheme !== this._lastSentTheme) {
-              log(`📤 [EVENT-COORDINATOR] Sending settings (theme: ${currentTheme}, prev: ${this._lastSentTheme})`);
-              this._lastSentTheme = currentTheme;
+            if (settingsKey !== this._lastSentSettingsKey) {
+              log(`📤 [EVENT-COORDINATOR] Sending settings update`);
+              this._lastSentSettingsKey = settingsKey;
               this._sendMessage({
                 command: 'settingsResponse',
                 settings,
               }).catch((err) => log('❌ [EVENT-COORDINATOR] Failed to send settings update:', err));
               log('⚙️ [EVENT-COORDINATOR] Sent settings update to WebView');
             } else {
-              log(`⏭️ [EVENT-COORDINATOR] Skipping duplicate theme update (${currentTheme})`);
+              log(`⏭️ [EVENT-COORDINATOR] Skipping duplicate settings update`);
             }
           }
 
@@ -316,6 +318,9 @@ export class TerminalEventCoordinator implements vscode.Disposable {
             );
             log('⚙️ [EVENT-COORDINATOR] Sent font settings update to WebView');
           }
+
+          // 🔧 FIX: Nullify timer after callback for clarity
+          this._configChangeDebounceTimer = null;
         }, 100); // 100ms debounce
       }
     });
@@ -334,8 +339,9 @@ export class TerminalEventCoordinator implements vscode.Disposable {
   /**
    * Get current settings from VS Code configuration
    * Uses UnifiedConfigurationService for consistency with other settings sources
+   * 🔧 FIX: Returns typed WebViewSettingsPayload instead of Record<string, unknown>
    */
-  private _getCurrentSettings(): Record<string, unknown> {
+  private _getCurrentSettings(): WebViewSettingsPayload {
     const configService = getUnifiedConfigurationService();
     const settings = configService.getCompleteTerminalSettings();
     const altClickSettings = configService.getAltClickSettings();
