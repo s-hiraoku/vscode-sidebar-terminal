@@ -219,16 +219,21 @@ export class TerminalEventCoordinator implements vscode.Disposable {
   // Debounce timer for config change events
   private _configChangeDebounceTimer: NodeJS.Timeout | null = null;
   private _lastSentTheme: string | null = null;
+  // 🔧 FIX: Persistent flags to accumulate update intent across debounce window
+  // This prevents stale closure values when multiple config events fire rapidly
+  private _pendingSettingsUpdate = false;
+  private _pendingFontSettingsUpdate = false;
 
   /**
    * Set up configuration change listeners
+   *
+   * 🔧 FIX: Uses persistent instance flags (_pendingSettingsUpdate, _pendingFontSettingsUpdate)
+   * to accumulate update intent across debounce window. This ensures all config changes
+   * within the 100ms debounce window are honored, avoiding stale closure values.
    */
   private setupConfigurationChangeListeners(): void {
     const configChangeDisposable = vscode.workspace.onDidChangeConfiguration((event) => {
-      let shouldUpdateSettings = false;
-      let shouldUpdateFontSettings = false;
-
-      // Check for general settings changes
+      // Check for general settings changes - use OR to accumulate intent
       if (
         event.affectsConfiguration('editor.multiCursorModifier') ||
         event.affectsConfiguration('terminal.integrated.altClickMovesCursor') ||
@@ -236,10 +241,10 @@ export class TerminalEventCoordinator implements vscode.Disposable {
         event.affectsConfiguration('secondaryTerminal.theme') ||
         event.affectsConfiguration('secondaryTerminal.cursorBlink')
       ) {
-        shouldUpdateSettings = true;
+        this._pendingSettingsUpdate = true;
       }
 
-      // Check for font settings changes
+      // Check for font settings changes - use OR to accumulate intent
       if (
         event.affectsConfiguration('terminal.integrated.fontSize') ||
         event.affectsConfiguration('terminal.integrated.fontFamily') ||
@@ -254,12 +259,12 @@ export class TerminalEventCoordinator implements vscode.Disposable {
         event.affectsConfiguration('secondaryTerminal.lineHeight') ||
         event.affectsConfiguration('secondaryTerminal.letterSpacing')
       ) {
-        shouldUpdateFontSettings = true;
+        this._pendingFontSettingsUpdate = true;
       }
 
       // Send updated settings to WebView when configuration changes
-      // Use debounce to prevent rapid-fire updates with stale values
-      if (shouldUpdateSettings || shouldUpdateFontSettings) {
+      // Use debounce to prevent rapid-fire updates
+      if (this._pendingSettingsUpdate || this._pendingFontSettingsUpdate) {
         // Clear any pending debounce timer
         if (this._configChangeDebounceTimer) {
           clearTimeout(this._configChangeDebounceTimer);
@@ -267,6 +272,12 @@ export class TerminalEventCoordinator implements vscode.Disposable {
 
         // Debounce: wait 100ms for config to settle before sending update
         this._configChangeDebounceTimer = setTimeout(() => {
+          // Read and reset the flags atomically
+          const shouldUpdateSettings = this._pendingSettingsUpdate;
+          const shouldUpdateFontSettings = this._pendingFontSettingsUpdate;
+          this._pendingSettingsUpdate = false;
+          this._pendingFontSettingsUpdate = false;
+
           log(
             '⚙️ [EVENT-COORDINATOR] Configuration changed (settings:',
             shouldUpdateSettings,

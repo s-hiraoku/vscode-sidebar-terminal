@@ -174,10 +174,13 @@
   max-width: 100% !important;
 }
 
-/* 🔧 CRITICAL FIX: xterm-cursor-layer and other layers
-   These layers inside xterm-screen may have fixed dimensions
+/* 🔧 xterm-screen child div elements (NOT canvas elements)
+   Some div layers inside xterm-screen may have fixed dimensions.
+   Note: Canvas elements are NOT affected by this rule and should NEVER
+   have max-width constraints applied (see comment above).
+   The :not(canvas) ensures we only target div children.
 */
-.xterm-screen > div {
+.xterm-screen > div:not(canvas) {
   max-width: 100% !important;
 }
 

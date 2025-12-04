@@ -152,9 +152,12 @@ export class RenderingOptimizer implements Disposable {
   }
 
   /**
-   * Check if WebGL environment is problematic
-   * Some macOS configurations with certain GPU drivers can cause
-   * rendering issues with WebGL in VS Code WebViews.
+   * Check if running in a potentially problematic WebGL environment
+   * (e.g., x86 Node.js on ARM macOS via Rosetta, or Volta with x86 Node)
+   *
+   * @internal Currently unreachable - WebGL is disabled in enableWebGL() due to
+   * macOS Tahoe GPU issues. Preserved for future use when WebGL is re-enabled.
+   * @see https://github.com/electron/electron/issues/45574
    */
   private isProblematicWebGLEnvironment(): boolean {
     try {
