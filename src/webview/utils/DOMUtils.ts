@@ -236,20 +236,18 @@ export namespace DOMUtils {
       xtermScreen.style.minWidth = '';
     }
 
-    // 🔧 FIX: Reset canvas element inline styles ONLY (NOT attributes!)
-    // xterm.js sets fixed pixel width/height on canvas elements as:
-    // 1. HTML attributes (width="XXX" height="YYY") - REQUIRED for rendering resolution
-    // 2. Inline styles (style="width: XXXpx; height: YYYpx") - for display size
+    // 🔧 CRITICAL FIX: DO NOT reset canvas inline styles!
+    // xterm.js sets inline styles on canvas elements for precise display size:
+    // - style="width: XXXpx; height: YYYpx" - controls display size
+    // - width/height attributes - controls rendering resolution
     //
-    // ⚠️ WARNING: Do NOT remove width/height ATTRIBUTES - xterm.js needs them for rendering!
-    // Only clear the inline STYLES to allow CSS to control display size.
-    const canvasElements = container.querySelectorAll('.xterm-screen canvas');
-    canvasElements.forEach((canvas) => {
-      const canvasEl = canvas as HTMLCanvasElement;
-      // Clear inline styles only - let CSS control display size
-      canvasEl.style.width = '';
-      canvasEl.style.height = '';
-    });
+    // Clearing inline styles breaks cursor and decoration rendering on macOS.
+    // The container styles (.xterm-screen, .xterm-viewport) with width: 100%
+    // are sufficient for expansion. Let fitAddon.fit() handle canvas sizing.
+    //
+    // Previous code that cleared canvas styles has been removed:
+    // const canvasElements = container.querySelectorAll('.xterm-screen canvas');
+    // canvasElements.forEach((canvas) => { canvasEl.style.width = ''; ... });
 
     // 🔧 FIX: Also reset xterm-rows element which contains the actual rendered text
     const xtermRows = container.querySelector('.xterm-rows') as HTMLElement;

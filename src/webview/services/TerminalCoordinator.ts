@@ -133,9 +133,14 @@ export class TerminalCoordinator extends BaseManager implements ITerminalCoordin
 
       // Open terminal in container
       terminal.open(container);
+
       // Reset xterm.js inline styles before fit to allow terminal expansion
       DOMUtils.resetXtermInlineStyles(container);
       fitAddon.fit();
+
+      // 🔧 FIX: Refresh to ensure cursor and decorations are rendered
+      // Do NOT call terminal.clear() as it interferes with shell prompt
+      terminal.refresh(0, terminal.rows - 1);
 
       // Setup terminal event handlers
       this.setupTerminalEventHandlers(terminal, terminalId);

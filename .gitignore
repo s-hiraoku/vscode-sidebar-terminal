@@ -35,3 +35,4 @@ yarn-error.log*
 
 # Claude Code関連ファイル
 .claude/settings.local.json
+.envrc

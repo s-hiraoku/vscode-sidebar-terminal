@@ -14,7 +14,7 @@
  * @see openspec/changes/refactor-terminal-foundation/specs/split-lifecycle-manager/spec.md
  */
 
-import { Terminal } from '@xterm/xterm';
+import { Terminal, ITerminalOptions } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 
 import { TerminalConfig } from '../../types/shared';
@@ -166,21 +166,91 @@ export class TerminalCreationService implements Disposable {
           }
         }
 
+        // Get font settings from config (sent by Extension) OR from ConfigManager
+        // Priority: config direct properties > config.fontSettings > ConfigManager
+        // This ensures powerlevel10k icons and other Nerd Font characters display correctly
+        const configManager = this.coordinator.getManagers?.()?.config;
+
+        // Check BOTH config.fontSettings AND direct config properties
+        // Extension sends fontFamily/fontSize directly in config, not nested in fontSettings
+        const configFontSettings = (config as any)?.fontSettings;
+        const directFontFamily = (config as any)?.fontFamily;
+        const directFontSize = (config as any)?.fontSize;
+
+        // Use direct config values if available, otherwise fall back to fontSettings or ConfigManager
+        let currentFontSettings: any;
+        if (directFontFamily || directFontSize) {
+          // Extension sent font settings directly in config
+          currentFontSettings = {
+            fontFamily: directFontFamily || configFontSettings?.fontFamily || configManager?.getCurrentFontSettings?.()?.fontFamily,
+            fontSize: directFontSize || configFontSettings?.fontSize || configManager?.getCurrentFontSettings?.()?.fontSize,
+            fontWeight: (config as any)?.fontWeight || configFontSettings?.fontWeight || 'normal',
+            fontWeightBold: (config as any)?.fontWeightBold || configFontSettings?.fontWeightBold || 'bold',
+            lineHeight: (config as any)?.lineHeight || configFontSettings?.lineHeight || 1,
+            letterSpacing: (config as any)?.letterSpacing ?? configFontSettings?.letterSpacing ?? 0,
+          };
+        } else if (configFontSettings) {
+          currentFontSettings = configFontSettings;
+        } else {
+          currentFontSettings = configManager?.getCurrentFontSettings?.();
+        }
+
+        // Only apply non-empty font settings to prevent overwriting defaults with empty values
+        // This ensures powerlevel10k/Nerd Font settings are actually applied
+        const fontOverrides: Partial<ITerminalOptions> = {};
+        if (currentFontSettings) {
+          // Only include fontFamily if it's a non-empty string
+          if (typeof currentFontSettings.fontFamily === 'string' && currentFontSettings.fontFamily.trim()) {
+            fontOverrides.fontFamily = currentFontSettings.fontFamily.trim();
+          }
+          // Only include fontSize if it's a positive number
+          if (typeof currentFontSettings.fontSize === 'number' && currentFontSettings.fontSize > 0) {
+            fontOverrides.fontSize = currentFontSettings.fontSize;
+          }
+          // Only include fontWeight if it's a non-empty string
+          if (typeof currentFontSettings.fontWeight === 'string' && currentFontSettings.fontWeight.trim()) {
+            fontOverrides.fontWeight = currentFontSettings.fontWeight.trim() as ITerminalOptions['fontWeight'];
+          }
+          // Only include fontWeightBold if it's a non-empty string
+          if (typeof currentFontSettings.fontWeightBold === 'string' && currentFontSettings.fontWeightBold.trim()) {
+            fontOverrides.fontWeightBold = currentFontSettings.fontWeightBold.trim() as ITerminalOptions['fontWeightBold'];
+          }
+          // Only include lineHeight if it's a positive number
+          if (typeof currentFontSettings.lineHeight === 'number' && currentFontSettings.lineHeight > 0) {
+            fontOverrides.lineHeight = currentFontSettings.lineHeight;
+          }
+          // Only include letterSpacing if it's a number (can be 0 or negative)
+          if (typeof currentFontSettings.letterSpacing === 'number') {
+            fontOverrides.letterSpacing = currentFontSettings.letterSpacing;
+          }
+        }
+
         // Merge config with defaults using TerminalConfigService
-        // Cast config to WebViewTerminalConfig compatible type
-        const terminalConfig = TerminalConfigService.mergeConfig(
-          config as Parameters<typeof TerminalConfigService.mergeConfig>[0]
-        );
+        // Include font settings in the merge to ensure they're applied from the start
+        const configWithFonts = {
+          ...(config as Parameters<typeof TerminalConfigService.mergeConfig>[0]),
+          ...fontOverrides,
+        };
+        const terminalConfig = TerminalConfigService.mergeConfig(configWithFonts);
 
         // Create Terminal instance
         const terminal = new Terminal(terminalConfig as any);
         terminalLogger.info(`✅ Terminal instance created: ${terminalId}`);
+
+        // Get link modifier from settings (VS Code standard behavior)
+        // When multiCursorModifier is 'alt', links open with Cmd/Ctrl+Click
+        // When multiCursorModifier is 'ctrlCmd', links open with Alt+Click
+        // Note: configManager was already retrieved above for font settings
+        const currentSettings = configManager?.getCurrentSettings?.();
+        const multiCursorModifier = currentSettings?.multiCursorModifier ?? 'alt';
+        const linkModifier = multiCursorModifier === 'alt' ? 'alt' : 'ctrlCmd';
 
         // Load all addons using TerminalAddonManager
         const loadedAddons = await this.addonManager.loadAllAddons(terminal, terminalId, {
           enableGpuAcceleration: terminalConfig.enableGpuAcceleration,
           enableSearchAddon: terminalConfig.enableSearchAddon,
           enableUnicode11: terminalConfig.enableUnicode11,
+          linkModifier, // VS Code standard: pass link modifier setting
           linkHandler: (_event, uri) => {
             // Delegate to extension so it can honor workspace trust and external uri handling
             try {
@@ -316,23 +386,25 @@ export class TerminalCreationService implements Disposable {
 
         // 🎯 VS Code Pattern: Apply font and visual settings AFTER terminal.open()
         // xterm.js requires the terminal to be attached to DOM before settings can be applied
+        // Note: configManager was already retrieved above; reuse it here
         try {
           const managers = this.coordinator.getManagers?.();
           const uiManager = managers?.ui;
-          const configManager = managers?.config;
 
           if (uiManager) {
-            const currentSettings = configManager?.getCurrentSettings?.();
-            const currentFontSettings = configManager?.getCurrentFontSettings?.();
+            // Use currentSettings already retrieved above, or get fresh copy
+            const settingsForVisuals = currentSettings ?? configManager?.getCurrentSettings?.();
+            // Use currentFontSettings already retrieved above, or get fresh copy
+            const fontSettingsForApply = currentFontSettings ?? configManager?.getCurrentFontSettings?.();
 
-            if (currentSettings) {
-              uiManager.applyAllVisualSettings(terminal, currentSettings);
+            if (settingsForVisuals) {
+              uiManager.applyAllVisualSettings(terminal, settingsForVisuals);
               terminalLogger.info(`✅ Visual settings applied to terminal: ${terminalId}`);
             }
 
-            if (currentFontSettings) {
-              uiManager.applyFontSettings(terminal, currentFontSettings);
-              terminalLogger.info(`✅ Font settings applied to terminal: ${terminalId} (${currentFontSettings.fontFamily}, ${currentFontSettings.fontSize}px)`);
+            if (fontSettingsForApply) {
+              uiManager.applyFontSettings(terminal, fontSettingsForApply);
+              terminalLogger.info(`✅ Font settings applied to terminal: ${terminalId} (${fontSettingsForApply.fontFamily}, ${fontSettingsForApply.fontSize}px)`);
             }
           }
         } catch (error) {
@@ -361,6 +433,8 @@ export class TerminalCreationService implements Disposable {
         this.setupShellIntegration(terminal, terminalId);
 
         // Register file link handlers using TerminalLinkManager
+        // Set link modifier before registering handlers (VS Code standard behavior)
+        this.linkManager.setLinkModifier(linkModifier);
         this.linkManager.registerTerminalLinkHandlers(terminal, terminalId);
 
         // Enable VS Code standard scrollbar using TerminalScrollbarService
@@ -554,6 +628,40 @@ export class TerminalCreationService implements Disposable {
         terminalLogger.info(
           `✅ Container unregistered from TerminalContainerManager: ${terminalId}`
         );
+
+        // 🔧 FIX: Refresh layout after terminal removal to clean up orphaned resizers
+        const remainingTerminals = this.splitManager.getTerminals().size;
+        const displayManager = this.coordinator?.getDisplayModeManager?.();
+        const currentMode = displayManager?.getCurrentMode?.() ?? 'normal';
+
+        terminalLogger.info(`🔧 [CLEANUP] Current mode: ${currentMode}, remaining: ${remainingTerminals}`);
+
+        if (remainingTerminals <= 1) {
+          // If only 1 or 0 terminals remain, clear all split artifacts including resizers
+          containerManager.clearSplitArtifacts();
+          terminalLogger.info(`✅ Split artifacts cleared (remaining terminals: ${remainingTerminals})`);
+
+          // Switch to normal mode if we're in split mode with 1 terminal
+          if (currentMode === 'split' && displayManager && remainingTerminals === 1) {
+            displayManager.setDisplayMode('normal');
+            terminalLogger.info(`✅ Switched to normal mode after deletion`);
+          }
+        } else if (currentMode === 'split') {
+          // If multiple terminals remain and we're in split mode, rebuild layout
+          const orderedIds = Array.from(this.splitManager.getTerminals().keys());
+          const activeId = this.coordinator?.getActiveTerminalId?.() ?? orderedIds[0] ?? null;
+          containerManager.applyDisplayState({
+            mode: 'split',
+            activeTerminalId: activeId,
+            orderedTerminalIds: orderedIds,
+            splitDirection: 'vertical',
+          });
+          terminalLogger.info(`✅ Split layout rebuilt with ${remainingTerminals} terminals`);
+        } else {
+          // Normal or fullscreen mode - just clear any stray split artifacts
+          containerManager.clearSplitArtifacts();
+          terminalLogger.info(`✅ Cleared stray split artifacts in ${currentMode} mode`);
+        }
       }
 
       terminalLogger.info(`Terminal removed successfully: ${terminalId}`);
@@ -672,6 +780,11 @@ export class TerminalCreationService implements Disposable {
           // 🔧 CRITICAL FIX: Reset xterm inline styles BEFORE fit() to allow width expansion
           DOMUtils.resetXtermInlineStyles(container);
           fitAddon.fit();
+
+          // 🔧 FIX: Refresh terminal to ensure cursor and decorations are rendered
+          // Do NOT call terminal.clear() as it clears shell prompt output
+          terminal.refresh(0, terminal.rows - 1);
+
           terminalLogger.debug(
             `Terminal initial size: ${terminalId} (${terminal.cols}x${terminal.rows}) after ${retryCount} retries`
           );
@@ -685,6 +798,8 @@ export class TerminalCreationService implements Disposable {
                 // 🔧 FIX: Reset xterm inline styles before delayed fit as well
                 DOMUtils.resetXtermInlineStyles(container);
                 fitAddon.fit();
+                // Refresh after delayed fit to ensure cursor visibility
+                terminal.refresh(0, terminal.rows - 1);
                 terminalLogger.debug(
                   `Terminal delayed resize: ${terminalId} (${terminal.cols}x${terminal.rows})`
                 );
@@ -710,6 +825,8 @@ export class TerminalCreationService implements Disposable {
             try {
               DOMUtils.resetXtermInlineStyles(container);
               fitAddon.fit();
+              // Refresh to ensure cursor visibility (do NOT clear)
+              terminal.refresh(0, terminal.rows - 1);
               terminalLogger.info(`Forced fit for small container: ${terminalId}`);
             } catch (e) {
               terminalLogger.error(`Forced fit failed for ${terminalId}:`, e);

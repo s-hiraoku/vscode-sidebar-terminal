@@ -246,7 +246,21 @@ export class TerminalCommandHandlers {
   public async performKillTerminal(terminalId: string): Promise<void> {
     log(`🗑️ [HANDLER] Killing terminal: ${terminalId}`);
 
-    this.deps.terminalManager.killTerminal(terminalId);
+    // 🔧 FIX: await killTerminal to ensure deletion completes before sending messages
+    try {
+      await this.deps.terminalManager.killTerminal(terminalId);
+    } catch (error) {
+      // killTerminal throws if it fails (e.g., last terminal protection)
+      log(`⚠️ [HANDLER] killTerminal failed:`, error);
+      // Send failure response to WebView
+      await this.deps.communicationService.sendMessage({
+        command: 'deleteTerminalResponse',
+        terminalId: terminalId,
+        success: false,
+        reason: error instanceof Error ? error.message : 'Terminal deletion failed',
+      });
+      return;
+    }
 
     await this.deps.communicationService.sendMessage({
       command: 'terminalRemoved',
@@ -474,6 +488,10 @@ export class TerminalCommandHandlers {
   public async initializeTerminals(): Promise<void> {
     log('🔧 [HANDLER] Initializing terminals...');
 
+    // Include font settings in terminalCreated message
+    const configService = getUnifiedConfigurationService();
+    const fontSettings = configService.getWebViewFontSettings();
+
     const terminals = this.deps.terminalManager.getTerminals();
     for (const terminal of terminals) {
       await this.deps.communicationService.sendMessage({
@@ -483,6 +501,10 @@ export class TerminalCommandHandlers {
           name: terminal.name,
           cwd: terminal.cwd || safeProcessCwd(),
           isActive: terminal.id === this.deps.terminalManager.getActiveTerminalId(),
+        },
+        // 🔧 Include font settings directly in the message
+        config: {
+          fontSettings,
         },
       });
     }

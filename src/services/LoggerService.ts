@@ -147,7 +147,7 @@ export class LoggerService {
       if (typeof data === 'object') {
         try {
           parts.push(JSON.stringify(data, null, 2));
-        } catch (error) {
+        } catch {
           parts.push(`[Circular or non-serializable data]`);
         }
       } else {

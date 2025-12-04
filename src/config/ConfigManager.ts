@@ -252,33 +252,37 @@ export class ConfigManager {
 
   /**
    * VS Codeのフォント設定を取得
-   * 優先順位：terminal.integrated.fontFamily > editor.fontFamily > system monospace
+   * 優先順位：secondaryTerminal.fontFamily > terminal.integrated.fontFamily > editor.fontFamily > system monospace
    */
   public getFontFamily(): string {
     this._ensureInitialized();
 
     try {
-      // 1. ターミナル専用のフォント設定を確認
+      // 1. 拡張機能専用のフォント設定を確認（最優先）
+      const extensionConfig = vscode.workspace.getConfiguration('secondaryTerminal');
+      const extensionFontFamily = extensionConfig.get<string>('fontFamily');
+
+      if (extensionFontFamily && extensionFontFamily.trim() && extensionFontFamily.trim() !== 'monospace') {
+        return extensionFontFamily.trim();
+      }
+
+      // 2. ターミナル専用のフォント設定を確認
       const terminalConfig = vscode.workspace.getConfiguration('terminal.integrated');
       const terminalFontFamily = terminalConfig.get<string>('fontFamily');
-
-      // Debug log removed for production
 
       if (terminalFontFamily && terminalFontFamily.trim()) {
         return terminalFontFamily.trim();
       }
 
-      // 2. エディタのフォント設定をフォールバック
+      // 3. エディタのフォント設定をフォールバック
       const editorConfig = vscode.workspace.getConfiguration('editor');
       const editorFontFamily = editorConfig.get<string>('fontFamily');
-
-      // Debug log removed for production
 
       if (editorFontFamily && editorFontFamily.trim()) {
         return editorFontFamily.trim();
       }
 
-      // 3. システムデフォルトのmonospaceフォント
+      // 4. システムデフォルトのmonospaceフォント
       return CONFIG_CACHE_CONSTANTS.DEFAULT_FONT_FAMILY;
     } catch (error) {
       log('[ConfigManager] Error getting fontFamily:', error);
@@ -288,33 +292,38 @@ export class ConfigManager {
 
   /**
    * VS Codeのフォントサイズ設定を取得
-   * 優先順位：terminal.integrated.fontSize > editor.fontSize > default(14)
+   * 優先順位：secondaryTerminal.fontSize > terminal.integrated.fontSize > editor.fontSize > default(14)
    */
   public getFontSize(): number {
     this._ensureInitialized();
 
     try {
-      // 1. ターミナル専用のフォントサイズ設定を確認
+      // 1. 拡張機能専用のフォントサイズ設定を確認（最優先）
+      const extensionConfig = vscode.workspace.getConfiguration('secondaryTerminal');
+      const extensionFontSize = extensionConfig.get<number>('fontSize');
+
+      // デフォルト値(12)でない場合はユーザー設定として使用
+      if (extensionFontSize && extensionFontSize > 0 && extensionFontSize !== 12) {
+        return extensionFontSize;
+      }
+
+      // 2. ターミナル専用のフォントサイズ設定を確認
       const terminalConfig = vscode.workspace.getConfiguration('terminal.integrated');
       const terminalFontSize = terminalConfig.get<number>('fontSize');
-
-      // Debug log removed for production
 
       if (terminalFontSize && terminalFontSize > 0) {
         return terminalFontSize;
       }
 
-      // 2. エディタのフォントサイズ設定をフォールバック
+      // 3. エディタのフォントサイズ設定をフォールバック
       const editorConfig = vscode.workspace.getConfiguration('editor');
       const editorFontSize = editorConfig.get<number>('fontSize');
-
-      // Debug log removed for production
 
       if (editorFontSize && editorFontSize > 0) {
         return editorFontSize;
       }
 
-      // 3. デフォルトフォントサイズ
+      // 4. デフォルトフォントサイズ
       return CONFIG_CACHE_CONSTANTS.DEFAULT_FONT_SIZE;
     } catch (error) {
       log('[ConfigManager] Error getting fontSize:', error);

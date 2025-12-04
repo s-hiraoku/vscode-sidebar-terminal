@@ -2,6 +2,26 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Run Extension (x86_64)",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "/usr/bin/arch",
+      "runtimeArgs": [
+        "-x86_64",
+        "/Applications/Visual Studio Code.app/Contents/MacOS/Electron"
+      ],
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/dist/**/*.js"
+      ],
+      "preLaunchTask": "npm: compile",
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
+    },
+    {
       "name": "Run Extension",
       "type": "extensionHost",
       "request": "launch",
