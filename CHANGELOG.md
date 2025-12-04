@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.159] - 2025-12-04
+
+### Fixed
+
+- **Font Settings Not Applied (Complete Fix)**: Comprehensive fix for Nerd Font icons not displaying
+  - **Root Cause**: `terminalCreated` message didn't include font settings, and WebView processed messages asynchronously
+  - **Fix 1**: Include `fontSettings` in `terminalCreated` message from Extension
+  - **Fix 2**: WebView `TerminalCreationService` uses `config.fontSettings` if available (priority over ConfigManager)
+  - **Fix 3**: Support both `msg.terminalId` and `msg.terminal.id` message formats for compatibility
+  - **Result**: Font settings are now guaranteed to be available at terminal creation time
+  - Dual safety net: `fontSettingsUpdate` message + embedded `config.fontSettings` in `terminalCreated`
+
 ## [0.1.158] - 2025-12-04
 
 ### Fixed

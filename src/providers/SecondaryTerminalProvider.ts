@@ -1082,6 +1082,11 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   public async _initializeTerminal(): Promise<void> {
     log('🔧 [PROVIDER] Initializing terminal...');
 
+    // 🔧 CRITICAL FIX: Include font settings in terminalCreated message
+    // This ensures font settings are available when WebView creates terminals
+    const fontSettings = this._settingsService.getCurrentFontSettings();
+    log('🔤 [PROVIDER] Font settings for terminal creation:', fontSettings);
+
     const terminals = this._terminalManager.getTerminals();
     for (const terminal of terminals) {
       await this._sendMessage({
@@ -1091,6 +1096,10 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           name: terminal.name,
           cwd: terminal.cwd || safeProcessCwd(),
           isActive: terminal.id === this._terminalManager.getActiveTerminalId(),
+        },
+        // 🔧 Include font settings directly in the message
+        config: {
+          fontSettings,
         },
       });
     }
@@ -1335,6 +1344,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         }
 
         if (restoredTerminals.length > 0) {
+          // 🔧 CRITICAL FIX: Include font settings in terminalCreated message for session restore
+          const fontSettings = this._settingsService.getCurrentFontSettings();
+
           // Send terminal creation notifications
           for (const mapping of terminalMappings) {
             await this._sendMessage({
@@ -1344,6 +1356,10 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
                 name: mapping.terminalData.name || `Terminal ${mapping.newId}`,
                 cwd: mapping.terminalData.cwd || safeProcessCwd(),
                 isActive: mapping.terminalData.isActive || false,
+              },
+              // 🔧 Include font settings directly in the message
+              config: {
+                fontSettings,
               },
             });
           }

@@ -148,13 +148,16 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
     msg: MessageCommand,
     coordinator: IManagerCoordinator
   ): Promise<void> {
-    const terminalId = msg.terminalId as string;
-    const terminalName = msg.terminalName as string;
+    // 🔧 FIX: Support both msg.terminalId and msg.terminal.id formats
+    // Extension sends terminal: { id, name, ... } but handler expected terminalId
+    const terminal = (msg as any).terminal;
+    const terminalId = (msg.terminalId as string) || terminal?.id;
+    const terminalName = (msg.terminalName as string) || terminal?.name;
     const terminalNumber = msg.terminalNumber as number;
     const config = msg.config;
-    const isActive = (msg as any).terminal?.isActive ?? false;
+    const isActive = terminal?.isActive ?? false;
 
-    if (terminalId && terminalName && config) {
+    if (terminalId && terminalName) {
       this.logger.info(
         `🔍 TERMINAL_CREATED message received: ${terminalId} (${terminalName}) #${terminalNumber || 'unknown'}${isActive ? ' [ACTIVE]' : ''}`
       );

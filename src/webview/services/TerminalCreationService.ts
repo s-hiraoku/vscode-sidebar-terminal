@@ -166,10 +166,20 @@ export class TerminalCreationService implements Disposable {
           }
         }
 
-        // 🔧 CRITICAL FIX: Get font settings BEFORE creating terminal
+        // 🔧 CRITICAL FIX: Get font settings from config (sent by Extension) OR from ConfigManager
+        // Priority: config.fontSettings (from Extension message) > ConfigManager (from FontSettingsService)
         // This ensures powerlevel10k icons and other Nerd Font characters display correctly
         const configManager = this.coordinator.getManagers?.()?.config;
-        const currentFontSettings = configManager?.getCurrentFontSettings?.();
+
+        // 🔧 FIX: Use fontSettings from config if available (sent by Extension in terminalCreated message)
+        // This solves the timing issue where FontSettingsService hasn't received settings yet
+        const configFontSettings = (config as any)?.fontSettings;
+        const currentFontSettings = configFontSettings || configManager?.getCurrentFontSettings?.();
+
+        terminalLogger.info(`🔤 Font settings source: ${configFontSettings ? 'config (Extension)' : 'ConfigManager'}`);
+        if (currentFontSettings) {
+          terminalLogger.info(`🔤 Font settings: ${currentFontSettings.fontFamily}, ${currentFontSettings.fontSize}px`);
+        }
 
         // Merge config with defaults using TerminalConfigService
         // Include font settings in the merge to ensure they're applied from the start

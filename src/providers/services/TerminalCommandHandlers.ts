@@ -474,6 +474,11 @@ export class TerminalCommandHandlers {
   public async initializeTerminals(): Promise<void> {
     log('🔧 [HANDLER] Initializing terminals...');
 
+    // 🔧 CRITICAL FIX: Include font settings in terminalCreated message
+    const configService = getUnifiedConfigurationService();
+    const fontSettings = configService.getFontSettings();
+    log('🔤 [HANDLER] Font settings for terminal creation:', fontSettings);
+
     const terminals = this.deps.terminalManager.getTerminals();
     for (const terminal of terminals) {
       await this.deps.communicationService.sendMessage({
@@ -483,6 +488,10 @@ export class TerminalCommandHandlers {
           name: terminal.name,
           cwd: terminal.cwd || safeProcessCwd(),
           isActive: terminal.id === this.deps.terminalManager.getActiveTerminalId(),
+        },
+        // 🔧 Include font settings directly in the message
+        config: {
+          fontSettings,
         },
       });
     }
