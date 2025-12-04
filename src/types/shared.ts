@@ -169,6 +169,22 @@ export interface WebViewTerminalSettings extends PartialTerminalSettings {
 }
 
 /**
+ * WebView settings payload sent via 'settingsResponse' command
+ * Used by TerminalEventCoordinator for configuration change notifications
+ * 🔧 FIX: Added for type safety - replaces Record<string, unknown>
+ */
+export interface WebViewSettingsPayload {
+  readonly cursorBlink: boolean;
+  readonly theme: string;
+  readonly altClickMovesCursor: boolean;
+  readonly multiCursorModifier: string;
+  readonly enableCliAgentIntegration: boolean;
+  readonly highlightActiveBorder: boolean;
+  readonly dynamicSplitDirection: boolean;
+  readonly panelLocation: 'auto' | 'sidebar' | 'panel';
+}
+
+/**
  * 完全なターミナル設定
  * 全ての設定項目を含む統合型
  */
