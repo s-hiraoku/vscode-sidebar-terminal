@@ -729,19 +729,43 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     log('🔥 [TERMINAL-INIT] === _handleWebviewInitialized CALLED ===');
     log('🎯 [TERMINAL-INIT] WebView fully initialized - starting terminal initialization');
 
-    // 🔤 FIX: Send init message to WebView to trigger font settings request
-    // This was missing - WebView needs init message to send getSettings request
-    log('📤 [TERMINAL-INIT] Sending init message to WebView...');
-    void this._sendMessage({
-      command: 'init',
-      timestamp: Date.now(),
-    }).then(() => {
-      log('✅ [TERMINAL-INIT] init message sent to WebView');
-    });
+    // 🔤 FIX: Send init message and font settings BEFORE creating terminals
+    // This ensures fonts are applied during terminal creation, not after
+    void this._initializeWithFontSettings();
+  }
 
-    // Start initialization via orchestrator
-    // Now it's safe to create terminals because WebView can handle terminalCreated messages
-    void this._orchestrator.initialize();
+  /**
+   * Initialize WebView with font settings before creating terminals
+   * This ensures font settings are available when terminals are created
+   */
+  private async _initializeWithFontSettings(): Promise<void> {
+    try {
+      // Step 1: Send init message
+      log('📤 [TERMINAL-INIT] Step 1: Sending init message to WebView...');
+      await this._sendMessage({
+        command: 'init',
+        timestamp: Date.now(),
+      });
+      log('✅ [TERMINAL-INIT] init message sent');
+
+      // Step 2: Send font settings BEFORE terminal creation
+      const fontSettings = this._settingsService.getCurrentFontSettings();
+      log('📤 [TERMINAL-INIT] Step 2: Sending font settings BEFORE terminal creation:', fontSettings);
+      await this._sendMessage({
+        command: 'fontSettingsUpdate',
+        fontSettings,
+      });
+      log('✅ [TERMINAL-INIT] Font settings sent');
+
+      // Step 3: Now create terminals - they will use the font settings we just sent
+      log('📤 [TERMINAL-INIT] Step 3: Starting terminal initialization with font settings ready');
+      await this._orchestrator.initialize();
+      log('✅ [TERMINAL-INIT] Terminal initialization complete');
+    } catch (error) {
+      log('❌ [TERMINAL-INIT] Error during initialization:', error);
+      // Still try to initialize terminals even if font settings failed
+      void this._orchestrator.initialize();
+    }
   }
 
   private async _handleGetSettings(): Promise<void> {

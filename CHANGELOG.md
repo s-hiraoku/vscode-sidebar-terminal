@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.158] - 2025-12-04
+
+### Fixed
+
+- **Font Settings Timing Issue**: Fix font not applied on startup
+  - Send `fontSettingsUpdate` message BEFORE terminal creation (not after)
+  - Previously terminals were created before WebView received font settings
+  - Now initialization sequence: init → fontSettingsUpdate → terminal creation
+  - Ensures FontSettingsService has correct settings when terminals are created
+
 ## [0.1.157] - 2025-12-03
 
 ### Fixed
