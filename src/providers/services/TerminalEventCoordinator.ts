@@ -242,6 +242,8 @@ export class TerminalEventCoordinator implements vscode.Disposable {
   private _configChangeDebounceTimer: NodeJS.Timeout | null = null;
   // 🔧 FIX: Track entire settings payload to prevent dropping non-theme setting changes
   private _lastSentSettingsKey: string | null = null;
+  // 🔧 FIX: Track font settings to prevent duplicate font settings updates
+  private _lastFontSettingsKey: string | null = null;
   // 🔧 FIX: Persistent flags to accumulate update intent across debounce window
   // This prevents stale closure values when multiple config events fire rapidly
   private _pendingSettingsUpdate = false;
@@ -331,13 +333,22 @@ export class TerminalEventCoordinator implements vscode.Disposable {
 
           if (shouldUpdateFontSettings) {
             const fontSettings = this._getCurrentFontSettings();
-            this._sendMessage({
-              command: 'fontSettingsUpdate',
-              fontSettings,
-            }).catch((err) =>
-              log('❌ [EVENT-COORDINATOR] Failed to send font settings update:', err)
-            );
-            log('⚙️ [EVENT-COORDINATOR] Sent font settings update to WebView');
+            // 🔧 FIX: Deduplicate font settings to prevent duplicate updates within debounce window
+            const fontSettingsKey = JSON.stringify(fontSettings);
+
+            if (fontSettingsKey !== this._lastFontSettingsKey) {
+              log(`📤 [EVENT-COORDINATOR] Sending font settings update`);
+              this._lastFontSettingsKey = fontSettingsKey;
+              this._sendMessage({
+                command: 'fontSettingsUpdate',
+                fontSettings,
+              }).catch((err) =>
+                log('❌ [EVENT-COORDINATOR] Failed to send font settings update:', err)
+              );
+              log('⚙️ [EVENT-COORDINATOR] Sent font settings update to WebView');
+            } else {
+              log(`⏭️ [EVENT-COORDINATOR] Skipping duplicate font settings update`);
+            }
           }
 
           // 🔧 FIX: Nullify timer after callback for clarity
