@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.162] - 2025-12-04
+
+### Fixed
+
+- **Terminal 1 Initial Styling Inconsistency**: Fix Terminal 1 having different color/styling on initial display
+  - **Root Cause**: All terminals were created with `isActive: false`, active styling applied asynchronously later
+  - **Fix**: Pass `isActive` flag through terminal config and apply border styling BEFORE terminal opens
+  - **Result**: Terminal 1 now has consistent active styling from the start (no visual flicker)
+  - Added `updateSingleTerminalBorder` method to UIManager for early border application
+
 ## [0.1.161] - 2025-12-04
 
 ### Fixed

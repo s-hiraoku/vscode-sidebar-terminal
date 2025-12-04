@@ -165,10 +165,13 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
         `🔍 Current terminal count before creation: ${coordinator.getAllTerminalInstances().size}`
       );
 
+      // 🔧 FIX: Include isActive in config so container is created with correct initial styling
+      const configWithActive = config ? { ...config, isActive } : { isActive };
+
       const result = await coordinator.createTerminal(
         terminalId,
         terminalName,
-        config,
+        configWithActive,
         terminalNumber,
         'extension'
       );
