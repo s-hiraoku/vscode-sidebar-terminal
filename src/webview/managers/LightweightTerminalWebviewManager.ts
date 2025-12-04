@@ -1117,6 +1117,14 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
         highlightActiveBorder,
       };
 
+      // 🔧 CRITICAL FIX: Update ConfigManager with new settings
+      // This ensures new terminals created later will get the correct theme
+      if (this.configManager) {
+        const instances = this.terminalLifecycleManager.getAllTerminalInstances();
+        this.configManager.applySettings(this.currentSettings, instances);
+        log(`⚙️ [SETTINGS] ConfigManager updated with theme: ${this.currentSettings.theme}`);
+      }
+
       this.uiManager.setHighlightActiveBorder(highlightActiveBorder);
 
       const activeId = this.getActiveTerminalId();
@@ -1128,6 +1136,17 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
           this.uiManager.updateSplitTerminalBorders(activeId);
         }
       }
+
+      // Apply theme and visual settings to all terminals
+      const instances = this.terminalLifecycleManager.getAllTerminalInstances();
+      instances.forEach((terminalData, terminalId) => {
+        try {
+          this.uiManager.applyAllVisualSettings(terminalData.terminal, this.currentSettings);
+          log(`⚙️ [SETTINGS] Applied visual settings to terminal ${terminalId}`);
+        } catch (error) {
+          log(`❌ [SETTINGS] Error applying visual settings to terminal ${terminalId}:`, error);
+        }
+      });
 
       log('⚙️ Settings applied:', settings);
     } catch (error) {

@@ -110,6 +110,16 @@ export class TerminalSettingsManager {
         const instances = this.callbacks.getAllTerminalInstances();
         this.configManager.applySettings(this.currentSettings, instances);
         this.currentSettings = this.configManager.getCurrentSettings();
+
+        // Apply theme and visual settings to all terminals
+        instances.forEach((terminalData, terminalId) => {
+          try {
+            this.uiManager.applyAllVisualSettings(terminalData.terminal, this.currentSettings);
+            log(`[SETTINGS] Applied visual settings to terminal ${terminalId}`);
+          } catch (error) {
+            log(`[SETTINGS] Error applying visual settings to terminal ${terminalId}:`, error);
+          }
+        });
       }
 
       log('[SETTINGS] Settings applied:', settings);
