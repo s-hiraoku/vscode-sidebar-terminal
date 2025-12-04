@@ -1044,15 +1044,23 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private async _performKillTerminal(terminalId: string): Promise<void> {
     log(`🗑️ [PROVIDER] Killing terminal: ${terminalId}`);
 
-    // 🔧 FIX: await killTerminal to ensure deletion completes before sending state
+    // 🔧 FIX: await killTerminal and properly handle errors
+    // Do NOT send terminalRemoved if deletion fails (e.g., last terminal protection)
     try {
       await this._terminalManager.killTerminal(terminalId);
     } catch (error) {
       log(`❌ [PROVIDER] Error killing terminal: ${error}`);
-      // Continue to send messages even if deletion had issues
+      // 🔧 FIX: Send failure response and do NOT continue with removal messages
+      await this._sendMessage({
+        command: 'deleteTerminalResponse',
+        terminalId: terminalId,
+        success: false,
+        reason: error instanceof Error ? error.message : 'Terminal deletion failed',
+      });
+      return; // Stop here - do not send terminalRemoved for failed deletion
     }
 
-    // Send terminalRemoved message first
+    // Send terminalRemoved message first (only on successful deletion)
     await this._sendMessage({
       command: 'terminalRemoved',
       terminalId: terminalId,

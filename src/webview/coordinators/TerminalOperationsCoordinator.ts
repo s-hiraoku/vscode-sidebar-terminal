@@ -226,6 +226,8 @@ export class TerminalOperationsCoordinator {
 
   /**
    * 安全なターミナル作成
+   * 🔧 FIX: WebView側でIDを生成せず、Extension側に作成をリクエストするだけ
+   * Extension側が作成したターミナルはstateUpdateメッセージで同期される
    */
   public async createTerminalSafely(terminalName?: string): Promise<boolean> {
     try {
@@ -242,43 +244,27 @@ export class TerminalOperationsCoordinator {
         return false;
       }
 
-      // 削除待機中はキューに追加
+      // 削除待機中の場合はリクエストを遅延
       if (this.deletionTracker.size > 0) {
-        const nextNumber = this.getNextAvailableNumber();
-        if (!nextNumber) {
-          log('❌ No available number for queued creation');
-          return false;
-        }
-
-        const terminalId = `terminal-${nextNumber}`;
-        const finalName = terminalName || `Terminal ${nextNumber}`;
-
-        try {
-          return await this.queueTerminalCreation(terminalId, finalName);
-        } catch (error) {
-          log(`❌ Queued creation failed:`, error);
-          return false;
-        }
+        log('⏳ [SAFE-CREATE] Deletion in progress, waiting before creation request...');
+        // 500ms後に再試行
+        return new Promise((resolve) => {
+          setTimeout(() => {
+            this.createTerminalSafely(terminalName).then(resolve);
+          }, 500);
+        });
       }
 
-      // 直接作成
-      const nextNumber = this.getNextAvailableNumber();
-      if (!nextNumber) {
-        log('❌ No available number for direct creation');
-        return false;
-      }
-
-      const terminalId = `terminal-${nextNumber}`;
-      const finalName = terminalName || `Terminal ${nextNumber}`;
-
+      // 🔧 FIX: IDを生成せず、Extension側に作成をリクエスト
+      // Extension側がIDを生成し、terminalCreatedメッセージでWebViewに通知する
       this.deps.postMessageToExtension({
         command: 'createTerminal',
-        terminalId,
-        terminalName: finalName,
+        // terminalId は Extension 側で生成するため送らない
+        terminalName: terminalName,
         timestamp: Date.now(),
       });
 
-      log(`✅ Creation request sent: ${terminalId}`);
+      log(`✅ [SAFE-CREATE] Creation request sent to Extension`);
       return true;
     } catch (error) {
       log('❌ Error in safe terminal creation:', error);
@@ -288,11 +274,12 @@ export class TerminalOperationsCoordinator {
 
   /**
    * ターミナル作成をキューに追加
+   * 🔧 FIX: IDはExtension側で生成されるため、WebView側ではIDを指定せず名前のみを保持
    */
-  public queueTerminalCreation(terminalId: string, terminalName: string): Promise<boolean> {
+  public queueTerminalCreation(terminalName: string): Promise<boolean> {
     return new Promise((resolve, reject) => {
       const request: PendingCreationRequest = {
-        id: terminalId,
+        id: `pending-${Date.now()}`, // 仮ID（Extension側で本当のIDが割り当てられる）
         name: terminalName,
         timestamp: Date.now(),
         resolve,
@@ -300,11 +287,11 @@ export class TerminalOperationsCoordinator {
       };
 
       this.pendingCreationRequests.push(request);
-      log(`📥 [QUEUE] Queued terminal creation: ${terminalId}`);
+      log(`📥 [QUEUE] Queued terminal creation request`);
 
       // タイムアウト設定
       setTimeout(() => {
-        const index = this.pendingCreationRequests.findIndex((r) => r.id === terminalId);
+        const index = this.pendingCreationRequests.findIndex((r) => r.id === request.id);
         if (index !== -1) {
           this.pendingCreationRequests.splice(index, 1);
           reject(new Error('Terminal creation request timed out'));
@@ -315,6 +302,7 @@ export class TerminalOperationsCoordinator {
 
   /**
    * キューの処理
+   * 🔧 FIX: IDはExtension側で生成されるため、WebView側ではIDを送らない
    */
   public processPendingCreationRequests(): void {
     if (this.pendingCreationRequests.length === 0) {
@@ -327,18 +315,18 @@ export class TerminalOperationsCoordinator {
     if (!request) return;
 
     if (this.canCreateTerminal()) {
-      log(`✅ Processing terminal creation: ${request.id}`);
+      log(`✅ Processing queued terminal creation request`);
 
+      // 🔧 FIX: IDはExtension側で生成される
       this.deps.postMessageToExtension({
         command: 'createTerminal',
-        terminalId: request.id,
         terminalName: request.name,
         timestamp: Date.now(),
       });
 
       request.resolve(true);
     } else {
-      log(`❌ Cannot create terminal yet, re-queueing: ${request.id}`);
+      log(`❌ Cannot create terminal yet, re-queueing request`);
       this.pendingCreationRequests.unshift(request);
       setTimeout(() => this.processPendingCreationRequests(), 500);
     }

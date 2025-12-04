@@ -160,16 +160,18 @@ export class SplitLayoutService {
       terminalsWrapper.appendChild(wrapper);
       this.splitWrapperCache.set(terminalId, wrapper);
 
-      // Add resizer between terminals (not after the last one)
-      if (index < orderedTerminalIds.length - 1) {
-        const resizer = this.createSplitResizer(splitDirection);
-        terminalsWrapper.appendChild(resizer);
-        this.splitResizers.add(resizer);
-      }
+      // 🔧 DISABLED: Resizers are not functional yet, so skip adding them
+      // This prevents orphaned resizer elements from accumulating
+      // TODO: Re-enable when resize functionality is implemented
+      // if (index < orderedTerminalIds.length - 1) {
+      //   const resizer = this.createSplitResizer(splitDirection);
+      //   terminalsWrapper.appendChild(resizer);
+      //   this.splitResizers.add(resizer);
+      // }
     });
 
     containerLogger.info(
-      `Split layout activated: ${orderedTerminalIds.length} wrappers, ${this.splitResizers.size} resizers`
+      `Split layout activated: ${orderedTerminalIds.length} wrappers (resizers disabled)`
     );
   }
 

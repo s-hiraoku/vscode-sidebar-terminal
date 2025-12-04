@@ -400,14 +400,16 @@ export class TerminalLifecycleManager {
       `🗑️ [DELETE] Starting delete operation for terminal: ${terminalId} (source: ${options.source || 'unknown'})`
     );
 
-    // 1. Validation (if not force)
-    if (!options.force) {
-      const validation = this.validateDeletion(terminalId);
-      if (!validation.canDelete) {
-        log(`⚠️ [DELETE] Cannot delete terminal: ${validation.reason}`);
+    // 🔧 FIX: ALWAYS validate to enforce minimum 1 terminal rule
+    // Even with force: true, we must protect the last terminal
+    const validation = this.validateDeletion(terminalId);
+    if (!validation.canDelete) {
+      log(`⚠️ [DELETE] Cannot delete terminal: ${validation.reason}`);
+      // Only show warning message if not forced (force mode expects caller to handle errors)
+      if (!options.force) {
         showWarningMessage(validation.reason || 'Cannot delete terminal');
-        return { success: false, reason: validation.reason };
       }
+      return { success: false, reason: validation.reason };
     }
 
     // 2. Check terminal exists

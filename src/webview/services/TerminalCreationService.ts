@@ -628,6 +628,40 @@ export class TerminalCreationService implements Disposable {
         terminalLogger.info(
           `✅ Container unregistered from TerminalContainerManager: ${terminalId}`
         );
+
+        // 🔧 FIX: Refresh layout after terminal removal to clean up orphaned resizers
+        const remainingTerminals = this.splitManager.getTerminals().size;
+        const displayManager = this.coordinator?.getDisplayModeManager?.();
+        const currentMode = displayManager?.getCurrentMode?.() ?? 'normal';
+
+        terminalLogger.info(`🔧 [CLEANUP] Current mode: ${currentMode}, remaining: ${remainingTerminals}`);
+
+        if (remainingTerminals <= 1) {
+          // If only 1 or 0 terminals remain, clear all split artifacts including resizers
+          containerManager.clearSplitArtifacts();
+          terminalLogger.info(`✅ Split artifacts cleared (remaining terminals: ${remainingTerminals})`);
+
+          // Switch to normal mode if we're in split mode with 1 terminal
+          if (currentMode === 'split' && displayManager && remainingTerminals === 1) {
+            displayManager.setDisplayMode('normal');
+            terminalLogger.info(`✅ Switched to normal mode after deletion`);
+          }
+        } else if (currentMode === 'split') {
+          // If multiple terminals remain and we're in split mode, rebuild layout
+          const orderedIds = Array.from(this.splitManager.getTerminals().keys());
+          const activeId = this.coordinator?.getActiveTerminalId?.() ?? orderedIds[0] ?? null;
+          containerManager.applyDisplayState({
+            mode: 'split',
+            activeTerminalId: activeId,
+            orderedTerminalIds: orderedIds,
+            splitDirection: 'vertical',
+          });
+          terminalLogger.info(`✅ Split layout rebuilt with ${remainingTerminals} terminals`);
+        } else {
+          // Normal or fullscreen mode - just clear any stray split artifacts
+          containerManager.clearSplitArtifacts();
+          terminalLogger.info(`✅ Cleared stray split artifacts in ${currentMode} mode`);
+        }
       }
 
       terminalLogger.info(`Terminal removed successfully: ${terminalId}`);

@@ -1494,9 +1494,10 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   /**
    * Queue terminal creation request
    * 委譲: TerminalOperationsCoordinator
+   * 🔧 FIX: IDはExtension側で生成されるため、名前のみを受け付ける
    */
-  public queueTerminalCreation(terminalId: string, terminalName: string): Promise<boolean> {
-    return this.terminalOperations.queueTerminalCreation(terminalId, terminalName);
+  public queueTerminalCreation(terminalName: string): Promise<boolean> {
+    return this.terminalOperations.queueTerminalCreation(terminalName);
   }
 
   /**

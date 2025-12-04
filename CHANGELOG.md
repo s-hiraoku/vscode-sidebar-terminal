@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.161] - 2025-12-04
+
+### Fixed
+
+- **Terminal Deletion Bug**: Fix trash button deleting all terminals instead of keeping at least 1
+  - Always validate deletion even with `force: true` to enforce minimum terminal rule
+  - Await `killTerminal()` completion before sending messages to WebView
+  - Handle deletion errors properly to stop message propagation on failure
+
+- **Terminal State Management**: Fix garbage remaining after terminal add/delete cycles
+  - Move terminal ID generation to Extension side only (WebView no longer generates IDs)
+  - Prevent duplicate terminals and state mismatch between Extension and WebView
+  - Add proper layout cleanup after terminal removal
+
+- **Split Layout Resizers**: Disable non-functional resizer creation temporarily
+  - Resizers were leaving visual garbage when terminals were deleted
+  - Disabled until resize functionality is properly implemented
+
 ## [0.1.160] - 2025-12-04
 
 ### Fixed

@@ -30,13 +30,13 @@
 
 ### Terminal Management
 
-| Feature | Description |
-|---------|-------------|
-| **Multiple Terminals** | Up to 5 concurrent terminal instances |
-| **Session Persistence** | Auto-save/restore sessions with 1,000 lines scrollback |
-| **Split Views** | Vertical/horizontal splitting for multi-terminal workflows |
-| **Tab Management** | Drag & drop reordering, close buttons, smart switching |
-| **Cross-Platform** | Windows, macOS, and Linux support |
+| Feature                 | Description                                                |
+| ----------------------- | ---------------------------------------------------------- |
+| **Multiple Terminals**  | Up to 5 concurrent terminal instances                      |
+| **Session Persistence** | Auto-save/restore sessions with 1,000 lines scrollback     |
+| **Split Views**         | Vertical/horizontal splitting for multi-terminal workflows |
+| **Tab Management**      | Drag & drop reordering, close buttons, smart switching     |
+| **Cross-Platform**      | Windows, macOS, and Linux support                          |
 
 ### AI Agent Integration
 
@@ -45,9 +45,10 @@ Automatic detection and status tracking for:
 - **Claude Code** - `claude "your task"`
 - **Codex CLI** - `codex "your task"`
 - **Gemini CLI** - `gemini "your task"`
-- **GitHub Copilot** - `gh copilot` or keyboard shortcut
+- **GitHub Copilot** - `copilot` or keyboard shortcut
 
 **Features:**
+
 - Real-time connection status indicators
 - File reference sharing with `CMD+Option+L` (Mac) / `Ctrl+Alt+L` (Win/Linux)
 - Session persistence across VS Code restarts
@@ -63,26 +64,26 @@ Automatic detection and status tracking for:
 
 ## Keyboard Shortcuts
 
-| Shortcut | Action |
-|----------|--------|
-| `Cmd+C` / `Ctrl+C` | Copy selected text |
-| `Cmd+V` / `Ctrl+V` | Paste from clipboard |
-| `Cmd+Option+L` / `Ctrl+Alt+L` | Send file reference to AI agents |
-| `Cmd+K Cmd+C` / `Ctrl+K Ctrl+C` | GitHub Copilot integration |
-| `Alt+Click` | Position cursor |
-| `Ctrl+Shift+D` | Toggle debug panel |
+| Shortcut                        | Action                           |
+| ------------------------------- | -------------------------------- |
+| `Cmd+C` / `Ctrl+C`              | Copy selected text               |
+| `Cmd+V` / `Ctrl+V`              | Paste from clipboard             |
+| `Cmd+Option+L` / `Ctrl+Alt+L`   | Send file reference to AI agents |
+| `Cmd+K Cmd+C` / `Ctrl+K Ctrl+C` | GitHub Copilot integration       |
+| `Alt+Click`                     | Position cursor                  |
+| `Ctrl+Shift+D`                  | Toggle debug panel               |
 
 ## Command Palette
 
 Access via `Ctrl+Shift+P` (Win/Linux) or `Cmd+Shift+P` (Mac):
 
-| Command | Description |
-|---------|-------------|
-| `Secondary Terminal: Focus Terminal` | Focus terminal panel |
-| `Secondary Terminal: Split Terminal` | Split vertically |
-| `Secondary Terminal: Split Terminal Horizontal` | Split horizontally |
-| `Secondary Terminal: Show Version` | Display version info |
-| `Secondary Terminal: Clear Corrupted History` | Clear session data |
+| Command                                         | Description          |
+| ----------------------------------------------- | -------------------- |
+| `Secondary Terminal: Focus Terminal`            | Focus terminal panel |
+| `Secondary Terminal: Split Terminal`            | Split vertically     |
+| `Secondary Terminal: Split Terminal Horizontal` | Split horizontally   |
+| `Secondary Terminal: Show Version`              | Display version info |
+| `Secondary Terminal: Clear Corrupted History`   | Clear session data   |
 
 ## Configuration
 
@@ -117,10 +118,12 @@ User Input → VS Code Commands → Extension Host → WebView → xterm.js
 ```
 
 **Extension Host (Node.js)**
+
 - TerminalManager: PTY processes, lifecycle, AI detection
 - Session Management: Persistent state across restarts
 
 **WebView (Browser)**
+
 - xterm.js: Terminal emulation
 - Manager System: Input, UI, Performance, Splitting, Configuration
 
@@ -135,15 +138,18 @@ User Input → VS Code Commands → Extension Host → WebView → xterm.js
 ## Troubleshooting
 
 ### Terminal Not Starting
+
 - Check `secondaryTerminal.shell` setting points to valid shell
 - Verify shell is accessible from your PATH
 
 ### AI Agent Not Detected
+
 - Ensure `secondaryTerminal.enableCliAgentIntegration` is `true`
 - Check debug panel (`Ctrl+Shift+D`) for detection logs
 - Verify agent is properly installed
 
 ### Performance Issues
+
 - Reduce `secondaryTerminal.maxTerminals` if needed
 - Check system resources via debug panel
 
@@ -164,6 +170,7 @@ npm run lint          # ESLint check
 ```
 
 **Quality Standards:**
+
 - TypeScript strict mode
 - 275+ unit tests
 - E2E test coverage with Playwright
