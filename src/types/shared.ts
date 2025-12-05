@@ -31,6 +31,14 @@ export {
 // ===== 基本ターミナル設定 =====
 
 /**
+ * Active border display mode for terminals
+ * - 'none': Never show active border
+ * - 'always': Always show active border
+ * - 'multipleOnly': Only show when 2+ terminals exist
+ */
+export type ActiveBorderMode = 'none' | 'always' | 'multipleOnly';
+
+/**
  * 基本ターミナル設定インターフェース
  * 全てのターミナル設定の基盤となる型
  */
@@ -72,7 +80,7 @@ export interface InteractionConfig {
   readonly confirmBeforeKill?: boolean;
   readonly altClickMovesCursor?: boolean;
   readonly multiCursorModifier?: string;
-  readonly highlightActiveBorder?: boolean;
+  readonly activeBorderMode?: ActiveBorderMode;
 }
 
 // ===== 統合型定義 =====
@@ -93,7 +101,7 @@ export interface ExtensionTerminalConfig
     blink?: boolean;
   };
   readonly enableCliAgentIntegration?: boolean;
-  readonly highlightActiveBorder?: boolean;
+  readonly activeBorderMode?: ActiveBorderMode;
   // Addon configuration for WebView terminal rendering
   readonly enableGpuAcceleration?: boolean;
   readonly enableSearchAddon?: boolean;
@@ -117,7 +125,7 @@ export interface PartialTerminalSettings {
   altClickMovesCursor?: boolean;
   multiCursorModifier?: string;
   enableCliAgentIntegration?: boolean;
-  highlightActiveBorder?: boolean;
+  activeBorderMode?: ActiveBorderMode;
   // VS Code keybinding system settings
   sendKeybindingsToShell?: boolean;
   commandsToSkipShell?: string[];
@@ -185,7 +193,7 @@ export interface WebViewSettingsPayload {
   readonly altClickMovesCursor: boolean;
   readonly multiCursorModifier: string;
   readonly enableCliAgentIntegration: boolean;
-  readonly highlightActiveBorder: boolean;
+  readonly activeBorderMode: ActiveBorderMode;
   readonly dynamicSplitDirection: boolean;
   readonly panelLocation: 'auto' | 'sidebar' | 'panel';
 }
@@ -382,7 +390,7 @@ export const CONFIG_KEYS = {
   DEFAULT_PROFILE_OSX: 'defaultProfile.osx',
   INHERIT_VSCODE_PROFILES: 'inheritVSCodeProfiles',
   ENABLE_PROFILE_AUTO_DETECTION: 'enableProfileAutoDetection',
-  HIGHLIGHT_ACTIVE_BORDER: 'highlightActiveBorder',
+  ACTIVE_BORDER_MODE: 'activeBorderMode',
 } as const;
 
 // ===== ターミナル管理型 =====

@@ -1063,12 +1063,12 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     // Use onDidChangeConfiguration instead of non-existent onDidChangePanelLocation
     const disposable = vscode.workspace.onDidChangeConfiguration((event) => {
       // Check if panelLocation setting changed
-      if (event.affectsConfiguration('sidebarTerminal.panelLocation')) {
+      if (event.affectsConfiguration('secondaryTerminal.panelLocation')) {
         log('📍 [PROVIDER] Panel location configuration changed');
 
         // Get the new location from configuration
         const newLocation = vscode.workspace
-          .getConfiguration('sidebarTerminal')
+          .getConfiguration('secondaryTerminal')
           .get<PanelLocation>('panelLocation', 'sidebar');
 
         log(`📍 [PROVIDER] New panel location: ${newLocation}`);
@@ -1076,10 +1076,85 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           log(`❌ [PROVIDER] Failed to handle panel location change: ${error}`);
         });
       }
+
+      // Handle settings changes that affect WebView (e.g., activeBorderMode)
+      if (this._isSettingsChangeAffectingWebView(event)) {
+        log('⚙️ [PROVIDER] Settings changed, sending updated settings to WebView...');
+        void this._sendSettingsUpdateToWebView();
+      }
+
+      // Handle font settings changes
+      if (this._isFontSettingsChange(event)) {
+        log('🎨 [PROVIDER] Font settings changed, sending update to WebView...');
+        void this._sendFontSettingsUpdateToWebView();
+      }
     });
 
     this._cleanupService.addDisposable(disposable);
     log('✅ [PROVIDER] Panel location change listener registered');
+  }
+
+  /**
+   * Check if configuration change affects WebView settings
+   */
+  private _isSettingsChangeAffectingWebView(event: vscode.ConfigurationChangeEvent): boolean {
+    return (
+      event.affectsConfiguration('secondaryTerminal.activeBorderMode') ||
+      event.affectsConfiguration('secondaryTerminal.theme') ||
+      event.affectsConfiguration('secondaryTerminal.cursorBlink') ||
+      event.affectsConfiguration('secondaryTerminal.enableCliAgentIntegration') ||
+      event.affectsConfiguration('secondaryTerminal.dynamicSplitDirection') ||
+      event.affectsConfiguration('secondaryTerminal.panelLocation') ||
+      event.affectsConfiguration('editor.multiCursorModifier') ||
+      event.affectsConfiguration('terminal.integrated.altClickMovesCursor') ||
+      event.affectsConfiguration('secondaryTerminal.altClickMovesCursor')
+    );
+  }
+
+  /**
+   * Check if configuration change affects font settings
+   */
+  private _isFontSettingsChange(event: vscode.ConfigurationChangeEvent): boolean {
+    return (
+      event.affectsConfiguration('secondaryTerminal.fontFamily') ||
+      event.affectsConfiguration('secondaryTerminal.fontSize') ||
+      event.affectsConfiguration('secondaryTerminal.fontWeight') ||
+      event.affectsConfiguration('secondaryTerminal.fontWeightBold') ||
+      event.affectsConfiguration('secondaryTerminal.lineHeight') ||
+      event.affectsConfiguration('secondaryTerminal.letterSpacing') ||
+      event.affectsConfiguration('terminal.integrated.fontSize') ||
+      event.affectsConfiguration('terminal.integrated.fontFamily') ||
+      event.affectsConfiguration('terminal.integrated.fontWeight') ||
+      event.affectsConfiguration('terminal.integrated.fontWeightBold') ||
+      event.affectsConfiguration('terminal.integrated.lineHeight') ||
+      event.affectsConfiguration('terminal.integrated.letterSpacing') ||
+      event.affectsConfiguration('editor.fontSize') ||
+      event.affectsConfiguration('editor.fontFamily')
+    );
+  }
+
+  /**
+   * Send updated settings to WebView
+   */
+  private async _sendSettingsUpdateToWebView(): Promise<void> {
+    const settings = this._settingsService.getCurrentSettings();
+    log(`📤 [PROVIDER] Sending settings update to WebView: activeBorderMode=${settings.activeBorderMode}`);
+    await this._sendMessage({
+      command: 'settingsResponse',
+      settings,
+    });
+  }
+
+  /**
+   * Send updated font settings to WebView
+   */
+  private async _sendFontSettingsUpdateToWebView(): Promise<void> {
+    const fontSettings = this._settingsService.getCurrentFontSettings();
+    log('📤 [PROVIDER] Sending font settings update to WebView');
+    await this._sendMessage({
+      command: 'fontSettingsUpdate',
+      fontSettings,
+    });
   }
 
   public splitTerminal(direction?: SplitDirection): void {

@@ -363,7 +363,7 @@ export class TerminalEventCoordinator implements vscode.Disposable {
       altClickMovesCursor: altClickSettings.altClickMovesCursor,
       multiCursorModifier: altClickSettings.multiCursorModifier,
       enableCliAgentIntegration: configService.isFeatureEnabled('cliAgentIntegration'),
-      highlightActiveBorder: configService.get('sidebarTerminal', 'highlightActiveBorder', true),
+      activeBorderMode: configService.get('sidebarTerminal', 'activeBorderMode', 'multipleOnly'),
       dynamicSplitDirection: configService.isFeatureEnabled('dynamicSplitDirection'),
       panelLocation: configService.get('sidebarTerminal', 'panelLocation', 'auto'),
     };

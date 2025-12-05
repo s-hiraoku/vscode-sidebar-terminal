@@ -36,7 +36,7 @@ const DEFAULT_SETTINGS: PartialTerminalSettings = {
   cursorBlink: true,
   altClickMovesCursor: true,
   multiCursorModifier: 'alt',
-  highlightActiveBorder: true,
+  activeBorderMode: 'multipleOnly',
 };
 
 /**
@@ -82,18 +82,18 @@ export class TerminalSettingsManager {
    */
   public applySettings(settings: PartialTerminalSettings): void {
     try {
-      const highlightActiveBorder =
-        settings.highlightActiveBorder !== undefined
-          ? settings.highlightActiveBorder
-          : (this.currentSettings.highlightActiveBorder ?? true);
+      const activeBorderMode =
+        settings.activeBorderMode !== undefined
+          ? settings.activeBorderMode
+          : (this.currentSettings.activeBorderMode ?? 'multipleOnly');
 
       this.currentSettings = {
         ...this.currentSettings,
         ...settings,
-        highlightActiveBorder,
+        activeBorderMode,
       };
 
-      this.uiManager.setHighlightActiveBorder(highlightActiveBorder);
+      this.uiManager.setActiveBorderMode(activeBorderMode);
 
       const activeId = this.callbacks.getActiveTerminalId();
       if (activeId) {

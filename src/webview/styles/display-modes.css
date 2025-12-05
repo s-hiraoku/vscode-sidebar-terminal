@@ -83,8 +83,14 @@
   box-sizing: border-box !important;
 }
 
-.terminal-container.active {
+/* Active border highlight - can be disabled via settings */
+.terminal-container.active:not(.no-highlight-border) {
   border-color: var(--vscode-focusBorder, #007acc) !important;
+}
+
+/* When highlight is disabled, keep border transparent */
+.terminal-container.active.no-highlight-border {
+  border-color: transparent !important;
 }
 
 .terminal-content {

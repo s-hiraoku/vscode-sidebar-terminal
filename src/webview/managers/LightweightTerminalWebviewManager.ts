@@ -376,7 +376,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
     // UI Manager
     this.uiManager = new UIManager();
-    this.uiManager.setHighlightActiveBorder(this.currentSettings.highlightActiveBorder ?? true);
+    this.uiManager.setActiveBorderMode(this.currentSettings.activeBorderMode ?? 'multipleOnly');
 
     // Connect FontSettingsService with UIManager (Dependency Injection)
     this.fontSettingsService.setApplicator(this.uiManager);
@@ -810,6 +810,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       // 即座にボーダー更新を実行（UIManager経由）
       const allContainers = this.splitManager.getTerminalContainers();
       if (this.uiManager) {
+        // Terminal count is auto-updated inside updateTerminalBorders
         this.uiManager.updateTerminalBorders(terminalId, allContainers);
         log(`🎯 [FIX] Applied active border immediately after creation: ${terminalId}`);
       }
@@ -1173,15 +1174,15 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
   public applySettings(settings: PartialTerminalSettings): void {
     try {
-      const highlightActiveBorder =
-        settings.highlightActiveBorder !== undefined
-          ? settings.highlightActiveBorder
-          : (this.currentSettings.highlightActiveBorder ?? true);
+      const activeBorderMode =
+        settings.activeBorderMode !== undefined
+          ? settings.activeBorderMode
+          : (this.currentSettings.activeBorderMode ?? 'multipleOnly');
 
       this.currentSettings = {
         ...this.currentSettings,
         ...settings,
-        highlightActiveBorder,
+        activeBorderMode,
       };
 
       // 🔧 CRITICAL FIX: Update ConfigManager with new settings
@@ -1192,7 +1193,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
         log(`⚙️ [SETTINGS] ConfigManager updated with theme: ${this.currentSettings.theme}`);
       }
 
-      this.uiManager.setHighlightActiveBorder(highlightActiveBorder);
+      this.uiManager.setActiveBorderMode(activeBorderMode);
 
       const activeId = this.getActiveTerminalId();
       if (activeId) {

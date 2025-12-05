@@ -778,10 +778,17 @@
           "default": "#ffff00",
           "description": "Color for running command decorations."
         },
-        "secondaryTerminal.highlightActiveBorder": {
-          "type": "boolean",
-          "default": true,
-          "description": "Show a blue border around the focused sidebar terminal."
+        "secondaryTerminal.activeBorderMode": {
+          "type": "string",
+          "enum": ["none", "always", "multipleOnly"],
+          "enumItemLabels": ["Off", "Always", "Only with Multiple Terminals"],
+          "enumDescriptions": [
+            "Border highlight is disabled",
+            "Border always shown on the active terminal",
+            "Border only shown when you have 2+ terminals open"
+          ],
+          "default": "multipleOnly",
+          "description": "When to show the blue border around the active terminal"
         },
         "secondaryTerminal.links.enabled": {
           "type": "boolean",

@@ -240,10 +240,10 @@ export class ConfigurationService extends DisposableBase {
         'enableGitHubCopilotIntegration',
         true
       ),
-      highlightActiveBorder: this.getCachedValue(
+      activeBorderMode: this.getCachedValue(
         'secondaryTerminal',
-        'highlightActiveBorder',
-        true
+        'activeBorderMode',
+        'multipleOnly'
       ),
     };
   }
