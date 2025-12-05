@@ -36,7 +36,7 @@ const DEFAULT_SETTINGS: PartialTerminalSettings = {
   cursorBlink: true,
   altClickMovesCursor: true,
   multiCursorModifier: 'alt',
-  highlightActiveBorder: true,
+  activeBorderMode: 'multipleOnly',
 };
 
 /**
@@ -82,18 +82,18 @@ export class TerminalSettingsManager {
    */
   public applySettings(settings: PartialTerminalSettings): void {
     try {
-      const highlightActiveBorder =
-        settings.highlightActiveBorder !== undefined
-          ? settings.highlightActiveBorder
-          : (this.currentSettings.highlightActiveBorder ?? true);
+      const activeBorderMode =
+        settings.activeBorderMode !== undefined
+          ? settings.activeBorderMode
+          : (this.currentSettings.activeBorderMode ?? 'multipleOnly');
 
       this.currentSettings = {
         ...this.currentSettings,
         ...settings,
-        highlightActiveBorder,
+        activeBorderMode,
       };
 
-      this.uiManager.setHighlightActiveBorder(highlightActiveBorder);
+      this.uiManager.setActiveBorderMode(activeBorderMode);
 
       const activeId = this.callbacks.getActiveTerminalId();
       if (activeId) {
@@ -110,6 +110,16 @@ export class TerminalSettingsManager {
         const instances = this.callbacks.getAllTerminalInstances();
         this.configManager.applySettings(this.currentSettings, instances);
         this.currentSettings = this.configManager.getCurrentSettings();
+
+        // Apply theme and visual settings to all terminals
+        instances.forEach((terminalData, terminalId) => {
+          try {
+            this.uiManager.applyAllVisualSettings(terminalData.terminal, this.currentSettings);
+            log(`[SETTINGS] Applied visual settings to terminal ${terminalId}`);
+          } catch (error) {
+            log(`[SETTINGS] Error applying visual settings to terminal ${terminalId}:`, error);
+          }
+        });
       }
 
       log('[SETTINGS] Settings applied:', settings);

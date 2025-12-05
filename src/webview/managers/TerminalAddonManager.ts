@@ -146,21 +146,23 @@ export class TerminalAddonManager {
         });
       }
 
-      if (config.enableGpuAcceleration) {
-        addons.webglAddon = await AddonLoader.loadAddon(terminal, terminalId, WebglAddon, {
-          required: false,
-          addonName: 'WebglAddon (GPU acceleration)',
-        });
-
-        // 🔧 CRITICAL FIX: Force refresh after WebGL addon load
-        // WebGL initialization can silently fail on some environments (Rosetta/Volta x86)
-        // and a refresh ensures the cursor layer is properly rendered
-        if (addons.webglAddon) {
-          await new Promise(resolve => requestAnimationFrame(resolve));
-          terminal.refresh(0, terminal.rows - 1);
-          terminalLogger.debug(`🔧 Post-WebGL refresh triggered for terminal: ${terminalId}`);
-        }
-      }
+      // 🔧 WebGL addon is intentionally disabled due to macOS Tahoe GPU issues
+      // See: https://github.com/electron/electron/issues/45574
+      // WebGL rendering causes WindowServer 80%+ GPU usage on macOS 26 Tahoe
+      // with Electron's _cornerMask private API. Re-enable when Electron 38.2.0+ ships.
+      //
+      // When re-enabling, include this fix for Rosetta/Volta x86 environments:
+      // if (config.enableGpuAcceleration) {
+      //   addons.webglAddon = await AddonLoader.loadAddon(terminal, terminalId, WebglAddon, {
+      //     required: false,
+      //     addonName: 'WebglAddon (GPU acceleration)',
+      //   });
+      //   // Force refresh after WebGL addon load - WebGL initialization can silently fail
+      //   if (addons.webglAddon) {
+      //     await new Promise(resolve => requestAnimationFrame(resolve));
+      //     terminal.refresh(0, terminal.rows - 1);
+      //   }
+      // }
 
       if (config.enableUnicode11) {
         addons.unicode11Addon = await AddonLoader.loadAddon(terminal, terminalId, Unicode11Addon, {

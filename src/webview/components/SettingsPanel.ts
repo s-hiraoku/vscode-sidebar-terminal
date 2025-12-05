@@ -182,38 +182,39 @@ export class SettingsPanel {
   private createActiveBorderControl(): string {
     return `
       <div>
-        <label style="
+        <div style="
           color: var(--vscode-foreground, #cccccc);
           font-size: 13px;
           font-weight: 500;
-          display: flex;
-          align-items: flex-start;
-          gap: 8px;
-          cursor: pointer;
+          margin-bottom: 8px;
         ">
-          <input
-            type="checkbox"
-            id="highlight-active-border"
-            checked
-            style="
-              width: 16px;
-              height: 16px;
-              cursor: pointer;
-              margin-top: 2px;
-            "
-          />
-          <div>
-            <div>Show Active Terminal Highlight</div>
-            <div style="
-              font-size: 11px;
-              color: var(--vscode-descriptionForeground, #999999);
-              margin-top: 4px;
-              line-height: 1.4;
-            ">
-              Toggle the blue border that appears around the focused sidebar terminal.
-            </div>
-          </div>
-        </label>
+          Active Terminal Border
+        </div>
+        <select
+          id="active-border-mode"
+          style="
+            width: 100%;
+            padding: 6px 8px;
+            background: var(--vscode-dropdown-background, #3c3c3c);
+            color: var(--vscode-dropdown-foreground, #cccccc);
+            border: 1px solid var(--vscode-dropdown-border, #3c3c3c);
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+          "
+        >
+          <option value="none">Off</option>
+          <option value="always">Always</option>
+          <option value="multipleOnly" selected>Only with Multiple Terminals</option>
+        </select>
+        <div style="
+          font-size: 11px;
+          color: var(--vscode-descriptionForeground, #999999);
+          margin-top: 6px;
+          line-height: 1.4;
+        ">
+          When to show the blue border around the active terminal.
+        </div>
       </div>
     `;
   }
@@ -368,7 +369,7 @@ export class SettingsPanel {
     try {
       const defaultSettings: PartialTerminalSettings = {
         enableCliAgentIntegration: true,
-        highlightActiveBorder: true,
+        activeBorderMode: 'multipleOnly',
       };
 
       this.populateSettings(defaultSettings);
@@ -385,15 +386,15 @@ export class SettingsPanel {
       throw new Error('Settings panel not available');
     }
 
-    const highlightBorderCheckbox = this.panelElement.querySelector(
-      '#highlight-active-border'
-    ) as HTMLInputElement;
+    const activeBorderModeSelect = this.panelElement.querySelector(
+      '#active-border-mode'
+    ) as HTMLSelectElement;
     const claudeCodeIntegrationCheckbox = this.panelElement.querySelector(
       '#cli-agent-integration'
     ) as HTMLInputElement;
 
     return {
-      highlightActiveBorder: highlightBorderCheckbox?.checked ?? true,
+      activeBorderMode: (activeBorderModeSelect?.value as 'none' | 'always' | 'multipleOnly') ?? 'multipleOnly',
       enableCliAgentIntegration: claudeCodeIntegrationCheckbox?.checked ?? true,
     };
   }
@@ -405,16 +406,16 @@ export class SettingsPanel {
     if (!settings || !this.panelElement) return;
 
     try {
-      const highlightBorderCheckbox = this.panelElement.querySelector(
-        '#highlight-active-border'
-      ) as HTMLInputElement;
+      const activeBorderModeSelect = this.panelElement.querySelector(
+        '#active-border-mode'
+      ) as HTMLSelectElement;
       const claudeCodeIntegrationCheckbox = this.panelElement.querySelector(
         '#cli-agent-integration'
       ) as HTMLInputElement;
 
-      if (highlightBorderCheckbox) {
-        highlightBorderCheckbox.checked =
-          settings.highlightActiveBorder !== undefined ? settings.highlightActiveBorder : true;
+      if (activeBorderModeSelect) {
+        activeBorderModeSelect.value =
+          settings.activeBorderMode !== undefined ? settings.activeBorderMode : 'multipleOnly';
       }
 
       if (claudeCodeIntegrationCheckbox && settings.enableCliAgentIntegration !== undefined) {

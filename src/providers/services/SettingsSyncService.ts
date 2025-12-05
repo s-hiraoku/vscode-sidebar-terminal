@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { PartialTerminalSettings, WebViewFontSettings } from '../../types/shared';
+import { PartialTerminalSettings, WebViewFontSettings, ActiveBorderMode } from '../../types/shared';
 import { getUnifiedConfigurationService } from '../../config/UnifiedConfigurationService';
 import { showSuccess, showError } from '../../utils/feedback';
 import { provider as log } from '../../utils/logger';
@@ -27,6 +27,38 @@ export class SettingsSyncService {
 
   constructor(reinitializeTerminalCallback?: () => Promise<void>) {
     this._reinitializeTerminalCallback = reinitializeTerminalCallback;
+    // Run migration check on construction
+    this._migrateDeprecatedSettings();
+  }
+
+  /**
+   * Migrate deprecated settings to new format
+   * Handles: highlightActiveBorder (boolean) -> activeBorderMode (enum)
+   */
+  private _migrateDeprecatedSettings(): void {
+    const config = vscode.workspace.getConfiguration('secondaryTerminal');
+    const inspection = config.inspect<boolean>('highlightActiveBorder');
+
+    // Check if user explicitly set the old setting (not default)
+    const userValue = inspection?.globalValue ?? inspection?.workspaceValue;
+    if (userValue !== undefined) {
+      // User had the old setting - migrate it
+      const newMode: ActiveBorderMode = userValue === false ? 'none' : 'multipleOnly';
+
+      // Only migrate if new setting hasn't been explicitly set
+      const newInspection = config.inspect<string>('activeBorderMode');
+      const newUserValue = newInspection?.globalValue ?? newInspection?.workspaceValue;
+
+      if (newUserValue === undefined) {
+        log(`🔄 Migrating highlightActiveBorder=${userValue} to activeBorderMode=${newMode}`);
+        config.update('activeBorderMode', newMode, vscode.ConfigurationTarget.Global)
+          .then(() => {
+            log(`✅ Settings migration complete`);
+          }, (err) => {
+            log(`⚠️ Settings migration failed: ${err}`);
+          });
+      }
+    }
   }
 
   /**
@@ -49,10 +81,10 @@ export class SettingsSyncService {
       multiCursorModifier: altClickSettings.multiCursorModifier,
       // CLI Agent Code integration settings
       enableCliAgentIntegration: configService.isFeatureEnabled('cliAgentIntegration'),
-      highlightActiveBorder: configService.get('sidebarTerminal', 'highlightActiveBorder', true),
+      activeBorderMode: configService.get('secondaryTerminal', 'activeBorderMode', 'multipleOnly'),
       // Dynamic split direction settings (Issue #148)
       dynamicSplitDirection: configService.isFeatureEnabled('dynamicSplitDirection'),
-      panelLocation: configService.get('sidebarTerminal', 'panelLocation', 'auto'),
+      panelLocation: configService.get('secondaryTerminal', 'panelLocation', 'auto'),
     };
   }
 
@@ -133,34 +165,34 @@ export class SettingsSyncService {
 
       // Update VS Code settings using unified configuration service
       if (settings.cursorBlink !== undefined) {
-        await configService.update('sidebarTerminal', 'cursorBlink', settings.cursorBlink);
+        await configService.update('secondaryTerminal', 'cursorBlink', settings.cursorBlink);
       }
       if (settings.theme) {
-        await configService.update('sidebarTerminal', 'theme', settings.theme);
+        await configService.update('secondaryTerminal', 'theme', settings.theme);
       }
       if (settings.enableCliAgentIntegration !== undefined) {
         await configService.update(
-          'sidebarTerminal',
+          'secondaryTerminal',
           'enableCliAgentIntegration',
           settings.enableCliAgentIntegration
         );
       }
-      if (settings.highlightActiveBorder !== undefined) {
+      if (settings.activeBorderMode !== undefined) {
         await configService.update(
-          'sidebarTerminal',
-          'highlightActiveBorder',
-          settings.highlightActiveBorder
+          'secondaryTerminal',
+          'activeBorderMode',
+          settings.activeBorderMode
         );
       }
       if (settings.dynamicSplitDirection !== undefined) {
         await configService.update(
-          'sidebarTerminal',
+          'secondaryTerminal',
           'dynamicSplitDirection',
           settings.dynamicSplitDirection
         );
       }
       if (settings.panelLocation !== undefined) {
-        await configService.update('sidebarTerminal', 'panelLocation', settings.panelLocation);
+        await configService.update('secondaryTerminal', 'panelLocation', settings.panelLocation);
       }
       // Note: Font settings are read directly from VS Code's terminal/editor settings
 

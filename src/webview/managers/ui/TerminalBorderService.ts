@@ -7,13 +7,14 @@
 
 import { WEBVIEW_THEME_CONSTANTS } from '../../utils/WebviewThemeUtils';
 import { uiLogger } from '../../utils/ManagerLogger';
-import { webview as log } from '../../../utils/logger';
+import type { ActiveBorderMode } from '../../../types/shared';
 
 /**
  * Service for managing terminal border styling
  */
 export class TerminalBorderService {
-  private highlightActiveBorderEnabled = true;
+  private activeBorderMode: ActiveBorderMode = 'multipleOnly';
+  private currentTerminalCount = 1;
 
   /**
    * Update borders for all terminals based on active state
@@ -22,9 +23,7 @@ export class TerminalBorderService {
     activeTerminalId: string,
     allContainers: Map<string, HTMLElement>
   ): void {
-    uiLogger.info(
-      `Updating terminal borders - Active: ${activeTerminalId}, Containers: ${allContainers.size}`
-    );
+    this.currentTerminalCount = allContainers.size;
 
     // Reset terminal-body border to avoid interference
     const terminalBody = document.getElementById('terminal-body');
@@ -34,28 +33,17 @@ export class TerminalBorderService {
       terminalBody.classList.remove('active');
     }
 
-    // Log all available containers
-    allContainers.forEach((container, terminalId) => {
-      uiLogger.debug(
-        `Container ${terminalId}: ${container.tagName}#${container.id}.${container.className}`
-      );
-    });
-
-    // First, ensure all terminals are marked as inactive
-    allContainers.forEach((container, _terminalId) => {
+    // Mark all terminals inactive, then set the active one
+    allContainers.forEach((container) => {
       this.updateSingleTerminalBorder(container, false);
     });
 
-    // Then, mark only the active terminal as active
     const activeContainer = allContainers.get(activeTerminalId);
     if (activeContainer) {
-      uiLogger.debug(`Setting active border for: ${activeTerminalId}`);
       this.updateSingleTerminalBorder(activeContainer, true);
     } else {
-      uiLogger.warn(`Active container not found for: ${activeTerminalId}`);
+      uiLogger.warn(`Active container not found: ${activeTerminalId}`);
     }
-
-    uiLogger.info(`Updated borders, active terminal: ${activeTerminalId}`);
   }
 
   /**
@@ -63,6 +51,7 @@ export class TerminalBorderService {
    */
   public updateSplitTerminalBorders(activeTerminalId: string): void {
     const allContainers = document.querySelectorAll('.terminal-container');
+    this.currentTerminalCount = allContainers.length;
     allContainers.forEach((container) => {
       const element = container as HTMLElement;
       const terminalId = element.dataset.terminalId;
@@ -70,87 +59,114 @@ export class TerminalBorderService {
         this.updateSingleTerminalBorder(element, terminalId === activeTerminalId);
       }
     });
-    uiLogger.info(`Updated split terminal borders, active: ${activeTerminalId}`);
   }
 
   /**
-   * Enable or disable active border highlight
+   * Set the active border display mode
    */
-  public setHighlightActiveBorder(enabled: boolean): void {
-    this.highlightActiveBorderEnabled = enabled;
-    uiLogger.info(`Active border highlight ${enabled ? 'enabled' : 'disabled'}`);
+  public setActiveBorderMode(mode: ActiveBorderMode): void {
+    this.activeBorderMode = mode;
+    this.refreshAllBorders();
   }
 
   /**
-   * Check if active border highlight is enabled
+   * Update the current terminal count (used for "multipleOnly" logic)
    */
-  public isHighlightActiveBorderEnabled(): boolean {
-    return this.highlightActiveBorderEnabled;
+  public setTerminalCount(count: number): void {
+    this.currentTerminalCount = count;
+    this.refreshAllBorders();
+  }
+
+  /**
+   * Refresh borders on all terminal containers based on current settings
+   */
+  private refreshAllBorders(): void {
+    const allContainers = document.querySelectorAll('.terminal-container');
+    const shouldShowBorder = this.shouldShowActiveBorder();
+
+    allContainers.forEach((container) => {
+      if (shouldShowBorder) {
+        container.classList.remove('no-highlight-border');
+      } else {
+        container.classList.add('no-highlight-border');
+      }
+    });
+  }
+
+  /**
+   * Determine if active border should be shown based on mode and terminal count
+   */
+  private shouldShowActiveBorder(): boolean {
+    switch (this.activeBorderMode) {
+      case 'none':
+        return false;
+      case 'always':
+        return true;
+      case 'multipleOnly':
+        return this.currentTerminalCount >= 2;
+      default:
+        return true;
+    }
+  }
+
+  /**
+   * Get the current active border mode
+   */
+  public getActiveBorderMode(): ActiveBorderMode {
+    return this.activeBorderMode;
   }
 
   /**
    * Update border for a single terminal container
    */
   public updateSingleTerminalBorder(container: HTMLElement, isActive: boolean): void {
-    // DEBUG: Enhanced border debugging
-    log(`[DEBUG] Updating border for terminal:`, {
-      terminalId: container.dataset.terminalId,
-      containerId: container.id,
-      containerClass: container.className,
-      isActive,
-      currentBorderColor: container.style.borderColor,
-      currentBorderWidth: container.style.borderWidth,
-    });
+    const shouldShow = this.shouldShowActiveBorder();
+
+    // Apply no-highlight-border class based on mode and terminal count
+    if (shouldShow) {
+      container.classList.remove('no-highlight-border');
+    } else {
+      container.classList.add('no-highlight-border');
+    }
 
     if (isActive) {
       container.classList.add('active');
       container.classList.remove('inactive');
 
-      if (this.highlightActiveBorderEnabled) {
-        // FIX: Apply refined border styling - thinner border as requested
-        // Use a single source of truth for active terminal borders
+      if (shouldShow) {
+        // Active border with highlight
         container.style.setProperty(
           'border',
           `1px solid ${WEBVIEW_THEME_CONSTANTS.ACTIVE_BORDER_COLOR}`,
           'important'
         );
         container.style.setProperty('border-radius', '4px', 'important');
-        // Enhanced visibility with subtle shadow
         container.style.setProperty(
           'box-shadow',
           `0 0 0 1px ${WEBVIEW_THEME_CONSTANTS.ACTIVE_BORDER_COLOR}, 0 0 8px rgba(0, 122, 204, 0.2)`,
           'important'
         );
-        // Ensure proper z-index for visibility
         container.style.setProperty('z-index', '2', 'important');
-
-        log(`[DEBUG] Applied ACTIVE border styles`, {
-          borderColor: WEBVIEW_THEME_CONSTANTS.ACTIVE_BORDER_COLOR,
-          computedStyle: window.getComputedStyle(container).border,
-        });
       } else {
+        // Active but highlight disabled
         container.style.setProperty('border', '1px solid transparent', 'important');
         container.style.setProperty('border-radius', '4px', 'important');
         container.style.setProperty('box-shadow', 'none', 'important');
         container.style.setProperty('z-index', '1', 'important');
-
-        log('[DEBUG] Active border highlight disabled; applied transparent border');
       }
     } else {
       container.classList.remove('active');
       container.classList.add('inactive');
 
-      // FIX: Keep consistent border structure but transparent for inactive - thinner border
+      // Inactive terminal - transparent border
       container.style.setProperty('border', '1px solid transparent', 'important');
       container.style.setProperty('border-radius', '4px', 'important');
       container.style.setProperty('box-shadow', 'none', 'important');
       container.style.setProperty('z-index', '1', 'important');
-
-      log(`[DEBUG] Applied INACTIVE border styles`);
     }
 
     uiLogger.debug(
-      `Updated border for terminal: ${container.dataset.terminalId}, active: ${isActive}, color: ${isActive ? WEBVIEW_THEME_CONSTANTS.ACTIVE_BORDER_COLOR : 'transparent'}`
+      `Border updated: ${container.dataset.terminalId}, active: ${isActive}, visible: ${shouldShow}`
     );
   }
 }
