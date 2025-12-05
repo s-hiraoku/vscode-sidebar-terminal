@@ -32,7 +32,7 @@ export class ConfigManager implements IConfigManager {
     bellSound: false,
     altClickMovesCursor: false,
     multiCursorModifier: 'alt',
-    highlightActiveBorder: true,
+    activeBorderMode: 'multipleOnly',
   };
 
   // Fallback font settings (used only when FontSettingsService is not available)
@@ -73,7 +73,7 @@ export class ConfigManager implements IConfigManager {
     inheritVSCodeProfiles: true,
     enableProfileAutoDetection: true,
     scrollback: 1000,
-    highlightActiveBorder: true,
+    activeBorderMode: 'multipleOnly',
     bellSound: false,
     altClickMovesCursor: false,
     multiCursorModifier: 'alt',
@@ -359,10 +359,10 @@ export class ConfigManager implements IConfigManager {
       typeof settings.enableCliAgentIntegration === 'boolean'
         ? settings.enableCliAgentIntegration
         : this.DEFAULTS.enableCliAgentIntegration;
-    normalized.highlightActiveBorder =
-      typeof settings.highlightActiveBorder === 'boolean'
-        ? settings.highlightActiveBorder
-        : this.DEFAULTS.highlightActiveBorder;
+    normalized.activeBorderMode =
+      typeof settings.activeBorderMode === 'string'
+        ? settings.activeBorderMode
+        : this.DEFAULTS.activeBorderMode;
 
     // Shell validation
     if (typeof settings.shell === 'string') {

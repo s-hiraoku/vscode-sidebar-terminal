@@ -8,7 +8,7 @@
  */
 
 import { Terminal } from '@xterm/xterm';
-import { PartialTerminalSettings, WebViewFontSettings } from '../../types/shared';
+import { PartialTerminalSettings, WebViewFontSettings, ActiveBorderMode } from '../../types/shared';
 import { getWebviewTheme, WEBVIEW_THEME_CONSTANTS } from '../utils/WebviewThemeUtils';
 import { IUIManager } from '../interfaces/ManagerInterfaces';
 import { HeaderFactory, TerminalHeaderElements } from '../factories/HeaderFactory';
@@ -100,6 +100,8 @@ export class UIManager extends BaseManager implements IUIManager {
     activeTerminalId: string,
     allContainers: Map<string, HTMLElement>
   ): void {
+    // Auto-update terminal count for "only when multiple" border logic
+    this.borderService.setTerminalCount(allContainers.size);
     this.borderService.updateTerminalBorders(activeTerminalId, allContainers);
   }
 
@@ -112,11 +114,19 @@ export class UIManager extends BaseManager implements IUIManager {
   }
 
   /**
-   * Enable or disable active border highlight
+   * Set the active border display mode
    * Delegates to TerminalBorderService
    */
-  public setHighlightActiveBorder(enabled: boolean): void {
-    this.borderService.setHighlightActiveBorder(enabled);
+  public setActiveBorderMode(mode: ActiveBorderMode): void {
+    this.borderService.setActiveBorderMode(mode);
+  }
+
+  /**
+   * Update terminal count (used for "multipleOnly" border mode)
+   * Delegates to TerminalBorderService
+   */
+  public setTerminalCount(count: number): void {
+    this.borderService.setTerminalCount(count);
   }
 
   /**
