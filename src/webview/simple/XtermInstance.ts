@@ -241,6 +241,7 @@ export class XtermInstance {
   private webglAddon: WebglAddon | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private disposed = false;
+  private cleanupCallbacks: (() => void)[] = [];
 
   // Debounce resize to prevent excessive fit() calls
   private resizeTimer: number | null = null;
@@ -301,6 +302,43 @@ export class XtermInstance {
     // 6. Open terminal in DOM
     terminal.open(terminalBody);
 
+    // 🎯 CRITICAL: Handle paste events for Claude Code image paste support
+    // On macOS, we need to intercept BOTH keydown AND paste events:
+    // 1. keydown: attachCustomKeyEventHandler returns false to bypass xterm.js key handling
+    // 2. paste: Add listener in capture phase to prevent xterm.js paste handler
+    // Use userAgentData if available (modern), fallback to userAgent (deprecated navigator.platform)
+    const isMac = (navigator as any).userAgentData?.platform === 'macOS' || /Mac/.test(navigator.userAgent);
+
+    // Part 1: Block xterm.js keydown handling for Cmd+V
+    terminal.attachCustomKeyEventHandler((event: KeyboardEvent) => {
+      if (isMac && event.metaKey && event.key === 'v' && !event.ctrlKey && !event.shiftKey) {
+        return false; // Don't let xterm.js handle Cmd+V keydown
+      }
+      return true;
+    });
+
+    // Part 2: Handle Cmd+V image paste by sending Ctrl+V escape sequence
+    // This triggers Claude Code's native clipboard reading mechanism
+    // Simplified: only use sync paste event (clipboardData is available synchronously)
+    let pasteHandler: ((event: ClipboardEvent) => void) | null = null;
+    if (isMac) {
+      pasteHandler = (event: ClipboardEvent) => {
+        const clipboardData = event.clipboardData;
+        if (!clipboardData) return;
+
+        const hasImage = Array.from(clipboardData.items).some(item => item.type.startsWith('image/'));
+
+        if (hasImage) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          // Send Ctrl+V escape sequence to trigger Claude Code's clipboard read
+          callbacks.onData(id, '\x16');
+          return;
+        }
+      };
+      terminalBody.addEventListener('paste', pasteHandler, true);
+    }
+
     // 7. Create instance
     const instance = new XtermInstance(
       id,
@@ -311,6 +349,14 @@ export class XtermInstance {
       fitAddon,
       serializeAddon
     );
+
+    // Register paste handler cleanup to prevent memory leak
+    if (pasteHandler) {
+      const handler = pasteHandler; // Capture for closure
+      instance.addCleanup(() => {
+        terminalBody.removeEventListener('paste', handler, true);
+      });
+    }
 
     // 8. Try WebGL addon for performance
     await instance.tryEnableWebGL();
@@ -723,6 +769,13 @@ export class XtermInstance {
   }
 
   /**
+   * Register a cleanup callback to be called on dispose
+   */
+  public addCleanup(callback: () => void): void {
+    this.cleanupCallbacks.push(callback);
+  }
+
+  /**
    * Dispose terminal and clean up all resources
    */
   public dispose(): void {
@@ -730,6 +783,16 @@ export class XtermInstance {
     this.disposed = true;
 
     console.log(`[XtermInstance] Disposing ${this.id}`);
+
+    // Run cleanup callbacks first (e.g., remove event listeners)
+    for (const callback of this.cleanupCallbacks) {
+      try {
+        callback();
+      } catch (error) {
+        console.error(`[XtermInstance] Cleanup callback error for ${this.id}:`, error);
+      }
+    }
+    this.cleanupCallbacks = [];
 
     // Clear resize timer
     if (this.resizeTimer !== null) {

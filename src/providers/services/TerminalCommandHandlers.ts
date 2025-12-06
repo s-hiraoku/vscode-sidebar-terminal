@@ -416,6 +416,77 @@ export class TerminalCommandHandlers {
   }
 
   /**
+   * Handle image paste for Claude Code
+   * Saves the image to a temp file and sends the file path to the terminal
+   */
+  public async handlePasteImage(message: WebviewMessage): Promise<void> {
+    if (!hasTerminalId(message)) {
+      log('⚠️ [HANDLER] pasteImage missing terminalId');
+      return;
+    }
+
+    const imageData = (message as any)?.imageData as string;
+    const imageType = (message as any)?.imageType as string;
+
+    if (!imageData || !imageType) {
+      log('⚠️ [HANDLER] pasteImage missing imageData or imageType');
+      return;
+    }
+
+    try {
+      log(`🖼️ [HANDLER] Processing image paste for terminal ${message.terminalId}`);
+
+      // Extract base64 data (remove data:image/xxx;base64, prefix)
+      const base64Match = imageData.match(/^data:image\/[a-z]+;base64,(.+)$/i);
+      if (!base64Match || !base64Match[1]) {
+        log('⚠️ [HANDLER] Invalid base64 image data format');
+        return;
+      }
+      const base64Content = base64Match[1];
+
+      // Determine file extension from MIME type (sanitized for security)
+      const validExtensions = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'];
+      const rawExtension = imageType.replace('image/', '').toLowerCase();
+      const extension = validExtensions.includes(rawExtension) ? rawExtension : 'png';
+
+      // Create temp file path
+      const os = await import('os');
+      const path = await import('path');
+      const fs = await import('fs');
+      const tempDir = os.tmpdir();
+      const timestamp = Date.now();
+      const filename = `claude-paste-${timestamp}.${extension}`;
+      const tempFilePath = path.join(tempDir, filename);
+
+      // Write image to temp file
+      const imageBuffer = Buffer.from(base64Content, 'base64');
+      fs.writeFileSync(tempFilePath, imageBuffer);
+
+      // Schedule cleanup after 5 minutes (Claude Code should have read it by then)
+      setTimeout(() => {
+        try {
+          if (fs.existsSync(tempFilePath)) {
+            fs.unlinkSync(tempFilePath);
+            log(`🧹 [HANDLER] Cleaned up temp image: ${tempFilePath}`);
+          }
+        } catch {
+          // Ignore cleanup errors
+        }
+      }, 5 * 60 * 1000);
+
+      log(`🖼️ [HANDLER] Saved image to temp file: ${tempFilePath}`);
+
+      // Send the file path to the terminal PTY
+      // Claude Code expects the file path as input
+      this.deps.terminalManager.sendInput(tempFilePath, message.terminalId);
+
+      log(`🖼️ [HANDLER] Sent image path to terminal ${message.terminalId}`);
+    } catch (error) {
+      log('❌ [HANDLER] Failed to handle image paste:', error);
+    }
+  }
+
+  /**
    * Handle AI Agent connection switch
    * Issue #122: AI Agent connection toggle button functionality
    */

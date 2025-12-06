@@ -69,11 +69,16 @@ Automatic detection and status tracking for:
 | Shortcut                        | Action                           |
 | ------------------------------- | -------------------------------- |
 | `Cmd+C` / `Ctrl+C`              | Copy selected text               |
-| `Cmd+V` / `Ctrl+V`              | Paste from clipboard             |
+| `Cmd+V` / `Ctrl+V`              | Paste (text and images)          |
+| `Shift+Enter` / `Option+Enter`  | Insert newline (Claude Code)     |
 | `Cmd+Option+L` / `Ctrl+Alt+L`   | Send file reference to AI agents |
 | `Cmd+K Cmd+C` / `Ctrl+K Ctrl+C` | GitHub Copilot integration       |
 | `Alt+Click`                     | Position cursor                  |
 | `Ctrl+Shift+D`                  | Toggle debug panel               |
+
+> **Claude Code tips**:
+> - `Cmd+V` on macOS pastes both text and images (screenshots) into Claude Code
+> - Use `Shift+Enter` or `Option+Enter` to insert newlines for multiline prompts
 
 ## Command Palette
 
