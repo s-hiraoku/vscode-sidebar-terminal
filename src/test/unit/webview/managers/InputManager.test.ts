@@ -371,6 +371,71 @@ describe('InputManager', () => {
       expect(handled).to.be.false;
       expect(mockCoordinator.postMessageToExtension.called).to.be.false;
     });
+
+    it('should handle Shift+Enter as newline for Claude Code multiline input', () => {
+      const event = new jsdom.window.KeyboardEvent('keydown', {
+        key: 'Enter',
+        shiftKey: true,
+      });
+
+      const handled = inputManager.handleSpecialKeys(event, 'terminal-1', mockCoordinator);
+
+      // Should be handled as newline input
+      expect(handled).to.be.true;
+      expect(mockCoordinator.postMessageToExtension.calledOnce).to.be.true;
+
+      const callArgs = mockCoordinator.postMessageToExtension.firstCall.args[0] as any;
+      expect(callArgs.command).to.equal('input');
+      expect(callArgs.terminalId).to.equal('terminal-1');
+      expect(callArgs.data).to.equal('\n');
+    });
+
+    it('should handle Alt+Enter (Option+Enter) as newline for Claude Code multiline input', () => {
+      const event = new jsdom.window.KeyboardEvent('keydown', {
+        key: 'Enter',
+        altKey: true,
+      });
+
+      const handled = inputManager.handleSpecialKeys(event, 'terminal-1', mockCoordinator);
+
+      // Should be handled as newline input
+      expect(handled).to.be.true;
+      expect(mockCoordinator.postMessageToExtension.calledOnce).to.be.true;
+
+      const callArgs = mockCoordinator.postMessageToExtension.firstCall.args[0] as any;
+      expect(callArgs.command).to.equal('input');
+      expect(callArgs.terminalId).to.equal('terminal-1');
+      expect(callArgs.data).to.equal('\n');
+    });
+
+    it('should handle Cmd+Enter (Meta+Enter) as newline for Claude Code multiline input', () => {
+      const event = new jsdom.window.KeyboardEvent('keydown', {
+        key: 'Enter',
+        metaKey: true,
+      });
+
+      const handled = inputManager.handleSpecialKeys(event, 'terminal-1', mockCoordinator);
+
+      // Should be handled as newline input
+      expect(handled).to.be.true;
+      expect(mockCoordinator.postMessageToExtension.calledOnce).to.be.true;
+
+      const callArgs = mockCoordinator.postMessageToExtension.firstCall.args[0] as any;
+      expect(callArgs.command).to.equal('input');
+      expect(callArgs.terminalId).to.equal('terminal-1');
+      expect(callArgs.data).to.equal('\n');
+    });
+
+    it('should not handle plain Enter without modifier keys', () => {
+      const event = new jsdom.window.KeyboardEvent('keydown', {
+        key: 'Enter',
+      });
+
+      const handled = inputManager.handleSpecialKeys(event, 'terminal-1', mockCoordinator);
+
+      // Plain Enter should not be handled by special keys (let terminal handle it)
+      expect(handled).to.be.false;
+    });
   });
 
   describe('High-Speed Typing Test', () => {
