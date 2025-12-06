@@ -425,7 +425,8 @@ export class TerminalCreationService implements Disposable {
         // The browser triggers a paste event when Cmd+V is pressed. xterm.js has its own
         // paste handler that only reads text/plain. We must stop this to let Claude Code
         // read images from clipboard via its internal mechanisms.
-        const isMac = navigator.platform.includes('Mac');
+        // Use userAgentData if available (modern), fallback to userAgent (deprecated navigator.platform)
+        const isMac = (navigator as any).userAgentData?.platform === 'macOS' || /Mac/.test(navigator.userAgent);
 
         // Part 1: Block xterm.js keydown handling for Cmd+V
         terminal.attachCustomKeyEventHandler((event: KeyboardEvent) => {
@@ -444,7 +445,7 @@ export class TerminalCreationService implements Disposable {
         // Solution: Block xterm.js paste and send \x16 to trigger Claude Code's image paste
         // Simplified: only use sync paste event (clipboardData is available synchronously)
         if (isMac) {
-          terminalContent.addEventListener('paste', (event: ClipboardEvent) => {
+          const pasteHandler = (event: ClipboardEvent) => {
             const clipboardData = event.clipboardData;
             if (!clipboardData) return;
 
@@ -463,7 +464,15 @@ export class TerminalCreationService implements Disposable {
               return;
             }
             // For text-only paste, let xterm.js handle it normally
-          }, true);
+          };
+          // Register with eventRegistry for automatic cleanup on terminal disposal
+          this.eventRegistry.register(
+            `terminal-${terminalId}-paste-image`,
+            terminalContent,
+            'paste',
+            pasteHandler as EventListener,
+            true // capture phase
+          );
         }
 
         // 🎯 VS Code Pattern: Apply font and visual settings AFTER terminal.open()
