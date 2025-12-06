@@ -1009,7 +1009,8 @@ export class InputManager extends BaseManager implements IInputManager {
     // Paste handling: Platform-specific behavior for Claude Code compatibility
     // macOS: Let Cmd+V and Ctrl+V pass through to Claude Code for both text AND image paste
     // Windows/Linux: Intercept Ctrl+V for text paste (standard behavior)
-    const isMac = navigator.platform.includes('Mac');
+    // Use userAgentData if available (modern), fallback to userAgent (deprecated navigator.platform)
+    const isMac = (navigator as any).userAgentData?.platform === 'macOS' || /Mac/.test(navigator.userAgent);
     if (event.key === 'v') {
       if (isMac && (event.metaKey || event.ctrlKey)) {
         // macOS: Let both Cmd+V and Ctrl+V pass through for Claude Code
@@ -1121,7 +1122,8 @@ export class InputManager extends BaseManager implements IInputManager {
     terminal: Terminal,
     manager: IManagerCoordinator
   ): boolean {
-    const isMac = navigator.platform.includes('Mac');
+    // Use userAgentData if available (modern), fallback to userAgent (deprecated navigator.platform)
+    const isMac = (navigator as any).userAgentData?.platform === 'macOS' || /Mac/.test(navigator.userAgent);
     const ctrlOrCmd = isMac ? event.metaKey : event.ctrlKey;
 
     // NEVER intercept these - they must go to shell:
