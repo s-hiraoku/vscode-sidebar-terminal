@@ -409,34 +409,8 @@ export class TerminalCreationService implements Disposable {
         // - But Claude Code reads images via its own clipboard mechanism triggered by Ctrl+V
         // - Ctrl+V sends escape sequence \x16 which Claude Code recognizes
         // Solution: Block xterm.js paste and send \x16 to trigger Claude Code's image paste
+        // Simplified: only use sync paste event (clipboardData is available synchronously)
         if (isMac) {
-          // Track if we just sent Ctrl+V to avoid duplicate handling
-          let ctrlVSentForImage = false;
-
-          terminalContent.addEventListener('keydown', (event: KeyboardEvent) => {
-            // On Cmd+V with image in clipboard, send Ctrl+V escape sequence
-            if (event.metaKey && event.key === 'v' && !event.ctrlKey && !event.shiftKey) {
-              // Check clipboard for images (async, but we can check synchronously via navigator.clipboard)
-              navigator.clipboard.read().then(items => {
-                for (const item of items) {
-                  if (item.types.some(type => type.startsWith('image/'))) {
-                    terminalLogger.info(`🖼️ Cmd+V with image - sending Ctrl+V escape sequence`);
-                    ctrlVSentForImage = true;
-                    // Send Ctrl+V escape sequence (\x16) to trigger Claude Code's clipboard read
-                    this.coordinator.postMessageToExtension({
-                      command: 'input',
-                      terminalId: terminalId,
-                      data: '\x16', // Ctrl+V escape sequence
-                    });
-                    return;
-                  }
-                }
-              }).catch(() => {
-                // Clipboard read failed, let normal paste happen
-              });
-            }
-          }, true);
-
           terminalContent.addEventListener('paste', (event: ClipboardEvent) => {
             const clipboardData = event.clipboardData;
             if (!clipboardData) return;
@@ -444,19 +418,15 @@ export class TerminalCreationService implements Disposable {
             const hasImage = Array.from(clipboardData.items).some(item => item.type.startsWith('image/'));
 
             if (hasImage) {
-              terminalLogger.info(`🖼️ Image in paste event - blocking xterm.js, ctrlVSent: ${ctrlVSentForImage}`);
+              terminalLogger.info(`🖼️ Image in paste event - blocking xterm.js, sending Ctrl+V escape`);
               event.preventDefault();
               event.stopImmediatePropagation();
-
-              // If we haven't already sent Ctrl+V, send it now
-              if (!ctrlVSentForImage) {
-                this.coordinator.postMessageToExtension({
-                  command: 'input',
-                  terminalId: terminalId,
-                  data: '\x16',
-                });
-              }
-              ctrlVSentForImage = false;
+              // Send Ctrl+V escape sequence to trigger Claude Code's clipboard read
+              this.coordinator.postMessageToExtension({
+                command: 'input',
+                terminalId: terminalId,
+                data: '\x16',
+              });
               return;
             }
             // For text-only paste, let xterm.js handle it normally

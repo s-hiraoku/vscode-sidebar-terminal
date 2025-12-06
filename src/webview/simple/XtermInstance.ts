@@ -35,8 +35,6 @@ export interface XtermCallbacks {
   onResize: (terminalId: string, cols: number, rows: number) => void;
   onFocus: (terminalId: string) => void;
   onTitleChange?: (terminalId: string, title: string) => void;
-  /** Called when an image is pasted (for Claude Code image paste support) */
-  onImagePaste?: (terminalId: string, imageData: string, imageType: string) => void;
 }
 
 /**
@@ -319,24 +317,8 @@ export class XtermInstance {
 
     // Part 2: Handle Cmd+V image paste by sending Ctrl+V escape sequence
     // This triggers Claude Code's native clipboard reading mechanism
+    // Simplified: only use sync paste event (clipboardData is available synchronously)
     if (isMac) {
-      let ctrlVSentForImage = false;
-
-      terminalBody.addEventListener('keydown', (event: KeyboardEvent) => {
-        if (event.metaKey && event.key === 'v' && !event.ctrlKey && !event.shiftKey) {
-          navigator.clipboard.read().then(items => {
-            for (const item of items) {
-              if (item.types.some(type => type.startsWith('image/'))) {
-                ctrlVSentForImage = true;
-                // Send Ctrl+V escape sequence via onData callback
-                callbacks.onData(id, '\x16');
-                return;
-              }
-            }
-          }).catch(() => {});
-        }
-      }, true);
-
       terminalBody.addEventListener('paste', (event: ClipboardEvent) => {
         const clipboardData = event.clipboardData;
         if (!clipboardData) return;
@@ -346,11 +328,8 @@ export class XtermInstance {
         if (hasImage) {
           event.preventDefault();
           event.stopImmediatePropagation();
-
-          if (!ctrlVSentForImage) {
-            callbacks.onData(id, '\x16');
-          }
-          ctrlVSentForImage = false;
+          // Send Ctrl+V escape sequence to trigger Claude Code's clipboard read
+          callbacks.onData(id, '\x16');
           return;
         }
       }, true);
