@@ -154,6 +154,13 @@ export class RenderingOptimizer implements Disposable {
   /**
    * Check if running in a potentially problematic WebGL environment
    * (e.g., x86 Node.js on ARM macOS via Rosetta, or Volta with x86 Node)
+   *
+   * @internal Currently unreachable when WebGL is disabled due to macOS Tahoe GPU issues.
+   * Preserved for future use when WebGL is re-enabled.
+   * @see https://github.com/electron/electron/issues/45574
+   *
+   * TODO: Re-enable WebGL testing when macOS 26.2+ and Electron 38.2.0+ are available
+   * to validate this detection logic still works correctly.
    */
   private isProblematicWebGLEnvironment(): boolean {
     try {
@@ -259,6 +266,13 @@ export class RenderingOptimizer implements Disposable {
   /**
    * Verify WebGL is actually rendering correctly
    * Force a refresh and check if canvas layers are properly initialized
+   *
+   * @internal Called only when WebGL is enabled. Currently WebGL is disabled
+   * due to macOS Tahoe GPU issues, so this method may not be exercised in production.
+   *
+   * TODO: Re-enable WebGL and verify this method when macOS Tahoe GPU issues are resolved.
+   * Prerequisites: macOS 26.2+ and Electron 38.2.0+ with fixed GPU rendering.
+   * @see TerminalAddonManager.ts for WebGL addon loading (currently disabled)
    */
   private async verifyWebGLRendering(terminal: Terminal, terminalId: string): Promise<void> {
     // Wait a frame for WebGL to initialize

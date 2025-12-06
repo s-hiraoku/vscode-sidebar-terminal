@@ -36,6 +36,7 @@ import { EventHandlerRegistry } from '../utils/EventHandlerRegistry';
 import { terminalLogger } from '../utils/ManagerLogger';
 import { TerminalHeaderElements } from '../factories/HeaderFactory';
 import { DOMUtils } from '../utils/DOMUtils';
+import { getWebviewTheme } from '../utils/WebviewThemeUtils';
 
 // Extracted services
 import {
@@ -49,6 +50,12 @@ import { TerminalScrollIndicatorService } from './terminal/TerminalScrollIndicat
 interface Disposable {
   dispose(): void;
 }
+
+/**
+ * Delay after renderer setup before final theme re-application and refresh.
+ * This allows WebGL/DOM renderer to fully initialize before applying final styles.
+ */
+const POST_RENDERER_SETUP_DELAY_MS = 200;
 
 /**
  * Service responsible for terminal creation, removal, and switching operations
@@ -458,6 +465,10 @@ export class TerminalCreationService implements Disposable {
             if (settingsForVisuals) {
               uiManager.applyAllVisualSettings(terminal, settingsForVisuals);
               terminalLogger.info(`✅ Visual settings applied to terminal: ${terminalId}`);
+
+              // 🔧 CRITICAL FIX: Explicitly update container backgrounds immediately
+              // This ensures the correct theme is visible right away
+              this.updateContainerBackgrounds(terminalId, container, terminalContent, currentSettings);
             }
 
             if (fontSettingsForApply) {
@@ -608,6 +619,36 @@ export class TerminalCreationService implements Disposable {
             `▶️ Resumed all ResizeObservers after terminal creation: ${terminalId}`
           );
         }, 100);
+
+        // 🔧 CRITICAL FIX: Final refresh after all setup is complete
+        // This ensures text and cursor display correctly after WebGL/DOM renderer setup
+        // Theme must be re-applied after RenderingOptimizer setup to ensure correct colors
+        setTimeout(() => {
+          try {
+            const managers = this.coordinator.getManagers?.();
+            const uiManager = managers?.ui;
+            const configManager = managers?.config;
+            const currentSettings = configManager?.getCurrentSettings?.();
+
+            terminalLogger.info(`🎨 [DEBUG] Final theme check - currentSettings.theme: ${currentSettings?.theme}`);
+
+            if (uiManager && currentSettings) {
+              // Re-apply theme to ensure correct colors after WebGL setup
+              uiManager.applyTerminalTheme(terminal, currentSettings);
+              terminalLogger.info(`🎨 Final theme re-application for terminal: ${terminalId}`);
+
+              // 🔧 CRITICAL FIX: Explicitly update container backgrounds
+              // terminal.element may not be available when applyTerminalTheme tries to scope the update
+              this.updateContainerBackgrounds(terminalId, container, terminalContent, currentSettings);
+            }
+
+            // Force a full terminal refresh
+            terminal.refresh(0, terminal.rows - 1);
+            terminalLogger.info(`🔄 Final terminal refresh completed: ${terminalId}`);
+          } catch (error) {
+            terminalLogger.warn(`⚠️ Final refresh failed for terminal ${terminalId}:`, error);
+          }
+        }, POST_RENDERER_SETUP_DELAY_MS);
 
         return terminal;
       } catch (error) {
@@ -989,6 +1030,47 @@ export class TerminalCreationService implements Disposable {
       `Could not extract terminal number from ID: ${terminalId}, defaulting to 1`
     );
     return 1;
+  }
+
+  /**
+   * Update container backgrounds with theme color
+   *
+   * 🔧 FIX: Extracted from duplicate code in createTerminal() and delayed renderer setup.
+   * Explicitly updates container backgrounds since terminal.element may not be available
+   * when applyTerminalTheme tries to scope the update.
+   *
+   * @param terminalId - Terminal identifier for logging
+   * @param container - Terminal container element
+   * @param terminalContent - Terminal content element
+   * @param settings - Settings object containing theme property
+   */
+  private updateContainerBackgrounds(
+    terminalId: string,
+    container: HTMLElement | null,
+    terminalContent: HTMLElement | null,
+    settings: { theme?: string } | null | undefined
+  ): void {
+    if (!settings) {
+      return;
+    }
+
+    const resolvedTheme = getWebviewTheme(settings);
+    const backgroundColor = resolvedTheme.background;
+
+    if (terminalContent) {
+      terminalContent.style.backgroundColor = backgroundColor;
+    }
+    if (container) {
+      const xtermElement = container.querySelector<HTMLElement>('.xterm');
+      if (xtermElement) {
+        xtermElement.style.backgroundColor = backgroundColor;
+      }
+      const viewport = container.querySelector<HTMLElement>('.xterm-viewport');
+      if (viewport) {
+        viewport.style.backgroundColor = backgroundColor;
+      }
+    }
+    terminalLogger.info(`🎨 Container backgrounds updated: ${terminalId} (${backgroundColor})`);
   }
 
   /**

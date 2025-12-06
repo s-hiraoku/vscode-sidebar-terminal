@@ -6,6 +6,8 @@
  * @see Issue #223 - Phase 1: Communication Layer Definition
  */
 
+import type { ActiveBorderMode } from '../../types/shared';
+
 /**
  * Terminal settings DTO
  * Transferred from Extension to WebView
@@ -23,7 +25,7 @@ export interface TerminalSettingsDTO {
   cursorWidth?: number;
   scrollback?: number;
   altClickMovesCursor?: boolean;
-  highlightActiveBorder?: boolean;
+  activeBorderMode?: ActiveBorderMode;
   sendKeybindingsToShell?: boolean;
   allowChords?: boolean;
   allowMnemonics?: boolean;
