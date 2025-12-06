@@ -444,8 +444,10 @@ export class TerminalCommandHandlers {
       }
       const base64Content = base64Match[1];
 
-      // Determine file extension from MIME type
-      const extension = imageType.replace('image/', '') || 'png';
+      // Determine file extension from MIME type (sanitized for security)
+      const validExtensions = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'];
+      const rawExtension = imageType.replace('image/', '').toLowerCase();
+      const extension = validExtensions.includes(rawExtension) ? rawExtension : 'png';
 
       // Create temp file path
       const os = await import('os');
@@ -459,6 +461,18 @@ export class TerminalCommandHandlers {
       // Write image to temp file
       const imageBuffer = Buffer.from(base64Content, 'base64');
       fs.writeFileSync(tempFilePath, imageBuffer);
+
+      // Schedule cleanup after 5 minutes (Claude Code should have read it by then)
+      setTimeout(() => {
+        try {
+          if (fs.existsSync(tempFilePath)) {
+            fs.unlinkSync(tempFilePath);
+            log(`🧹 [HANDLER] Cleaned up temp image: ${tempFilePath}`);
+          }
+        } catch {
+          // Ignore cleanup errors
+        }
+      }, 5 * 60 * 1000);
 
       log(`🖼️ [HANDLER] Saved image to temp file: ${tempFilePath}`);
 
