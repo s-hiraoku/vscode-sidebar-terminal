@@ -384,6 +384,85 @@ export class TerminalCreationService implements Disposable {
         terminal.open(terminalContent);
         terminalLogger.info(`✅ Terminal opened in container: ${terminalId}`);
 
+        // 🎯 CRITICAL: Handle paste events for Claude Code image paste support
+        // On macOS, we need to intercept BOTH keydown AND paste events:
+        // 1. keydown: attachCustomKeyEventHandler returns false to bypass xterm.js key handling
+        // 2. paste: Add listener in capture phase to prevent xterm.js paste handler
+        //
+        // The browser triggers a paste event when Cmd+V is pressed. xterm.js has its own
+        // paste handler that only reads text/plain. We must stop this to let Claude Code
+        // read images from clipboard via its internal mechanisms.
+        const isMac = navigator.platform.includes('Mac');
+
+        // Part 1: Block xterm.js keydown handling for Cmd+V
+        terminal.attachCustomKeyEventHandler((event: KeyboardEvent) => {
+          if (isMac && event.metaKey && event.key === 'v' && !event.ctrlKey && !event.shiftKey) {
+            terminalLogger.info(`🖼️ Cmd+V keydown - bypassing xterm.js key handler`);
+            return false;
+          }
+          return true;
+        });
+
+        // Part 2: Handle Cmd+V image paste by sending Ctrl+V escape sequence
+        // When Cmd+V is pressed with an image in clipboard:
+        // - xterm.js would normally handle this as paste (text only)
+        // - But Claude Code reads images via its own clipboard mechanism triggered by Ctrl+V
+        // - Ctrl+V sends escape sequence \x16 which Claude Code recognizes
+        // Solution: Block xterm.js paste and send \x16 to trigger Claude Code's image paste
+        if (isMac) {
+          // Track if we just sent Ctrl+V to avoid duplicate handling
+          let ctrlVSentForImage = false;
+
+          terminalContent.addEventListener('keydown', (event: KeyboardEvent) => {
+            // On Cmd+V with image in clipboard, send Ctrl+V escape sequence
+            if (event.metaKey && event.key === 'v' && !event.ctrlKey && !event.shiftKey) {
+              // Check clipboard for images (async, but we can check synchronously via navigator.clipboard)
+              navigator.clipboard.read().then(items => {
+                for (const item of items) {
+                  if (item.types.some(type => type.startsWith('image/'))) {
+                    terminalLogger.info(`🖼️ Cmd+V with image - sending Ctrl+V escape sequence`);
+                    ctrlVSentForImage = true;
+                    // Send Ctrl+V escape sequence (\x16) to trigger Claude Code's clipboard read
+                    this.coordinator.postMessageToExtension({
+                      command: 'input',
+                      terminalId: terminalId,
+                      data: '\x16', // Ctrl+V escape sequence
+                    });
+                    return;
+                  }
+                }
+              }).catch(() => {
+                // Clipboard read failed, let normal paste happen
+              });
+            }
+          }, true);
+
+          terminalContent.addEventListener('paste', (event: ClipboardEvent) => {
+            const clipboardData = event.clipboardData;
+            if (!clipboardData) return;
+
+            const hasImage = Array.from(clipboardData.items).some(item => item.type.startsWith('image/'));
+
+            if (hasImage) {
+              terminalLogger.info(`🖼️ Image in paste event - blocking xterm.js, ctrlVSent: ${ctrlVSentForImage}`);
+              event.preventDefault();
+              event.stopImmediatePropagation();
+
+              // If we haven't already sent Ctrl+V, send it now
+              if (!ctrlVSentForImage) {
+                this.coordinator.postMessageToExtension({
+                  command: 'input',
+                  terminalId: terminalId,
+                  data: '\x16',
+                });
+              }
+              ctrlVSentForImage = false;
+              return;
+            }
+            // For text-only paste, let xterm.js handle it normally
+          }, true);
+        }
+
         // 🎯 VS Code Pattern: Apply font and visual settings AFTER terminal.open()
         // xterm.js requires the terminal to be attached to DOM before settings can be applied
         // Note: configManager was already retrieved above; reuse it here

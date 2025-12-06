@@ -993,10 +993,12 @@ export class InputManager extends BaseManager implements IInputManager {
         // Use Extension messaging for clipboard (navigator.clipboard doesn't work in VS Code WebView)
         this.logger(`${event.metaKey ? 'Cmd' : 'Ctrl'}+C copy for terminal ${terminalId}`);
         event.preventDefault();
+        event.stopPropagation(); // Prevent xterm.js from also handling this event
         this.handleTerminalCopy(manager);
         return true;
       }
       // Send interrupt signal (only on Ctrl+C, not Cmd+C on macOS)
+      // Note: Don't stopPropagation for interrupt - let it flow to shell
       if (!event.metaKey) {
         this.logger(`Ctrl+C interrupt for terminal ${terminalId}`);
         this.emitTerminalInteractionEvent('interrupt', terminalId, undefined, manager);
@@ -1004,13 +1006,24 @@ export class InputManager extends BaseManager implements IInputManager {
       }
     }
 
-    // Ctrl+V (Windows/Linux) or Cmd+V (macOS): Paste
-    if ((event.ctrlKey || event.metaKey) && event.key === 'v') {
-      // Use Extension messaging for clipboard (navigator.clipboard doesn't work in VS Code WebView)
-      this.logger(`${event.metaKey ? 'Cmd' : 'Ctrl'}+V paste for terminal ${terminalId}`);
-      event.preventDefault();
-      this.handleTerminalPaste(manager);
-      return true;
+    // Paste handling: Platform-specific behavior for Claude Code compatibility
+    // macOS: Let Cmd+V and Ctrl+V pass through to Claude Code for both text AND image paste
+    // Windows/Linux: Intercept Ctrl+V for text paste (standard behavior)
+    const isMac = navigator.platform.includes('Mac');
+    if (event.key === 'v') {
+      if (isMac && (event.metaKey || event.ctrlKey)) {
+        // macOS: Let both Cmd+V and Ctrl+V pass through for Claude Code
+        // Claude Code handles both text and image paste natively
+        this.logger(`${event.metaKey ? 'Cmd' : 'Ctrl'}+V on macOS - passing through for Claude Code`);
+        return false; // Don't intercept - let Claude Code handle it
+      } else if (!isMac && event.ctrlKey) {
+        // Windows/Linux: Ctrl+V for text paste
+        this.logger(`Ctrl+V text paste for terminal ${terminalId}`);
+        event.preventDefault();
+        event.stopPropagation();
+        this.handleTerminalPaste(manager);
+        return true;
+      }
     }
 
     // Ctrl+Insert (Windows/Linux): Copy - VS Code standard shortcut
@@ -1019,6 +1032,7 @@ export class InputManager extends BaseManager implements IInputManager {
       if (terminal && terminal.terminal.hasSelection()) {
         this.logger(`Ctrl+Insert copy for terminal ${terminalId}`);
         event.preventDefault();
+        event.stopPropagation(); // Prevent xterm.js from also handling this event
         this.handleTerminalCopy(manager);
         return true;
       }
@@ -1028,7 +1042,22 @@ export class InputManager extends BaseManager implements IInputManager {
     if (event.shiftKey && event.key === 'Insert') {
       this.logger(`Shift+Insert paste for terminal ${terminalId}`);
       event.preventDefault();
+      event.stopPropagation(); // Prevent xterm.js from also handling this event
       this.handleTerminalPaste(manager);
+      return true;
+    }
+
+    // Shift+Enter or Option/Alt+Enter: Send newline for Claude Code multiline input
+    // Claude Code uses these for inserting newlines without submitting
+    if (event.key === 'Enter' && (event.shiftKey || event.altKey || event.metaKey)) {
+      this.logger(
+        `${event.shiftKey ? 'Shift' : event.altKey ? 'Alt' : 'Cmd'}+Enter - sending newline for multiline input`
+      );
+      event.preventDefault();
+      event.stopPropagation();
+      // Send literal newline character (not carriage return)
+      // This allows Claude Code to recognize it as "insert newline" vs "submit"
+      this.queueInputData(terminalId, '\n', true);
       return true;
     }
 

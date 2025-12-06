@@ -293,8 +293,9 @@ export class KeyboardShortcutService {
     try {
       const clipboardText = await vscode.env.clipboard.readText();
       if (clipboardText && activeTerminal) {
-        this._terminalManager.sendInput(activeTerminal, clipboardText);
-        log(`📋 [KEYBOARD] Pasted text: ${activeTerminal}`);
+        // Fix: sendInput signature is (data, terminalId), not (terminalId, data)
+        this._terminalManager.sendInput(clipboardText, activeTerminal);
+        log(`📋 [KEYBOARD] Pasted ${clipboardText.length} chars to terminal ${activeTerminal}`);
       }
     } catch (error) {
       log(`❌ [KEYBOARD] Failed to paste: ${error}`);
@@ -342,7 +343,8 @@ export class KeyboardShortcutService {
     });
 
     if (selected && activeTerminal) {
-      this._terminalManager.sendInput(activeTerminal, selected + '\n');
+      // Fix: sendInput signature is (data, terminalId), not (terminalId, data)
+      this._terminalManager.sendInput(selected + '\n', activeTerminal);
       log(`🔄 [KEYBOARD] Running recent command: ${selected}`);
     }
   }
