@@ -36,6 +36,8 @@ export interface XtermCallbacks {
   onResize: (terminalId: string, cols: number, rows: number) => void;
   onFocus: (terminalId: string) => void;
   onTitleChange?: (terminalId: string, title: string) => void;
+  /** Called when an image is pasted (for Claude Code image paste support) */
+  onImagePaste?: (terminalId: string, imageData: string, imageType: string) => void;
 }
 
 /**
@@ -301,6 +303,59 @@ export class XtermInstance {
 
     // 6. Open terminal in DOM
     terminal.open(terminalBody);
+
+    // 🎯 CRITICAL: Handle paste events for Claude Code image paste support
+    // On macOS, we need to intercept BOTH keydown AND paste events:
+    // 1. keydown: attachCustomKeyEventHandler returns false to bypass xterm.js key handling
+    // 2. paste: Add listener in capture phase to prevent xterm.js paste handler
+    const isMac = navigator.platform.includes('Mac');
+
+    // Part 1: Block xterm.js keydown handling for Cmd+V
+    terminal.attachCustomKeyEventHandler((event: KeyboardEvent) => {
+      if (isMac && event.metaKey && event.key === 'v' && !event.ctrlKey && !event.shiftKey) {
+        return false; // Don't let xterm.js handle Cmd+V keydown
+      }
+      return true;
+    });
+
+    // Part 2: Handle Cmd+V image paste by sending Ctrl+V escape sequence
+    // This triggers Claude Code's native clipboard reading mechanism
+    if (isMac) {
+      let ctrlVSentForImage = false;
+
+      terminalBody.addEventListener('keydown', (event: KeyboardEvent) => {
+        if (event.metaKey && event.key === 'v' && !event.ctrlKey && !event.shiftKey) {
+          navigator.clipboard.read().then(items => {
+            for (const item of items) {
+              if (item.types.some(type => type.startsWith('image/'))) {
+                ctrlVSentForImage = true;
+                // Send Ctrl+V escape sequence via onData callback
+                callbacks.onData(id, '\x16');
+                return;
+              }
+            }
+          }).catch(() => {});
+        }
+      }, true);
+
+      terminalBody.addEventListener('paste', (event: ClipboardEvent) => {
+        const clipboardData = event.clipboardData;
+        if (!clipboardData) return;
+
+        const hasImage = Array.from(clipboardData.items).some(item => item.type.startsWith('image/'));
+
+        if (hasImage) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+
+          if (!ctrlVSentForImage) {
+            callbacks.onData(id, '\x16');
+          }
+          ctrlVSentForImage = false;
+          return;
+        }
+      }, true);
+    }
 
     // 7. Create instance
     const instance = new XtermInstance(
