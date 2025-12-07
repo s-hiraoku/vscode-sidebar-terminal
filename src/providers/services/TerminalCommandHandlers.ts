@@ -458,9 +458,9 @@ export class TerminalCommandHandlers {
       const filename = `claude-paste-${timestamp}.${extension}`;
       const tempFilePath = path.join(tempDir, filename);
 
-      // Write image to temp file
+      // Write image to temp file (async to avoid blocking event loop)
       const imageBuffer = Buffer.from(base64Content, 'base64');
-      fs.writeFileSync(tempFilePath, imageBuffer);
+      await fs.promises.writeFile(tempFilePath, imageBuffer);
 
       // Schedule cleanup after 5 minutes (Claude Code should have read it by then)
       setTimeout(() => {
