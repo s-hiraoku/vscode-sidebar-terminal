@@ -993,10 +993,12 @@ export class InputManager extends BaseManager implements IInputManager {
         // Use Extension messaging for clipboard (navigator.clipboard doesn't work in VS Code WebView)
         this.logger(`${event.metaKey ? 'Cmd' : 'Ctrl'}+C copy for terminal ${terminalId}`);
         event.preventDefault();
+        event.stopPropagation(); // Prevent xterm.js from also handling this event
         this.handleTerminalCopy(manager);
         return true;
       }
       // Send interrupt signal (only on Ctrl+C, not Cmd+C on macOS)
+      // Note: Don't stopPropagation for interrupt - let it flow to shell
       if (!event.metaKey) {
         this.logger(`Ctrl+C interrupt for terminal ${terminalId}`);
         this.emitTerminalInteractionEvent('interrupt', terminalId, undefined, manager);
@@ -1004,13 +1006,24 @@ export class InputManager extends BaseManager implements IInputManager {
       }
     }
 
-    // Ctrl+V (Windows/Linux) or Cmd+V (macOS): Paste
-    if ((event.ctrlKey || event.metaKey) && event.key === 'v') {
-      // Use Extension messaging for clipboard (navigator.clipboard doesn't work in VS Code WebView)
-      this.logger(`${event.metaKey ? 'Cmd' : 'Ctrl'}+V paste for terminal ${terminalId}`);
-      event.preventDefault();
-      this.handleTerminalPaste(manager);
-      return true;
+    // Paste handling: Let paste event handler in TerminalCreationService handle clipboard
+    // This ensures both text AND image paste work correctly:
+    // - Text paste: Read from clipboardData and send to extension
+    // - Image paste: Send \x16 to trigger Claude Code's native clipboard read
+    // We don't intercept keydown here because the paste event needs to fire for clipboard access
+    // Use userAgentData if available (modern), fallback to userAgent (deprecated navigator.platform)
+    const isMac = (navigator as any).userAgentData?.platform === 'macOS' || /Mac/.test(navigator.userAgent);
+    if (event.key === 'v') {
+      if (isMac && event.metaKey) {
+        // macOS Cmd+V: Let paste event handler deal with it
+        // Don't preventDefault - we need the paste event to fire
+        this.logger(`Cmd+V on macOS - letting paste event handler process`);
+        return false; // Don't intercept
+      } else if (!isMac && event.ctrlKey) {
+        // Windows/Linux Ctrl+V: Let paste event handler deal with it
+        this.logger(`Ctrl+V on non-Mac - letting paste event handler process`);
+        return false; // Don't intercept
+      }
     }
 
     // Ctrl+Insert (Windows/Linux): Copy - VS Code standard shortcut
@@ -1019,6 +1032,7 @@ export class InputManager extends BaseManager implements IInputManager {
       if (terminal && terminal.terminal.hasSelection()) {
         this.logger(`Ctrl+Insert copy for terminal ${terminalId}`);
         event.preventDefault();
+        event.stopPropagation(); // Prevent xterm.js from also handling this event
         this.handleTerminalCopy(manager);
         return true;
       }
@@ -1028,7 +1042,22 @@ export class InputManager extends BaseManager implements IInputManager {
     if (event.shiftKey && event.key === 'Insert') {
       this.logger(`Shift+Insert paste for terminal ${terminalId}`);
       event.preventDefault();
+      event.stopPropagation(); // Prevent xterm.js from also handling this event
       this.handleTerminalPaste(manager);
+      return true;
+    }
+
+    // Shift+Enter or Option/Alt+Enter: Send newline for Claude Code multiline input
+    // Claude Code uses these for inserting newlines without submitting
+    if (event.key === 'Enter' && (event.shiftKey || event.altKey || event.metaKey)) {
+      this.logger(
+        `${event.shiftKey ? 'Shift' : event.altKey ? 'Alt' : 'Cmd'}+Enter - sending newline for multiline input`
+      );
+      event.preventDefault();
+      event.stopPropagation();
+      // Send literal newline character (not carriage return)
+      // This allows Claude Code to recognize it as "insert newline" vs "submit"
+      this.queueInputData(terminalId, '\n', true);
       return true;
     }
 
@@ -1092,7 +1121,8 @@ export class InputManager extends BaseManager implements IInputManager {
     terminal: Terminal,
     manager: IManagerCoordinator
   ): boolean {
-    const isMac = navigator.platform.includes('Mac');
+    // Use userAgentData if available (modern), fallback to userAgent (deprecated navigator.platform)
+    const isMac = (navigator as any).userAgentData?.platform === 'macOS' || /Mac/.test(navigator.userAgent);
     const ctrlOrCmd = isMac ? event.metaKey : event.ctrlKey;
 
     // NEVER intercept these - they must go to shell:

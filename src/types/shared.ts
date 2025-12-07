@@ -572,6 +572,8 @@ export interface WebviewMessage {
     | 'deleteTerminalResponse' // 🎯 FIX: 削除処理統一化で追加
     | 'copyToClipboard' // 📋 Clipboard: Copy text to system clipboard
     | 'requestClipboardContent' // 📋 Clipboard: Request clipboard content for paste
+    | 'pasteText' // 📋 Clipboard: Paste text from WebView clipboard read
+    | 'pasteImage' // 📋 Clipboard: Paste image for Claude Code
     | 'switchAiAgentResponse' // AIエージェント切り替えレスポンス
     | 'phase8ServicesReady' // Phase 8: Terminal Decorations & Links service ready notification
     | 'htmlScriptTest' // HTML script test message
