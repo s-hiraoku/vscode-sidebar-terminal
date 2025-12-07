@@ -303,42 +303,49 @@ export class XtermInstance {
     // 6. Open terminal in DOM
     terminal.open(terminalBody);
 
-    // 🎯 CRITICAL: Handle paste events for Claude Code image paste support
-    // On macOS, we need to intercept BOTH keydown AND paste events:
-    // 1. keydown: attachCustomKeyEventHandler returns false to bypass xterm.js key handling
-    // 2. paste: Add listener in capture phase to prevent xterm.js paste handler
-    // Use userAgentData if available (modern), fallback to userAgent (deprecated navigator.platform)
-    const isMac = (navigator as any).userAgentData?.platform === 'macOS' || /Mac/.test(navigator.userAgent);
+    // 🎯 CRITICAL: Handle ALL paste events (text AND image)
+    // VS Code WebView has clipboard API restrictions, so xterm.js can't read clipboard directly.
+    // We intercept paste events to:
+    // 1. For IMAGE paste: Send \x16 to trigger Claude Code's native clipboard read
+    // 2. For TEXT paste: Read from clipboardData and send via onData callback
 
-    // Part 1: Block xterm.js keydown handling for Cmd+V
+    // Block xterm.js keydown handling for paste shortcuts to prevent double-handling
     terminal.attachCustomKeyEventHandler((event: KeyboardEvent) => {
-      if (isMac && event.metaKey && event.key === 'v' && !event.ctrlKey && !event.shiftKey) {
-        return false; // Don't let xterm.js handle Cmd+V keydown
+      // Use userAgentData if available (modern), fallback to userAgent
+      const isMac = (navigator as any).userAgentData?.platform === 'macOS' || /Mac/.test(navigator.userAgent);
+      // Block Cmd+V on macOS and Ctrl+V on all platforms
+      if ((isMac && event.metaKey && event.key === 'v') ||
+          (event.ctrlKey && event.key === 'v' && !event.shiftKey)) {
+        return false; // Let browser fire paste event, we'll handle it there
       }
       return true;
     });
 
-    // Part 2: Handle Cmd+V image paste by sending Ctrl+V escape sequence
-    // This triggers Claude Code's native clipboard reading mechanism
-    // Simplified: only use sync paste event (clipboardData is available synchronously)
-    let pasteHandler: ((event: ClipboardEvent) => void) | null = null;
-    if (isMac) {
-      pasteHandler = (event: ClipboardEvent) => {
-        const clipboardData = event.clipboardData;
-        if (!clipboardData) return;
+    // Handle ALL paste events (text AND image)
+    const pasteHandler = (event: ClipboardEvent) => {
+      const clipboardData = event.clipboardData;
+      if (!clipboardData) return;
 
-        const hasImage = Array.from(clipboardData.items).some(item => item.type.startsWith('image/'));
+      const hasImage = Array.from(clipboardData.items).some(item => item.type.startsWith('image/'));
 
-        if (hasImage) {
-          event.preventDefault();
-          event.stopImmediatePropagation();
-          // Send Ctrl+V escape sequence to trigger Claude Code's clipboard read
-          callbacks.onData(id, '\x16');
-          return;
-        }
-      };
-      terminalBody.addEventListener('paste', pasteHandler, true);
-    }
+      if (hasImage) {
+        // IMAGE paste: Send \x16 to trigger Claude Code's native clipboard read
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        callbacks.onData(id, '\x16');
+        return;
+      }
+
+      // TEXT paste: Read from clipboardData and send via callback
+      const text = clipboardData.getData('text/plain');
+      if (text) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        callbacks.onData(id, text);
+        return;
+      }
+    };
+    terminalBody.addEventListener('paste', pasteHandler, true);
 
     // 7. Create instance
     const instance = new XtermInstance(
@@ -352,12 +359,9 @@ export class XtermInstance {
     );
 
     // Register paste handler cleanup to prevent memory leak
-    if (pasteHandler) {
-      const handler = pasteHandler; // Capture for closure
-      instance.addCleanup(() => {
-        terminalBody.removeEventListener('paste', handler, true);
-      });
-    }
+    instance.addCleanup(() => {
+      terminalBody.removeEventListener('paste', pasteHandler, true);
+    });
 
     // 8. Try WebGL addon for performance
     await instance.tryEnableWebGL();
