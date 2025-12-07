@@ -416,6 +416,45 @@ export class TerminalCommandHandlers {
   }
 
   /**
+   * Handle text paste from WebView
+   * This is used when the WebView reads clipboard data directly from the paste event
+   * and sends it to the extension for terminal input.
+   */
+  public async handlePasteText(message: WebviewMessage): Promise<void> {
+    if (!hasTerminalId(message)) {
+      log('⚠️ [HANDLER] pasteText missing terminalId');
+      return;
+    }
+
+    const text = (message as any)?.text;
+    if (typeof text !== 'string' || text.length === 0) {
+      log('⚠️ [HANDLER] pasteText called without text');
+      return;
+    }
+
+    try {
+      log(`📋 [HANDLER] Pasting ${text.length} chars to terminal ${message.terminalId}`);
+
+      // Get terminal and send input
+      const terminal = this.deps.terminalManager.getTerminal(message.terminalId);
+      if (!terminal) {
+        log('❌ [HANDLER] Terminal not found for paste operation');
+        return;
+      }
+
+      // Escape special characters based on shell type
+      const shellPath = (terminal as any).shellPath || '';
+      const processedText = this.escapeTextForShell(text, shellPath);
+
+      // Send to terminal
+      this.deps.terminalManager.sendInput(processedText, message.terminalId);
+      log('✅ [HANDLER] Text pasted successfully');
+    } catch (error) {
+      log('❌ [HANDLER] Failed to paste text:', error);
+    }
+  }
+
+  /**
    * Handle image paste for Claude Code
    * Saves the image to a temp file and sends the file path to the terminal
    */
