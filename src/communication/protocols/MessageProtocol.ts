@@ -101,6 +101,8 @@ export type WebViewToExtensionCommand =
   | 'relayoutTerminals'
   | 'copyToClipboard'
   | 'requestClipboardContent'
+  | 'pasteText'
+  | 'pasteImage'
   | 'htmlScriptTest'
   | 'webviewReady'
   | 'ready'

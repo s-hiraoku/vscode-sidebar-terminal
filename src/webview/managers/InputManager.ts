@@ -1006,24 +1006,23 @@ export class InputManager extends BaseManager implements IInputManager {
       }
     }
 
-    // Paste handling: Platform-specific behavior for Claude Code compatibility
-    // macOS: Let Cmd+V and Ctrl+V pass through to Claude Code for both text AND image paste
-    // Windows/Linux: Intercept Ctrl+V for text paste (standard behavior)
+    // Paste handling: Let paste event handler in TerminalCreationService handle clipboard
+    // This ensures both text AND image paste work correctly:
+    // - Text paste: Read from clipboardData and send to extension
+    // - Image paste: Send \x16 to trigger Claude Code's native clipboard read
+    // We don't intercept keydown here because the paste event needs to fire for clipboard access
     // Use userAgentData if available (modern), fallback to userAgent (deprecated navigator.platform)
     const isMac = (navigator as any).userAgentData?.platform === 'macOS' || /Mac/.test(navigator.userAgent);
     if (event.key === 'v') {
-      if (isMac && (event.metaKey || event.ctrlKey)) {
-        // macOS: Let both Cmd+V and Ctrl+V pass through for Claude Code
-        // Claude Code handles both text and image paste natively
-        this.logger(`${event.metaKey ? 'Cmd' : 'Ctrl'}+V on macOS - passing through for Claude Code`);
-        return false; // Don't intercept - let Claude Code handle it
+      if (isMac && event.metaKey) {
+        // macOS Cmd+V: Let paste event handler deal with it
+        // Don't preventDefault - we need the paste event to fire
+        this.logger(`Cmd+V on macOS - letting paste event handler process`);
+        return false; // Don't intercept
       } else if (!isMac && event.ctrlKey) {
-        // Windows/Linux: Ctrl+V for text paste
-        this.logger(`Ctrl+V text paste for terminal ${terminalId}`);
-        event.preventDefault();
-        event.stopPropagation();
-        this.handleTerminalPaste(manager);
-        return true;
+        // Windows/Linux Ctrl+V: Let paste event handler deal with it
+        this.logger(`Ctrl+V on non-Mac - letting paste event handler process`);
+        return false; // Don't intercept
       }
     }
 
