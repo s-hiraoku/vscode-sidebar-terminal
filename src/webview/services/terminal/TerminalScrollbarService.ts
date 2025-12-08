@@ -146,8 +146,8 @@ export class TerminalScrollbarService {
       }
 
       /* Let xterm manage overlay positioning; overriding can misalign hitboxes */
+      /* NOTE: xterm-selection-layer intentionally excluded - it breaks text selection */
       .terminal-container .xterm .xterm-link-layer,
-      .terminal-container .xterm .xterm-selection-layer,
       .terminal-container .xterm .xterm-decoration-container {
         top: initial !important;
         left: initial !important;
