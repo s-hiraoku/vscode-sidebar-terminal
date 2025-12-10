@@ -208,7 +208,18 @@ export class ConfigurationService extends DisposableBase {
       // 表示設定
       cursorBlink: this.getCachedValue('secondaryTerminal', 'cursorBlink', true),
       cursorStyle: this.getCachedValue('secondaryTerminal', 'cursorStyle', 'block'),
+      cursorWidth: this.getCachedValue('secondaryTerminal', 'cursorWidth', 1),
       theme: this.getCachedValue('secondaryTerminal', 'theme', 'dark'),
+      drawBoldTextInBrightColors: this.getCachedValue(
+        'secondaryTerminal',
+        'drawBoldTextInBrightColors',
+        true
+      ),
+      minimumContrastRatio: this.getCachedValue(
+        'secondaryTerminal',
+        'minimumContrastRatio',
+        1
+      ),
 
       // ヘッダー設定
       showHeader: this.getCachedValue('secondaryTerminal', 'showHeader', true),

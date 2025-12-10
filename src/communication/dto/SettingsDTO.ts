@@ -23,6 +23,8 @@ export interface TerminalSettingsDTO {
   cursorBlink?: boolean;
   cursorStyle?: 'block' | 'underline' | 'bar';
   cursorWidth?: number;
+  drawBoldTextInBrightColors?: boolean;
+  minimumContrastRatio?: number;
   scrollback?: number;
   altClickMovesCursor?: boolean;
   activeBorderMode?: ActiveBorderMode;

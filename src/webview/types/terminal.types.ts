@@ -76,6 +76,8 @@ export interface TerminalConfig {
   drawBoldTextInBrightColors: boolean;
   rightClickSelectsWord: boolean;
   wordSeparator: string;
+  /** Whether this terminal should be active on creation */
+  isActive?: boolean;
 }
 
 // Export commonly used combinations

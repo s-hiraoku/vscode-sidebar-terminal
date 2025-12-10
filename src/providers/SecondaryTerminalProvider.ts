@@ -1139,6 +1139,26 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       return;
     }
 
+    // Check if confirmation is required before killing
+    const confirmBeforeKill = vscode.workspace
+      .getConfiguration('secondaryTerminal')
+      .get<boolean>('confirmBeforeKill', false);
+
+    if (confirmBeforeKill) {
+      const terminal = this._terminalManager.getTerminal(activeTerminalId);
+      const terminalName = terminal?.name || `Terminal ${activeTerminalId}`;
+      const result = await vscode.window.showWarningMessage(
+        `Are you sure you want to kill "${terminalName}"?`,
+        { modal: true },
+        'Kill Terminal'
+      );
+
+      if (result !== 'Kill Terminal') {
+        log('⚠️ [PROVIDER] Terminal kill cancelled by user');
+        return;
+      }
+    }
+
     await this._performKillTerminal(activeTerminalId);
   }
 
@@ -1185,6 +1205,26 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   public async killSpecificTerminal(terminalId: string): Promise<void> {
+    // Check if confirmation is required before killing
+    const confirmBeforeKill = vscode.workspace
+      .getConfiguration('secondaryTerminal')
+      .get<boolean>('confirmBeforeKill', false);
+
+    if (confirmBeforeKill) {
+      const terminal = this._terminalManager.getTerminal(terminalId);
+      const terminalName = terminal?.name || `Terminal ${terminalId}`;
+      const result = await vscode.window.showWarningMessage(
+        `Are you sure you want to kill "${terminalName}"?`,
+        { modal: true },
+        'Kill Terminal'
+      );
+
+      if (result !== 'Kill Terminal') {
+        log('⚠️ [PROVIDER] Terminal kill cancelled by user');
+        return;
+      }
+    }
+
     await this._performKillSpecificTerminal(terminalId);
   }
 

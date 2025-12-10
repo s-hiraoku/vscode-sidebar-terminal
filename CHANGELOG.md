@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.163] - 2025-12-10
+
+### Fixed
+
+- **Scrollback Loss on Long Idle**: Fix scrollback data being lost when terminal is left idle for extended periods
+  - **Root Cause**: Auto-save only triggered on user input/output events; long idle periods caused stale cache
+  - **Fix 1**: Add 30-second periodic auto-save in WebView to ensure scrollback is captured during idle
+  - **Fix 2**: Clear Extension cache before periodic saves to force fresh data extraction
+  - **Fix 3**: Extend scrollback extraction timeout from 500ms to 2000ms for reliable capture
+  - **Result**: Latest scrollback content is now reliably saved even after hours of inactivity
+
+## [0.1.162] - 2025-12-04
+
+### Fixed
+
+- **Terminal 1 Initial Styling Inconsistency**: Fix Terminal 1 having different color/styling on initial display
+  - **Root Cause**: All terminals were created with `isActive: false`, active styling applied asynchronously later
+  - **Fix**: Pass `isActive` flag through terminal config and apply border styling BEFORE terminal opens
+  - **Result**: Terminal 1 now has consistent active styling from the start (no visual flicker)
+  - Added `updateSingleTerminalBorder` method to UIManager for early border application
+
 ## [0.1.161] - 2025-12-04
 
 ### Fixed

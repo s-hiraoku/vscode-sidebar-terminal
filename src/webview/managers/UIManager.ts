@@ -130,6 +130,15 @@ export class UIManager extends BaseManager implements IUIManager {
   }
 
   /**
+   * Update border for a single terminal container
+   * Delegates to TerminalBorderService
+   * Used to apply initial active styling during terminal creation
+   */
+  public updateSingleTerminalBorder(container: HTMLElement, isActive: boolean): void {
+    this.borderService.updateSingleTerminalBorder(container, isActive);
+  }
+
+  /**
    * Show terminal placeholder when no terminals exist
    */
   public showTerminalPlaceholder(): void {
