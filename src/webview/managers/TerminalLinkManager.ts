@@ -6,12 +6,14 @@
  * - Links require modifier key + click to activate (Cmd/Ctrl or Alt depending on settings)
  * - Hover shows underline and pointer cursor when modifier key is pressed
  * - Supports file paths with line:column navigation
+ * - Supports multi-line URLs that wrap across terminal lines
  */
 
 import { Terminal, type ILink, type IDisposable } from '@xterm/xterm';
 import { IManagerCoordinator } from '../interfaces/ManagerInterfaces';
 import { terminalLogger } from '../utils/ManagerLogger';
 import { BaseManager } from './BaseManager';
+import { MultiLineUrlLinkProvider } from '../providers/MultiLineUrlLinkProvider';
 
 /**
  * Parsed file link with optional line and column numbers
@@ -36,6 +38,8 @@ interface ParsedFileLink {
 export class TerminalLinkManager extends BaseManager {
   private readonly coordinator: IManagerCoordinator;
   private readonly linkProviderDisposables = new Map<string, IDisposable>();
+  private readonly multiLineProviderDisposables = new Map<string, IDisposable>();
+  private readonly multiLineProviders = new Map<string, MultiLineUrlLinkProvider>();
 
   // Current link modifier setting (updated when settings change)
   // 'alt' means Alt is for multi-cursor, so Cmd/Ctrl opens links
@@ -62,6 +66,11 @@ export class TerminalLinkManager extends BaseManager {
   public setLinkModifier(modifier: 'alt' | 'ctrlCmd'): void {
     this.linkModifier = modifier;
     terminalLogger.info(`Link modifier updated to: ${modifier}`);
+
+    // Update all multi-line URL providers with the new modifier
+    this.multiLineProviders.forEach((provider) => {
+      provider.setLinkModifier(modifier);
+    });
   }
 
   /**
@@ -91,18 +100,36 @@ export class TerminalLinkManager extends BaseManager {
    */
   public registerTerminalLinkHandlers(terminal: Terminal, terminalId: string): void {
     try {
-      // Dispose existing provider if any
+      // Dispose existing providers if any
       this.linkProviderDisposables.get(terminalId)?.dispose();
+      this.multiLineProviderDisposables.get(terminalId)?.dispose();
 
-      const disposable = terminal.registerLinkProvider({
+      // Register file path link provider
+      const filePathDisposable = terminal.registerLinkProvider({
         provideLinks: (lineNumber, callback) => {
           const links = this.findLinksInLine(terminal, lineNumber, terminalId);
           callback(links);
         },
       });
 
-      this.linkProviderDisposables.set(terminalId, disposable);
-      terminalLogger.debug(`Link provider registered for ${terminalId}`);
+      this.linkProviderDisposables.set(terminalId, filePathDisposable);
+
+      // Register multi-line URL link provider
+      // This handles URLs that wrap across multiple terminal lines
+      const multiLineProvider = new MultiLineUrlLinkProvider(terminal, terminalId, {
+        linkModifier: this.linkModifier,
+        onUrlActivate: (url, tid) => {
+          this.openUrlFromTerminal(url, tid);
+        },
+      });
+
+      const multiLineDisposable = terminal.registerLinkProvider(multiLineProvider);
+      this.multiLineProviderDisposables.set(terminalId, multiLineDisposable);
+      this.multiLineProviders.set(terminalId, multiLineProvider);
+
+      terminalLogger.debug(
+        `Link providers registered for ${terminalId} (file paths + multi-line URLs)`
+      );
     } catch (error) {
       terminalLogger.warn(`Failed to register link provider for ${terminalId}:`, error);
     }
@@ -299,11 +326,20 @@ export class TerminalLinkManager extends BaseManager {
    * Unregister link provider for a terminal
    */
   public unregisterTerminalLinkProvider(terminalId: string): void {
+    // Dispose file path link provider
     const disposable = this.linkProviderDisposables.get(terminalId);
     if (disposable) {
       disposable.dispose();
       this.linkProviderDisposables.delete(terminalId);
     }
+
+    // Dispose multi-line URL link provider
+    const multiLineDisposable = this.multiLineProviderDisposables.get(terminalId);
+    if (multiLineDisposable) {
+      multiLineDisposable.dispose();
+      this.multiLineProviderDisposables.delete(terminalId);
+    }
+    this.multiLineProviders.delete(terminalId);
   }
 
   /**
@@ -316,6 +352,11 @@ export class TerminalLinkManager extends BaseManager {
   protected doDispose(): void {
     this.linkProviderDisposables.forEach((d) => d.dispose());
     this.linkProviderDisposables.clear();
+
+    this.multiLineProviderDisposables.forEach((d) => d.dispose());
+    this.multiLineProviderDisposables.clear();
+    this.multiLineProviders.clear();
+
     terminalLogger.info('TerminalLinkManager disposed');
   }
 }

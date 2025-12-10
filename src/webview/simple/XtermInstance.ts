@@ -624,6 +624,88 @@ export class XtermInstance {
         this.terminal.focus();
       }
     });
+
+    // 🔍 DEBUG: Mouse event logging to diagnose selection issue
+    this.setupMouseDebugLogging();
+  }
+
+  /**
+   * 🔍 DEBUG: Add mouse event logging to diagnose selection issues
+   * Remove this method after debugging is complete
+   */
+  private setupMouseDebugLogging(): void {
+    const xtermElement = this.container.querySelector('.xterm');
+    const xtermScreen = this.container.querySelector('.xterm-screen');
+    const selectionLayer = this.container.querySelector('.xterm-selection-layer');
+
+    console.log(`[MOUSE DEBUG ${this.id}] Setup - Elements found:`, {
+      xterm: !!xtermElement,
+      screen: !!xtermScreen,
+      selectionLayer: !!selectionLayer,
+    });
+
+    // Check selection layer CSS
+    if (selectionLayer) {
+      const style = window.getComputedStyle(selectionLayer);
+      console.log(`[MOUSE DEBUG ${this.id}] Selection layer CSS:`, {
+        position: style.position,
+        top: style.top,
+        left: style.left,
+        pointerEvents: style.pointerEvents,
+        display: style.display,
+        visibility: style.visibility,
+        zIndex: style.zIndex,
+      });
+    }
+
+    // Track if we're in a drag operation
+    let isDragging = false;
+
+    // Listen on container for mouse events
+    this.container.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      console.log(`[MOUSE DEBUG ${this.id}] mousedown on container`, {
+        target: (e.target as HTMLElement)?.className,
+        x: e.clientX,
+        y: e.clientY,
+        button: e.button,
+      });
+    }, true); // capture phase
+
+    this.container.addEventListener('mousemove', (e) => {
+      if (isDragging) {
+        console.log(`[MOUSE DEBUG ${this.id}] mousemove (dragging)`, {
+          target: (e.target as HTMLElement)?.className,
+          x: e.clientX,
+          y: e.clientY,
+        });
+      }
+    }, true);
+
+    this.container.addEventListener('mouseup', (e) => {
+      if (isDragging) {
+        isDragging = false;
+        console.log(`[MOUSE DEBUG ${this.id}] mouseup`, {
+          target: (e.target as HTMLElement)?.className,
+          hasSelection: this.terminal.hasSelection(),
+          selection: this.terminal.getSelection(),
+        });
+      }
+    }, true);
+
+    // Also check xterm.js selection events
+    this.terminal.onSelectionChange(() => {
+      console.log(`[MOUSE DEBUG ${this.id}] xterm onSelectionChange fired!`, {
+        hasSelection: this.terminal.hasSelection(),
+        selection: this.terminal.getSelection(),
+      });
+    });
+
+    // Log the terminal element structure
+    console.log(`[MOUSE DEBUG ${this.id}] Terminal element structure:`, {
+      containerChildren: Array.from(this.container.children).map(c => c.className),
+      xtermChildren: xtermElement ? Array.from(xtermElement.children).map(c => c.className) : [],
+    });
   }
 
   /**
