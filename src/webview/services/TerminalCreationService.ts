@@ -626,6 +626,9 @@ export class TerminalCreationService implements Disposable {
         terminalLogger.info(`✅ RenderingOptimizer disposed for: ${terminalId}`);
       }
 
+      // 🔧 FIX: Clear periodic auto-save timer to prevent memory leaks
+      TerminalAutoSaveService.clearPeriodicSaveTimer(terminalId);
+
       // Cleanup scroll indicator
       const disposeScrollIndicator = this.scrollIndicatorDisposables.get(terminalId);
       if (disposeScrollIndicator) {

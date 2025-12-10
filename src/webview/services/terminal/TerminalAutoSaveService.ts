@@ -17,10 +17,29 @@ export class TerminalAutoSaveService {
   // Static Set to track terminals currently being restored (blocks auto-save)
   private static restoringTerminals = new Set<string>();
 
+  // Periodic save interval (30 seconds) - ensures scrollback is saved even without user activity
+  private static readonly PERIODIC_SAVE_INTERVAL = 30000;
+
+  // Track periodic save timers for cleanup
+  private static periodicSaveTimers = new Map<string, number>();
+
   private readonly coordinator: IManagerCoordinator;
 
   constructor(coordinator: IManagerCoordinator) {
     this.coordinator = coordinator;
+  }
+
+  /**
+   * Clear periodic save timer for a terminal (call on terminal dispose)
+   */
+  public static clearPeriodicSaveTimer(terminalId: string): void {
+    const timer = TerminalAutoSaveService.periodicSaveTimers.get(terminalId);
+    if (timer) {
+      window.clearInterval(timer);
+      TerminalAutoSaveService.periodicSaveTimers.delete(terminalId);
+      // eslint-disable-next-line no-console
+      console.log(`[AUTO-SAVE] Cleared periodic save timer for: ${terminalId}`);
+    }
   }
 
   /**
@@ -131,6 +150,54 @@ export class TerminalAutoSaveService {
     terminal.onLineFeed(pushScrollbackToExtension);
     setTimeout(pushScrollbackToExtension, 2000);
 
-    terminalLogger.info(`[AUTO-SAVE] Scrollback auto-save enabled for terminal: ${terminalId}`);
+    // 🔧 FIX: Add periodic save to ensure scrollback is captured even during long idle periods
+    // This fixes the issue where scrollback data is lost when terminal is left idle for extended time
+    const periodicTimer = window.setInterval(() => {
+      // Skip if terminal is being restored
+      if (TerminalAutoSaveService.isTerminalRestoring(terminalId)) {
+        return;
+      }
+
+      try {
+        const serialized = serializeAddon.serialize({ scrollback: 1000 });
+        const lines = serialized.split('\n');
+
+        const windowWithApi = window as Window & {
+          vscodeApi?: {
+            postMessage: (message: unknown) => void;
+          };
+        };
+
+        const message = {
+          command: 'pushScrollbackData',
+          terminalId,
+          scrollbackData: lines,
+          timestamp: Date.now(),
+          periodic: true, // Mark as periodic save for debugging
+        };
+
+        if (windowWithApi.vscodeApi) {
+          windowWithApi.vscodeApi.postMessage(message);
+          terminalLogger.debug(
+            `[AUTO-SAVE] Periodic save for terminal ${terminalId}: ${lines.length} lines`
+          );
+        } else if (this.coordinator && typeof this.coordinator.postMessageToExtension === 'function') {
+          this.coordinator.postMessageToExtension(message);
+          terminalLogger.debug(
+            `[AUTO-SAVE] Periodic save via coordinator for terminal ${terminalId}: ${lines.length} lines`
+          );
+        }
+      } catch (error) {
+        terminalLogger.warn(
+          `[AUTO-SAVE] Periodic save failed for terminal ${terminalId}:`,
+          error
+        );
+      }
+    }, TerminalAutoSaveService.PERIODIC_SAVE_INTERVAL);
+
+    // Track the timer for cleanup
+    TerminalAutoSaveService.periodicSaveTimers.set(terminalId, periodicTimer);
+
+    terminalLogger.info(`[AUTO-SAVE] Scrollback auto-save enabled for terminal: ${terminalId} (periodic: ${TerminalAutoSaveService.PERIODIC_SAVE_INTERVAL}ms)`);
   }
 }

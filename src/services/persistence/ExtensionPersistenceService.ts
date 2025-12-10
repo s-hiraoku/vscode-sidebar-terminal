@@ -524,11 +524,17 @@ export class ExtensionPersistenceService implements vscode.Disposable {
 
     // Setup periodic save timer for reliability
     // This ensures scrollback is saved even if onWillSaveState fails
+    // 🔧 FIX: Clear cache before periodic save to ensure fresh scrollback data is captured
     this.periodicSaveTimer = setInterval(async () => {
       if (this.isRestoring) {
         return; // Don't save during restore
       }
       try {
+        // Clear cache to force fresh extraction during periodic saves
+        // This ensures the latest scrollback content is captured even after long idle periods
+        this.pushedScrollbackCache.clear();
+        log(`🔄 [EXT-PERSISTENCE] Periodic save: cleared cache for fresh extraction`);
+
         const result = await this.saveCurrentSession();
         if (result.success && result.terminalCount > 0) {
           log(`💾 [EXT-PERSISTENCE] Periodic save completed: ${result.terminalCount} terminals`);
@@ -657,7 +663,7 @@ export class ExtensionPersistenceService implements vscode.Disposable {
         this.pendingScrollbackRequests.delete(requestId);
         log(`⚠️ [EXT-PERSISTENCE] Scrollback extraction timeout for ${terminalId}`);
         resolve({ id: terminalId, scrollback: [] });
-      }, 500); // 500ms timeout - short because periodic save ensures recent data is cached
+      }, 2000); // 🔧 FIX: Extended timeout (500ms → 2000ms) to ensure reliable extraction
 
       this.pendingScrollbackRequests.set(requestId, { resolve, timeout, terminalId });
 
