@@ -455,6 +455,45 @@ export class ExtensionPersistenceService implements vscode.Disposable {
   }
 
   /**
+   * 🔧 FIX: Handle scrollback refresh request from WebView after sleep/wake
+   * Sends cached scrollback data back to WebView for all requested terminals
+   */
+  public async handleScrollbackRefreshRequest(message: {
+    terminalIds?: string[];
+  }): Promise<void> {
+    if (!this.sidebarProvider) {
+      log('⚠️ [EXT-PERSISTENCE] Cannot refresh scrollback - no sidebar provider');
+      return;
+    }
+
+    const terminalIds = message.terminalIds || [];
+    log(`🔄 [EXT-PERSISTENCE] Scrollback refresh requested for ${terminalIds.length} terminals`);
+
+    for (const terminalId of terminalIds) {
+      const cachedScrollback = this.pushedScrollbackCache.get(terminalId);
+
+      if (cachedScrollback && cachedScrollback.length > 0) {
+        try {
+          await this.sidebarProvider.sendMessageToWebview({
+            command: 'restoreTerminalScrollback',
+            terminalId,
+            scrollbackContent: cachedScrollback,
+            isRefresh: true, // Mark as refresh to avoid overwriting newer data
+            timestamp: Date.now(),
+          });
+          log(
+            `✅ [EXT-PERSISTENCE] Sent scrollback refresh for ${terminalId}: ${cachedScrollback.length} lines`
+          );
+        } catch (error) {
+          log(`❌ [EXT-PERSISTENCE] Failed to send scrollback refresh for ${terminalId}:`, error);
+        }
+      } else {
+        log(`⚠️ [EXT-PERSISTENCE] No cached scrollback for ${terminalId}`);
+      }
+    }
+  }
+
+  /**
    * Cleanup expired sessions
    */
   public async cleanupExpiredSessions(): Promise<void> {

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.164] - 2025-12-11
+
+### Fixed
+
+- **Scrollback Loss on Sleep/Wake**: Fix scrollback data being lost when PC wakes from sleep
+  - **Root Cause**: WebView didn't detect sleep/wake events; scrollback wasn't saved before sleep or restored after wake
+  - **Fix 1**: Add `visibilitychange` event handler to detect sleep/wake transitions
+  - **Fix 2**: Save all terminal scrollback immediately when page becomes hidden (before sleep)
+  - **Fix 3**: Request scrollback refresh from Extension when waking after >5 seconds of hidden state
+  - **Fix 4**: Add `requestScrollbackRefresh` message handler in Extension to resend cached scrollback
+  - **Result**: Scrollback is now preserved across sleep/wake cycles
+
 ## [0.1.163] - 2025-12-10
 
 ### Fixed
