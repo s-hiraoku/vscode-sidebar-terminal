@@ -573,6 +573,11 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         handler: async (msg: WebviewMessage) => await this._handleScrollbackDataCollected(msg),
         category: 'persistence' as const,
       },
+      {
+        command: 'requestScrollbackRefresh',
+        handler: async (msg: WebviewMessage) => await this._handleScrollbackRefreshRequest(msg),
+        category: 'persistence' as const,
+      },
 
       // Debug handlers
       {
@@ -653,6 +658,29 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     // Fallback: treat as pushScrollbackData for cache update
     (message as any).command = 'pushScrollbackData';
     await this._handlePushScrollbackData(message);
+  }
+
+  /**
+   * 🔧 FIX: Handle scrollback refresh request from WebView after sleep/wake
+   */
+  private async _handleScrollbackRefreshRequest(message: WebviewMessage): Promise<void> {
+    if (!this._extensionPersistenceService) {
+      log('⚠️ [PROVIDER] Received requestScrollbackRefresh but persistence service is unavailable');
+      return;
+    }
+
+    const handler = (this._extensionPersistenceService as any).handleScrollbackRefreshRequest;
+    if (typeof handler !== 'function') {
+      log('⚠️ [PROVIDER] Persistence service does not support handleScrollbackRefreshRequest');
+      return;
+    }
+
+    try {
+      await handler.call(this._extensionPersistenceService, message);
+      log('✅ [PROVIDER] Scrollback refresh request handled');
+    } catch (error) {
+      log('❌ [PROVIDER] Failed to process scrollback refresh request:', error);
+    }
   }
 
   private async _handleTerminalReady(message: WebviewMessage): Promise<void> {
