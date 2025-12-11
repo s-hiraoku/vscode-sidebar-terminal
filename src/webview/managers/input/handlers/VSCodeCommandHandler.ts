@@ -18,6 +18,7 @@ import {
   ScrollDirection,
 } from '../services/TerminalOperationsService';
 import { TerminalInteractionEvent } from '../../../../types/common';
+import { getCleanedSelection } from '../../../utils/SelectionUtils';
 
 export type EmitEventFn = (
   type: TerminalInteractionEvent['type'],
@@ -327,6 +328,12 @@ export class VSCodeCommandHandler {
     }
   }
 
+  /**
+   * Handle copy command
+   *
+   * Uses getCleanedSelection() to fix xterm.js issue #443 where wrapped lines
+   * incorrectly include newlines at visual wrap points.
+   */
   private handleCopy(manager: IManagerCoordinator): void {
     const activeId = manager.getActiveTerminalId();
     if (!activeId) return;
@@ -335,15 +342,16 @@ export class VSCodeCommandHandler {
     if (!instance?.terminal) return;
 
     const terminal = instance.terminal;
-    if (terminal.hasSelection()) {
-      const selection = terminal.getSelection();
-      if (selection) {
-        manager.postMessageToExtension({
-          command: 'copyToClipboard',
-          text: selection,
-        });
-        this.logger('Selection copied to clipboard');
-      }
+
+    // Use utility that fixes wrapped line newlines (xterm.js issue #443)
+    const cleanedSelection = getCleanedSelection(terminal);
+
+    if (cleanedSelection) {
+      manager.postMessageToExtension({
+        command: 'copyToClipboard',
+        text: cleanedSelection,
+      });
+      this.logger('Selection copied to clipboard');
     }
   }
 

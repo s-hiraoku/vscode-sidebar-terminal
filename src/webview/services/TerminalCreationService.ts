@@ -18,6 +18,7 @@ import { Terminal, ITerminalOptions } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 
 import { TerminalConfig } from '../../types/shared';
+import { cleanWrappedLineSelection } from '../utils/SelectionUtils';
 import { TerminalInstance, IManagerCoordinator } from '../interfaces/ManagerInterfaces';
 import { SplitManager } from '../managers/SplitManager';
 import { TerminalAddonManager } from '../managers/TerminalAddonManager';
@@ -494,6 +495,38 @@ export class TerminalCreationService implements Disposable {
           pasteHandler as EventListener,
           true // capture phase - intercept before xterm.js
         );
+
+        // 🎯 CRITICAL: Handle COPY events to fix wrapped line newlines (xterm.js issue #443)
+        // When copying text that spans wrapped lines or shell continuation lines,
+        // the selection incorrectly includes newlines. We intercept the copy event
+        // and clean the selection to produce proper single-line commands.
+        const copyHandler = (event: ClipboardEvent) => {
+          if (!terminal.hasSelection()) {
+            return; // No selection, let browser handle normally
+          }
+
+          const rawSelection = terminal.getSelection();
+          if (!rawSelection) {
+            return;
+          }
+
+          // Clean wrapped line newlines using our utility
+          const cleanedSelection = cleanWrappedLineSelection(terminal, rawSelection);
+
+          event.preventDefault();
+          event.clipboardData?.setData('text/plain', cleanedSelection);
+        };
+
+        // Register copy handler at document level for reliable interception
+        document.addEventListener('copy', copyHandler, true);
+
+        // Store reference for cleanup
+        const copyCleanup = () => {
+          document.removeEventListener('copy', copyHandler, true);
+        };
+
+        // Register cleanup handler - use a custom property to track
+        (container as any).__copyCleanup = copyCleanup;
 
         // 🎯 VS Code Pattern: Apply font and visual settings AFTER terminal.open()
         // xterm.js requires the terminal to be attached to DOM before settings can be applied

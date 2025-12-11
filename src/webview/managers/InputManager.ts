@@ -9,6 +9,7 @@ import { IInputManager, IManagerCoordinator } from '../interfaces/ManagerInterfa
 import { INotificationManager } from '../interfaces/ManagerInterfaces';
 import { BaseManager } from './BaseManager';
 import { EventHandlerRegistry } from '../utils/EventHandlerRegistry';
+import { getCleanedSelection } from '../utils/SelectionUtils';
 // import { inputLogger } from '../utils/ManagerLogger';
 import { IMEHandler } from './input/handlers/IMEHandler';
 import { IIMEHandler } from './input/interfaces/IInputHandlers';
@@ -407,6 +408,9 @@ export class InputManager extends BaseManager implements IInputManager {
    * Handle terminal copy selection
    * Note: In VS Code WebView, navigator.clipboard may not work.
    * We send selection to Extension to copy via VS Code API.
+   *
+   * IMPORTANT: Uses getCleanedSelection() to fix xterm.js issue #443
+   * where wrapped lines incorrectly include newlines at visual wrap points.
    */
   private handleTerminalCopy(manager: IManagerCoordinator): void {
     const activeTerminalId = manager.getActiveTerminalId();
@@ -420,26 +424,24 @@ export class InputManager extends BaseManager implements IInputManager {
     }
 
     const terminal = terminalInstance.terminal;
-    const hasSelection = terminal.hasSelection();
 
-    if (hasSelection) {
-      const selection = terminal.getSelection();
+    // Use utility that fixes wrapped line newlines (xterm.js issue #443)
+    const cleanedSelection = getCleanedSelection(terminal);
 
-      if (selection) {
-        // Send selection to Extension to copy to clipboard
-        this.logger(
-          `📋 Copying selection from terminal ${activeTerminalId} (${selection.length} chars)`
-        );
+    if (cleanedSelection) {
+      // Send selection to Extension to copy to clipboard
+      this.logger(
+        `📋 Copying selection from terminal ${activeTerminalId} (${cleanedSelection.length} chars)`
+      );
 
-        manager.postMessageToExtension({
-          command: 'copyToClipboard',
-          terminalId: activeTerminalId,
-          text: selection,
-        });
+      manager.postMessageToExtension({
+        command: 'copyToClipboard',
+        terminalId: activeTerminalId,
+        text: cleanedSelection,
+      });
 
-        // Clear selection after copy (like VS Code terminal)
-        terminal.clearSelection();
-      }
+      // Clear selection after copy (like VS Code terminal)
+      terminal.clearSelection();
     }
   }
 

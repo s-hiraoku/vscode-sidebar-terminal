@@ -6,6 +6,7 @@
  */
 
 import { IManagerCoordinator } from '../../../interfaces/ManagerInterfaces';
+import { getCleanedSelection } from '../../../utils/SelectionUtils';
 
 /**
  * Terminal interaction event emitter type
@@ -101,6 +102,9 @@ export class TerminalOperationsService {
 
   /**
    * Handle terminal copy selection
+   *
+   * Uses getCleanedSelection() to fix xterm.js issue #443 where wrapped lines
+   * incorrectly include newlines at visual wrap points.
    */
   public copySelection(manager: IManagerCoordinator): void {
     const activeTerminalId = manager.getActiveTerminalId();
@@ -114,12 +118,14 @@ export class TerminalOperationsService {
     }
 
     const terminal = terminalInstance.terminal;
-    const selection = terminal.getSelection();
 
-    if (selection && selection.length > 0) {
+    // Use utility that fixes wrapped line newlines (xterm.js issue #443)
+    const cleanedSelection = getCleanedSelection(terminal);
+
+    if (cleanedSelection && cleanedSelection.length > 0) {
       // Send to Extension for clipboard write via VS Code API
-      this.emitInteractionEvent('copy-selection', activeTerminalId, { text: selection }, manager);
-      this.logger(`Copy selection: ${selection.length} characters`);
+      this.emitInteractionEvent('copy-selection', activeTerminalId, { text: cleanedSelection }, manager);
+      this.logger(`Copy selection: ${cleanedSelection.length} characters`);
     } else {
       this.logger('No selection to copy');
     }

@@ -17,6 +17,7 @@ import { FitAddon } from '@xterm/addon-fit';
 import { WebglAddon } from '@xterm/addon-webgl';
 import { SerializeAddon } from '@xterm/addon-serialize';
 import { TerminalConfig, TerminalTheme } from './types';
+import { cleanWrappedLineSelection } from '../utils/SelectionUtils';
 
 /**
  * Terminal creation result
@@ -346,6 +347,28 @@ export class XtermInstance {
     };
     terminalBody.addEventListener('paste', pasteHandler, true);
 
+    // 🎯 CRITICAL: Handle COPY events to fix wrapped line newlines (xterm.js issue #443)
+    // When copying text that spans wrapped lines, xterm.js incorrectly includes newlines
+    // at visual wrap points. We intercept the copy event and clean the selection.
+    const copyHandler = (event: ClipboardEvent) => {
+      if (!terminal.hasSelection()) {
+        return; // No selection, let browser handle normally
+      }
+
+      const rawSelection = terminal.getSelection();
+      if (!rawSelection) {
+        return;
+      }
+
+      // Clean wrapped line newlines using our utility
+      const cleanedSelection = cleanWrappedLineSelection(terminal, rawSelection);
+
+      // Always set cleaned selection to clipboard
+      event.preventDefault();
+      event.clipboardData?.setData('text/plain', cleanedSelection);
+    };
+    terminalBody.addEventListener('copy', copyHandler, true);
+
     // 7. Create instance
     const instance = new XtermInstance(
       id,
@@ -357,9 +380,10 @@ export class XtermInstance {
       serializeAddon
     );
 
-    // Register paste handler cleanup to prevent memory leak
+    // Register paste and copy handler cleanup to prevent memory leak
     instance.addCleanup(() => {
       terminalBody.removeEventListener('paste', pasteHandler, true);
+      terminalBody.removeEventListener('copy', copyHandler, true);
     });
 
     // 8. Try WebGL addon for performance
@@ -624,88 +648,6 @@ export class XtermInstance {
         this.terminal.focus();
       }
     });
-
-    // 🔍 DEBUG: Mouse event logging to diagnose selection issue
-    this.setupMouseDebugLogging();
-  }
-
-  /**
-   * 🔍 DEBUG: Add mouse event logging to diagnose selection issues
-   * Remove this method after debugging is complete
-   */
-  private setupMouseDebugLogging(): void {
-    const xtermElement = this.container.querySelector('.xterm');
-    const xtermScreen = this.container.querySelector('.xterm-screen');
-    const selectionLayer = this.container.querySelector('.xterm-selection-layer');
-
-    console.log(`[MOUSE DEBUG ${this.id}] Setup - Elements found:`, {
-      xterm: !!xtermElement,
-      screen: !!xtermScreen,
-      selectionLayer: !!selectionLayer,
-    });
-
-    // Check selection layer CSS
-    if (selectionLayer) {
-      const style = window.getComputedStyle(selectionLayer);
-      console.log(`[MOUSE DEBUG ${this.id}] Selection layer CSS:`, {
-        position: style.position,
-        top: style.top,
-        left: style.left,
-        pointerEvents: style.pointerEvents,
-        display: style.display,
-        visibility: style.visibility,
-        zIndex: style.zIndex,
-      });
-    }
-
-    // Track if we're in a drag operation
-    let isDragging = false;
-
-    // Listen on container for mouse events
-    this.container.addEventListener('mousedown', (e) => {
-      isDragging = true;
-      console.log(`[MOUSE DEBUG ${this.id}] mousedown on container`, {
-        target: (e.target as HTMLElement)?.className,
-        x: e.clientX,
-        y: e.clientY,
-        button: e.button,
-      });
-    }, true); // capture phase
-
-    this.container.addEventListener('mousemove', (e) => {
-      if (isDragging) {
-        console.log(`[MOUSE DEBUG ${this.id}] mousemove (dragging)`, {
-          target: (e.target as HTMLElement)?.className,
-          x: e.clientX,
-          y: e.clientY,
-        });
-      }
-    }, true);
-
-    this.container.addEventListener('mouseup', (e) => {
-      if (isDragging) {
-        isDragging = false;
-        console.log(`[MOUSE DEBUG ${this.id}] mouseup`, {
-          target: (e.target as HTMLElement)?.className,
-          hasSelection: this.terminal.hasSelection(),
-          selection: this.terminal.getSelection(),
-        });
-      }
-    }, true);
-
-    // Also check xterm.js selection events
-    this.terminal.onSelectionChange(() => {
-      console.log(`[MOUSE DEBUG ${this.id}] xterm onSelectionChange fired!`, {
-        hasSelection: this.terminal.hasSelection(),
-        selection: this.terminal.getSelection(),
-      });
-    });
-
-    // Log the terminal element structure
-    console.log(`[MOUSE DEBUG ${this.id}] Terminal element structure:`, {
-      containerChildren: Array.from(this.container.children).map(c => c.className),
-      xtermChildren: xtermElement ? Array.from(xtermElement.children).map(c => c.className) : [],
-    });
   }
 
   /**
@@ -867,8 +809,6 @@ export class XtermInstance {
   public dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
-
-    console.log(`[XtermInstance] Disposing ${this.id}`);
 
     // Run cleanup callbacks first (e.g., remove event listeners)
     for (const callback of this.cleanupCallbacks) {
