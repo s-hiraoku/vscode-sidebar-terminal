@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.169] - 2025-12-13
+
+### 🐛 Bug Fixes
+
+- **Marketplace Compatibility**: Convert README images from SVG to PNG
+  - VS Code Marketplace restricts SVG in README files
+  - Hero and architecture diagrams now use PNG format
+
+## [0.1.168] - 2025-12-13
+
+### 📚 Documentation
+
+- **README Redesign**: Improved documentation with visual diagrams
+  - Added hero illustration
+  - Added architecture diagram
+  - Expanded keyboard shortcuts documentation
+  - Updated command palette reference
+
+## [0.1.167] - 2025-12-13
+
+### 🐛 Bug Fixes
+
+- **Scroll Position Preservation**: Fixed auto-scroll behavior during terminal output
+  - No longer forces scroll to bottom when user is reading previous output
+  - Uses `isAtBottom()` check with 1-line tolerance for scroll detection
+  - Improves TUI compatibility (vim, htop, etc.) by respecting user scroll position
+
+### ⚡ Performance
+
+- **Async Write Optimization**: Improved terminal write handling
+  - Use xterm.js async write callbacks to ensure proper ordering
+  - Batch scrollback restoration writes for better performance
+  - Scroll-to-bottom now executes after write is applied to DOM
+
+### 🧹 Maintenance
+
+- **Codebase Cleanup**: Removed obsolete OpenSpec change proposals and spec2impl files
+  - Removed 7 active OpenSpec changes (12,000+ lines)
+  - Removed archived OpenSpec changes
+  - Streamlined project structure for easier maintenance
+
 ## [0.1.86] - 2025-01-14
 
 ### 🎯 Key Improvements

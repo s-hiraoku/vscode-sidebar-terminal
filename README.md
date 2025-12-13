@@ -11,7 +11,7 @@
 
 > **Note**: This extension is under active development. Please expect some bugs as we continuously improve the experience.
 
-![Secondary Terminal Demo](resources/demo.gif)
+![Secondary Terminal](resources/readme-hero.png)
 
 ## Quick Start
 
@@ -52,7 +52,7 @@ Automatic detection and status tracking for:
 **Features:**
 
 - Real-time connection status indicators
-- File reference sharing with `CMD+Option+L` (Mac) / `Ctrl+Alt+L` (Win/Linux)
+- File reference sharing with `Cmd+Alt+L` (Mac) / `Ctrl+Alt+L` (Win/Linux)
 - Session persistence across VS Code restarts
 - Multi-agent workflows across terminals
 
@@ -66,14 +66,20 @@ Automatic detection and status tracking for:
 
 ## Keyboard Shortcuts
 
-| Shortcut                        | Action                           |
-| ------------------------------- | -------------------------------- |
-| `Cmd+C` / `Ctrl+C`              | Copy selected text               |
-| `Cmd+V` / `Ctrl+V`              | Paste from clipboard             |
-| `Cmd+Option+L` / `Ctrl+Alt+L`   | Send file reference to AI agents |
-| `Cmd+K Cmd+C` / `Ctrl+K Ctrl+C` | GitHub Copilot integration       |
-| `Alt+Click`                     | Position cursor                  |
-| `Ctrl+Shift+D`                  | Toggle debug panel               |
+| Shortcut                      | Action                                                                 |
+| ----------------------------- | ---------------------------------------------------------------------- |
+| `Cmd+Alt+L` / `Ctrl+Alt+L`    | Insert file reference for AI agents (from editor)                       |
+| `Cmd+K Cmd+C` / `Ctrl+K Ctrl+C` | Activate GitHub Copilot Chat                                            |
+| ``Ctrl+` ``                   | Focus Secondary Terminal view (when terminal is not focused)            |
+| ``Ctrl+Shift+` ``             | Create new terminal                                                     |
+| `Cmd+\\` (Mac) / `Ctrl+Shift+5` | Split terminal vertically (when Secondary Terminal is focused)          |
+| `Cmd+K` / `Ctrl+K`            | Clear terminal (when Secondary Terminal is focused)                     |
+| `Alt+Cmd+Left/Right` (Mac) / `Alt+Left/Right` | Focus previous/next terminal (when focused)                |
+| `Cmd+Alt+1..5` (Mac) / `Alt+1..5` | Focus terminal by index (when focused)                                 |
+| `Ctrl+Shift+D`                | Toggle debug panel (webview)                                            |
+
+Other UX features:
+- `Alt+Click` moves the cursor (VS Code-style) when enabled.
 
 ## Command Palette
 
@@ -82,10 +88,13 @@ Access via `Ctrl+Shift+P` (Win/Linux) or `Cmd+Shift+P` (Mac):
 | Command                                         | Description          |
 | ----------------------------------------------- | -------------------- |
 | `Secondary Terminal: Focus Terminal`            | Focus terminal panel |
-| `Secondary Terminal: Split Terminal`            | Split vertically     |
-| `Secondary Terminal: Split Terminal Horizontal` | Split horizontally   |
+| `Secondary Terminal: Create New Terminal`       | Create a new terminal |
+| `Secondary Terminal: Split Terminal Vertically` | Split vertically     |
+| `Secondary Terminal: Split Terminal Horizontally` | Split horizontally |
+| `Secondary Terminal: Select Terminal Profile`   | Choose a profile     |
+| `Secondary Terminal: Manage Terminal Profiles`  | Edit profiles        |
 | `Secondary Terminal: Show Version`              | Display version info |
-| `Secondary Terminal: Clear Corrupted History`   | Clear session data   |
+| `Secondary Terminal: Clear Corrupted Terminal History` | Clear session data |
 
 ## Configuration
 
@@ -113,11 +122,7 @@ Access via `Ctrl+Shift+P` (Win/Linux) or `Cmd+Shift+P` (Mac):
 
 ## Architecture
 
-```
-User Input → VS Code Commands → Extension Host → WebView → xterm.js
-                    ↕                    ↕              ↕
-             TerminalManager ←→ node-pty ←→ Shell/AI Agents
-```
+![Architecture](resources/readme-architecture.png)
 
 **Extension Host (Node.js)**
 

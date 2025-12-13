@@ -157,6 +157,12 @@ export interface WebViewFontSettings {
   fontWeightBold?: string;
   lineHeight?: number;
   letterSpacing?: number;
+  // Cursor settings
+  cursorStyle?: 'block' | 'underline' | 'bar';
+  cursorWidth?: number;
+  // Display settings
+  drawBoldTextInBrightColors?: boolean;
+  minimumContrastRatio?: number;
 }
 
 /**

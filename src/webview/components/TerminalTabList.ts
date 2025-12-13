@@ -136,13 +136,23 @@ export class TerminalTabList {
       }
 
       .terminal-mode-indicator-symbol {
+        width: 16px;
+        height: 16px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        font-size: 16px;
-        line-height: 1;
-        font-family: monospace;
-        font-weight: bold;
+        line-height: 0;
+      }
+
+      .terminal-mode-indicator-symbol svg {
+        width: 16px;
+        height: 16px;
+        display: block;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 1.5;
+        stroke-linecap: round;
+        stroke-linejoin: round;
       }
 
       .terminal-tabs-scroll {
@@ -636,32 +646,56 @@ export class TerminalTabList {
     this.dropIndicator.classList.remove('visible');
   }
 
+  private getModeIndicatorIconSvg(icon: 'fullscreen' | 'grid'): string {
+    if (icon === 'fullscreen') {
+      // "Maximize" corners icon
+      return `
+        <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+          <path d="M6 1H1V6M10 1H15V6M1 10V15H6M10 15H15V10" />
+        </svg>
+      `.trim();
+    }
+
+    // "All terminals" grid icon
+    return `
+      <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+        <rect x="1.5" y="1.5" width="5" height="5" rx="1" />
+        <rect x="9.5" y="1.5" width="5" height="5" rx="1" />
+        <rect x="1.5" y="9.5" width="5" height="5" rx="1" />
+        <rect x="9.5" y="9.5" width="5" height="5" rx="1" />
+      </svg>
+    `.trim();
+  }
+
   public setModeIndicator(mode: 'normal' | 'fullscreen' | 'split'): void {
     this.currentMode = mode;
     if (!this.modeIndicatorContainer || !this.modeIndicatorSymbol) {
       return;
     }
 
-    const config: Record<'normal' | 'fullscreen' | 'split', { label: string; symbol: string }> = {
+    const config: Record<
+      'normal' | 'fullscreen' | 'split',
+      { label: string; icon: 'fullscreen' | 'grid' }
+    > = {
       normal: {
-        label: 'Single terminal layout - Click to maximize',
-        symbol: '⊞',
+        label: 'Show active terminal fullscreen',
+        icon: 'fullscreen',
       },
       fullscreen: {
-        label: 'Fullscreen layout - Click to split',
-        symbol: '⊡',
+        label: 'Show all terminals',
+        icon: 'grid',
       },
       split: {
-        label: 'Split layout',
-        symbol: '⊞',
+        label: 'Show active terminal fullscreen',
+        icon: 'fullscreen',
       },
     };
 
-    const { label, symbol } = config[mode];
+    const { label, icon } = config[mode];
     this.modeIndicatorContainer.setAttribute('aria-label', label);
     this.modeIndicatorContainer.setAttribute('title', label);
     this.modeIndicatorContainer.setAttribute('data-mode', mode);
-    this.modeIndicatorSymbol.textContent = symbol;
+    this.modeIndicatorSymbol.innerHTML = this.getModeIndicatorIconSvg(icon);
 
     // Always show the mode indicator
     this.modeIndicatorContainer.style.display = 'flex';

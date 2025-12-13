@@ -223,6 +223,20 @@ export class TerminalCreationService implements Disposable {
           if (typeof currentFontSettings.letterSpacing === 'number') {
             fontOverrides.letterSpacing = currentFontSettings.letterSpacing;
           }
+          // Cursor settings
+          if (currentFontSettings.cursorStyle) {
+            fontOverrides.cursorStyle = currentFontSettings.cursorStyle;
+          }
+          if (typeof currentFontSettings.cursorWidth === 'number' && currentFontSettings.cursorWidth > 0) {
+            fontOverrides.cursorWidth = currentFontSettings.cursorWidth;
+          }
+          // Display settings
+          if (typeof currentFontSettings.drawBoldTextInBrightColors === 'boolean') {
+            fontOverrides.drawBoldTextInBrightColors = currentFontSettings.drawBoldTextInBrightColors;
+          }
+          if (typeof currentFontSettings.minimumContrastRatio === 'number') {
+            fontOverrides.minimumContrastRatio = currentFontSettings.minimumContrastRatio;
+          }
         }
 
         // Merge config with defaults using TerminalConfigService
@@ -280,12 +294,16 @@ export class TerminalCreationService implements Disposable {
         // Create terminal container using factory with proper config
         const terminalNumberToUse = terminalNumber ?? this.extractTerminalNumber(terminalId);
 
+        // 🔧 FIX: Use isActive from config to set initial container styling correctly
+        // This prevents Terminal 1 from having different styling on initial display
+        const isActiveFromConfig = (config as any)?.isActive ?? false;
+
         const containerConfig: TerminalContainerConfig = {
           id: terminalId,
           name: terminalName,
           className: 'terminal-container',
           isSplit: false,
-          isActive: false,
+          isActive: isActiveFromConfig,
         };
 
         const headerConfig: TerminalHeaderConfig = {
@@ -379,6 +397,21 @@ export class TerminalCreationService implements Disposable {
         // Make container visible
         container.style.display = 'flex';
         container.style.visibility = 'visible';
+
+        // 🔧 FIX: Apply active border styling BEFORE terminal opens to prevent flicker
+        // This ensures Terminal 1 has consistent styling from the start
+        if (isActiveFromConfig) {
+          try {
+            const managers = this.coordinator.getManagers?.();
+            const uiManager = managers?.ui;
+            if (uiManager) {
+              uiManager.updateSingleTerminalBorder(container, true);
+              terminalLogger.info(`✅ Active border applied to container: ${terminalId}`);
+            }
+          } catch (error) {
+            terminalLogger.warn('⚠️ Active border application failed; continuing', error);
+          }
+        }
 
         // Open terminal in the body div (AFTER container is in DOM)
         terminal.open(terminalContent);
@@ -593,6 +626,9 @@ export class TerminalCreationService implements Disposable {
         terminalLogger.info(`✅ RenderingOptimizer disposed for: ${terminalId}`);
       }
 
+      // 🔧 FIX: Clear periodic auto-save timer to prevent memory leaks
+      TerminalAutoSaveService.clearPeriodicSaveTimer(terminalId);
+
       // Cleanup scroll indicator
       const disposeScrollIndicator = this.scrollIndicatorDisposables.get(terminalId);
       if (disposeScrollIndicator) {
@@ -650,11 +686,15 @@ export class TerminalCreationService implements Disposable {
           // If multiple terminals remain and we're in split mode, rebuild layout
           const orderedIds = Array.from(this.splitManager.getTerminals().keys());
           const activeId = this.coordinator?.getActiveTerminalId?.() ?? orderedIds[0] ?? null;
+          const currentLocation =
+            (this.splitManager as { getCurrentPanelLocation?: () => 'sidebar' | 'panel' })
+              .getCurrentPanelLocation?.() || 'sidebar';
+          const splitDirection = this.splitManager.getOptimalSplitDirection(currentLocation);
           containerManager.applyDisplayState({
             mode: 'split',
             activeTerminalId: activeId,
             orderedTerminalIds: orderedIds,
-            splitDirection: 'vertical',
+            splitDirection,
           });
           terminalLogger.info(`✅ Split layout rebuilt with ${remainingTerminals} terminals`);
         } else {

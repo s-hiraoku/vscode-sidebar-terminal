@@ -2,7 +2,7 @@
   "name": "vscode-sidebar-terminal",
   "displayName": "Secondary Terminal",
   "description": "Production-ready VS Code extension with TypeScript-compliant terminal in sidebar, ProcessState/InteractionState management, and comprehensive session management.",
-  "version": "0.1.161",
+  "version": "0.1.169",
   "publisher": "s-hiraoku",
   "sideEffects": false,
   "engines": {
@@ -385,11 +385,6 @@
           "default": true,
           "description": "Automatically hide status messages after specified duration"
         },
-        "secondaryTerminal.showStatusOnActivity": {
-          "type": "boolean",
-          "default": true,
-          "description": "Show last status message when user performs actions"
-        },
         "secondaryTerminal.showWebViewHeader": {
           "type": "boolean",
           "default": true,
@@ -510,21 +505,6 @@
           "minimum": 50,
           "maximum": 95,
           "description": "Storage usage percentage threshold for optimization warning (default: 80%)"
-        },
-        "secondaryTerminal.hideOnStartup": {
-          "type": "string",
-          "default": "never",
-          "enum": [
-            "never",
-            "whenEmpty",
-            "always"
-          ],
-          "enumDescriptions": [
-            "Never hide the terminal view on startup",
-            "Hide terminal when no sessions are restored",
-            "Always hide terminal on startup"
-          ],
-          "description": "Control terminal visibility on VS Code startup"
         },
         "secondaryTerminal.fontFamily": {
           "type": "string",

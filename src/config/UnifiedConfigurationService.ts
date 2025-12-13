@@ -368,6 +368,7 @@ export class UnifiedConfigurationService implements Disposable {
    * Get WebView font settings (consolidates font config logic)
    */
   public getWebViewFontSettings(): WebViewFontSettings {
+    const section = CONFIG_SECTIONS.SIDEBAR_TERMINAL;
     return {
       fontSize: this.getFontSize(),
       fontFamily: this.getFontFamily(),
@@ -375,6 +376,12 @@ export class UnifiedConfigurationService implements Disposable {
       fontWeightBold: this.getFontWeightBold(),
       lineHeight: this.getLineHeight(),
       letterSpacing: this.getLetterSpacing(),
+      // Cursor settings
+      cursorStyle: this.get(section, 'cursorStyle', 'block') as 'block' | 'underline' | 'bar',
+      cursorWidth: this.get(section, 'cursorWidth', 1),
+      // Display settings
+      drawBoldTextInBrightColors: this.get(section, 'drawBoldTextInBrightColors', true),
+      minimumContrastRatio: this.get(section, 'minimumContrastRatio', 1),
     };
   }
 

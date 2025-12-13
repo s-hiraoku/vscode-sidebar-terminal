@@ -250,16 +250,37 @@ export class TerminalLifecycleCoordinator {
         return false;
       }
 
-      terminalInstance.terminal.write(data);
+      const terminal = terminalInstance.terminal;
+      const shouldFollowOutput = this.isAtBottom(terminal);
 
-      // Auto-scroll to bottom to match VS Code standard terminal behavior
-      // This ensures users always see the latest output
-      terminalInstance.terminal.scrollToBottom();
+      // Important: xterm.write is async; scroll after the write is applied to avoid
+      // ending up "above bottom" during heavy output (common with interactive TUIs).
+      terminal.write(data, () => {
+        if (!shouldFollowOutput) {
+          return;
+        }
+        try {
+          terminal.scrollToBottom();
+        } catch (error) {
+          terminalLogger.debug(`Auto-scroll after write failed for ${targetId}:`, error);
+        }
+      });
 
       return true;
     } catch (error) {
       terminalLogger.error(`Failed to write to terminal:`, error);
       return false;
+    }
+  }
+
+  private isAtBottom(terminal: Terminal): boolean {
+    try {
+      const buffer = terminal.buffer.active;
+      // Tolerance of 1 line to avoid jitter during rapid output/reflow.
+      return Math.abs(buffer.baseY - buffer.viewportY) <= 1;
+    } catch {
+      // If buffer is unavailable for any reason, default to following output.
+      return true;
     }
   }
 

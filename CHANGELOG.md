@@ -7,6 +7,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.166] - 2025-12-13
+
+### Fixed
+
+- **Panel Move WebView Reinitialization**: Fix terminal display issues when moving panel between sidebar and bottom panel
+  - **Root Cause**: WebView content was not properly reinitialized when VS Code recreates the WebView instance during panel movement
+  - **Fix 1**: Reset handshake state and reinitialize WebView content on panel move
+  - **Fix 2**: Track WebView instance changes and re-register message listeners for new instances
+  - **Fix 3**: Add `_reinitializeWebviewAfterPanelMove` method for proper state restoration
+  - **Result**: Terminals now display correctly after moving panel between sidebar and bottom panel
+
+- **Split Layout Direction on Panel Move**: Fix split layout direction not updating when moving between sidebar and bottom panel
+  - **Root Cause**: Split direction remained vertical even when moving to bottom panel (which should use horizontal)
+  - **Fix 1**: Add `setupPanelLocationSync` to listen for panel location changes
+  - **Fix 2**: Automatically rebuild split layout with correct direction (horizontal for panel, vertical for sidebar)
+  - **Fix 3**: Add retry logic for terminals-wrapper class sync when wrapper isn't ready yet
+  - **Result**: Split layout now correctly switches between horizontal (bottom panel) and vertical (sidebar)
+
+## [0.1.165] - 2025-12-13
+
+### Changed
+
+- **Mode Indicator Icons**: Replace Unicode symbols (⊞/⊡) with SVG icons for better cross-platform rendering
+  - Use maximize/corners icon for fullscreen mode toggle
+  - Use grid icon for showing all terminals
+  - Improved visual consistency across different fonts and operating systems
+
+## [0.1.164] - 2025-12-11
+
+### Fixed
+
+- **Scrollback Loss on Sleep/Wake**: Fix scrollback data being lost when PC wakes from sleep
+  - **Root Cause**: WebView didn't detect sleep/wake events; scrollback wasn't saved before sleep or restored after wake
+  - **Fix 1**: Add `visibilitychange` event handler to detect sleep/wake transitions
+  - **Fix 2**: Save all terminal scrollback immediately when page becomes hidden (before sleep)
+  - **Fix 3**: Request scrollback refresh from Extension when waking after >5 seconds of hidden state
+  - **Fix 4**: Add `requestScrollbackRefresh` message handler in Extension to resend cached scrollback
+  - **Result**: Scrollback is now preserved across sleep/wake cycles
+
+## [0.1.163] - 2025-12-10
+
+### Fixed
+
+- **Scrollback Loss on Long Idle**: Fix scrollback data being lost when terminal is left idle for extended periods
+  - **Root Cause**: Auto-save only triggered on user input/output events; long idle periods caused stale cache
+  - **Fix 1**: Add 30-second periodic auto-save in WebView to ensure scrollback is captured during idle
+  - **Fix 2**: Clear Extension cache before periodic saves to force fresh data extraction
+  - **Fix 3**: Extend scrollback extraction timeout from 500ms to 2000ms for reliable capture
+  - **Result**: Latest scrollback content is now reliably saved even after hours of inactivity
+
+## [0.1.162] - 2025-12-04
+
+### Fixed
+
+- **Terminal 1 Initial Styling Inconsistency**: Fix Terminal 1 having different color/styling on initial display
+  - **Root Cause**: All terminals were created with `isActive: false`, active styling applied asynchronously later
+  - **Fix**: Pass `isActive` flag through terminal config and apply border styling BEFORE terminal opens
+  - **Result**: Terminal 1 now has consistent active styling from the start (no visual flicker)
+  - Added `updateSingleTerminalBorder` method to UIManager for early border application
+
 ## [0.1.161] - 2025-12-04
 
 ### Fixed
