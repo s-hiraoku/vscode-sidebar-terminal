@@ -7,13 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.169] - 2025-12-13
+
+### 🐛 Bug Fixes
+
+- **Marketplace Compatibility**: Convert README images from SVG to PNG
+  - VS Code Marketplace restricts SVG in README files
+  - Hero and architecture diagrams now use PNG format
+
 ## [0.1.168] - 2025-12-13
 
 ### 📚 Documentation
 
 - **README Redesign**: Improved documentation with visual diagrams
-  - Added hero SVG illustration
-  - Added architecture diagram SVG
+  - Added hero illustration
+  - Added architecture diagram
   - Expanded keyboard shortcuts documentation
   - Updated command palette reference
 
