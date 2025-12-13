@@ -65,6 +65,7 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
     registry.set('terminalCreated', (msg, coord) => this.handleTerminalCreated(msg, coord));
     registry.set('newTerminal', (msg, coord) => this.handleNewTerminal(msg, coord));
     registry.set('focusTerminal', (msg, coord) => this.handleFocusTerminal(msg, coord));
+    registry.set('restoreFocus', (msg, coord) => this.handleRestoreFocus(msg, coord));
     registry.set('terminalRemoved', (msg, coord) => this.handleTerminalRemoved(msg, coord));
     registry.set('setRestoringSession', (msg, coord) => this.handleSetRestoringSession(msg, coord));
 
@@ -242,6 +243,20 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
     if (terminalId) {
       coordinator.ensureTerminalFocus(terminalId);
       this.logger.info(`Terminal focused: ${terminalId}`);
+    }
+  }
+
+  /**
+   * Handle restore focus request - focuses the active terminal
+   * Called when WebView becomes visible again (e.g., after switching apps)
+   */
+  private handleRestoreFocus(_msg: MessageCommand, coordinator: IManagerCoordinator): void {
+    const activeTerminalId = coordinator.getActiveTerminalId();
+    if (activeTerminalId) {
+      coordinator.ensureTerminalFocus(activeTerminalId);
+      this.logger.info(`Focus restored to active terminal: ${activeTerminalId}`);
+    } else {
+      this.logger.warn('No active terminal to restore focus to');
     }
   }
 

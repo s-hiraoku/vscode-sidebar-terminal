@@ -352,6 +352,15 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       log('📍 [VISIBILITY] Requesting panel location detection after visibility change');
       this._requestPanelLocationDetection();
     }, 200);
+
+    // Restore terminal focus when WebView becomes visible again
+    // This fixes focus loss when switching between applications
+    setTimeout(() => {
+      log('🎯 [VISIBILITY] Restoring terminal focus after visibility change');
+      void this._sendMessage({
+        command: 'restoreFocus',
+      });
+    }, 100);
   }
 
   private _handleWebviewHidden(): void {
