@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.165] - 2025-12-13
+
+### Changed
+
+- **Mode Indicator Icons**: Replace Unicode symbols (⊞/⊡) with SVG icons for better cross-platform rendering
+  - Use maximize/corners icon for fullscreen mode toggle
+  - Use grid icon for showing all terminals
+  - Improved visual consistency across different fonts and operating systems
+
 ## [0.1.164] - 2025-12-11
 
 ### Fixed
