@@ -686,11 +686,15 @@ export class TerminalCreationService implements Disposable {
           // If multiple terminals remain and we're in split mode, rebuild layout
           const orderedIds = Array.from(this.splitManager.getTerminals().keys());
           const activeId = this.coordinator?.getActiveTerminalId?.() ?? orderedIds[0] ?? null;
+          const currentLocation =
+            (this.splitManager as { getCurrentPanelLocation?: () => 'sidebar' | 'panel' })
+              .getCurrentPanelLocation?.() || 'sidebar';
+          const splitDirection = this.splitManager.getOptimalSplitDirection(currentLocation);
           containerManager.applyDisplayState({
             mode: 'split',
             activeTerminalId: activeId,
             orderedTerminalIds: orderedIds,
-            splitDirection: 'vertical',
+            splitDirection,
           });
           terminalLogger.info(`✅ Split layout rebuilt with ${remainingTerminals} terminals`);
         } else {

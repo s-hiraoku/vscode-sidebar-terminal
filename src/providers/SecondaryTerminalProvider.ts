@@ -59,6 +59,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
   private _terminalIdMapping?: Map<string, string>;
   private _isInitialized = false;
+  private _webviewMessageListenerDisposable: vscode.Disposable | null = null;
+  private _webviewMessageListenerView: vscode.WebviewView | null = null;
+  private _pendingPanelMoveReinit = false;
 
   // Phase 8 services (typed properly)
   private _decorationsService?: import('../services/TerminalDecorationsService').TerminalDecorationsService;
@@ -205,18 +208,16 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       this._lifecycleManager.setView(webviewView);
       this._communicationService.setView(webviewView);
 
+      // 🔧 FIX: Panel movement recreates the WebView content; restart handshake for the new instance
+      this._isInitialized = false;
+      this._pendingPanelMoveReinit = true;
+
       // 🔧 FIX: Panel movement creates new WebView instance - must reinitialize HTML
       // VS Code destroys WebView content when moving between panel locations
       log('🔄 [PROVIDER] Panel moved - reinitializing WebView content');
       this._lifecycleManager.configureWebview(webviewView);
       this._registerWebviewMessageListener(webviewView);
       this._initializeWebviewContent(webviewView);
-
-      // Restore terminal state after reinitialization
-      setTimeout(() => {
-        log('🔄 [PROVIDER] Restoring terminal state after panel move');
-        this._syncTerminalStateToWebView();
-      }, 100);
 
       return;
     }
@@ -274,9 +275,17 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   private _registerWebviewMessageListener(webviewView: vscode.WebviewView): void {
+    // If this is a new WebView instance (panel movement), dispose old listener and re-register
+    if (this._webviewMessageListenerView !== webviewView) {
+      this._webviewMessageListenerDisposable?.dispose();
+      this._webviewMessageListenerDisposable = null;
+      this._webviewMessageListenerView = webviewView;
+      this._lifecycleManager.setMessageListenerRegistered(false);
+    }
+
     // Prevent duplicate message listener registration
     if (this._lifecycleManager.isMessageListenerRegistered()) {
-      log('⏭️ [PROVIDER] Message listener already registered, skipping duplicate registration');
+      log('⏭️ [PROVIDER] Message listener already registered for current WebView');
       return;
     }
 
@@ -324,6 +333,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     );
 
     this._cleanupService.addDisposable(disposable);
+    this._webviewMessageListenerDisposable = disposable;
     this._lifecycleManager.setMessageListenerRegistered(true);
     log('✅ [PROVIDER] Message listener registered');
   }
@@ -757,9 +767,44 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     log('🔥 [TERMINAL-INIT] === _handleWebviewInitialized CALLED ===');
     log('🎯 [TERMINAL-INIT] WebView fully initialized - starting terminal initialization');
 
+    if (this._pendingPanelMoveReinit) {
+      this._pendingPanelMoveReinit = false;
+      void this._reinitializeWebviewAfterPanelMove();
+      return;
+    }
+
     // 🔤 FIX: Send init message and font settings BEFORE creating terminals
     // This ensures fonts are applied during terminal creation, not after
     void this._initializeWithFontSettings();
+  }
+
+  private async _reinitializeWebviewAfterPanelMove(): Promise<void> {
+    try {
+      log('🔄 [PANEL-MOVE] Reinitializing WebView after panel move');
+
+      await this._sendMessage({
+        command: 'init',
+        timestamp: Date.now(),
+      });
+
+      const fontSettings = this._settingsService.getCurrentFontSettings();
+      await this._sendMessage({
+        command: 'fontSettingsUpdate',
+        fontSettings,
+      });
+
+      await this._initializeTerminal();
+      this.sendFullCliAgentStateSync();
+
+      log('✅ [PANEL-MOVE] WebView reinitialization complete');
+    } catch (error) {
+      log('❌ [PANEL-MOVE] Failed to reinitialize WebView after panel move:', error);
+      try {
+        await this._initializeTerminal();
+      } catch {
+        // ignore
+      }
+    }
   }
 
   /**
@@ -1194,9 +1239,6 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    */
   private _syncTerminalStateToWebView(): void {
     log('🔄 [PROVIDER] Syncing terminal state to WebView after panel move');
-
-    // Reset initialization state to allow message sending
-    this._isInitialized = true;
 
     // Re-initialize terminals in WebView
     void this._initializeTerminal();
