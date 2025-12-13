@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.168] - 2025-12-13
+
+### 📚 Documentation
+
+- **README Redesign**: Improved documentation with visual diagrams
+  - Added hero SVG illustration
+  - Added architecture diagram SVG
+  - Expanded keyboard shortcuts documentation
+  - Updated command palette reference
+
 ## [0.1.167] - 2025-12-13
 
 ### 🐛 Bug Fixes
