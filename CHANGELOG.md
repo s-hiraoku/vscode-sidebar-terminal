@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.166] - 2025-12-13
+
+### Fixed
+
+- **Panel Move WebView Reinitialization**: Fix terminal display issues when moving panel between sidebar and bottom panel
+  - **Root Cause**: WebView content was not properly reinitialized when VS Code recreates the WebView instance during panel movement
+  - **Fix 1**: Reset handshake state and reinitialize WebView content on panel move
+  - **Fix 2**: Track WebView instance changes and re-register message listeners for new instances
+  - **Fix 3**: Add `_reinitializeWebviewAfterPanelMove` method for proper state restoration
+  - **Result**: Terminals now display correctly after moving panel between sidebar and bottom panel
+
+- **Split Layout Direction on Panel Move**: Fix split layout direction not updating when moving between sidebar and bottom panel
+  - **Root Cause**: Split direction remained vertical even when moving to bottom panel (which should use horizontal)
+  - **Fix 1**: Add `setupPanelLocationSync` to listen for panel location changes
+  - **Fix 2**: Automatically rebuild split layout with correct direction (horizontal for panel, vertical for sidebar)
+  - **Fix 3**: Add retry logic for terminals-wrapper class sync when wrapper isn't ready yet
+  - **Result**: Split layout now correctly switches between horizontal (bottom panel) and vertical (sidebar)
+
 ## [0.1.165] - 2025-12-13
 
 ### Changed
