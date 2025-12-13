@@ -167,6 +167,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     this.terminalLifecycleManager = new TerminalLifecycleCoordinator(this.splitManager, this);
     this.cliAgentStateManager = new CliAgentStateManager();
     this.eventHandlerManager = new EventHandlerManager();
+    this.setupPanelLocationSync();
     this.findInTerminalManager = new FindInTerminalManager();
     this.profileManager = new ProfileManager();
     try {
@@ -209,6 +210,72 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
     this.isInitialized = true;
     log('✅ RefactoredTerminalWebviewManager initialized');
+  }
+
+  private setupPanelLocationSync(): void {
+    // Panel location (sidebar/panel) changes - keep split layout direction in sync
+    this.eventHandlerManager.addEventListener(
+      window,
+      'terminal-panel-location-changed',
+      (event: Event) => {
+        const customEvent = event as CustomEvent<{ location?: unknown }>;
+        const location = customEvent.detail?.location;
+        if (location !== 'sidebar' && location !== 'panel') {
+          return;
+        }
+
+        this.splitManager.setPanelLocation(location);
+
+        const direction = location === 'panel' ? 'horizontal' : 'vertical';
+
+        try {
+          const terminalCount = this.splitManager.getTerminals().size;
+          const currentMode = this.displayModeManager.getCurrentMode();
+
+          // Bottom panel: if multiple terminals are visible (i.e. not fullscreen), enforce split layout immediately
+          if (location === 'panel' && terminalCount > 1 && currentMode !== 'fullscreen') {
+            this.displayModeManager.showAllTerminalsSplit();
+            return;
+          }
+
+          // Sidebar: if already in split mode, rebuild layout to ensure vertical stacking
+          if (location === 'sidebar' && currentMode === 'split') {
+            this.displayModeManager.showAllTerminalsSplit();
+            return;
+          }
+        } catch {
+          // fall through
+        }
+
+        // Otherwise, just update split direction for the next activation
+        this.splitManager.updateSplitDirection(direction, location);
+      }
+    );
+
+    // Best-effort sync: apply the current location even if the first event fired before full UI was ready
+    setTimeout(() => {
+      try {
+        const terminalsWrapper = document.getElementById('terminals-wrapper');
+        if (!terminalsWrapper) {
+          return;
+        }
+
+        const location = terminalsWrapper.classList.contains('terminal-split-horizontal')
+          ? 'panel'
+          : 'sidebar';
+        this.splitManager.setPanelLocation(location);
+
+        const terminalCount = this.splitManager.getTerminals().size;
+        const currentMode = this.displayModeManager.getCurrentMode();
+        if (location === 'panel' && terminalCount > 1 && currentMode !== 'fullscreen') {
+          this.displayModeManager.showAllTerminalsSplit();
+        } else if (location === 'sidebar' && currentMode === 'split') {
+          this.displayModeManager.showAllTerminalsSplit();
+        }
+      } catch {
+        // ignore
+      }
+    }, 250);
   }
 
   /**

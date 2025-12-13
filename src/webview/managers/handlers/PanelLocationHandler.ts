@@ -67,6 +67,10 @@ export class PanelLocationHandler implements IMessageHandler {
         // Initial detection
         if (!initialDetectionDone) {
           const terminalsWrapper = document.getElementById('terminals-wrapper');
+          // Update cached state even if terminals-wrapper isn't ready yet
+          this.cachedFlexDirection = detectedLocation === 'panel' ? 'row' : 'column';
+          this.cachedPanelLocation = detectedLocation;
+
           if (terminalsWrapper) {
             // 🔧 FIX: Apply CSS class for horizontal layout (bottom panel only)
             // Default is column (vertical/sidebar), add class for row (horizontal/panel)
@@ -75,10 +79,10 @@ export class PanelLocationHandler implements IMessageHandler {
             } else {
               terminalsWrapper.classList.remove('terminal-split-horizontal');
             }
-
-            // Update cached state
-            this.cachedFlexDirection = detectedLocation === 'panel' ? 'row' : 'column';
-            this.cachedPanelLocation = detectedLocation;
+          } else {
+            // terminals-wrapper may be created later (after terminalCreated messages)
+            // Retry once the wrapper exists so layout matches the detected location
+            this.scheduleTerminalsWrapperClassSync(detectedLocation);
           }
 
           // Report to Extension
@@ -91,7 +95,7 @@ export class PanelLocationHandler implements IMessageHandler {
           initialDetectionDone = true;
 
           // 🔧 FIX: Schedule terminal refit after initial detection
-          this.scheduleTerminalRefitViaDOM();
+          this.scheduleTerminalRefitViaDOM(detectedLocation);
         } else {
           // Change detection: Only update if location changed
           if (this.cachedPanelLocation !== detectedLocation) {
@@ -103,6 +107,8 @@ export class PanelLocationHandler implements IMessageHandler {
               } else {
                 terminalsWrapper.classList.remove('terminal-split-horizontal');
               }
+            } else {
+              this.scheduleTerminalsWrapperClassSync(detectedLocation);
             }
 
             // Update cached state
@@ -117,7 +123,7 @@ export class PanelLocationHandler implements IMessageHandler {
             });
 
             // 🔧 FIX: Schedule terminal refit after panel location change
-            this.scheduleTerminalRefitViaDOM();
+            this.scheduleTerminalRefitViaDOM(detectedLocation);
           }
         }
 
@@ -140,13 +146,13 @@ export class PanelLocationHandler implements IMessageHandler {
    * Used when coordinator is not available (autonomous detection)
    * Dispatches a custom event that TerminalWebviewManager can listen to
    */
-  private scheduleTerminalRefitViaDOM(): void {
+  private scheduleTerminalRefitViaDOM(location: 'sidebar' | 'panel'): void {
     setTimeout(() => {
       try {
         // Dispatch custom event for terminal refit
         const event = new CustomEvent('terminal-panel-location-changed', {
           bubbles: true,
-          detail: { location: this.cachedPanelLocation },
+          detail: { location },
         });
         window.dispatchEvent(event);
         this.logger.info('📤 Dispatched terminal-panel-location-changed event');
@@ -154,6 +160,30 @@ export class PanelLocationHandler implements IMessageHandler {
         this.logger.error('Failed to dispatch terminal refit event:', error);
       }
     }, WEBVIEW_TIMING.PANEL_REFIT_DELAY_MS);
+  }
+
+  private scheduleTerminalsWrapperClassSync(location: 'sidebar' | 'panel'): void {
+    const maxAttempts = 20;
+    let attempt = 0;
+
+    const timer = setInterval(() => {
+      attempt++;
+
+      const terminalsWrapper = document.getElementById('terminals-wrapper');
+      if (terminalsWrapper) {
+        if (location === 'panel') {
+          terminalsWrapper.classList.add('terminal-split-horizontal');
+        } else {
+          terminalsWrapper.classList.remove('terminal-split-horizontal');
+        }
+        clearInterval(timer);
+        return;
+      }
+
+      if (attempt >= maxAttempts) {
+        clearInterval(timer);
+      }
+    }, 50);
   }
 
   /**
