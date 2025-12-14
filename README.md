@@ -50,7 +50,7 @@ Automatic detection and status tracking for:
 - **Claude Code** - `claude "your task"`
 - **Codex CLI** - `codex "your task"`
 - **Gemini CLI** - `gemini "your task"`
-- **Copilot CLI** - `gh copilot suggest "your task"`
+- **Copilot CLI** - `copilot "your task"`
 
 **Features:**
 
