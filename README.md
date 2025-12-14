@@ -47,7 +47,7 @@ Automatic detection and status tracking for:
 - **Claude Code** - `claude "your task"`
 - **Codex CLI** - `codex "your task"`
 - **Gemini CLI** - `gemini "your task"`
-- **GitHub Copilot** - `copilot` or keyboard shortcut
+- **GitHub Copilot** - `gh copilot` or keyboard shortcut
 
 **Features:**
 
