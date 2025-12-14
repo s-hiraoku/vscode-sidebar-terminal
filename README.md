@@ -8,7 +8,7 @@
 [![License](https://img.shields.io/github/license/s-hiraoku/vscode-sidebar-terminal)](https://github.com/s-hiraoku/vscode-sidebar-terminal/blob/main/LICENSE)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/s-hiraoku/vscode-sidebar-terminal)
 
-**The Essential Tool for the CLI Coding Agent Era** - A production-ready terminal extension for developers who need more than VS Code's standard terminal. Manage up to 5 terminals in the sidebar with seamless AI agent integration for Claude Code, Codex CLI, Gemini CLI, and GitHub Copilot.
+**The Essential Tool for the CLI Coding Agent Era** - A production-ready terminal extension for developers who need more than VS Code's standard terminal. Manage up to 5 terminals in the sidebar with seamless AI agent integration for Claude Code, Codex CLI, Gemini CLI, and Copilot CLI.
 
 > **Note**: This extension is under active development. Please expect some bugs as we continuously improve the experience.
 
@@ -50,7 +50,7 @@ Automatic detection and status tracking for:
 - **Claude Code** - `claude "your task"`
 - **Codex CLI** - `codex "your task"`
 - **Gemini CLI** - `gemini "your task"`
-- **GitHub Copilot** - `gh copilot suggest "your task"`
+- **Copilot CLI** - `gh copilot suggest "your task"`
 
 **Features:**
 
