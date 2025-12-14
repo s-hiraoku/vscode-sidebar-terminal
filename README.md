@@ -9,7 +9,7 @@
 
 > **Note**: This extension is under active development. Please expect some bugs as we continuously improve the experience.
 
-![Secondary Terminal](resources/readme-hero.png)
+![Secondary Terminal](resources/banner.png)
 
 ## Quick Start
 
@@ -120,7 +120,7 @@ Access via `Ctrl+Shift+P` (Win/Linux) or `Cmd+Shift+P` (Mac):
 
 ## Architecture
 
-![Architecture](resources/readme-architecture.png)
+![Architecture](resources/architeccture-graphic-record.png)
 
 **Extension Host (Node.js)**
 
