@@ -45,10 +45,10 @@
 
 Automatic detection and status tracking for:
 
-- **Claude Code** - `claude "your task"`
-- **Codex CLI** - `codex "your task"`
-- **Gemini CLI** - `gemini "your task"`
-- **Copilot CLI** - `copilot "your task"`
+- **Claude Code**
+- **Codex CLI**
+- **Gemini CLI**
+- **Copilot CLI**
 
 **Features:**
 
