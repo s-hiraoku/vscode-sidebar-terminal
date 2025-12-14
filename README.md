@@ -13,6 +13,8 @@
 
 ![Secondary Terminal](resources/banner.png)
 
+![Demo](resources/readme-hero.png)
+
 ## Quick Start
 
 ### Installation
@@ -66,35 +68,36 @@ Automatic detection and status tracking for:
 
 ## Keyboard Shortcuts
 
-| Shortcut                      | Action                                                                 |
-| ----------------------------- | ---------------------------------------------------------------------- |
-| `Cmd+Alt+L` / `Ctrl+Alt+L`    | Insert file reference for AI agents (from editor)                       |
-| `Cmd+K Cmd+C` / `Ctrl+K Ctrl+C` | Activate GitHub Copilot Chat                                            |
-| ``Ctrl+` ``                   | Focus Secondary Terminal view (when terminal is not focused)            |
-| ``Ctrl+Shift+` ``             | Create new terminal                                                     |
-| `Cmd+\\` (Mac) / `Ctrl+Shift+5` | Split terminal vertically (when Secondary Terminal is focused)          |
-| `Cmd+K` / `Ctrl+K`            | Clear terminal (when Secondary Terminal is focused)                     |
-| `Alt+Cmd+Left/Right` (Mac) / `Alt+Left/Right` | Focus previous/next terminal (when focused)                |
-| `Cmd+Alt+1..5` (Mac) / `Alt+1..5` | Focus terminal by index (when focused)                                 |
-| `Ctrl+Shift+D`                | Toggle debug panel (webview)                                            |
+| Shortcut                                      | Action                                                         |
+| --------------------------------------------- | -------------------------------------------------------------- |
+| `Cmd+Alt+L` / `Ctrl+Alt+L`                    | Insert file reference for AI agents (from editor)              |
+| `Cmd+K Cmd+C` / `Ctrl+K Ctrl+C`               | Activate GitHub Copilot Chat                                   |
+| ``Ctrl+` ``                                   | Focus Secondary Terminal view (when terminal is not focused)   |
+| ``Ctrl+Shift+` ``                             | Create new terminal                                            |
+| `Cmd+\\` (Mac) / `Ctrl+Shift+5`               | Split terminal vertically (when Secondary Terminal is focused) |
+| `Cmd+K` / `Ctrl+K`                            | Clear terminal (when Secondary Terminal is focused)            |
+| `Alt+Cmd+Left/Right` (Mac) / `Alt+Left/Right` | Focus previous/next terminal (when focused)                    |
+| `Cmd+Alt+1..5` (Mac) / `Alt+1..5`             | Focus terminal by index (when focused)                         |
+| `Ctrl+Shift+D`                                | Toggle debug panel (webview)                                   |
 
 Other UX features:
+
 - `Alt+Click` moves the cursor (VS Code-style) when enabled.
 
 ## Command Palette
 
 Access via `Ctrl+Shift+P` (Win/Linux) or `Cmd+Shift+P` (Mac):
 
-| Command                                         | Description          |
-| ----------------------------------------------- | -------------------- |
-| `Secondary Terminal: Focus Terminal`            | Focus terminal panel |
-| `Secondary Terminal: Create New Terminal`       | Create a new terminal |
-| `Secondary Terminal: Split Terminal Vertically` | Split vertically     |
-| `Secondary Terminal: Split Terminal Horizontally` | Split horizontally |
-| `Secondary Terminal: Select Terminal Profile`   | Choose a profile     |
-| `Secondary Terminal: Manage Terminal Profiles`  | Edit profiles        |
-| `Secondary Terminal: Show Version`              | Display version info |
-| `Secondary Terminal: Clear Corrupted Terminal History` | Clear session data |
+| Command                                                | Description           |
+| ------------------------------------------------------ | --------------------- |
+| `Secondary Terminal: Focus Terminal`                   | Focus terminal panel  |
+| `Secondary Terminal: Create New Terminal`              | Create a new terminal |
+| `Secondary Terminal: Split Terminal Vertically`        | Split vertically      |
+| `Secondary Terminal: Split Terminal Horizontally`      | Split horizontally    |
+| `Secondary Terminal: Select Terminal Profile`          | Choose a profile      |
+| `Secondary Terminal: Manage Terminal Profiles`         | Edit profiles         |
+| `Secondary Terminal: Show Version`                     | Display version info  |
+| `Secondary Terminal: Clear Corrupted Terminal History` | Clear session data    |
 
 ## Configuration
 
@@ -122,7 +125,9 @@ Access via `Ctrl+Shift+P` (Win/Linux) or `Cmd+Shift+P` (Mac):
 
 ## Architecture
 
-![Architecture](resources/architeccture-graphic-record.png)
+![Architecture](resources/architeccture-graphic-recording.png)
+
+![Architecture Detail](resources/readme-architecture.png)
 
 **Extension Host (Node.js)**
 
