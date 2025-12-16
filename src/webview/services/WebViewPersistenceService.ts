@@ -484,22 +484,30 @@ export class WebViewPersistenceService {
     const writeBatch = (startIndex: number) => {
       const endIndex = Math.min(startIndex + BATCH_SIZE, lines.length);
 
+      let chunk = '';
       for (let i = startIndex; i < endIndex; i++) {
         const line = lines[i];
         if (line !== undefined) {
-          terminal.write(line);
-          if (i < lines.length - 1) {
-            terminal.write('\r\n');
-          }
+          chunk += line;
+        }
+        if (i < lines.length - 1) {
+          chunk += '\r\n';
         }
       }
 
-      if (endIndex < lines.length) {
-        setTimeout(() => writeBatch(endIndex), 0);
-      } else {
-        // Auto-scroll to bottom after all content is written
-        terminal.scrollToBottom();
-      }
+      // xterm.write is async; chain batches via callback to keep ordering and ensure
+      // final scroll-to-bottom happens after content is applied.
+      terminal.write(chunk, () => {
+        if (endIndex < lines.length) {
+          setTimeout(() => writeBatch(endIndex), 0);
+        } else {
+          try {
+            terminal.scrollToBottom();
+          } catch {
+            // Best-effort
+          }
+        }
+      });
     };
 
     writeBatch(0);

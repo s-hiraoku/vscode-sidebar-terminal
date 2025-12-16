@@ -12,7 +12,7 @@
   
   <!-- Main title -->
   <text x="640" y="200" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="72" font-weight="bold" fill="#ffffff">
-    Sidebar Terminal
+    Secondary Terminal
   </text>
   
   <!-- Subtitle -->
