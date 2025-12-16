@@ -1050,7 +1050,7 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:report": "playwright show-report",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
-    "vsce:package": "@vscode/vsce package",
+    "vsce:package": "npm run validate:native-deps && @vscode/vsce package",
     "vsce:publish": "@vscode/vsce publish",
     "vsce:package:win32-x64": "@vscode/vsce package --target win32-x64",
     "vsce:package:win32-arm64": "@vscode/vsce package --target win32-arm64",
@@ -1093,7 +1093,8 @@
     "docs:generate": "npx typedoc",
     "docs:watch": "npx typedoc --watch",
     "docs:clean": "rm -rf docs/api",
-    "rebuild:fast": "npm rebuild @homebridge/node-pty-prebuilt-multiarch"
+    "rebuild:fast": "npm rebuild @homebridge/node-pty-prebuilt-multiarch",
+    "validate:native-deps": "node -e \"try { require('@homebridge/node-pty-prebuilt-multiarch'); console.log('✅ node-pty native deps OK'); } catch(e) { console.error('❌ node-pty missing:', e.message); process.exit(1); }\""
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.0",
