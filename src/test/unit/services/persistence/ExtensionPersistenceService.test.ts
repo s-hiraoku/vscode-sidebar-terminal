@@ -11,6 +11,9 @@ describe('ExtensionPersistenceService', () => {
   let terminalManager: {
     getTerminals: sinon.SinonStub;
     getActiveTerminalId: sinon.SinonStub;
+    createTerminal: sinon.SinonStub;
+    setActiveTerminal: sinon.SinonStub;
+    reorderTerminals: sinon.SinonStub;
   };
   let workspaceState: {
     get: sinon.SinonStub;
@@ -40,6 +43,9 @@ describe('ExtensionPersistenceService', () => {
         { id: 'terminal-2', name: 'Terminal 2', cwd: '/tmp', isActive: false },
       ]),
       getActiveTerminalId: sandbox.stub().returns('terminal-1'),
+      createTerminal: sandbox.stub().returns(''),
+      setActiveTerminal: sandbox.stub(),
+      reorderTerminals: sandbox.stub(),
     };
 
     service = new ExtensionPersistenceService(context, terminalManager as any);
@@ -109,5 +115,38 @@ describe('ExtensionPersistenceService', () => {
     const cache = (service as any).pushedScrollbackCache as Map<string, string[]>;
     expect(cache.get('terminal-1')).to.deep.equal(['prefetch-1']);
     expect(cache.get('terminal-2')).to.equal(undefined);
+  });
+
+  it('reorders restored terminals to match saved session order', async () => {
+    terminalManager.createTerminal.resetBehavior();
+    terminalManager.createTerminal.onCall(0).returns('new-1');
+    terminalManager.createTerminal.onCall(1).returns('new-2');
+    terminalManager.createTerminal.onCall(2).returns('new-3');
+
+    const waitStub = sandbox.stub(service as any, 'waitForTerminalsReady').resolves();
+    const restoreStub = sandbox.stub(service as any, 'requestScrollbackRestoration').resolves();
+
+    const sessionData = {
+      terminals: [
+        { id: 'old-1', name: 'Terminal 1', number: 1, cwd: '/tmp', isActive: false },
+        { id: 'old-2', name: 'Terminal 2', number: 2, cwd: '/tmp', isActive: true },
+        { id: 'old-3', name: 'Terminal 3', number: 3, cwd: '/tmp', isActive: false },
+      ],
+      activeTerminalId: 'old-2',
+      timestamp: Date.now(),
+      version: '0.1.999',
+    };
+
+    await (service as any).batchRestoreTerminals(sessionData);
+
+    expect(waitStub.calledOnce).to.equal(true);
+    expect(restoreStub.called).to.equal(false);
+    expect(terminalManager.reorderTerminals.calledOnce).to.equal(true);
+    expect(terminalManager.reorderTerminals.firstCall.args[0]).to.deep.equal([
+      'new-1',
+      'new-2',
+      'new-3',
+    ]);
+    expect(terminalManager.setActiveTerminal.calledWith('new-2')).to.equal(true);
   });
 });

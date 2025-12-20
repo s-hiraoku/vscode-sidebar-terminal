@@ -214,8 +214,8 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
   private setupPanelLocationSync(): void {
     // Panel location (sidebar/panel) changes - keep split layout direction in sync
-    this.eventHandlerManager.addEventListener(
-      window,
+    // Use direct window.addEventListener for custom events
+    window.addEventListener(
       'terminal-panel-location-changed',
       (event: Event) => {
         const customEvent = event as CustomEvent<{ location?: unknown }>;

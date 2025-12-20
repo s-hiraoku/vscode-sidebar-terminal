@@ -200,12 +200,12 @@ export class ResizeCoordinator {
               log(`  .terminal-content: ${contentEl?.clientWidth}x${contentEl?.clientHeight}`);
               log(`  .xterm: ${xtermEl?.clientWidth}x${xtermEl?.clientHeight}`);
 
-              terminalData.fitAddon.fit();
+              terminalData.fitAddon?.fit();
 
               // 🔧 CRITICAL FIX: Call fit() again after frame to ensure canvas updates
               requestAnimationFrame(() => {
                 DOMUtils.resetXtermInlineStyles(container, true);
-                terminalData.fitAddon.fit();
+                terminalData.fitAddon?.fit();
               });
 
               // 🎯 VS Code Pattern: Notify PTY about new dimensions

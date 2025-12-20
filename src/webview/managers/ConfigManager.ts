@@ -101,6 +101,10 @@ export class ConfigManager implements IConfigManager {
     fontWeightBold: 'bold',
     lineHeight: 1.0,
     letterSpacing: 0,
+    cursorStyle: 'block',
+    cursorWidth: 1,
+    drawBoldTextInBrightColors: true,
+    minimumContrastRatio: 1,
   };
 
   /**

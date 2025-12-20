@@ -794,6 +794,13 @@ export class ExtensionPersistenceService implements vscode.Disposable {
     await this.waitForTerminalsReady(pendingTerminalIds, 3000);
     log(`✅ [EXT-PERSISTENCE] All terminals ready or timeout reached`);
 
+    // Preserve original order from the saved session (explicit reorder after restore)
+    const restoredOrder = terminalCreations.map((terminal) => terminal.id);
+    if (restoredOrder.length > 1) {
+      this.terminalManager.reorderTerminals(restoredOrder);
+      log(`🔁 [EXT-PERSISTENCE] Restored terminal order:`, restoredOrder);
+    }
+
     // Restore scrollback content in batches
     if (terminalCreations.length > 0 && scrollbackData) {
       await this.requestScrollbackRestoration(terminalCreations);

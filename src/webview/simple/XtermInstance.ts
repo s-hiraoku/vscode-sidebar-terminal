@@ -17,7 +17,7 @@ import { FitAddon } from '@xterm/addon-fit';
 import { WebglAddon } from '@xterm/addon-webgl';
 import { SerializeAddon } from '@xterm/addon-serialize';
 import { TerminalConfig, TerminalTheme } from './types';
-import * as DOMUtils from '../utils/DOMUtils';
+import { DOMUtils } from '../utils/DOMUtils';
 
 /**
  * Terminal creation result
