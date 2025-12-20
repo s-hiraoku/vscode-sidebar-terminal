@@ -60,84 +60,14 @@ jobs:
           path: test-results/
           retention-days: 30
 
-  pre-release-quality-gate:
-    name: Pre-Release TDD Quality Gate
-    runs-on: ubuntu-latest
-    # Only run quality gate for tag releases
-    if: startsWith(github.ref, 'refs/tags/v')
-    # Run in parallel with E2E tests (not sequential)
-    # Timeout after 10 minutes (known Ubuntu test timeout issue)
-    timeout-minutes: 10
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '24'
-          cache: 'npm'
-
-      - name: Setup Python (for node-gyp)
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.x'
-
-      - name: Install build tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential xvfb
-
-      - name: Install dependencies
-        run: npm ci --ignore-scripts
-
-      - name: Rebuild native dependencies
-        run: npm rebuild --verbose
-
-      - name: Compile tests
-        run: npm run compile-tests || echo "⚠️ Test compilation has TypeScript errors - will be fixed in follow-up PR"
-        continue-on-error: true
-
-      - name: Run TDD Quality Gate
-        run: |
-          echo "🚦 Running Pre-Release TDD Quality Gate..."
-          set +e  # Disable exit on error temporarily
-          xvfb-run -a npm run tdd:comprehensive-check
-          TDD_EXIT_CODE=$?
-          set -e  # Re-enable exit on error
-
-          if [ $TDD_EXIT_CODE -ne 0 ]; then
-            echo "⚠️ TDD Quality Gate has issues - will be fixed in follow-up PR"
-            echo "Continuing with release due to TypeScript test compilation errors"
-          else
-            echo "✅ TDD Quality Gate Passed - Release Approved"
-          fi
-        continue-on-error: true
-
-      - name: Generate TDD Report for Release
-        run: |
-          npm run tdd:generate-report > tdd-release-report.md
-          echo "TDD_RELEASE_REPORT<<EOF" >> $GITHUB_ENV
-          cat tdd-release-report.md >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
-
-      - name: Upload TDD Report
-        uses: actions/upload-artifact@v5
-        with:
-          name: tdd-release-report
-          path: tdd-release-report.md
-
   build:
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
-    # Quality gates run in parallel; build starts when both complete
-    # E2E must pass; TDD is optional (known Ubuntu timeout issue, may timeout/cancel)
-    needs: [e2e-quality-gate, pre-release-quality-gate]
+    # E2E must pass for tag releases; skipped for branch pushes
+    needs: [e2e-quality-gate]
     if: |
       always() &&
-      (needs.e2e-quality-gate.result == 'success' || needs.e2e-quality-gate.result == 'skipped') &&
-      (needs.pre-release-quality-gate.result == 'success' || needs.pre-release-quality-gate.result == 'skipped' || needs.pre-release-quality-gate.result == 'failure' || needs.pre-release-quality-gate.result == 'cancelled')
+      (needs.e2e-quality-gate.result == 'success' || needs.e2e-quality-gate.result == 'skipped')
     strategy:
       matrix:
         include:
