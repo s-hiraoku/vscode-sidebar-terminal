@@ -190,7 +190,7 @@ export class ResizeCoordinator {
                 log(`  .xterm inline style: width=${xtermEl.style.width}, height=${xtermEl.style.height}`);
               }
 
-              // 🎯 Single fit() call - VS Code pattern
+              // 🎯 Reset styles and fit() - VS Code pattern
               // Reset styles right before fit to ensure clean state
               DOMUtils.resetXtermInlineStyles(container, true);
 
@@ -201,6 +201,12 @@ export class ResizeCoordinator {
               log(`  .xterm: ${xtermEl?.clientWidth}x${xtermEl?.clientHeight}`);
 
               terminalData.fitAddon.fit();
+
+              // 🔧 CRITICAL FIX: Call fit() again after frame to ensure canvas updates
+              requestAnimationFrame(() => {
+                DOMUtils.resetXtermInlineStyles(container, true);
+                terminalData.fitAddon.fit();
+              });
 
               // 🎯 VS Code Pattern: Notify PTY about new dimensions
               // This is CRITICAL - without this, the shell process doesn't know about the new size

@@ -56,7 +56,7 @@ export class ScrollbackMessageHandler implements IMessageHandler {
 
     switch (command) {
       case 'getScrollback':
-        this.handleGetScrollback(msg, coordinator);
+        await this.handleGetScrollback(msg, coordinator);
         break;
       case 'restoreScrollback':
         this.handleRestoreScrollback(msg, coordinator);
@@ -91,7 +91,10 @@ export class ScrollbackMessageHandler implements IMessageHandler {
   /**
    * Handle get scrollback request
    */
-  private handleGetScrollback(msg: MessageCommand, coordinator: IManagerCoordinator): void {
+  private async handleGetScrollback(
+    msg: MessageCommand,
+    coordinator: IManagerCoordinator
+  ): Promise<void> {
     this.logger.info('Handling get scrollback message');
 
     const terminalId = msg.terminalId as string;
@@ -110,6 +113,9 @@ export class ScrollbackMessageHandler implements IMessageHandler {
     }
 
     try {
+      // Flush any pending writes so the latest output is included.
+      await this.flushTerminalWrites(terminalInstance.terminal);
+
       // Get SerializeAddon for color preservation
       const serializeAddon = coordinator.getSerializeAddon(terminalId);
 
@@ -120,10 +126,14 @@ export class ScrollbackMessageHandler implements IMessageHandler {
         maxLines
       );
 
-      // Send scrollback data back to extension
+      const requestId = msg.requestId as string | undefined;
+
+      // Send scrollback data back to extension (use unified format + include requestId)
       void this.messageQueue.enqueue({
-        command: 'scrollbackExtracted',
+        command: 'scrollbackDataCollected',
         terminalId,
+        requestId,
+        scrollbackData: scrollbackContent,
         scrollbackContent,
         timestamp: Date.now(),
       });
@@ -317,6 +327,9 @@ export class ScrollbackMessageHandler implements IMessageHandler {
       this.logger.info(`✅ [SAVE-DEBUG] Terminal instance found for ${terminalId}`);
       this.logger.info(`🔍 [SAVE-DEBUG] Has serializeAddon: ${!!terminalInstance.serializeAddon}`);
       this.logger.info(`🔍 [SAVE-DEBUG] Has terminal: ${!!terminalInstance.terminal}`);
+
+      // Flush any pending writes so the latest output is included.
+      await this.flushTerminalWrites(terminalInstance.terminal);
 
       // Extract scrollback data
       const scrollbackData = this.extractScrollbackFromTerminal(terminalInstance, maxLines || 1000);
@@ -522,7 +535,7 @@ export class ScrollbackMessageHandler implements IMessageHandler {
       // 🎨 Try SerializeAddon first (if available) - preserves ANSI color codes
       if (terminal.serializeAddon) {
         this.logger.info('✅ Using SerializeAddon for color-preserving scrollback extraction');
-        const serialized = terminal.serializeAddon.serialize();
+        const serialized = terminal.serializeAddon.serialize({ scrollback: maxLines });
         const lines = serialized.split('\n').slice(-maxLines);
         this.logger.info(
           `✅ Extracted ${lines.length} lines with ANSI colors using SerializeAddon`
@@ -784,5 +797,32 @@ export class ScrollbackMessageHandler implements IMessageHandler {
    */
   public dispose(): void {
     this.restoredTerminals.dispose();
+  }
+
+  private async flushTerminalWrites(terminal: Terminal | undefined): Promise<void> {
+    if (!terminal || typeof terminal.write !== 'function') {
+      return;
+    }
+
+    await new Promise<void>((resolve) => {
+      let settled = false;
+      const timeout = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        resolve();
+      }, 200);
+
+      try {
+        terminal.write('', () => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeout);
+          resolve();
+        });
+      } catch {
+        clearTimeout(timeout);
+        resolve();
+      }
+    });
   }
 }

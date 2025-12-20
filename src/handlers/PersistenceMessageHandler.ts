@@ -86,11 +86,12 @@ export class PersistenceMessageHandler {
   /**
    * セッション保存処理
    */
-  private async handleSaveSession(_terminalData: unknown): Promise<PersistenceResponse> {
+  private async handleSaveSession(data: unknown): Promise<PersistenceResponse> {
     try {
       // ExtensionPersistenceService.saveCurrentSession() doesn't take parameters
       // It gets terminal data directly from TerminalManager
-      const result = await this.persistenceService.saveCurrentSession();
+      const preferCache = Boolean((data as { preferCache?: boolean } | undefined)?.preferCache);
+      const result = await this.persistenceService.saveCurrentSession({ preferCache });
 
       if (!result.success) {
         return {

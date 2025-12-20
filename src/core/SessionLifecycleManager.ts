@@ -106,7 +106,8 @@ export class SessionLifecycleManager {
 
     log('💾 [STANDARD_SESSION] Saving session on exit...');
     try {
-      const result = await extensionPersistenceService.saveCurrentSession();
+      await extensionPersistenceService.prefetchScrollbackForSave();
+      const result = await extensionPersistenceService.saveCurrentSession({ preferCache: true });
       if (result.success) {
         log(`✅ [STANDARD_SESSION] Session saved on exit: ${result.terminalCount} terminals`);
       } else {

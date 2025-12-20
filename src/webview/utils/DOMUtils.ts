@@ -234,20 +234,20 @@ export namespace DOMUtils {
       xtermScreen.style.height = '';
       xtermScreen.style.maxWidth = '';
       xtermScreen.style.minWidth = '';
+      // 🔧 FIX: Set background color to match terminal, eliminating visible gap
+      const viewport = container.querySelector('.xterm-viewport') as HTMLElement;
+      if (viewport && viewport.style.backgroundColor) {
+        xtermScreen.style.backgroundColor = viewport.style.backgroundColor;
+      }
     }
 
-    // 🔧 CRITICAL FIX: DO NOT reset canvas inline styles!
-    // xterm.js sets inline styles on canvas elements for precise display size:
-    // - style="width: XXXpx; height: YYYpx" - controls display size
-    // - width/height attributes - controls rendering resolution
-    //
-    // Clearing inline styles breaks cursor and decoration rendering on macOS.
-    // The container styles (.xterm-screen, .xterm-viewport) with width: 100%
-    // are sufficient for expansion. Let fitAddon.fit() handle canvas sizing.
-    //
-    // Previous code that cleared canvas styles has been removed:
-    // const canvasElements = container.querySelectorAll('.xterm-screen canvas');
-    // canvasElements.forEach((canvas) => { canvasEl.style.width = ''; ... });
+    // 🔧 FIX: Reset canvas inline styles to allow CSS width: 100% to take effect
+    // This forces canvas to use parent width instead of fixed pixel value
+    const canvasElements = container.querySelectorAll('.xterm-screen canvas');
+    canvasElements.forEach((canvas) => {
+      const canvasEl = canvas as HTMLCanvasElement;
+      canvasEl.style.width = '100%';
+    });
 
     // 🔧 FIX: Also reset xterm-rows element which contains the actual rendered text
     const xtermRows = container.querySelector('.xterm-rows') as HTMLElement;
