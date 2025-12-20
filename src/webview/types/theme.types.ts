@@ -21,7 +21,7 @@ export interface TerminalTheme {
   foreground: string;
   cursor: string;
   cursorAccent?: string;
-  selection: string;
+  selectionBackground: string;
   black: string;
   red: string;
   green: string;
@@ -56,7 +56,7 @@ export const DARK_THEME: TerminalTheme = {
   foreground: '#cccccc',
   cursor: '#aeafad',
   cursorAccent: '#000000',
-  selection: 'rgba(38, 79, 120, 0.5)', // VS Code selection with transparency
+  selectionBackground: 'rgba(38, 79, 120, 0.5)', // VS Code selection with transparency
   black: '#000000',
   red: '#cd3131',
   green: '#0dbc79',
@@ -85,7 +85,7 @@ export const LIGHT_THEME: TerminalTheme = {
   foreground: '#333333',
   cursor: '#000000',
   cursorAccent: '#ffffff',
-  selection: 'rgba(173, 214, 255, 0.5)', // VS Code selection with transparency
+  selectionBackground: 'rgba(173, 214, 255, 0.5)', // VS Code selection with transparency
   black: '#000000',
   red: '#cd3131',
   green: '#00bc00',
