@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.170] - 2025-12-20
+
+### Fixed
+
+- **Terminal Canvas Gap**: Fix visible gap between terminal canvas and container edge
+  - **Root Cause**: FitAddon reserves space for scrollbar (14px), leaving a visible gap when canvas (644px) is smaller than container (663px)
+  - **Fix**: Apply viewport background color to `.xterm` element to hide the gap
+  - **Result**: Terminal now displays without visible gaps at the edge
+
+- **Terminal Restore Order**: Keep terminal order consistent when restoring sessions
+  - Terminals now restore in the same order they were saved
+  - Added reordering logic after session restore completion
+
+- **Terminal Restore Stability**: Stabilize terminal restore and sizing
+  - Save scrollback on exit using prefetch + cache to avoid empty scrollback
+  - Ignore empty scrollback pushes and preserve last known cache
+  - Flush pending xterm writes before scrollback extraction
+  - Reset inline styles and double-fit to fix canvas sizing
+
+### Added
+
+- **Test Coverage**: Added unit tests for exit save cache handling and restore order behavior
+
 ## [0.1.166] - 2025-12-13
 
 ### Fixed
