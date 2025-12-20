@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.171] - 2025-12-20
+## [0.1.172] - 2025-12-20
 
 ### Fixed
 
@@ -18,9 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **CI/CD Performance**: Run E2E and TDD quality gates in parallel during releases
-  - Reduces release workflow time by ~5-10 minutes
-  - Both quality gates now run simultaneously instead of sequentially
+- **CI/CD Simplification**: Separate TDD quality check from release workflow
+  - Remove TDD quality gate from release workflow (was causing timeouts)
+  - TDD checks now run on branch push/PR only (separate workflow)
+  - Release workflow is simpler and more reliable
 
 ## [0.1.170] - 2025-12-20
 
