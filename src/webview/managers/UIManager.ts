@@ -33,6 +33,7 @@ export class UIManager extends BaseManager implements IUIManager {
   // Theme cache for performance
   private currentTheme: string | null = null;
   private themeApplied = false;
+  private readonly themeCache = new WeakMap<Terminal, string | null>();
 
   // Prevent rapid successive updates that could cause duplication
   private readonly UPDATE_DEBOUNCE_MS = 100;
@@ -185,10 +186,14 @@ export class UIManager extends BaseManager implements IUIManager {
   public applyTerminalTheme(terminal: Terminal, settings: PartialTerminalSettings): void {
     const theme = getWebviewTheme(settings);
 
-    // Only apply if theme changed
-    if (this.currentTheme !== theme.background) {
+    const nextBackground = theme.background || null;
+    const previousBackground = this.themeCache.get(terminal) ?? null;
+
+    // Only apply if theme changed for this specific terminal
+    if (previousBackground !== nextBackground) {
       terminal.options.theme = theme;
-      this.currentTheme = theme.background || null;
+      this.themeCache.set(terminal, nextBackground);
+      this.currentTheme = nextBackground;
       this.themeApplied = true;
       uiLogger.info(`Applied theme to terminal: ${theme.background || 'default'}`);
     }
