@@ -291,18 +291,13 @@ export class TerminalProcessManager implements ITerminalProcessManager {
 
   /**
    * リサイズ後のシェルリフレッシュ
+   * Note: SIGWINCH is automatically sent by PTY on resize, so explicit refresh is not needed
+   * Removed \x0c (form feed) as it causes ^L to be displayed on some shells (Issue #329)
    */
-  private refreshShellAfterResize(ptyInstance: pty.IPty): void {
-    setTimeout(() => {
-      try {
-        if (ptyInstance.pid) {
-          log(`🔄 [PTY-PROCESS] Sending refresh signal to process ${ptyInstance.pid}`);
-          ptyInstance.write('\x0c'); // Form feed character to refresh display
-        }
-      } catch (refreshError) {
-        log(`⚠️ [PTY-PROCESS] Failed to refresh shell:`, refreshError);
-      }
-    }, 50);
+  private refreshShellAfterResize(_ptyInstance: pty.IPty): void {
+    // SIGWINCH is automatically sent by PTY on resize
+    // No additional action needed
+    log(`📏 [PTY-PROCESS] Resize complete, SIGWINCH sent by PTY`);
   }
 
   /**

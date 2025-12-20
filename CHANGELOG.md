@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.176] - 2025-12-21
+
+### Fixed
+
+- **^L Display Issue**: Fix `^L` (Ctrl+L) characters being displayed in terminal on startup and resize (Issue #329)
+  - **Root Cause**: Form feed character (`\x0c`) was sent to PTY after resize to refresh shell display
+  - **Fix**: Remove explicit `\x0c` send - PTY already sends SIGWINCH automatically on resize
+  - **Result**: No more `^L^L^L` displayed in terminal
+
 ## [0.1.175] - 2025-12-21
 
 ### Fixed
