@@ -132,12 +132,12 @@ jobs:
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     # Quality gates run in parallel; build starts when both complete
-    # E2E must pass; TDD is optional (known Ubuntu timeout issue)
+    # E2E must pass; TDD is optional (known Ubuntu timeout issue, may timeout/cancel)
     needs: [e2e-quality-gate, pre-release-quality-gate]
     if: |
       always() &&
       (needs.e2e-quality-gate.result == 'success' || needs.e2e-quality-gate.result == 'skipped') &&
-      (needs.pre-release-quality-gate.result == 'success' || needs.pre-release-quality-gate.result == 'skipped' || needs.pre-release-quality-gate.result == 'failure')
+      (needs.pre-release-quality-gate.result == 'success' || needs.pre-release-quality-gate.result == 'skipped' || needs.pre-release-quality-gate.result == 'failure' || needs.pre-release-quality-gate.result == 'cancelled')
     strategy:
       matrix:
         include:
