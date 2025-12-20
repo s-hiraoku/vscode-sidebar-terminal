@@ -71,7 +71,8 @@ Automatic detection and status tracking for:
 
 | Shortcut                                      | Action                                                         |
 | --------------------------------------------- | -------------------------------------------------------------- |
-| `Cmd+Alt+L` / `Ctrl+Alt+L`                    | Insert file reference for AI agents (from editor)              |
+| `Cmd+Alt+L` / `Ctrl+Alt+L`                    | Insert current file reference for AI agents (from editor)      |
+| `Cmd+Alt+L Cmd+Alt+L` / `Ctrl+Alt+L Ctrl+Alt+L` | Insert all open files references for AI agents (press twice) |
 | `Cmd+K Cmd+C` / `Ctrl+K Ctrl+C`               | Activate GitHub Copilot Chat                                   |
 | ``Ctrl+` ``                                   | Focus Secondary Terminal view (when terminal is not focused)   |
 | ``Ctrl+Shift+` ``                             | Create new terminal                                            |

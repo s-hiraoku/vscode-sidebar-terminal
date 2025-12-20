@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.173] - 2025-12-20
+
+### Added
+
+- **Send All Open Files Shortcut**: New keyboard shortcut to insert references for all open files
+  - `Cmd+Alt+L Cmd+Alt+L` (Mac) / `Ctrl+Alt+L Ctrl+Alt+L` (Win/Linux) - Press the shortcut twice
+  - Sends all open files as `@path` references to connected CLI agents (Claude Code, etc.)
+  - Each file is sent on a separate line for better readability
+  - Complements the existing single-file shortcut (`Cmd+Alt+L`)
+
 ## [0.1.172] - 2025-12-20
 
 ### Fixed

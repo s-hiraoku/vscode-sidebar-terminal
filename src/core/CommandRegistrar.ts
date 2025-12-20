@@ -158,6 +158,12 @@ export class CommandRegistrar {
           void this.deps.fileReferenceCommand?.handleSendAtMention();
         },
       },
+      {
+        command: 'secondaryTerminal.sendAllOpenFiles',
+        handler: () => {
+          void this.deps.fileReferenceCommand?.handleSendAllOpenFiles();
+        },
+      },
     ];
   }
 
