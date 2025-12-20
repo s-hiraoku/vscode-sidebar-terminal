@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.171] - 2025-12-20
+
+### Fixed
+
+- **Per-Terminal Theme Application**: Fix theme not being applied correctly to individual terminals
+  - **Root Cause**: Theme was tracked globally with a single variable, causing incorrect theme application when multiple terminals exist
+  - **Fix**: Use WeakMap to cache theme per terminal instance
+  - **Result**: Each terminal now correctly receives and applies its theme settings
+
+### Changed
+
+- **CI/CD Performance**: Run E2E and TDD quality gates in parallel during releases
+  - Reduces release workflow time by ~5-10 minutes
+  - Both quality gates now run simultaneously instead of sequentially
+
 ## [0.1.170] - 2025-12-20
 
 ### Fixed
