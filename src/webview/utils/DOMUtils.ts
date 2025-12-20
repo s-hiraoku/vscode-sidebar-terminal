@@ -215,6 +215,11 @@ export namespace DOMUtils {
       xtermElement.style.minWidth = '';
       xtermElement.style.width = '';
       xtermElement.style.height = '';
+      // 🔧 FIX: Set background color from viewport to eliminate visible gap
+      const viewport = container.querySelector('.xterm-viewport') as HTMLElement;
+      if (viewport && viewport.style.backgroundColor) {
+        xtermElement.style.backgroundColor = viewport.style.backgroundColor;
+      }
     }
 
     // 🔧 CRITICAL FIX: Reset xterm-viewport - this is the scrollable container
@@ -234,11 +239,6 @@ export namespace DOMUtils {
       xtermScreen.style.height = '';
       xtermScreen.style.maxWidth = '';
       xtermScreen.style.minWidth = '';
-      // 🔧 FIX: Set background color to match terminal, eliminating visible gap
-      const viewport = container.querySelector('.xterm-viewport') as HTMLElement;
-      if (viewport && viewport.style.backgroundColor) {
-        xtermScreen.style.backgroundColor = viewport.style.backgroundColor;
-      }
     }
 
     // 🔧 FIX: Reset canvas inline styles to allow CSS width: 100% to take effect
