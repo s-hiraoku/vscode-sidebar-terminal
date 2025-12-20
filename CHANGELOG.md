@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.174] - 2025-12-21
+## [0.1.175] - 2025-12-21
 
 ### Fixed
 
@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Root Cause**: Property name mismatch (`selection` vs `selectionBackground`) and CSS interfering with selection layer
   - **Fix**: Rename to `selectionBackground` (xterm.js standard) and exclude `.xterm-selection-layer` from CSS reset
   - **Result**: Text selection now shows proper blue highlight when clicking and dragging
+
+- **Build Fix**: Fix TypeScript error in ThemeManager.ts and remove SVG badge from README
 
 ## [0.1.173] - 2025-12-20
 
