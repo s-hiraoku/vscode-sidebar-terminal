@@ -24,6 +24,10 @@ export class TerminalDataBufferManager {
   private readonly DATA_FLUSH_INTERVAL = 8; // ~125fps for improved responsiveness
   private readonly MAX_BUFFER_SIZE = 50;
   private readonly _debugLoggingEnabled = ENABLE_TERMINAL_DEBUG_LOGS;
+  private readonly _ansiFilterState = new Map<
+    string,
+    { mode: 'normal' | 'esc' | 'csi'; csiParams: string }
+  >();
 
   constructor(
     private readonly _terminals: Map<string, TerminalInstance>,
@@ -67,7 +71,7 @@ export class TerminalDataBufferManager {
 
     // ✅ CRITICAL: Add terminal ID validation to each data chunk
     const validatedData = this._validateDataForTerminal(terminalId, data);
-    const normalizedData = this._normalizeControlSequences(validatedData);
+    const normalizedData = this._normalizeControlSequences(terminalId, validatedData);
     buffer.push(normalizedData);
 
     this.debugLog(
@@ -124,6 +128,7 @@ export class TerminalDataBufferManager {
       log(`⚠️ [TERMINAL] Cannot flush buffer for removed terminal: ${terminalId}`);
       // Clean up orphaned buffer and timer
       this._dataBuffers.delete(terminalId);
+      this._ansiFilterState.delete(terminalId);
       const timer = this._dataFlushTimers.get(terminalId);
       if (timer) {
         clearTimeout(timer);
@@ -182,14 +187,78 @@ export class TerminalDataBufferManager {
   /**
    * Normalize control sequences in data
    */
-  private _normalizeControlSequences(data: string): string {
-    if (!data || data.indexOf('\f') === -1) {
+  private _normalizeControlSequences(terminalId: string, data: string): string {
+    if (!data) {
       return data;
     }
 
-    const CLEAR_SEQUENCE = '\u001b[2J\u001b[H';
+    // Normalize form-feed to clear screen + cursor home (matches VS Code terminal behavior)
+    if (data.indexOf('\f') !== -1) {
+      const CLEAR_SEQUENCE = '\u001b[2J\u001b[H';
+      data = data.replace(/\f+/g, CLEAR_SEQUENCE);
+    }
 
-    return data.replace(/\f+/g, CLEAR_SEQUENCE);
+    // Prevent unexpected scrollback loss:
+    // Some TUIs (or terminfo "clear" sequences) emit CSI 3 J, which clears scrollback in xterm.js.
+    // VS Code's integrated terminal effectively preserves scrollback; match that behavior here.
+    return this._filterEraseScrollbackSequence(terminalId, data);
+  }
+
+  private _filterEraseScrollbackSequence(terminalId: string, data: string): string {
+    const state =
+      this._ansiFilterState.get(terminalId) ?? { mode: 'normal' as const, csiParams: '' };
+
+    let out = '';
+    for (let i = 0; i < data.length; i++) {
+      const ch = data.charAt(i);
+
+      if (state.mode === 'normal') {
+        if (ch === '\u001b') {
+          state.mode = 'esc';
+          continue;
+        }
+        out += ch;
+        continue;
+      }
+
+      if (state.mode === 'esc') {
+        if (ch === '[') {
+          state.mode = 'csi';
+          state.csiParams = '';
+          continue;
+        }
+
+        // Not a CSI sequence; emit the ESC and this char.
+        out += '\u001b' + ch;
+        state.mode = 'normal';
+        continue;
+      }
+
+      // CSI mode: collect params until a final byte
+      const isParamChar =
+        (ch >= '0' && ch <= '9') || ch === ';' || ch === '?' || ch === ' ' || ch === '>';
+      if (isParamChar) {
+        state.csiParams += ch;
+        continue;
+      }
+
+      // Final byte reached
+      const finalByte = ch;
+      const params = state.csiParams;
+      state.mode = 'normal';
+      state.csiParams = '';
+
+      // CSI 3 J => erase scrollback (drop it)
+      if (finalByte === 'J' && params === '3') {
+        this.debugLog(`🧽 [TERMINAL] Stripped CSI 3 J (erase scrollback) for ${terminalId}`);
+        continue;
+      }
+
+      out += '\u001b[' + params + finalByte;
+    }
+
+    this._ansiFilterState.set(terminalId, state);
+    return out;
   }
 
   /**
@@ -198,6 +267,7 @@ export class TerminalDataBufferManager {
   public cleanupBuffer(terminalId: string): void {
     this.flushBuffer(terminalId);
     this._dataBuffers.delete(terminalId);
+    this._ansiFilterState.delete(terminalId);
     const timer = this._dataFlushTimers.get(terminalId);
     if (timer) {
       clearTimeout(timer);
@@ -215,5 +285,6 @@ export class TerminalDataBufferManager {
     }
     this._dataBuffers.clear();
     this._dataFlushTimers.clear();
+    this._ansiFilterState.clear();
   }
 }

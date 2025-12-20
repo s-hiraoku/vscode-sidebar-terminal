@@ -118,7 +118,9 @@ export class ExtensionPersistenceService implements vscode.Disposable {
   /**
    * Save current terminal session to workspace storage
    */
-  public async saveCurrentSession(): Promise<PersistenceResult> {
+  public async saveCurrentSession(options?: {
+    preferCache?: boolean;
+  }): Promise<PersistenceResult> {
     log('🔵 saveCurrentSession() called');
 
     if (this.isRestoring) {
@@ -154,14 +156,29 @@ export class ExtensionPersistenceService implements vscode.Disposable {
         cliAgentType: this.detectCLIAgent(terminal),
       }));
 
+      const preferCache = Boolean(options?.preferCache);
+
       // Collect scrollback data - check cache first, request fresh if needed
       const scrollbackPromises = terminals.map(async (terminal) => {
         const cachedScrollback = this.pushedScrollbackCache.get(terminal.id);
+        if (preferCache) {
+          if (cachedScrollback && cachedScrollback.length > 0) {
+            return { id: terminal.id, scrollback: cachedScrollback, fromCache: true };
+          }
+          const extracted = await this.requestImmediateScrollbackExtraction(terminal.id);
+          if (extracted.scrollback.length > 0) {
+            return { ...extracted, fromCache: false };
+          }
+          return { id: terminal.id, scrollback: [], fromCache: true };
+        }
+        // Always request fresh extraction to avoid missing the latest lines.
+        const extracted = await this.requestImmediateScrollbackExtraction(terminal.id);
+        if (extracted.scrollback.length > 0) {
+          return { ...extracted, fromCache: false };
+        }
         if (cachedScrollback && cachedScrollback.length > 0) {
           return { id: terminal.id, scrollback: cachedScrollback, fromCache: true };
         }
-        // Request fresh extraction if cache miss
-        const extracted = await this.requestImmediateScrollbackExtraction(terminal.id);
         return { ...extracted, fromCache: false };
       });
 
@@ -279,6 +296,7 @@ export class ExtensionPersistenceService implements vscode.Disposable {
 
       if (!sessionData) {
         log('⏭️ No session found');
+        this.isRestoring = false;
         return { success: false, message: 'No session found' };
       }
 
@@ -286,6 +304,7 @@ export class ExtensionPersistenceService implements vscode.Disposable {
       const validation = SessionDataTransformer.validateSessionForRestore(sessionData);
       if (!validation.valid) {
         log(`❌ [EXT-PERSISTENCE] Validation failed: ${validation.issues?.join(', ')}`);
+        this.isRestoring = false;
         return { success: false, message: 'Invalid session data' };
       }
 
@@ -295,12 +314,14 @@ export class ExtensionPersistenceService implements vscode.Disposable {
       ) {
         log('[EXT-PERSISTENCE] Session expired, clearing...');
         await this.clearSession();
+        this.isRestoring = false;
         return { success: false, message: 'Session expired' };
       }
 
       // Skip if already has terminals (unless forced)
       if (!forceRestore && this.terminalManager.getTerminals().length > 0) {
         log('[EXT-PERSISTENCE] Skipping restore (terminals already exist)');
+        this.isRestoring = false;
         return { success: false, message: 'Terminals already exist' };
       }
 
@@ -359,6 +380,7 @@ export class ExtensionPersistenceService implements vscode.Disposable {
         terminals: sessionData.terminals,
         timestamp: sessionData.timestamp,
         version: sessionData.version,
+        scrollbackData: sessionData.scrollbackData,
       };
     } catch (error) {
       log(`❌ [EXT-PERSISTENCE] getSessionInfo failed: ${error}`);
@@ -400,6 +422,13 @@ export class ExtensionPersistenceService implements vscode.Disposable {
       return;
     }
 
+    if (message.scrollbackData.length === 0) {
+      log(
+        `[EXT-PERSISTENCE] Ignored empty scrollback push for ${message.terminalId} (preserving cache)`
+      );
+      return;
+    }
+
     this.pushedScrollbackCache.set(message.terminalId, message.scrollbackData);
     log(
       `[EXT-PERSISTENCE] Cached scrollback for ${message.terminalId}: ${message.scrollbackData.length} lines`
@@ -433,12 +462,18 @@ export class ExtensionPersistenceService implements vscode.Disposable {
   }): void {
     const { terminalId, requestId, scrollbackData } = message;
 
-    // Update cache regardless of request
+    // Update cache when non-empty to preserve last known scrollback
     if (terminalId && scrollbackData) {
-      this.pushedScrollbackCache.set(terminalId, scrollbackData);
-      log(
-        `[EXT-PERSISTENCE] Updated scrollback cache for ${terminalId}: ${scrollbackData.length} lines`
-      );
+      if (scrollbackData.length > 0) {
+        this.pushedScrollbackCache.set(terminalId, scrollbackData);
+        log(
+          `[EXT-PERSISTENCE] Updated scrollback cache for ${terminalId}: ${scrollbackData.length} lines`
+        );
+      } else {
+        log(
+          `[EXT-PERSISTENCE] Ignored empty scrollback update for ${terminalId} (preserving cache)`
+        );
+      }
     }
 
     // Handle pending extraction request
@@ -523,10 +558,6 @@ export class ExtensionPersistenceService implements vscode.Disposable {
    * Cleanup and dispose
    */
   public dispose(): void {
-    if (this.periodicSaveTimer) {
-      clearInterval(this.periodicSaveTimer);
-      this.periodicSaveTimer = undefined;
-    }
     this.onWillSaveStateDisposable?.dispose();
     this.pushedScrollbackCache.clear();
     this.pendingTerminalReadyCallbacks.clear();
@@ -538,12 +569,8 @@ export class ExtensionPersistenceService implements vscode.Disposable {
   // Private Methods
   // ==========================================================================
 
-  // Periodic save timer for reliable session persistence
-  private periodicSaveTimer: NodeJS.Timeout | undefined;
-  private static readonly PERIODIC_SAVE_INTERVAL = 60000; // 60 seconds
-
   /**
-   * Setup auto-save on window close/reload and periodic saves
+   * Setup auto-save on window close/reload
    */
   private setupAutoSave(): void {
     // Setup onWillSaveState for window close
@@ -553,7 +580,12 @@ export class ExtensionPersistenceService implements vscode.Disposable {
       this.onWillSaveStateDisposable = workspaceWithSaveState.onWillSaveState(
         async (event: any) => {
           log('[EXT-PERSISTENCE] Window closing - saving session...');
-          event.waitUntil(this.saveCurrentSession());
+          event.waitUntil(
+            (async () => {
+              await this.prefetchScrollbackForSave();
+              return this.saveCurrentSession({ preferCache: true });
+            })()
+          );
         }
       );
       log('✅ [EXT-PERSISTENCE] Auto-save on window close configured');
@@ -561,29 +593,7 @@ export class ExtensionPersistenceService implements vscode.Disposable {
       log('⚠️ [EXT-PERSISTENCE] onWillSaveState API not available');
     }
 
-    // Setup periodic save timer for reliability
-    // This ensures scrollback is saved even if onWillSaveState fails
-    // 🔧 FIX: Clear cache before periodic save to ensure fresh scrollback data is captured
-    this.periodicSaveTimer = setInterval(async () => {
-      if (this.isRestoring) {
-        return; // Don't save during restore
-      }
-      try {
-        // Clear cache to force fresh extraction during periodic saves
-        // This ensures the latest scrollback content is captured even after long idle periods
-        this.pushedScrollbackCache.clear();
-        log(`🔄 [EXT-PERSISTENCE] Periodic save: cleared cache for fresh extraction`);
-
-        const result = await this.saveCurrentSession();
-        if (result.success && result.terminalCount > 0) {
-          log(`💾 [EXT-PERSISTENCE] Periodic save completed: ${result.terminalCount} terminals`);
-        }
-      } catch (error) {
-        log(`⚠️ [EXT-PERSISTENCE] Periodic save failed: ${error}`);
-      }
-    }, ExtensionPersistenceService.PERIODIC_SAVE_INTERVAL);
-
-    log('✅ [EXT-PERSISTENCE] Periodic save configured (60s interval)');
+    // Periodic save disabled: save only on window close via onWillSaveState.
   }
 
   /**
@@ -720,6 +730,29 @@ export class ExtensionPersistenceService implements vscode.Disposable {
   }
 
   /**
+   * Prefetch scrollback before saving (best effort, updates cache)
+   */
+  public async prefetchScrollbackForSave(): Promise<void> {
+    const terminals = this.terminalManager.getTerminals();
+    if (terminals.length === 0) {
+      return;
+    }
+
+    try {
+      await Promise.all(
+        terminals.map(async (terminal) => {
+          const extracted = await this.requestImmediateScrollbackExtraction(terminal.id);
+          if (extracted.scrollback.length > 0) {
+            this.pushedScrollbackCache.set(terminal.id, extracted.scrollback);
+          }
+        })
+      );
+    } catch (error) {
+      log(`⚠️ [EXT-PERSISTENCE] Prefetch scrollback failed: ${error}`);
+    }
+  }
+
+  /**
    * Batch restore terminals with concurrency control
    */
   private async batchRestoreTerminals(
@@ -760,6 +793,13 @@ export class ExtensionPersistenceService implements vscode.Disposable {
     log(`[EXT-PERSISTENCE] Waiting for ${pendingTerminalIds.size} terminals to be ready...`);
     await this.waitForTerminalsReady(pendingTerminalIds, 3000);
     log(`✅ [EXT-PERSISTENCE] All terminals ready or timeout reached`);
+
+    // Preserve original order from the saved session (explicit reorder after restore)
+    const restoredOrder = terminalCreations.map((terminal) => terminal.id);
+    if (restoredOrder.length > 1) {
+      this.terminalManager.reorderTerminals(restoredOrder);
+      log(`🔁 [EXT-PERSISTENCE] Restored terminal order:`, restoredOrder);
+    }
 
     // Restore scrollback content in batches
     if (terminalCreations.length > 0 && scrollbackData) {
