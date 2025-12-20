@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.174] - 2025-12-21
+
+### Fixed
+
+- **Mouse Text Selection Highlight**: Fix selection highlight not visible when selecting text with mouse (PR #321 by @tonydehnke)
+  - **Root Cause**: Property name mismatch (`selection` vs `selectionBackground`) and CSS interfering with selection layer
+  - **Fix**: Rename to `selectionBackground` (xterm.js standard) and exclude `.xterm-selection-layer` from CSS reset
+  - **Result**: Text selection now shows proper blue highlight when clicking and dragging
+
 ## [0.1.173] - 2025-12-20
 
 ### Added
