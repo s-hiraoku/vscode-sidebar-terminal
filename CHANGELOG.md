@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.179] - 2025-12-22
+
+### Improved
+
+- **Default Profile Setting Documentation** (Issue #329): Clarify that `defaultProfile` expects a profile name, not a path
+  - Updated setting descriptions with examples: `PowerShell 7`, `bash`, `zsh`
+  - Added validation to detect when users enter file paths instead of profile names
+  - Shows helpful warning message guiding users to correct usage
+  - Points to `Terminal: Select Default Profile` command to discover available profiles
+
 ## [0.1.178] - 2025-12-21
 
 ### Fixed
