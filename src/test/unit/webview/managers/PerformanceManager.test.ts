@@ -25,6 +25,14 @@ interface MockFitAddon {
   fit: sinon.SinonStub;
 }
 
+// DSR response message type for test assertions
+interface DSRResponseMessage {
+  command: string;
+  data: string;
+  timestamp: number;
+  terminalId?: string;
+}
+
 describe('PerformanceManager', () => {
   let performanceManager: PerformanceManager;
   let mockCoordinator: sinon.SinonStubbedInstance<IManagerCoordinator>;
@@ -461,10 +469,11 @@ describe('PerformanceManager', () => {
       expect(mockCoordinator.postMessageToExtension.calledOnce).to.be.true;
 
       const call = mockCoordinator.postMessageToExtension.getCall(0);
-      expect(call.args[0].command).to.equal('input');
-      expect(call.args[0].terminalId).to.equal(terminalId);
+      const message = call.args[0] as DSRResponseMessage;
+      expect(message.command).to.equal('input');
+      expect(message.terminalId).to.equal(terminalId);
       // Response should be \x1b[10;5R (row 10, column 5 in 1-based format)
-      expect(call.args[0].data).to.equal('\x1b[10;5R');
+      expect(message.data).to.equal('\x1b[10;5R');
     });
 
     it('should handle DSR at cursor position (1,1) correctly', () => {
@@ -480,7 +489,7 @@ describe('PerformanceManager', () => {
 
       const call = mockCoordinator.postMessageToExtension.getCall(0);
       // Response should be \x1b[1;1R (row 1, column 1 in 1-based format)
-      expect(call.args[0].data).to.equal('\x1b[1;1R');
+      expect((call.args[0] as DSRResponseMessage).data).to.equal('\x1b[1;1R');
     });
 
     it('should handle DSR embedded in larger output', () => {
@@ -497,7 +506,7 @@ describe('PerformanceManager', () => {
       expect(mockCoordinator.postMessageToExtension.calledOnce).to.be.true;
 
       const call = mockCoordinator.postMessageToExtension.getCall(0);
-      expect(call.args[0].data).to.equal('\x1b[5;10R');
+      expect((call.args[0] as DSRResponseMessage).data).to.equal('\x1b[5;10R');
     });
 
     it('should not send DSR response for non-DSR sequences', () => {
@@ -553,10 +562,14 @@ describe('PerformanceManager', () => {
       expect(mockCoordinator.postMessageToExtension.callCount).to.equal(2);
 
       // First response: row 1, col 1
-      expect(mockCoordinator.postMessageToExtension.getCall(0).args[0].data).to.equal('\x1b[1;1R');
+      expect(
+        (mockCoordinator.postMessageToExtension.getCall(0).args[0] as DSRResponseMessage).data
+      ).to.equal('\x1b[1;1R');
 
       // Second response: row 15, col 20
-      expect(mockCoordinator.postMessageToExtension.getCall(1).args[0].data).to.equal('\x1b[15;20R');
+      expect(
+        (mockCoordinator.postMessageToExtension.getCall(1).args[0] as DSRResponseMessage).data
+      ).to.equal('\x1b[15;20R');
     });
 
     it('should include timestamp in DSR response message', () => {
@@ -565,8 +578,9 @@ describe('PerformanceManager', () => {
       performanceManager.bufferedWrite('\x1b[6n', mockTerminal as any, terminalId);
 
       const call = mockCoordinator.postMessageToExtension.getCall(0);
-      expect(call.args[0].timestamp).to.be.a('number');
-      expect(call.args[0].timestamp).to.be.greaterThan(0);
+      const message = call.args[0] as DSRResponseMessage;
+      expect(message.timestamp).to.be.a('number');
+      expect(message.timestamp).to.be.greaterThan(0);
     });
   });
 });
