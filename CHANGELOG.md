@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.177] - 2025-12-21
+
+### Fixed
+
+- **Scrollback Persistence on Reload**: Fix scrollback not being restored after Reload Window (Issue #341)
+  - **Root Cause**: VS Code terminates process before `deactivate()` completes, so session save never finished
+  - **Fix**: Auto-save session immediately (2s debounce) after scrollback cache update
+  - **Result**: Scrollback is now reliably restored after Reload Window or restart
+
+- **Terminal Initialization**: Improve terminal initialization reliability
+  - Notify WebView after successful session restoration
+  - Add null check for terminalId after createTerminal()
+
+### Removed
+
+- **Simplified WebView Mode**: Remove experimental simplified WebView implementation
+  - Delete `src/webview/simple/` directory (4 files)
+  - Remove `useSimplifiedWebView` setting from package.json
+  - Consolidate to single, stable WebView implementation
+
+### Changed
+
+- **Default Scrollback**: Update default scrollback buffer from 1000 to 2000 lines
+- **Logger**: Improve development mode detection for better debugging
+
 ## [0.1.176] - 2025-12-21
 
 ### Fixed
