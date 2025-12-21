@@ -184,9 +184,18 @@ jobs:
         with:
           args: --severity-threshold=high
 
+      - name: Check if Snyk SARIF exists
+        id: snyk-sarif-check
+        run: |
+          if [ -f snyk.sarif ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Upload Snyk results to GitHub Code Scanning
         uses: github/codeql-action/upload-sarif@v4
-        if: always()
+        if: steps.snyk-sarif-check.outputs.exists == 'true'
         with:
           sarif_file: snyk.sarif
 
