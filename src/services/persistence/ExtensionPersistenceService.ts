@@ -157,21 +157,29 @@ export class ExtensionPersistenceService implements vscode.Disposable {
       }));
 
       const preferCache = Boolean(options?.preferCache);
+      log(`🔵 [SAVE-DEBUG] preferCache=${preferCache}, pushedScrollbackCache.size=${this.pushedScrollbackCache.size}`);
 
       // Collect scrollback data - check cache first, request fresh if needed
       const scrollbackPromises = terminals.map(async (terminal) => {
+        log(`🔵 [SAVE-DEBUG] Processing terminal ${terminal.id}, cachedScrollback=${this.pushedScrollbackCache.has(terminal.id)}`);
         const cachedScrollback = this.pushedScrollbackCache.get(terminal.id);
+        log(`🔵 [SAVE-DEBUG] cachedScrollback length=${cachedScrollback?.length ?? 0}`);
+
         if (preferCache) {
+          // 🔧 FIX: When preferCache is true (called from deactivate), use cache only.
+          // Do NOT call requestImmediateScrollbackExtraction because:
+          // 1. WebView may already be closed during deactivate()
+          // 2. Waiting for 2-second timeout would cause process to exit before saving
+          // The cache is updated every 30 seconds by TerminalAutoSaveService
           if (cachedScrollback && cachedScrollback.length > 0) {
             return { id: terminal.id, scrollback: cachedScrollback, fromCache: true };
           }
-          const extracted = await this.requestImmediateScrollbackExtraction(terminal.id);
-          if (extracted.scrollback.length > 0) {
-            return { ...extracted, fromCache: false };
-          }
+          // No cache available - return empty (better than hanging on WebView timeout)
+          log(`⚠️ [SAVE-DEBUG] No cached scrollback for ${terminal.id}, skipping (preferCache=true)`);
           return { id: terminal.id, scrollback: [], fromCache: true };
         }
-        // Always request fresh extraction to avoid missing the latest lines.
+
+        // Normal save: request fresh extraction from WebView
         const extracted = await this.requestImmediateScrollbackExtraction(terminal.id);
         if (extracted.scrollback.length > 0) {
           return { ...extracted, fromCache: false };
@@ -182,7 +190,9 @@ export class ExtensionPersistenceService implements vscode.Disposable {
         return { ...extracted, fromCache: false };
       });
 
+      log(`🔵 [SAVE-DEBUG] Waiting for ${terminals.length} scrollback promises...`);
       const extractedScrollbacks = await Promise.all(scrollbackPromises);
+      log(`🔵 [SAVE-DEBUG] All scrollback promises resolved, count=${extractedScrollbacks.length}`);
 
       // Build scrollbackData from collected results
       const scrollbackData: Record<string, unknown> = {};
@@ -411,8 +421,16 @@ export class ExtensionPersistenceService implements vscode.Disposable {
     log('[EXT-PERSISTENCE] Sidebar provider configured');
   }
 
+  // Debounce timer for auto-save after scrollback push
+  private autoSaveDebounceTimer?: NodeJS.Timeout;
+  private static readonly AUTO_SAVE_DEBOUNCE_MS = 2000; // 2 seconds
+
   /**
    * Handle pushed scrollback data from WebView (for instant save)
+   *
+   * 🔧 FIX: Save session immediately after caching scrollback data.
+   * This ensures scrollback is persisted even if deactivate() doesn't complete
+   * (e.g., during Reload Window where VS Code may terminate the process early).
    */
   public handlePushedScrollbackData(message: {
     terminalId?: string;
@@ -431,8 +449,33 @@ export class ExtensionPersistenceService implements vscode.Disposable {
 
     this.pushedScrollbackCache.set(message.terminalId, message.scrollbackData);
     log(
-      `[EXT-PERSISTENCE] Cached scrollback for ${message.terminalId}: ${message.scrollbackData.length} lines`
+      `✅ [EXT-PERSISTENCE] Cached scrollback for ${message.terminalId}: ${message.scrollbackData.length} lines`
     );
+
+    // 🔧 FIX: Trigger debounced auto-save to persist scrollback immediately
+    // This ensures data is saved even if deactivate() doesn't complete
+    this.triggerDebouncedAutoSave();
+  }
+
+  /**
+   * Trigger debounced auto-save after scrollback update
+   */
+  private triggerDebouncedAutoSave(): void {
+    if (this.autoSaveDebounceTimer) {
+      clearTimeout(this.autoSaveDebounceTimer);
+    }
+
+    this.autoSaveDebounceTimer = setTimeout(() => {
+      this.autoSaveDebounceTimer = undefined;
+      if (!this.isRestoring) {
+        log('💾 [EXT-PERSISTENCE] Auto-saving session after scrollback update...');
+        void this.saveCurrentSession({ preferCache: true }).then((result) => {
+          if (result.success) {
+            log(`✅ [EXT-PERSISTENCE] Auto-save completed: ${result.terminalCount} terminals`);
+          }
+        });
+      }
+    }, ExtensionPersistenceService.AUTO_SAVE_DEBOUNCE_MS);
   }
 
   /**
@@ -558,6 +601,11 @@ export class ExtensionPersistenceService implements vscode.Disposable {
    * Cleanup and dispose
    */
   public dispose(): void {
+    // Clear auto-save debounce timer
+    if (this.autoSaveDebounceTimer) {
+      clearTimeout(this.autoSaveDebounceTimer);
+      this.autoSaveDebounceTimer = undefined;
+    }
     this.onWillSaveStateDisposable?.dispose();
     this.pushedScrollbackCache.clear();
     this.pendingTerminalReadyCallbacks.clear();
@@ -575,22 +623,26 @@ export class ExtensionPersistenceService implements vscode.Disposable {
   private setupAutoSave(): void {
     // Setup onWillSaveState for window close
     const workspaceWithSaveState = vscode.workspace as any;
+    log('🔧 [AUTO-SAVE-SETUP] Checking onWillSaveState API...');
 
     if (typeof workspaceWithSaveState.onWillSaveState === 'function') {
       this.onWillSaveStateDisposable = workspaceWithSaveState.onWillSaveState(
         async (event: any) => {
-          log('[EXT-PERSISTENCE] Window closing - saving session...');
+          log('🔴 [EXT-PERSISTENCE] Window closing - saving session...');
+          log(`🔴 [EXT-PERSISTENCE] Event reason: ${event?.reason}`);
           event.waitUntil(
             (async () => {
+              log('🔴 [EXT-PERSISTENCE] Starting prefetch...');
               await this.prefetchScrollbackForSave();
+              log('🔴 [EXT-PERSISTENCE] Prefetch done, calling saveCurrentSession...');
               return this.saveCurrentSession({ preferCache: true });
             })()
           );
         }
       );
-      log('✅ [EXT-PERSISTENCE] Auto-save on window close configured');
+      log('✅ [EXT-PERSISTENCE] Auto-save on window close configured (onWillSaveState registered)');
     } else {
-      log('⚠️ [EXT-PERSISTENCE] onWillSaveState API not available');
+      log('⚠️ [EXT-PERSISTENCE] onWillSaveState API not available - auto-save DISABLED');
     }
 
     // Periodic save disabled: save only on window close via onWillSaveState.

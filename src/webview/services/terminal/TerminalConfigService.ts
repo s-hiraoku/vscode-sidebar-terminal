@@ -71,7 +71,7 @@ const createDefaultTerminalConfig = (): WebViewTerminalConfig => {
     fastScrollModifier: 'alt' as const,
     fastScrollSensitivity: 5,
     scrollSensitivity: 1,
-    scrollback: 1000, // VS Code default
+    scrollback: 2000, // Match package.json default (secondaryTerminal.scrollback)
     scrollOnUserInput: true,
 
     // Word and Selection - VS Code default separator
