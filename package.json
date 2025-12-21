@@ -702,14 +702,6 @@
           "default": false,
           "description": "Controls whether keybindings are automatically sent to the shell instead of being handled by VS Code workbench."
         },
-        "secondaryTerminal.useSimplifiedWebView": {
-          "type": "boolean",
-          "default": false,
-          "description": "[Experimental] Use simplified WebView implementation with improved performance and reduced complexity. Requires extension restart to take effect.",
-          "tags": [
-            "experimental"
-          ]
-        },
         "secondaryTerminal.commandsToSkipShell": {
           "type": "array",
           "items": {

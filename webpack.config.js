@@ -94,7 +94,6 @@ const webviewConfig = {
 
   entry: {
     webview: './src/webview/main.ts',
-    'webview-simple': './src/webview/simple/SimpleTerminalWebView.ts',
   },
   resolve: {
     extensions: ['.ts', '.js'],
