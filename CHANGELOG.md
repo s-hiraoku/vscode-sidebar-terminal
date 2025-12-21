@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.180] - 2025-12-22
+
+### Fixed
+
+- **DSR Response Handling for CLI Tools** (Issue #341): Fix cursor position queries failing in tools like Codex
+  - **Root Cause**: `PerformanceManager.coordinator` was never initialized, so DSR responses were silently dropped
+  - **Symptom**: CLI tools using `ESC[6n` (cursor position query) would timeout with "cursor position could not be read"
+  - **Fix**: Call `initializePerformance(this)` during manager initialization to enable DSR response routing
+  - **Affected Tools**: Codex CLI, and any tool that queries terminal cursor position
+
 ## [0.1.179] - 2025-12-22
 
 ### Improved
