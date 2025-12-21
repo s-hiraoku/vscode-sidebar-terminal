@@ -2,7 +2,7 @@
   "name": "vscode-sidebar-terminal",
   "displayName": "Secondary Terminal",
   "description": "Production-ready VS Code extension with TypeScript-compliant terminal in sidebar, ProcessState/InteractionState management, and comprehensive session management.",
-  "version": "0.1.176",
+  "version": "0.1.179",
   "publisher": "s-hiraoku",
   "sideEffects": false,
   "engines": {
@@ -630,7 +630,7 @@
             "null"
           ],
           "default": null,
-          "description": "The default profile used on Windows. This setting will currently be ignored if either terminal.external.windowsExec or terminal.integrated.shell.windows are set."
+          "markdownDescription": "The default terminal profile name on Windows. Enter a **profile name** (not a path). Examples: `PowerShell`, `PowerShell 7`, `Command Prompt`, `Git Bash`. To see available profiles, run `Terminal: Select Default Profile` from the Command Palette."
         },
         "secondaryTerminal.defaultProfile.linux": {
           "type": [
@@ -638,7 +638,7 @@
             "null"
           ],
           "default": null,
-          "description": "The default profile used on Linux. This setting will currently be ignored if either terminal.external.linuxExec or terminal.integrated.shell.linux are set."
+          "markdownDescription": "The default terminal profile name on Linux. Enter a **profile name** (not a path). Examples: `bash`, `zsh`, `fish`. To see available profiles, run `Terminal: Select Default Profile` from the Command Palette."
         },
         "secondaryTerminal.defaultProfile.osx": {
           "type": [
@@ -646,7 +646,7 @@
             "null"
           ],
           "default": null,
-          "description": "The default profile used on macOS. This setting will currently be ignored if either terminal.external.osxExec or terminal.integrated.shell.osx are set."
+          "markdownDescription": "The default terminal profile name on macOS. Enter a **profile name** (not a path). Examples: `zsh`, `bash`, `fish`. To see available profiles, run `Terminal: Select Default Profile` from the Command Palette."
         },
         "secondaryTerminal.restoreScrollback": {
           "type": "boolean",
@@ -772,8 +772,16 @@
         },
         "secondaryTerminal.activeBorderMode": {
           "type": "string",
-          "enum": ["none", "always", "multipleOnly"],
-          "enumItemLabels": ["Off", "Always", "Only with Multiple Terminals"],
+          "enum": [
+            "none",
+            "always",
+            "multipleOnly"
+          ],
+          "enumItemLabels": [
+            "Off",
+            "Always",
+            "Only with Multiple Terminals"
+          ],
           "enumDescriptions": [
             "Border highlight is disabled",
             "Border always shown on the active terminal",

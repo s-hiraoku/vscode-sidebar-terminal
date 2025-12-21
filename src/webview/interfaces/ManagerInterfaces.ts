@@ -290,6 +290,7 @@ export interface IUIManager {
   applyVSCodeStyling(container: HTMLElement): void;
   setActiveBorderMode(mode: ActiveBorderMode): void;
   setTerminalCount(count: number): void;
+  setFullscreenMode(isFullscreen: boolean): void;
   dispose(): void;
 }
 
