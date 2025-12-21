@@ -376,7 +376,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
     // UI Manager
     this.uiManager = new UIManager();
-    this.uiManager.setHighlightActiveBorder(this.currentSettings.highlightActiveBorder ?? true);
+    this.uiManager.setActiveBorderMode(this.currentSettings.activeBorderMode ?? 'multipleOnly');
 
     // Connect FontSettingsService with UIManager (Dependency Injection)
     this.fontSettingsService.setApplicator(this.uiManager);
@@ -810,6 +810,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       // 即座にボーダー更新を実行（UIManager経由）
       const allContainers = this.splitManager.getTerminalContainers();
       if (this.uiManager) {
+        // Terminal count is auto-updated inside updateTerminalBorders
         this.uiManager.updateTerminalBorders(terminalId, allContainers);
         log(`🎯 [FIX] Applied active border immediately after creation: ${terminalId}`);
       }
@@ -1173,18 +1174,26 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
   public applySettings(settings: PartialTerminalSettings): void {
     try {
-      const highlightActiveBorder =
-        settings.highlightActiveBorder !== undefined
-          ? settings.highlightActiveBorder
-          : (this.currentSettings.highlightActiveBorder ?? true);
+      const activeBorderMode =
+        settings.activeBorderMode !== undefined
+          ? settings.activeBorderMode
+          : (this.currentSettings.activeBorderMode ?? 'multipleOnly');
 
       this.currentSettings = {
         ...this.currentSettings,
         ...settings,
-        highlightActiveBorder,
+        activeBorderMode,
       };
 
-      this.uiManager.setHighlightActiveBorder(highlightActiveBorder);
+      // 🔧 CRITICAL FIX: Update ConfigManager with new settings
+      // This ensures new terminals created later will get the correct theme
+      if (this.configManager) {
+        const instances = this.terminalLifecycleManager.getAllTerminalInstances();
+        this.configManager.applySettings(this.currentSettings, instances);
+        log(`⚙️ [SETTINGS] ConfigManager updated with theme: ${this.currentSettings.theme}`);
+      }
+
+      this.uiManager.setActiveBorderMode(activeBorderMode);
 
       const activeId = this.getActiveTerminalId();
       if (activeId) {
@@ -1195,6 +1204,17 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
           this.uiManager.updateSplitTerminalBorders(activeId);
         }
       }
+
+      // Apply theme and visual settings to all terminals
+      const instances = this.terminalLifecycleManager.getAllTerminalInstances();
+      instances.forEach((terminalData, terminalId) => {
+        try {
+          this.uiManager.applyAllVisualSettings(terminalData.terminal, this.currentSettings);
+          log(`⚙️ [SETTINGS] Applied visual settings to terminal ${terminalId}`);
+        } catch (error) {
+          log(`❌ [SETTINGS] Error applying visual settings to terminal ${terminalId}:`, error);
+        }
+      });
 
       log('⚙️ Settings applied:', settings);
     } catch (error) {

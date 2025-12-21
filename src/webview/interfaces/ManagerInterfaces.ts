@@ -8,7 +8,7 @@ import { SearchAddon } from '@xterm/addon-search';
 import { WebglAddon } from '@xterm/addon-webgl';
 import { Unicode11Addon } from '@xterm/addon-unicode11';
 import { SerializeAddon } from '@xterm/addon-serialize';
-import { PartialTerminalSettings, WebViewFontSettings } from '../../types/shared';
+import { PartialTerminalSettings, WebViewFontSettings, ActiveBorderMode } from '../../types/shared';
 import { AltClickState, TerminalInteractionEvent } from '../../types/common';
 import { ITerminalProfile } from '../../types/profiles';
 import type { IShellIntegrationManager } from '../../types/type-guards';
@@ -288,7 +288,8 @@ export interface IUIManager {
     agentType: string | null
   ): void;
   applyVSCodeStyling(container: HTMLElement): void;
-  setHighlightActiveBorder(enabled: boolean): void;
+  setActiveBorderMode(mode: ActiveBorderMode): void;
+  setTerminalCount(count: number): void;
   dispose(): void;
 }
 

@@ -83,8 +83,14 @@
   box-sizing: border-box !important;
 }
 
-.terminal-container.active {
+/* Active border highlight - can be disabled via settings */
+.terminal-container.active:not(.no-highlight-border) {
   border-color: var(--vscode-focusBorder, #007acc) !important;
+}
+
+/* When highlight is disabled, keep border transparent */
+.terminal-container.active.no-highlight-border {
+  border-color: transparent !important;
 }
 
 .terminal-content {
@@ -147,13 +153,19 @@
 }
 
 /* Canvas elements inside xterm
-   🔧 FIX: Force canvas to use parent width
-   This ensures canvas expands to fill the container.
-   Note: This may affect cursor positioning - monitor for issues.
+   🔧 CRITICAL: DO NOT apply max-width to canvas elements!
+   xterm.js requires precise pixel dimensions for cursor rendering.
+   The canvas elements include:
+   - xterm-text-layer: text rendering
+   - xterm-cursor-layer: cursor rendering (MUST NOT be constrained)
+   - xterm-link-layer: link underlining
+   - xterm-selection-layer: selection highlighting
+
+   Applying max-width: 100% breaks cursor and decoration rendering,
+   especially on macOS. Let xterm.js control canvas dimensions completely.
+   The container (.xterm-screen) already has width: 100% which handles expansion.
 */
-.xterm .xterm-screen canvas {
-  width: 100% !important;
-}
+/* .xterm .xterm-screen canvas - REMOVED: was breaking cursor layer */
 
 /* xterm-rows contains the actual rendered text spans */
 .xterm-rows {
@@ -168,10 +180,13 @@
   max-width: 100% !important;
 }
 
-/* 🔧 CRITICAL FIX: xterm-cursor-layer and other layers
-   These layers inside xterm-screen may have fixed dimensions
+/* 🔧 xterm-screen child div elements (NOT canvas elements)
+   Some div layers inside xterm-screen may have fixed dimensions.
+   Note: Canvas elements are NOT affected by this rule and should NEVER
+   have max-width constraints applied (see comment above).
+   The :not(canvas) ensures we only target div children.
 */
-.xterm-screen > div {
+.xterm-screen > div:not(canvas) {
   max-width: 100% !important;
 }
 
