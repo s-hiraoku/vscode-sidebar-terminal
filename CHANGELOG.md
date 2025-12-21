@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.178] - 2025-12-21
+
+### Fixed
+
+- **Active Border Mode Setting**: Fix activeBorderMode setting changes not taking effect
+  - `refreshAllBorders()` now properly updates inline border styles, not just CSS classes
+  - Mode changes are immediately reflected without requiring terminal recreation
+
+- **Fullscreen Border Visibility**: Hide active border in fullscreen mode for `multipleOnly` setting
+  - When `activeBorderMode` is `multipleOnly`, border now hides in fullscreen (single terminal visible)
+  - Border reappears when switching to split view with multiple terminals
+
 ## [0.1.177] - 2025-12-21
 
 ### Added
