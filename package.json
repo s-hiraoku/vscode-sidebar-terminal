@@ -1142,7 +1142,6 @@
     "typedoc": "^0.28.15",
     "typedoc-plugin-markdown": "^4.2.0",
     "typescript": "^5.9.3",
-    "vsce": "^2.15.0",
     "vscode-test": "^1.6.1",
     "webpack": "^5.103.0",
     "webpack-cli": "^6.0.0"
