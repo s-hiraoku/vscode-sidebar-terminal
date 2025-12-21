@@ -26,6 +26,7 @@ import {
   WebViewFontSettings,
   WebViewTerminalSettings,
   TerminalProfilesConfig,
+  ActiveBorderMode,
 } from '../types/shared';
 import { TERMINAL_CONSTANTS, CONFIG_CACHE_CONSTANTS } from '../constants/SystemConstants';
 import { terminal as log } from '../utils/logger';
@@ -693,7 +694,7 @@ export class UnifiedConfigurationService implements Disposable {
       case 'dynamicSplitDirection':
         return this.get(CONFIG_SECTIONS.SIDEBAR_TERMINAL, 'dynamicSplitDirection', true);
       case 'activeBorderMode':
-        return this.get(CONFIG_SECTIONS.SIDEBAR_TERMINAL, 'activeBorderMode', 'multipleOnly') !== 'none';
+        return this.get<ActiveBorderMode>(CONFIG_SECTIONS.SIDEBAR_TERMINAL, 'activeBorderMode', 'multipleOnly') !== 'none';
       default:
         log(`⚠️ [UnifiedConfig] Unknown feature: ${featureName}`);
         return false;
