@@ -55,6 +55,10 @@ export class PerformanceManager extends BaseManager {
   // CLI Agent mode for performance optimization
   private isCliAgentMode = false;
 
+  // DSR (Device Status Report) sequence pattern
+  // \x1b[6n queries cursor position, terminal should respond with \x1b[row;colR
+  private static readonly DSR_PATTERN = /\x1b\[6n/;
+
   /**
    * Schedule output to be written to terminal with intelligent buffering
    */
@@ -195,8 +199,71 @@ export class PerformanceManager extends BaseManager {
   /**
    * Buffered write with scroll preservation (main API method)
    */
-  public bufferedWrite(data: string, targetTerminal: Terminal, _terminalId: string): void {
+  public bufferedWrite(data: string, targetTerminal: Terminal, terminalId: string): void {
+    // Check for DSR (Device Status Report) query and respond BEFORE writing
+    // This ensures we capture the cursor position before new output moves it
+    // DSR query \x1b[6n requests cursor position, we respond with \x1b[row;colR
+    // Wrapped in try-catch to ensure DSR handling errors don't break output
+    try {
+      this.handleDSRQuery(data, targetTerminal, terminalId);
+    } catch (error) {
+      // Log error but don't break output flow
+      if (this.debugLoggingEnabled) {
+        this.logger(`Error handling DSR query: ${error}`);
+      }
+    }
+
     this.scheduleOutputBuffer(data, targetTerminal);
+  }
+
+  /**
+   * Handle DSR (Device Status Report) escape sequence
+   *
+   * When CLI tools like codex send \x1b[6n to query cursor position,
+   * we respond with \x1b[row;colR format.
+   *
+   * @see https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/341
+   */
+  private handleDSRQuery(data: string, terminal: Terminal, terminalId: string): void {
+    if (!PerformanceManager.DSR_PATTERN.test(data)) {
+      return;
+    }
+
+    if (!this.coordinator) {
+      if (this.debugLoggingEnabled) {
+        this.logger('DSR query detected but coordinator not available');
+      }
+      return;
+    }
+
+    // Defensive check: ensure terminal buffer is available
+    if (!terminal?.buffer?.active) {
+      if (this.debugLoggingEnabled) {
+        this.logger('DSR query detected but terminal buffer not available');
+      }
+      return;
+    }
+
+    // Get cursor position from xterm.js buffer
+    // Note: cursorY is 0-based but DSR response expects 1-based row number
+    const buffer = terminal.buffer.active;
+    const row = (buffer.cursorY ?? 0) + 1; // Convert to 1-based
+    const col = (buffer.cursorX ?? 0) + 1; // Convert to 1-based
+
+    // Send DSR response back to PTY via input channel
+    // Format: \x1b[row;colR (e.g., \x1b[1;1R for row 1, column 1)
+    const response = `\x1b[${row};${col}R`;
+
+    if (this.debugLoggingEnabled) {
+      this.logger(`DSR query detected, responding with cursor position: row=${row}, col=${col}`);
+    }
+
+    this.coordinator.postMessageToExtension({
+      command: 'input',
+      terminalId,
+      data: response,
+      timestamp: Date.now(),
+    });
   }
 
   // Internal coordinator reference

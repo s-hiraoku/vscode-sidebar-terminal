@@ -603,12 +603,66 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
           `Output buffered via PerformanceManager for ${terminal.name}: ${data.length} chars`
         );
       } else {
+        // Handle DSR query before direct write (fallback path)
+        // DSR is normally handled by PerformanceManager, but we need to handle it here too
+        // Wrapped in try-catch to ensure DSR handling errors don't break output
+        try {
+          this.handleDSRQueryFallback(data, terminal.terminal, terminalId, coordinator);
+        } catch (error) {
+          this.logger.warn('Error handling DSR query fallback', error);
+        }
         terminal.terminal.write(data);
         this.logger.debug(`Output written directly to ${terminal.name}: ${data.length} chars`);
       }
     } catch (error) {
       this.logger.error(`Error writing output to terminal ${terminal.name}`, error);
     }
+  }
+
+  /**
+   * Handle DSR (Device Status Report) escape sequence in fallback path
+   *
+   * When CLI tools send \x1b[6n to query cursor position,
+   * we respond with \x1b[row;colR format.
+   *
+   * This is a fallback for when PerformanceManager is not available.
+   * @see https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/341
+   */
+  private handleDSRQueryFallback(
+    data: string,
+    terminal: import('@xterm/xterm').Terminal,
+    terminalId: string,
+    coordinator: IManagerCoordinator
+  ): void {
+    // DSR pattern: \x1b[6n
+    if (!data.includes('\x1b[6n')) {
+      return;
+    }
+
+    // Defensive check: ensure terminal buffer is available
+    if (!terminal?.buffer?.active) {
+      this.logger.warn('DSR query detected but terminal buffer not available');
+      return;
+    }
+
+    // Get cursor position from xterm.js buffer
+    // Note: cursorY is 0-based but DSR response expects 1-based row number
+    const buffer = terminal.buffer.active;
+    const row = (buffer.cursorY ?? 0) + 1; // Convert to 1-based
+    const col = (buffer.cursorX ?? 0) + 1; // Convert to 1-based
+
+    // Send DSR response back to PTY via input channel
+    // Format: \x1b[row;colR (e.g., \x1b[1;1R for row 1, column 1)
+    const response = `\x1b[${row};${col}R`;
+
+    this.logger.info(`DSR query detected (fallback), responding: row=${row}, col=${col}`);
+
+    coordinator.postMessageToExtension({
+      command: 'input',
+      terminalId,
+      data: response,
+      timestamp: Date.now(),
+    });
   }
 
   /**
