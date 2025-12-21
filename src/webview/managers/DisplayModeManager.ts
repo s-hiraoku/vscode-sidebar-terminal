@@ -427,5 +427,11 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
   private notifyModeChanged(mode: DisplayMode): void {
     const tabs = this.coordinator?.getManagers()?.tabs;
     tabs?.updateModeIndicator(mode);
+
+    // Update UIManager's fullscreen state for border mode logic
+    const uiManager = (this.coordinator as any)?.uiManager;
+    if (uiManager?.setFullscreenMode) {
+      uiManager.setFullscreenMode(mode === 'fullscreen');
+    }
   }
 }

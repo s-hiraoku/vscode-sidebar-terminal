@@ -131,6 +131,15 @@ export class UIManager extends BaseManager implements IUIManager {
   }
 
   /**
+   * Set fullscreen mode state (used for "multipleOnly" border mode)
+   * When in fullscreen, multipleOnly mode will hide the active border
+   * Delegates to TerminalBorderService
+   */
+  public setFullscreenMode(isFullscreen: boolean): void {
+    this.borderService.setFullscreenMode(isFullscreen);
+  }
+
+  /**
    * Update border for a single terminal container
    * Delegates to TerminalBorderService
    * Used to apply initial active styling during terminal creation

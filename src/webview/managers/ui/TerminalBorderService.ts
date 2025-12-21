@@ -15,6 +15,7 @@ import type { ActiveBorderMode } from '../../../types/shared';
 export class TerminalBorderService {
   private activeBorderMode: ActiveBorderMode = 'multipleOnly';
   private currentTerminalCount = 1;
+  private isFullscreen = false;
 
   /**
    * Update borders for all terminals based on active state
@@ -78,23 +79,38 @@ export class TerminalBorderService {
   }
 
   /**
-   * Refresh borders on all terminal containers based on current settings
+   * Set fullscreen mode state (used for "multipleOnly" logic)
+   * When in fullscreen mode, multipleOnly will hide the border
    */
-  private refreshAllBorders(): void {
-    const allContainers = document.querySelectorAll('.terminal-container');
-    const shouldShowBorder = this.shouldShowActiveBorder();
-
-    allContainers.forEach((container) => {
-      if (shouldShowBorder) {
-        container.classList.remove('no-highlight-border');
-      } else {
-        container.classList.add('no-highlight-border');
-      }
-    });
+  public setFullscreenMode(isFullscreen: boolean): void {
+    this.isFullscreen = isFullscreen;
+    this.refreshAllBorders();
   }
 
   /**
-   * Determine if active border should be shown based on mode and terminal count
+   * Refresh borders on all terminal containers based on current settings
+   *
+   * 🔧 FIX: Actually update border styles, not just CSS classes.
+   * The previous implementation only toggled the no-highlight-border class,
+   * but the actual border/box-shadow styles are set inline by updateSingleTerminalBorder().
+   */
+  private refreshAllBorders(): void {
+    const allContainers = document.querySelectorAll('.terminal-container');
+    this.currentTerminalCount = allContainers.length;
+
+    allContainers.forEach((container) => {
+      const element = container as HTMLElement;
+      const isActive = element.classList.contains('active');
+      this.updateSingleTerminalBorder(element, isActive);
+    });
+
+    uiLogger.debug(
+      `Refreshed all borders: mode=${this.activeBorderMode}, count=${this.currentTerminalCount}`
+    );
+  }
+
+  /**
+   * Determine if active border should be shown based on mode, terminal count, and fullscreen state
    */
   private shouldShowActiveBorder(): boolean {
     switch (this.activeBorderMode) {
@@ -103,6 +119,10 @@ export class TerminalBorderService {
       case 'always':
         return true;
       case 'multipleOnly':
+        // In fullscreen mode, only one terminal is visible, so hide the border
+        if (this.isFullscreen) {
+          return false;
+        }
         return this.currentTerminalCount >= 2;
       default:
         return true;
