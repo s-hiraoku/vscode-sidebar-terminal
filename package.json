@@ -974,8 +974,7 @@
       {
         "command": "secondaryTerminal.paste",
         "key": "ctrl+v",
-        "mac": "cmd+v",
-        "when": "terminalFocus && view == secondaryTerminal"
+        "when": "terminalFocus && view == secondaryTerminal && !isMac"
       },
       {
         "command": "secondaryTerminal.runRecentCommand",

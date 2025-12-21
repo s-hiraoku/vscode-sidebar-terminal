@@ -242,6 +242,7 @@ export class XtermInstance {
   private webglAddon: WebglAddon | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private disposed = false;
+  private cleanupCallbacks: (() => void)[] = [];
 
   // Debounce resize to prevent excessive fit() calls
   private resizeTimer: number | null = null;
@@ -302,6 +303,50 @@ export class XtermInstance {
     // 6. Open terminal in DOM
     terminal.open(terminalBody);
 
+    // 🎯 CRITICAL: Handle ALL paste events (text AND image)
+    // VS Code WebView has clipboard API restrictions, so xterm.js can't read clipboard directly.
+    // We intercept paste events to:
+    // 1. For IMAGE paste: Send \x16 to trigger Claude Code's native clipboard read
+    // 2. For TEXT paste: Read from clipboardData and send via onData callback
+
+    // Block xterm.js keydown handling for paste shortcuts to prevent double-handling
+    terminal.attachCustomKeyEventHandler((event: KeyboardEvent) => {
+      // Use userAgentData if available (modern), fallback to userAgent
+      const isMac = (navigator as any).userAgentData?.platform === 'macOS' || /Mac/.test(navigator.userAgent);
+      // Block Cmd+V on macOS and Ctrl+V on all platforms
+      if ((isMac && event.metaKey && event.key === 'v') ||
+          (event.ctrlKey && event.key === 'v' && !event.shiftKey)) {
+        return false; // Let browser fire paste event, we'll handle it there
+      }
+      return true;
+    });
+
+    // Handle ALL paste events (text AND image)
+    const pasteHandler = (event: ClipboardEvent) => {
+      const clipboardData = event.clipboardData;
+      if (!clipboardData) return;
+
+      const hasImage = Array.from(clipboardData.items).some(item => item.type.startsWith('image/'));
+
+      if (hasImage) {
+        // IMAGE paste: Send \x16 to trigger Claude Code's native clipboard read
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        callbacks.onData(id, '\x16');
+        return;
+      }
+
+      // TEXT paste: Read from clipboardData and send via callback
+      const text = clipboardData.getData('text/plain');
+      if (text) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        callbacks.onData(id, text);
+        return;
+      }
+    };
+    terminalBody.addEventListener('paste', pasteHandler, true);
+
     // 7. Create instance
     const instance = new XtermInstance(
       id,
@@ -312,6 +357,11 @@ export class XtermInstance {
       fitAddon,
       serializeAddon
     );
+
+    // Register paste handler cleanup to prevent memory leak
+    instance.addCleanup(() => {
+      terminalBody.removeEventListener('paste', pasteHandler, true);
+    });
 
     // 8. Try WebGL addon for performance
     await instance.tryEnableWebGL();
@@ -734,6 +784,13 @@ export class XtermInstance {
   }
 
   /**
+   * Register a cleanup callback to be called on dispose
+   */
+  public addCleanup(callback: () => void): void {
+    this.cleanupCallbacks.push(callback);
+  }
+
+  /**
    * Dispose terminal and clean up all resources
    */
   public dispose(): void {
@@ -741,6 +798,16 @@ export class XtermInstance {
     this.disposed = true;
 
     console.log(`[XtermInstance] Disposing ${this.id}`);
+
+    // Run cleanup callbacks first (e.g., remove event listeners)
+    for (const callback of this.cleanupCallbacks) {
+      try {
+        callback();
+      } catch (error) {
+        console.error(`[XtermInstance] Cleanup callback error for ${this.id}:`, error);
+      }
+    }
+    this.cleanupCallbacks = [];
 
     // Clear resize timer
     if (this.resizeTimer !== null) {

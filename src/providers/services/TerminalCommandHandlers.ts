@@ -416,6 +416,77 @@ export class TerminalCommandHandlers {
   }
 
   /**
+   * Handle image paste for Claude Code
+   * Saves the image to a temp file and sends the file path to the terminal
+   */
+  public async handlePasteImage(message: WebviewMessage): Promise<void> {
+    if (!hasTerminalId(message)) {
+      log('⚠️ [HANDLER] pasteImage missing terminalId');
+      return;
+    }
+
+    const imageData = (message as any)?.imageData as string;
+    const imageType = (message as any)?.imageType as string;
+
+    if (!imageData || !imageType) {
+      log('⚠️ [HANDLER] pasteImage missing imageData or imageType');
+      return;
+    }
+
+    try {
+      log(`🖼️ [HANDLER] Processing image paste for terminal ${message.terminalId}`);
+
+      // Extract base64 data (remove data:image/xxx;base64, prefix)
+      const base64Match = imageData.match(/^data:image\/[a-z]+;base64,(.+)$/i);
+      if (!base64Match || !base64Match[1]) {
+        log('⚠️ [HANDLER] Invalid base64 image data format');
+        return;
+      }
+      const base64Content = base64Match[1];
+
+      // Determine file extension from MIME type (sanitized for security)
+      const validExtensions = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'];
+      const rawExtension = imageType.replace('image/', '').toLowerCase();
+      const extension = validExtensions.includes(rawExtension) ? rawExtension : 'png';
+
+      // Create temp file path
+      const os = await import('os');
+      const path = await import('path');
+      const fs = await import('fs');
+      const tempDir = os.tmpdir();
+      const timestamp = Date.now();
+      const filename = `claude-paste-${timestamp}.${extension}`;
+      const tempFilePath = path.join(tempDir, filename);
+
+      // Write image to temp file (async to avoid blocking event loop)
+      const imageBuffer = Buffer.from(base64Content, 'base64');
+      await fs.promises.writeFile(tempFilePath, imageBuffer);
+
+      // Schedule cleanup after 5 minutes (Claude Code should have read it by then)
+      setTimeout(() => {
+        try {
+          if (fs.existsSync(tempFilePath)) {
+            fs.unlinkSync(tempFilePath);
+            log(`🧹 [HANDLER] Cleaned up temp image: ${tempFilePath}`);
+          }
+        } catch {
+          // Ignore cleanup errors
+        }
+      }, 5 * 60 * 1000);
+
+      log(`🖼️ [HANDLER] Saved image to temp file: ${tempFilePath}`);
+
+      // Send the file path to the terminal PTY
+      // Claude Code expects the file path as input
+      this.deps.terminalManager.sendInput(tempFilePath, message.terminalId);
+
+      log(`🖼️ [HANDLER] Sent image path to terminal ${message.terminalId}`);
+    } catch (error) {
+      log('❌ [HANDLER] Failed to handle image paste:', error);
+    }
+  }
+
+  /**
    * Handle AI Agent connection switch
    * Issue #122: AI Agent connection toggle button functionality
    */
@@ -463,6 +534,44 @@ export class TerminalCommandHandlers {
         success: false,
         reason: 'Internal error occurred',
       } as WebviewMessage);
+    }
+  }
+
+  /**
+   * Handle text paste from WebView
+   * Used when clipboard text is read in WebView and sent to extension for terminal input
+   */
+  public async handlePasteText(message: WebviewMessage): Promise<void> {
+    if (!hasTerminalId(message)) {
+      log('⚠️ [HANDLER] pasteText missing terminalId');
+      return;
+    }
+
+    const text = (message as any)?.text;
+    if (typeof text !== 'string' || text.length === 0) {
+      log('⚠️ [HANDLER] pasteText called without text');
+      return;
+    }
+
+    try {
+      log(`📋 [HANDLER] Processing text paste for terminal ${message.terminalId}`);
+      log(`📋 [HANDLER] Text length: ${text.length} characters`);
+
+      const terminal = this.deps.terminalManager.getTerminal(message.terminalId);
+      if (!terminal) {
+        log('❌ [HANDLER] Terminal not found for paste operation');
+        return;
+      }
+
+      const shellPath = (terminal as any).shellPath || '';
+      const processedText = this.escapeTextForShell(text, shellPath);
+
+      // Send to terminal using sendInput
+      this.deps.terminalManager.sendInput(processedText, message.terminalId);
+
+      log('✅ [HANDLER] Text pasted successfully');
+    } catch (error) {
+      log('❌ [HANDLER] Failed to paste text:', error);
     }
   }
 

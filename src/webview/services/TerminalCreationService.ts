@@ -417,6 +417,77 @@ export class TerminalCreationService implements Disposable {
         terminal.open(terminalContent);
         terminalLogger.info(`✅ Terminal opened in container: ${terminalId}`);
 
+        // 🎯 CRITICAL: Handle ALL paste events (text AND image)
+        // VS Code WebView has clipboard API restrictions, so xterm.js can't read clipboard directly.
+        // We intercept paste events to:
+        // 1. For IMAGE paste: Send \x16 to trigger Claude Code's native clipboard read
+        // 2. For TEXT paste: Read from clipboardData and send to extension for terminal input
+        //
+        // This works on ALL platforms, not just macOS.
+
+        // Block xterm.js keydown handling for paste shortcuts to prevent double-handling
+        terminal.attachCustomKeyEventHandler((event: KeyboardEvent) => {
+          // Use userAgentData if available (modern), fallback to userAgent
+          const isMac = (navigator as any).userAgentData?.platform === 'macOS' || /Mac/.test(navigator.userAgent);
+          // Block Cmd+V on macOS and Ctrl+V on all platforms
+          if ((isMac && event.metaKey && event.key === 'v') ||
+              (event.ctrlKey && event.key === 'v' && !event.shiftKey)) {
+            terminalLogger.info(`📋 Paste keydown - bypassing xterm.js key handler`);
+            return false; // Let browser fire paste event, we'll handle it there
+          }
+          return true;
+        });
+
+        // Handle ALL paste events (text AND image)
+        const pasteHandler = (event: ClipboardEvent) => {
+          const clipboardData = event.clipboardData;
+          if (!clipboardData) {
+            terminalLogger.warn('📋 Paste event has no clipboardData');
+            return;
+          }
+
+          const hasImage = Array.from(clipboardData.items).some(item => item.type.startsWith('image/'));
+
+          if (hasImage) {
+            // IMAGE paste: Send \x16 to trigger Claude Code's native clipboard read
+            terminalLogger.info(`🖼️ Image in paste event - sending Ctrl+V escape for Claude Code`);
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            this.coordinator.postMessageToExtension({
+              command: 'input',
+              terminalId: terminalId,
+              data: '\x16',
+            });
+            return;
+          }
+
+          // TEXT paste: Read from clipboardData and send to extension
+          const text = clipboardData.getData('text/plain');
+          if (text) {
+            terminalLogger.info(`📋 Text paste (${text.length} chars) - sending to extension`);
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            // Send text directly to terminal via extension (bypasses xterm.js clipboard issues)
+            this.coordinator.postMessageToExtension({
+              command: 'pasteText',
+              terminalId: terminalId,
+              text: text,
+            });
+            return;
+          }
+
+          terminalLogger.warn('📋 Paste event has no text or image content');
+        };
+
+        // Register paste handler for automatic cleanup on terminal disposal
+        this.eventRegistry.register(
+          `terminal-${terminalId}-paste`,
+          terminalContent,
+          'paste',
+          pasteHandler as EventListener,
+          true // capture phase - intercept before xterm.js
+        );
+
         // 🎯 VS Code Pattern: Apply font and visual settings AFTER terminal.open()
         // xterm.js requires the terminal to be attached to DOM before settings can be applied
         // Note: configManager was already retrieved above; reuse it here

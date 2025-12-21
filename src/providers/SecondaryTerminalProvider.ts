@@ -538,6 +538,18 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         category: 'terminal' as const,
       },
       {
+        command: 'pasteImage',
+        handler: async (msg: WebviewMessage) =>
+          await this._terminalCommandHandlers.handlePasteImage(msg),
+        category: 'terminal' as const,
+      },
+      {
+        command: 'pasteText',
+        handler: async (msg: WebviewMessage) =>
+          await this._terminalCommandHandlers.handlePasteText(msg),
+        category: 'terminal' as const,
+      },
+      {
         command: 'switchAiAgent',
         handler: async (msg: WebviewMessage) =>
           await this._terminalCommandHandlers.handleSwitchAiAgent(msg),

@@ -151,7 +151,8 @@ export class TerminalInputHandler extends BaseMessageHandler<
     this.validateRequired(data, ['terminalId', 'input']);
 
     try {
-      this.dependencies.terminalManager.sendInput(data.terminalId, data.input);
+      // Fix: sendInput signature is (data, terminalId), not (terminalId, data)
+      this.dependencies.terminalManager.sendInput(data.input, data.terminalId);
       return { success: true };
     } catch (error) {
       this.log(`Error sending input to terminal ${data.terminalId}: ${error}`);
