@@ -445,7 +445,7 @@ export class TerminalCreationService implements Disposable {
 
               // 🔧 CRITICAL FIX: Explicitly update container backgrounds immediately
               // This ensures the correct theme is visible right away
-              this.updateContainerBackgrounds(terminalId, container, terminalContent, currentSettings);
+              this.updateContainerBackgrounds(terminalId, container, terminalContent, settingsForVisuals);
             }
 
             if (fontSettingsForApply) {

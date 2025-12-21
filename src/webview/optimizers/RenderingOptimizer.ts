@@ -218,42 +218,6 @@ export class RenderingOptimizer implements Disposable {
   }
 
   /**
-   * Verify WebGL rendering is working after addon load
-   */
-  private verifyWebGLRendering(terminal: Terminal, terminalId: string): boolean {
-    try {
-      // Check if the terminal has canvas layers
-      const element = terminal.element;
-      if (!element) {
-        terminalLogger.warn(`⚠️ Terminal ${terminalId} has no element for WebGL verification`);
-        return false;
-      }
-
-      // Look for WebGL canvas (xterm.js creates a canvas for WebGL rendering)
-      const canvases = element.querySelectorAll('canvas');
-      if (canvases.length === 0) {
-        terminalLogger.warn(`⚠️ No canvas elements found for terminal ${terminalId}`);
-        return false;
-      }
-
-      // Check if any canvas has WebGL context
-      for (const canvas of canvases) {
-        const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
-        if (gl && !gl.isContextLost()) {
-          terminalLogger.debug(`✅ WebGL context verified for terminal ${terminalId}`);
-          return true;
-        }
-      }
-
-      terminalLogger.warn(`⚠️ WebGL context not found or lost for terminal ${terminalId}`);
-      return false;
-    } catch (error) {
-      terminalLogger.warn(`⚠️ WebGL verification failed for terminal ${terminalId}:`, error);
-      return false;
-    }
-  }
-
-  /**
    * Enable WebGL rendering with auto-fallback
    *
    * 🔧 TEMPORARILY DISABLED: WebGL causes rendering issues where text/cursor
