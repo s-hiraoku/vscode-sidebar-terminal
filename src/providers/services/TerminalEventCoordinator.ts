@@ -33,7 +33,6 @@ export class TerminalEventCoordinator implements vscode.Disposable {
   constructor(
     private readonly _terminalManager: TerminalManager,
     private readonly _sendMessage: (message: WebviewMessage) => Promise<void>,
-    private readonly _saveSession: () => Promise<void>,
     private readonly _sendFullCliAgentStateSync: () => void,
     private readonly _terminalIdMapping?: Map<string, string>,
     private readonly _initializationState?: TerminalInitializationStateMachine
@@ -110,16 +109,6 @@ export class TerminalEventCoordinator implements vscode.Disposable {
       };
 
       void this._sendMessage(message);
-
-      // Auto-save session after terminal creation
-      setTimeout(async () => {
-        try {
-          await this._saveSession();
-          log('💾 [EVENT-COORDINATOR] Auto-saved session after terminal creation');
-        } catch (error) {
-          log('❌ [EVENT-COORDINATOR] Failed to auto-save session:', error);
-        }
-      }, 500);
     });
 
     // Handle terminal removal
@@ -129,16 +118,6 @@ export class TerminalEventCoordinator implements vscode.Disposable {
         command: TERMINAL_CONSTANTS.COMMANDS.TERMINAL_REMOVED,
         terminalId,
       });
-
-      // Auto-save session after terminal removal
-      setTimeout(async () => {
-        try {
-          await this._saveSession();
-          log('💾 [EVENT-COORDINATOR] Auto-saved session after terminal removal');
-        } catch (error) {
-          log('❌ [EVENT-COORDINATOR] Failed to auto-save session:', error);
-        }
-      }, 500);
     });
 
     // Handle state updates

@@ -263,9 +263,6 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     this._eventCoordinator = new TerminalEventCoordinator(
       this._terminalManager,
       this._communicationService.sendMessage.bind(this._communicationService),
-      async () => {
-        await this.saveCurrentSession();
-      },
       () => this.sendFullCliAgentStateSync(),
       this._terminalIdMapping,
       this._terminalInitStateMachine
@@ -605,6 +602,11 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         category: 'persistence' as const,
       },
       {
+        command: 'scrollbackExtracted',
+        handler: async (msg: WebviewMessage) => await this._handleScrollbackDataCollected(msg),
+        category: 'persistence' as const,
+      },
+      {
         command: 'requestScrollbackRefresh',
         handler: async (msg: WebviewMessage) => await this._handleScrollbackRefreshRequest(msg),
         category: 'persistence' as const,
@@ -665,7 +667,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   private async _handleScrollbackDataCollected(message: WebviewMessage): Promise<void> {
-    const scrollbackData = (message as any)?.scrollbackData;
+    const scrollbackData = (message as any)?.scrollbackData ?? (message as any)?.scrollbackContent;
     const requestId = (message as any)?.requestId;
     const terminalId = (message as any)?.terminalId;
 

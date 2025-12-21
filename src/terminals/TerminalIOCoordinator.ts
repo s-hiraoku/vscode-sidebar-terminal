@@ -394,18 +394,9 @@ export class TerminalIOCoordinator {
       ptyInstance.resize(cols, rows);
       log(`📏 [TERMINAL] Terminal resized: ${terminal.name} → ${cols}x${rows}`);
 
-      // VS Code pattern: Force shell refresh after resize
-      setTimeout(() => {
-        try {
-          // Send SIGWINCH signal to shell process to trigger prompt refresh
-          if (ptyInstance.pid) {
-            log(`🔄 [TERMINAL] Sending refresh signal to process ${ptyInstance.pid}`);
-            ptyInstance.write('\x0c'); // Form feed character to refresh display
-          }
-        } catch (refreshError) {
-          log(`⚠️ [TERMINAL] Failed to refresh shell for ${terminal.name}:`, refreshError);
-        }
-      }, 50);
+      // Note: SIGWINCH is automatically sent by PTY on resize
+      // Removed \x0c (form feed) as it causes ^L to be displayed on some shells
+      log(`📏 [TERMINAL] Resize complete for ${terminal.name}, SIGWINCH sent by PTY`);
 
       return { success: true };
     } catch (error) {

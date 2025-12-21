@@ -4,7 +4,7 @@
 [![Installs](https://img.shields.io/visual-studio-marketplace/i/s-hiraoku.vscode-sidebar-terminal)](https://marketplace.visualstudio.com/items?itemName=s-hiraoku.vscode-sidebar-terminal)
 [![Rating](https://img.shields.io/visual-studio-marketplace/r/s-hiraoku.vscode-sidebar-terminal)](https://marketplace.visualstudio.com/items?itemName=s-hiraoku.vscode-sidebar-terminal)
 [![License](https://img.shields.io/github/license/s-hiraoku/vscode-sidebar-terminal)](https://github.com/s-hiraoku/vscode-sidebar-terminal/blob/main/LICENSE)
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/s-hiraoku/vscode-sidebar-terminal)
+[![Ask DeepWiki](https://img.shields.io/badge/Ask-DeepWiki-blue)](https://deepwiki.com/s-hiraoku/vscode-sidebar-terminal)
 
 **The Essential Tool for the CLI Coding Agent Era** - A production-ready terminal extension for developers who need more than VS Code's standard terminal. Manage up to 5 terminals in the sidebar with seamless AI agent integration for Claude Code, Codex CLI, Gemini CLI, and Copilot CLI.
 
@@ -69,7 +69,8 @@ Automatic detection and status tracking for:
 
 | Shortcut                                      | Action                                                         |
 | --------------------------------------------- | -------------------------------------------------------------- |
-| `Cmd+Alt+L` / `Ctrl+Alt+L`                    | Insert file reference for AI agents (from editor)              |
+| `Cmd+Alt+L` / `Ctrl+Alt+L`                    | Insert current file reference for AI agents (from editor)      |
+| `Cmd+Alt+L Cmd+Alt+L` / `Ctrl+Alt+L Ctrl+Alt+L` | Insert all open files references for AI agents (press twice) |
 | `Cmd+K Cmd+C` / `Ctrl+K Ctrl+C`               | Activate GitHub Copilot Chat                                   |
 | ``Ctrl+` ``                                   | Focus Secondary Terminal view (when terminal is not focused)   |
 | ``Ctrl+Shift+` ``                             | Create new terminal                                            |

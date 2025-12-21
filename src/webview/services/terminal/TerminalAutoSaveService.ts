@@ -32,8 +32,8 @@ export class TerminalAutoSaveService {
   // Track if visibility change handler is set up
   private static visibilityHandlerSetup = false;
 
-  // Track last visibility change time to detect sleep/wake
-  private static lastVisibilityChangeTime = 0;
+  // Track last hidden timestamp to detect sleep/wake
+  private static lastHiddenAt = 0;
 
   private readonly coordinator: IManagerCoordinator;
 
@@ -67,22 +67,25 @@ export class TerminalAutoSaveService {
 
     document.addEventListener('visibilitychange', () => {
       const now = Date.now();
-      const timeSinceLastChange = now - TerminalAutoSaveService.lastVisibilityChangeTime;
-      TerminalAutoSaveService.lastVisibilityChangeTime = now;
 
       if (document.visibilityState === 'hidden') {
+        TerminalAutoSaveService.lastHiddenAt = now;
         // Page is being hidden (possibly going to sleep)
         // Save all terminal scrollback immediately
         // eslint-disable-next-line no-console
         console.log('[AUTO-SAVE] Page hidden - saving all scrollback immediately');
         TerminalAutoSaveService.saveAllScrollbackImmediately();
-      } else if (document.visibilityState === 'visible') {
-        // Page is becoming visible again (possibly waking from sleep)
-        // If more than 5 seconds passed, this might be a wake from sleep
-        const isLikelyWakeFromSleep = timeSinceLastChange > 5000;
+        return;
+      }
+
+      if (document.visibilityState === 'visible') {
+        const hiddenAt = TerminalAutoSaveService.lastHiddenAt;
+        const timeHidden = hiddenAt ? now - hiddenAt : 0;
+        // Consider it a sleep/wake only if hidden for a long enough period
+        const isLikelyWakeFromSleep = hiddenAt > 0 && timeHidden > 60000;
         // eslint-disable-next-line no-console
         console.log(
-          `[AUTO-SAVE] Page visible - timeSinceLastChange: ${timeSinceLastChange}ms, likelyWake: ${isLikelyWakeFromSleep}`
+          `[AUTO-SAVE] Page visible - hiddenDuration: ${timeHidden}ms, likelyWake: ${isLikelyWakeFromSleep}`
         );
 
         if (isLikelyWakeFromSleep) {
@@ -92,6 +95,12 @@ export class TerminalAutoSaveService {
           TerminalAutoSaveService.requestScrollbackRefresh();
         }
       }
+    });
+
+    window.addEventListener('pagehide', () => {
+      // Ensure latest scrollback is pushed before the webview unloads.
+      TerminalAutoSaveService.saveAllScrollbackImmediately();
+      TerminalAutoSaveService.requestSessionSaveOnExit();
     });
 
     TerminalAutoSaveService.visibilityHandlerSetup = true;
@@ -168,6 +177,29 @@ export class TerminalAutoSaveService {
     console.log(
       `[AUTO-SAVE] Requested scrollback refresh for ${TerminalAutoSaveService.registeredTerminals.size} terminals`
     );
+  }
+
+  private static requestSessionSaveOnExit(): void {
+    const windowWithApi = window as Window & {
+      vscodeApi?: {
+        postMessage: (message: unknown) => void;
+      };
+    };
+
+    if (!windowWithApi.vscodeApi) {
+      // eslint-disable-next-line no-console
+      console.warn('[AUTO-SAVE] vscodeApi not available for exit save request');
+      return;
+    }
+
+    windowWithApi.vscodeApi.postMessage({
+      command: 'persistenceSaveSession',
+      data: { preferCache: true, reason: 'pagehide' },
+      timestamp: Date.now(),
+    });
+
+    // eslint-disable-next-line no-console
+    console.log('[AUTO-SAVE] Requested session save on webview unload');
   }
 
   /**

@@ -966,6 +966,13 @@ export class TerminalCreationService implements Disposable {
           DOMUtils.resetXtermInlineStyles(container);
           fitAddon.fit();
 
+          // 🔧 CRITICAL FIX: Call fit() twice with frame wait for correct canvas sizing
+          // First fit() updates internal state, second fit() applies correct dimensions
+          requestAnimationFrame(() => {
+            DOMUtils.resetXtermInlineStyles(container);
+            fitAddon.fit();
+          });
+
           // 🔧 FIX: Refresh terminal to ensure cursor and decorations are rendered
           // Do NOT call terminal.clear() as it clears shell prompt output
           terminal.refresh(0, terminal.rows - 1);

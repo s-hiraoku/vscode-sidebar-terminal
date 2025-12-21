@@ -18,6 +18,7 @@ import { WebglAddon } from '@xterm/addon-webgl';
 import { SerializeAddon } from '@xterm/addon-serialize';
 import { TerminalConfig, TerminalTheme } from './types';
 import { cleanWrappedLineSelection } from '../utils/SelectionUtils';
+import { DOMUtils } from '../utils/DOMUtils';
 
 /**
  * Terminal creation result
@@ -391,6 +392,16 @@ export class XtermInstance {
 
     // 9. Initial fit after DOM is ready
     await XtermInstance.waitForNextFrame();
+
+    // 🔧 CRITICAL FIX: Reset inline styles BEFORE fit() to allow width expansion
+    // xterm.js sets fixed pixel widths at terminal.open() which prevents expansion
+    DOMUtils.resetXtermInlineStyles(container, true);
+
+    // 🔧 CRITICAL FIX: Call fit() twice - first to update internal state, second for correct size
+    // FitAddon may use cached dimensions from the initial render
+    fitAddon.fit();
+    await XtermInstance.waitForNextFrame();
+    DOMUtils.resetXtermInlineStyles(container, true);
     fitAddon.fit();
 
     // 🔧 FIX: Refresh to ensure cursor and decorations are rendered

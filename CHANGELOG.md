@@ -7,6 +7,75 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.176] - 2025-12-21
+
+### Fixed
+
+- **^L Display Issue**: Fix `^L` (Ctrl+L) characters being displayed in terminal on startup and resize (Issue #329)
+  - **Root Cause**: Form feed character (`\x0c`) was sent to PTY after resize to refresh shell display
+  - **Fix**: Remove explicit `\x0c` send - PTY already sends SIGWINCH automatically on resize
+  - **Result**: No more `^L^L^L` displayed in terminal
+
+## [0.1.175] - 2025-12-21
+
+### Fixed
+
+- **Mouse Text Selection Highlight**: Fix selection highlight not visible when selecting text with mouse (PR #321 by @tonydehnke)
+  - **Root Cause**: Property name mismatch (`selection` vs `selectionBackground`) and CSS interfering with selection layer
+  - **Fix**: Rename to `selectionBackground` (xterm.js standard) and exclude `.xterm-selection-layer` from CSS reset
+  - **Result**: Text selection now shows proper blue highlight when clicking and dragging
+
+- **Build Fix**: Fix TypeScript error in ThemeManager.ts and remove SVG badge from README
+
+## [0.1.173] - 2025-12-20
+
+### Added
+
+- **Send All Open Files Shortcut**: New keyboard shortcut to insert references for all open files
+  - `Cmd+Alt+L Cmd+Alt+L` (Mac) / `Ctrl+Alt+L Ctrl+Alt+L` (Win/Linux) - Press the shortcut twice
+  - Sends all open files as `@path` references to connected CLI agents (Claude Code, etc.)
+  - Each file is sent on a separate line for better readability
+  - Complements the existing single-file shortcut (`Cmd+Alt+L`)
+
+## [0.1.172] - 2025-12-20
+
+### Fixed
+
+- **Per-Terminal Theme Application**: Fix theme not being applied correctly to individual terminals
+  - **Root Cause**: Theme was tracked globally with a single variable, causing incorrect theme application when multiple terminals exist
+  - **Fix**: Use WeakMap to cache theme per terminal instance
+  - **Result**: Each terminal now correctly receives and applies its theme settings
+
+### Changed
+
+- **CI/CD Simplification**: Separate TDD quality check from release workflow
+  - Remove TDD quality gate from release workflow (was causing timeouts)
+  - TDD checks now run on branch push/PR only (separate workflow)
+  - Release workflow is simpler and more reliable
+
+## [0.1.170] - 2025-12-20
+
+### Fixed
+
+- **Terminal Canvas Gap**: Fix visible gap between terminal canvas and container edge
+  - **Root Cause**: FitAddon reserves space for scrollbar (14px), leaving a visible gap when canvas (644px) is smaller than container (663px)
+  - **Fix**: Apply viewport background color to `.xterm` element to hide the gap
+  - **Result**: Terminal now displays without visible gaps at the edge
+
+- **Terminal Restore Order**: Keep terminal order consistent when restoring sessions
+  - Terminals now restore in the same order they were saved
+  - Added reordering logic after session restore completion
+
+- **Terminal Restore Stability**: Stabilize terminal restore and sizing
+  - Save scrollback on exit using prefetch + cache to avoid empty scrollback
+  - Ignore empty scrollback pushes and preserve last known cache
+  - Flush pending xterm writes before scrollback extraction
+  - Reset inline styles and double-fit to fix canvas sizing
+
+### Added
+
+- **Test Coverage**: Added unit tests for exit save cache handling and restore order behavior
+
 ## [0.1.166] - 2025-12-13
 
 ### Fixed

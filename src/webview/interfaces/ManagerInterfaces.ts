@@ -268,6 +268,7 @@ export interface IInputManager {
 // UI management interface
 export interface IUIManager {
   updateTerminalBorders(activeTerminalId: string, allContainers: Map<string, HTMLElement>): void;
+  updateSingleTerminalBorder(container: HTMLElement, isActive: boolean): void;
   updateSplitTerminalBorders(activeTerminalId: string): void;
   showTerminalPlaceholder(): void;
   hideTerminalPlaceholder(): void;

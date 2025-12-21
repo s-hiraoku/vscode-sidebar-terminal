@@ -84,6 +84,112 @@ export class FileReferenceCommand {
   }
 
   /**
+   * 開いている全ファイルを CLI Agent に送信
+   * CMD+OPT+L+L で呼び出される
+   */
+  handleSendAllOpenFiles(): void {
+    try {
+      log('🚀 [DEBUG] handleSendAllOpenFiles called');
+
+      // CLI Agent統合機能が有効かチェック
+      if (!this.isCliAgentIntegrationEnabled()) {
+        log('🔧 [DEBUG] CLI Agent integration is disabled by user setting');
+        void vscode.window.showInformationMessage(
+          'File reference shortcuts are disabled. Enable them in Terminal Settings.'
+        );
+        return;
+      }
+
+      // 開いている全ファイルを取得
+      const openFiles = this.getAllOpenFiles();
+      if (openFiles.length === 0) {
+        log('⚠️ [WARN] No open files found');
+        void vscode.window.showWarningMessage('No open files to mention.');
+        return;
+      }
+
+      // ターミナル環境の確認
+      const terminalEnv = this.validateTerminalEnvironment();
+      if (!terminalEnv) {
+        return;
+      }
+
+      // CONNECTED状態の全CLI Agentに送信
+      const connectedAgents = this.getConnectedAgents();
+      if (connectedAgents.length === 0) {
+        void vscode.window.showWarningMessage(
+          'No active CLI Agent found. Please ensure a CLI Agent is running.'
+        );
+        return;
+      }
+
+      // 全ファイル参照を送信（1ファイルごとに改行）
+      connectedAgents.forEach((agent) => {
+        const text = openFiles.map((file) => `@${file}`).join('\n');
+
+        // サイドバーターミナルビューにフォーカス
+        void vscode.commands.executeCommand(VSCODE_COMMANDS.SECONDARY_TERMINAL_FOCUS);
+
+        // 特定のターミナルにフォーカス後、ファイル参照を送信
+        setTimeout(() => {
+          this.terminalManager.focusTerminal(agent.terminalId);
+          setTimeout(() => {
+            this.terminalManager.sendInput(text + ' ', agent.terminalId);
+            log(`📤 [DEBUG] Sent ${openFiles.length} file references to ${agent.agentType}`);
+          }, 100);
+        }, 50);
+      });
+
+      // 成功メッセージ
+      const agentTypes = connectedAgents.map((a) => a.agentType).join(', ');
+      void vscode.window.showInformationMessage(
+        `✅ Sent ${openFiles.length} file references to ${agentTypes}`
+      );
+      log(`✅ [DEBUG] ${openFiles.length} file references sent to ${connectedAgents.length} CLI agents`);
+    } catch (error) {
+      log('❌ [ERROR] Error in handleSendAllOpenFiles:', error);
+      void vscode.window.showErrorMessage(`Failed to send file references: ${String(error)}`);
+    }
+  }
+
+  /**
+   * 開いている全ファイルの相対パスを取得
+   */
+  private getAllOpenFiles(): string[] {
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    const workspaceRoot = workspaceFolder?.uri.fsPath || '';
+
+    const openFiles: string[] = [];
+
+    // tabGroupsから全ての開いているファイルを取得
+    for (const tabGroup of vscode.window.tabGroups.all) {
+      for (const tab of tabGroup.tabs) {
+        // TabInputTextのみを対象（テキストファイル）
+        if (tab.input instanceof vscode.TabInputText) {
+          const fullPath = tab.input.uri.fsPath;
+
+          // 相対パスを計算
+          let relativePath = fullPath;
+          if (workspaceRoot && fullPath.startsWith(workspaceRoot)) {
+            relativePath = fullPath.substring(workspaceRoot.length);
+            if (relativePath.startsWith('/') || relativePath.startsWith('\\')) {
+              relativePath = relativePath.substring(1);
+            }
+          }
+
+          // 重複を避ける
+          if (!openFiles.includes(relativePath)) {
+            openFiles.push(relativePath);
+          }
+        }
+      }
+    }
+
+    log(`🔍 [DEBUG] Found ${openFiles.length} open files`);
+    return openFiles;
+  }
+
+  /**
    * アクティブエディタからファイル情報と選択範囲を取得
    */
   private getActiveFileInfo(): {
