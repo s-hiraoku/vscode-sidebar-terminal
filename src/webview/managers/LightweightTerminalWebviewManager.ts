@@ -373,6 +373,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
     // Performance Manager
     this.performanceManager = new PerformanceManager();
+    this.performanceManager.initializePerformance(this); // 🔧 FIX: Enable DSR response handling (Issue #341)
 
     // UI Manager
     this.uiManager = new UIManager();
