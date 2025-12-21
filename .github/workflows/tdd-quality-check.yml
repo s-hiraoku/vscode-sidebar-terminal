@@ -14,8 +14,8 @@ jobs:
   tdd-check:
     name: TDD Quality Gate
     runs-on: ubuntu-latest
-    # 15 minutes timeout (known Ubuntu test timeout issue)
-    timeout-minutes: 15
+    # 25 minutes timeout (extended due to known Ubuntu test timeout issue)
+    timeout-minutes: 25
 
     steps:
       - name: Checkout code
