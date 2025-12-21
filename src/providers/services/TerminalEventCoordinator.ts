@@ -243,7 +243,8 @@ export class TerminalEventCoordinator implements vscode.Disposable {
         event.affectsConfiguration('terminal.integrated.altClickMovesCursor') ||
         event.affectsConfiguration('secondaryTerminal.altClickMovesCursor') ||
         event.affectsConfiguration('secondaryTerminal.theme') ||
-        event.affectsConfiguration('secondaryTerminal.cursorBlink')
+        event.affectsConfiguration('secondaryTerminal.cursorBlink') ||
+        event.affectsConfiguration('secondaryTerminal.activeBorderMode')
       ) {
         this._pendingSettingsUpdate = true;
       }
