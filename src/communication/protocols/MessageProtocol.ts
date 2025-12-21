@@ -102,6 +102,8 @@ export type WebViewToExtensionCommand =
   | 'copyToClipboard'
   | 'pasteText'
   | 'requestClipboardContent'
+  | 'pasteText'
+  | 'pasteImage'
   | 'htmlScriptTest'
   | 'webviewReady'
   | 'ready'

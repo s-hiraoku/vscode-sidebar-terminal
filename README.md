@@ -69,6 +69,9 @@ Automatic detection and status tracking for:
 
 | Shortcut                                      | Action                                                         |
 | --------------------------------------------- | -------------------------------------------------------------- |
+| `Cmd+C` / `Ctrl+C`                            | Copy selected text                                             |
+| `Cmd+V` / `Ctrl+V`                            | Paste (text and images)                                        |
+| `Shift+Enter` / `Option+Enter`                | Insert newline (Claude Code multiline prompts)                 |
 | `Cmd+Alt+L` / `Ctrl+Alt+L`                    | Insert current file reference for AI agents (from editor)      |
 | `Cmd+Alt+L Cmd+Alt+L` / `Ctrl+Alt+L Ctrl+Alt+L` | Insert all open files references for AI agents (press twice) |
 | `Cmd+K Cmd+C` / `Ctrl+K Ctrl+C`               | Activate GitHub Copilot Chat                                   |

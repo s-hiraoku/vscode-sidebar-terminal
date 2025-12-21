@@ -541,13 +541,15 @@ export class TerminalCreationService implements Disposable {
             // Use currentFontSettings already retrieved above, or get fresh copy
             const fontSettingsForApply = currentFontSettings ?? configManager?.getCurrentFontSettings?.();
 
+            terminalLogger.info(`🎨 [DEBUG] Immediate settings check - theme: ${settingsForVisuals?.theme}`);
+
             if (settingsForVisuals) {
               uiManager.applyAllVisualSettings(terminal, settingsForVisuals);
               terminalLogger.info(`✅ Visual settings applied to terminal: ${terminalId}`);
 
               // 🔧 CRITICAL FIX: Explicitly update container backgrounds immediately
               // This ensures the correct theme is visible right away
-              this.updateContainerBackgrounds(terminalId, container, terminalContent, currentSettings);
+              this.updateContainerBackgrounds(terminalId, container, terminalContent, settingsForVisuals);
             }
 
             if (fontSettingsForApply) {

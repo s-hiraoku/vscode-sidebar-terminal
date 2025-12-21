@@ -22,6 +22,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   e2e-tests:
     name: Playwright E2E Tests
@@ -79,7 +83,9 @@ jobs:
           retention-days: 30
 
       - name: Comment PR with test results
-        if: github.event_name == 'pull_request' && always()
+        # Skip for fork PRs (they don't have write permissions)
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && always()
+        continue-on-error: true
         uses: actions/github-script@v8
         with:
           script: |

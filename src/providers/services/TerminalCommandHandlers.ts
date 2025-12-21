@@ -577,6 +577,44 @@ export class TerminalCommandHandlers {
   }
 
   /**
+   * Handle text paste from WebView
+   * Used when clipboard text is read in WebView and sent to extension for terminal input
+   */
+  public async handlePasteText(message: WebviewMessage): Promise<void> {
+    if (!hasTerminalId(message)) {
+      log('⚠️ [HANDLER] pasteText missing terminalId');
+      return;
+    }
+
+    const text = (message as any)?.text;
+    if (typeof text !== 'string' || text.length === 0) {
+      log('⚠️ [HANDLER] pasteText called without text');
+      return;
+    }
+
+    try {
+      log(`📋 [HANDLER] Processing text paste for terminal ${message.terminalId}`);
+      log(`📋 [HANDLER] Text length: ${text.length} characters`);
+
+      const terminal = this.deps.terminalManager.getTerminal(message.terminalId);
+      if (!terminal) {
+        log('❌ [HANDLER] Terminal not found for paste operation');
+        return;
+      }
+
+      const shellPath = (terminal as any).shellPath || '';
+      const processedText = this.escapeTextForShell(text, shellPath);
+
+      // Send to terminal using sendInput
+      this.deps.terminalManager.sendInput(processedText, message.terminalId);
+
+      log('✅ [HANDLER] Text pasted successfully');
+    } catch (error) {
+      log('❌ [HANDLER] Failed to paste text:', error);
+    }
+  }
+
+  /**
    * Escape special characters for shell (VS Code standard pattern)
    * Supports bash/zsh (backslash) and PowerShell (backtick)
    */

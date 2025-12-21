@@ -790,6 +790,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     log('🔥 [TERMINAL-INIT] === _handleWebviewInitialized CALLED ===');
     log('🎯 [TERMINAL-INIT] WebView fully initialized - starting terminal initialization');
 
+    // Handle panel move reinit first
     if (this._pendingPanelMoveReinit) {
       this._pendingPanelMoveReinit = false;
       void this._reinitializeWebviewAfterPanelMove();

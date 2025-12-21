@@ -14,8 +14,8 @@ jobs:
   tdd-check:
     name: TDD Quality Gate
     runs-on: ubuntu-latest
-    # 15 minutes timeout (known Ubuntu test timeout issue)
-    timeout-minutes: 15
+    # 25 minutes timeout (extended due to known Ubuntu test timeout issue)
+    timeout-minutes: 25
 
     steps:
       - name: Checkout code
@@ -47,10 +47,17 @@ jobs:
         run: npm run compile-tests
         continue-on-error: true
 
-      - name: Run TDD Quality Gate
+      - name: Run Tests in Parallel
         run: |
-          echo "Running TDD Quality Gate..."
-          xvfb-run -a npm run tdd:comprehensive-check || echo "TDD Quality Gate has issues"
+          echo "Running unit tests in parallel (4 workers)..."
+          xvfb-run -a npm run test:unit:parallel || echo "Some tests failed"
+        continue-on-error: true
+
+      - name: Run TDD Quality Checks
+        run: |
+          echo "Running TDD quality checks..."
+          npm run tdd:check-quality || echo "Quality check has issues"
+          npm run tdd:quality-gate || echo "Quality gate has issues"
         continue-on-error: true
 
       - name: Generate TDD Report

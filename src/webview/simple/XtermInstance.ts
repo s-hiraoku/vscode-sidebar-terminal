@@ -831,6 +831,16 @@ export class XtermInstance {
     }
     this.cleanupCallbacks = [];
 
+    // Run cleanup callbacks first (e.g., remove event listeners)
+    for (const callback of this.cleanupCallbacks) {
+      try {
+        callback();
+      } catch (error) {
+        console.error(`[XtermInstance] Cleanup callback error for ${this.id}:`, error);
+      }
+    }
+    this.cleanupCallbacks = [];
+
     // Clear resize timer
     if (this.resizeTimer !== null) {
       window.clearTimeout(this.resizeTimer);

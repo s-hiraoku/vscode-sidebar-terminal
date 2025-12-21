@@ -196,16 +196,79 @@ export class UIManager extends BaseManager implements IUIManager {
   public applyTerminalTheme(terminal: Terminal, settings: PartialTerminalSettings): void {
     const theme = getWebviewTheme(settings);
 
-    const nextBackground = theme.background || null;
-    const previousBackground = this.themeCache.get(terminal) ?? null;
+    // Always apply theme (removed caching that could cause issues)
+    terminal.options.theme = theme;
+    this.currentTheme = theme.background || null;
+    this.themeApplied = true;
+    uiLogger.info(`🎨 [THEME] Applied theme to terminal: bg=${theme.background}, fg=${theme.foreground}`);
 
-    // Only apply if theme changed for this specific terminal
-    if (previousBackground !== nextBackground) {
-      terminal.options.theme = theme;
-      this.themeCache.set(terminal, nextBackground);
-      this.currentTheme = nextBackground;
-      this.themeApplied = true;
-      uiLogger.info(`Applied theme to terminal: ${theme.background || 'default'}`);
+    // Force terminal to redraw with new theme colors
+    // This is necessary for xterm.js to update the rendered text and cursor
+    terminal.refresh(0, terminal.rows - 1);
+
+    // Only update this specific terminal's container backgrounds
+    // Previously this updated ALL terminals, causing theme bleed when creating new terminals
+    this.updateContainerBackgrounds(theme.background, terminal);
+  }
+
+  /**
+   * Update container backgrounds to match terminal theme
+   * Ensures .terminal-content and .xterm-viewport backgrounds are consistent
+   *
+   * @param backgroundColor - The background color to apply
+   * @param terminal - Optional: specific terminal to update. If not provided, updates all terminals.
+   */
+  private updateContainerBackgrounds(backgroundColor: string, terminal?: Terminal): void {
+    try {
+      // If a specific terminal is provided, only update its containers
+      if (terminal && terminal.element) {
+        const terminalElement = terminal.element;
+
+        // Find the parent terminal-container
+        const terminalContainer = terminalElement.closest('.terminal-container');
+
+        if (terminalContainer) {
+          // Update only this terminal's content element
+          const terminalContent = terminalContainer.querySelector<HTMLElement>('.terminal-content');
+          if (terminalContent) {
+            terminalContent.style.backgroundColor = backgroundColor;
+          }
+        }
+
+        // Update xterm-viewport within this terminal
+        const xtermViewport = terminalElement.querySelector<HTMLElement>('.xterm-viewport');
+        if (xtermViewport) {
+          xtermViewport.style.backgroundColor = backgroundColor;
+        }
+
+        // Update the xterm element itself
+        terminalElement.style.backgroundColor = backgroundColor;
+
+        uiLogger.debug(`Updated specific terminal container background to: ${backgroundColor}`);
+        return;
+      }
+
+      // Fallback: Update all terminal-content elements (for global theme changes)
+      const terminalContents = document.querySelectorAll<HTMLElement>('.terminal-content');
+      terminalContents.forEach((element) => {
+        element.style.backgroundColor = backgroundColor;
+      });
+
+      // Update all xterm-viewport elements
+      const xtermViewports = document.querySelectorAll<HTMLElement>('.xterm-viewport');
+      xtermViewports.forEach((element) => {
+        element.style.backgroundColor = backgroundColor;
+      });
+
+      // Update all xterm elements (the main xterm container)
+      const xtermElements = document.querySelectorAll<HTMLElement>('.xterm');
+      xtermElements.forEach((element) => {
+        element.style.backgroundColor = backgroundColor;
+      });
+
+      uiLogger.debug(`Updated all container backgrounds to: ${backgroundColor}`);
+    } catch (error) {
+      uiLogger.warn('Failed to update container backgrounds:', error);
     }
   }
 
