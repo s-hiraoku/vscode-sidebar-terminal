@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.177] - 2025-12-21
 
+### Added
+
+- **Active Border Mode Dropdown**: Replace checkbox with dropdown for terminal border display (PR #319 by @tonydehnke)
+  - New `activeBorderMode` setting with options: `always`, `multipleOnly`, `none`
+  - `always`: Show border on active terminal even with single terminal
+  - `multipleOnly`: Show border only when multiple terminals exist (default)
+  - `none`: Never show active border
+  - Migrates existing `highlightActiveBorder` setting automatically
+
+- **Cmd+V Image Paste for Claude Code**: Enable image paste on macOS (PR #320 by @tonydehnke)
+  - Paste images from clipboard using Cmd+V in Claude Code sessions
+  - Images are saved as temporary files and sent as file references
+  - Works alongside existing text paste functionality
+
 ### Fixed
 
 - **Scrollback Persistence on Reload**: Fix scrollback not being restored after Reload Window (Issue #341)
