@@ -117,9 +117,14 @@ export class TerminalBorderService {
     if (color.startsWith('#')) {
       const hex = color.slice(1);
       if (hex.length === 3) {
-        r = parseInt(hex[0] + hex[0], 16);
-        g = parseInt(hex[1] + hex[1], 16);
-        b = parseInt(hex[2] + hex[2], 16);
+        const r0 = hex[0];
+        const g0 = hex[1];
+        const b0 = hex[2];
+        if (r0 !== undefined && g0 !== undefined && b0 !== undefined) {
+          r = parseInt(r0 + r0, 16);
+          g = parseInt(g0 + g0, 16);
+          b = parseInt(b0 + b0, 16);
+        }
       } else if (hex.length === 6) {
         r = parseInt(hex.slice(0, 2), 16);
         g = parseInt(hex.slice(2, 4), 16);
@@ -128,9 +133,14 @@ export class TerminalBorderService {
     } else if (color.startsWith('rgb')) {
       const match = color.match(/\d+/g);
       if (match && match.length >= 3) {
-        r = parseInt(match[0], 10);
-        g = parseInt(match[1], 10);
-        b = parseInt(match[2], 10);
+        const r0 = match[0];
+        const g0 = match[1];
+        const b0 = match[2];
+        if (r0 !== undefined && g0 !== undefined && b0 !== undefined) {
+          r = parseInt(r0, 10);
+          g = parseInt(g0, 10);
+          b = parseInt(b0, 10);
+        }
       }
     }
 

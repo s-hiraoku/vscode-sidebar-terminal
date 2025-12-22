@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.184] - 2025-12-23
+
+### Fixed
+
+- **TypeScript Type Safety**: Fix strict null check warnings in TerminalBorderService
+  - Add proper undefined guards for string/array index access in color parsing
+  - Resolves CI annotation warnings for `Object is possibly 'undefined'`
+
 ## [0.1.183] - 2025-12-23
 
 ### Added
