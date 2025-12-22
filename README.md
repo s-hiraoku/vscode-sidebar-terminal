@@ -73,7 +73,7 @@ Automatic detection and status tracking for:
 | `Cmd+V` / `Ctrl+V`                            | Paste (text and images)                                        |
 | `Shift+Enter` / `Option+Enter`                | Insert newline (Claude Code multiline prompts)                 |
 | `Cmd+Alt+L` / `Ctrl+Alt+L`                    | Insert current file reference for AI agents (from editor)      |
-| `Cmd+Alt+L Cmd+Alt+L` / `Ctrl+Alt+L Ctrl+Alt+L` | Insert all open files references for AI agents (press twice) |
+| `Cmd+Alt+A` / `Ctrl+Alt+A`                      | Insert all open files references for AI agents |
 | `Cmd+K Cmd+C` / `Ctrl+K Ctrl+C`               | Activate GitHub Copilot Chat                                   |
 | ``Ctrl+` ``                                   | Focus Secondary Terminal view (when terminal is not focused)   |
 | ``Ctrl+Shift+` ``                             | Create new terminal                                            |

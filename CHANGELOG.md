@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.181] - 2025-12-22
+
+### Fixed
+
+- **File Reference Keyboard Shortcuts**: Fix `Cmd+Alt+L` not responding on first press
+  - **Root Cause**: Chord keybinding `Cmd+Alt+L Cmd+Alt+L` caused VS Code to wait for second keypress
+  - **Fix**: Changed "Insert All Open Files" shortcut from chord to single key `Cmd+Alt+A`
+  - **New Shortcuts**:
+    - `Cmd+Alt+L` (Mac) / `Ctrl+Alt+L` (Win/Linux) - Insert current file reference
+    - `Cmd+Alt+A` (Mac) / `Ctrl+Alt+A` (Win/Linux) - Insert all open files
+
 ## [0.1.180] - 2025-12-22
 
 ### Fixed
@@ -103,7 +114,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Send All Open Files Shortcut**: New keyboard shortcut to insert references for all open files
-  - `Cmd+Alt+L Cmd+Alt+L` (Mac) / `Ctrl+Alt+L Ctrl+Alt+L` (Win/Linux) - Press the shortcut twice
+  - `Cmd+Alt+A` (Mac) / `Ctrl+Alt+A` (Win/Linux)
   - Sends all open files as `@path` references to connected CLI agents (Claude Code, etc.)
   - Each file is sent on a separate line for better readability
   - Complements the existing single-file shortcut (`Cmd+Alt+L`)
