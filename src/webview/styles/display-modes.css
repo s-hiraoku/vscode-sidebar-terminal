@@ -49,8 +49,6 @@
   display: flex !important;
   flex-direction: column !important;
   flex: 1 1 0 !important;
-  width: 100% !important;
-  height: 100% !important;
   min-width: 0 !important;
   min-height: 0 !important;
   overflow: hidden !important;
@@ -78,20 +76,12 @@
   min-width: 0 !important;
   min-height: 0 !important;
   position: relative !important;
-  border: 1px solid transparent;
+  border: 2px solid transparent;
   transition: border-color 0.2s ease-in-out;
   box-sizing: border-box !important;
 }
 
-/* Active border highlight - can be disabled via settings */
-.terminal-container.active:not(.no-highlight-border) {
-  border-color: var(--vscode-focusBorder, #007acc) !important;
-}
-
-/* When highlight is disabled, keep border transparent */
-.terminal-container.active.no-highlight-border {
-  border-color: transparent !important;
-}
+/* Active border highlight is handled via inline styles in TerminalBorderService */
 
 .terminal-content {
   display: flex !important;

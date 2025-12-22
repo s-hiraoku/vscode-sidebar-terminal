@@ -141,6 +141,11 @@ export class TerminalBorderService {
    */
   public updateSingleTerminalBorder(container: HTMLElement, isActive: boolean): void {
     const shouldShow = this.shouldShowActiveBorder();
+    const activeBorderColor = `var(--vscode-focusBorder, ${WEBVIEW_THEME_CONSTANTS.ACTIVE_BORDER_COLOR})`;
+
+    // Ensure a consistent border width regardless of prior inline styles
+    container.style.setProperty('border-width', '2px', 'important');
+    container.style.setProperty('border-style', 'solid', 'important');
 
     // Apply no-highlight-border class based on mode and terminal count
     if (shouldShow) {
@@ -154,22 +159,14 @@ export class TerminalBorderService {
       container.classList.remove('inactive');
 
       if (shouldShow) {
-        // Active border with highlight
-        container.style.setProperty(
-          'border',
-          `1px solid ${WEBVIEW_THEME_CONSTANTS.ACTIVE_BORDER_COLOR}`,
-          'important'
-        );
+        // Active border with highlight (single thick line)
+        container.style.setProperty('border-color', activeBorderColor, 'important');
         container.style.setProperty('border-radius', '4px', 'important');
-        container.style.setProperty(
-          'box-shadow',
-          `0 0 0 1px ${WEBVIEW_THEME_CONSTANTS.ACTIVE_BORDER_COLOR}, 0 0 8px rgba(0, 122, 204, 0.2)`,
-          'important'
-        );
+        container.style.setProperty('box-shadow', 'none', 'important');
         container.style.setProperty('z-index', '2', 'important');
       } else {
         // Active but highlight disabled
-        container.style.setProperty('border', '1px solid transparent', 'important');
+        container.style.setProperty('border-color', 'transparent', 'important');
         container.style.setProperty('border-radius', '4px', 'important');
         container.style.setProperty('box-shadow', 'none', 'important');
         container.style.setProperty('z-index', '1', 'important');
@@ -179,7 +176,7 @@ export class TerminalBorderService {
       container.classList.add('inactive');
 
       // Inactive terminal - transparent border
-      container.style.setProperty('border', '1px solid transparent', 'important');
+      container.style.setProperty('border-color', 'transparent', 'important');
       container.style.setProperty('border-radius', '4px', 'important');
       container.style.setProperty('box-shadow', 'none', 'important');
       container.style.setProperty('z-index', '1', 'important');

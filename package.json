@@ -695,7 +695,7 @@
             "Force sidebar location for split direction calculation",
             "Force bottom panel location for split direction calculation"
           ],
-          "description": "Panel location preference for dynamic split direction (Issue #148)"
+          "description": "Panel location preference for dynamic split direction"
         },
         "secondaryTerminal.sendKeybindingsToShell": {
           "type": "boolean",

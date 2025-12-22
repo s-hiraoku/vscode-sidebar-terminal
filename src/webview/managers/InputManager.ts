@@ -680,7 +680,30 @@ export class InputManager extends BaseManager implements IInputManager {
     //   this.logger(`Terminal ${terminalId} blurred`);
     // });
 
+    const shouldIgnoreActivationTarget = (event: MouseEvent | PointerEvent): boolean => {
+      const target = event.target as HTMLElement | null;
+      return Boolean(target?.closest('.terminal-control') || target?.closest('.terminal-header'));
+    };
+
+    const pointerDownHandler = (event: PointerEvent): void => {
+      if (shouldIgnoreActivationTarget(event)) {
+        return;
+      }
+
+      if (event.button !== 0) {
+        return;
+      }
+
+      // Ensure activation even when click is suppressed by canvas/selection behavior
+      manager.setActiveTerminalId(terminalId);
+      terminal.focus();
+    };
+
     const clickHandler = (event: MouseEvent): void => {
+      if (shouldIgnoreActivationTarget(event)) {
+        return;
+      }
+
       // Regular click: Focus terminal
       if (!event.altKey) {
         this.logger(`Regular click on terminal ${terminalId}`);
@@ -720,7 +743,16 @@ export class InputManager extends BaseManager implements IInputManager {
       `terminal-click-${terminalId}`,
       container,
       'click',
-      clickHandler as EventListener
+      clickHandler as EventListener,
+      { capture: true }
+    );
+
+    this.eventRegistry.register(
+      `terminal-pointerdown-${terminalId}`,
+      container,
+      'pointerdown',
+      pointerDownHandler as EventListener,
+      { capture: true }
     );
 
     this.logger(`Complete input handling configured for terminal ${terminalId}`);

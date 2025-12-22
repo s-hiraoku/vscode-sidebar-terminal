@@ -80,11 +80,13 @@ export class TerminalContainerFactory {
     split: {
       height: 'auto',
       minHeight: '150px',
-      border: '1px solid #444',
+      border: '1px solid var(--vscode-widget-border, #ccc)',
     },
     active: {
-      borderColor: '#007ACC',
-      boxShadow: '0 0 8px rgba(0, 122, 204, 0.3)',
+      borderColor: 'var(--vscode-focusBorder, #007acc)',
+      borderWidth: '2px',
+      borderStyle: 'solid',
+      boxShadow: 'none',
     },
   };
 
@@ -184,6 +186,7 @@ export class TerminalContainerFactory {
     container.className = config.className || 'terminal-container';
     container.setAttribute('data-terminal-id', config.id);
     container.setAttribute('data-terminal-name', config.name);
+    container.setAttribute('data-terminal-container', 'true');
 
     // Apply base styles
     this.applyStyles(container, this.DEFAULT_STYLES.container);
