@@ -18,7 +18,6 @@ import { TerminalCreationService } from '../services/TerminalCreationService';
 import { ResizeManager } from '../utils/ResizeManager';
 import { EventHandlerRegistry } from '../utils/EventHandlerRegistry';
 import { terminalLogger } from '../utils/ManagerLogger';
-import { ThemeManager } from '../utils/ThemeManager';
 import { DOMUtils } from '../utils/DOMUtils';
 
 /**
@@ -59,13 +58,6 @@ export class TerminalLifecycleCoordinator {
       this.coordinator,
       this.eventRegistry
     );
-
-    // Initialize ThemeManager for color support
-    try {
-      ThemeManager.initialize();
-    } catch (error) {
-      terminalLogger.warn('Failed to initialize ThemeManager:', error);
-    }
 
     terminalLogger.info('TerminalLifecycleCoordinator initialized with TerminalCreationService');
   }
@@ -297,18 +289,11 @@ export class TerminalLifecycleCoordinator {
 
       terminalLogger.info('Initializing terminal body container');
 
-      // Apply basic theming
-      // Note: Simplified approach without complex theme management
-
-      // Get theme colors using ThemeManager
-      const themeColors = ThemeManager.getThemeColors();
-
       // 🔧 FIX: terminal-body flex-direction is ALWAYS column
       // This ensures tab bar stays on top when in bottom panel
       container.style.cssText = `
         display: flex;
         flex-direction: column !important;
-        background: ${themeColors.background};
         width: 100%;
         height: 100%;
         min-height: 200px;

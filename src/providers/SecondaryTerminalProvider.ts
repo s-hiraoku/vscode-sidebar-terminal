@@ -369,18 +369,58 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private _initializeWebviewContent(webviewView: vscode.WebviewView): void {
     log('🔧 [PROVIDER] Step 4: Setting webview HTML...');
 
-    // Generate HTML content
+    // Get initial theme from settings to prevent flash of wrong theme
+    const settings = this._settingsService.getCurrentSettings();
+    const settingsTheme = settings.theme as 'light' | 'dark' | 'auto' | undefined;
+    const initialTheme = this._resolveInitialTheme(settingsTheme);
+    log(`🎨 [PROVIDER] Initial theme for HTML: ${initialTheme} (settings: ${settingsTheme})`);
+
+    // Generate HTML content with initial theme
     const htmlContent = this._htmlGenerationService.generateMainHtml({
       webview: webviewView.webview,
       extensionUri: this._extensionContext.extensionUri,
       includeSplitStyles: true,
       includeCliAgentStyles: true,
+      initialTheme,
     });
 
     // Set HTML using lifecycle manager
     this._lifecycleManager.setWebviewHtml(webviewView, htmlContent, false);
 
     log('🤝 [HANDSHAKE] HTML set, waiting for webviewReady from WebView');
+  }
+
+  private _resolveInitialTheme(
+    settingsTheme: 'light' | 'dark' | 'auto' | undefined
+  ): 'light' | 'dark' | 'auto' | undefined {
+    const normalizedTheme = settingsTheme ?? 'auto';
+    if (normalizedTheme !== 'auto') {
+      return normalizedTheme;
+    }
+
+    const activeThemeKind = vscode.window?.activeColorTheme?.kind;
+    const hasThemeKind =
+      typeof vscode.ColorThemeKind !== 'undefined' && typeof activeThemeKind === 'number';
+
+    if (!hasThemeKind) {
+      return normalizedTheme;
+    }
+
+    if (
+      activeThemeKind === vscode.ColorThemeKind.Light ||
+      activeThemeKind === vscode.ColorThemeKind.HighContrastLight
+    ) {
+      return 'light';
+    }
+
+    if (
+      activeThemeKind === vscode.ColorThemeKind.Dark ||
+      activeThemeKind === vscode.ColorThemeKind.HighContrast
+    ) {
+      return 'dark';
+    }
+
+    return normalizedTheme;
   }
 
   private _initializeMessageHandlers(): void {
@@ -799,7 +839,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
     // 🔤 FIX: Send init message and font settings BEFORE creating terminals
     // This ensures fonts are applied during terminal creation, not after
-    void this._initializeWithFontSettings();
+    // ⚠️ IMPORTANT: Must await to ensure settings are processed before terminal creation
+    await this._initializeWithFontSettings();
   }
 
   private async _reinitializeWebviewAfterPanelMove(): Promise<void> {

@@ -396,12 +396,12 @@ export class PanelLocationHandler implements IMessageHandler {
           if (
             hasProperty(
               configManager,
-              'loadSettings',
+              'getCurrentSettings',
               (value): value is () => { dynamicSplitDirection?: boolean; [key: string]: unknown } =>
                 typeof value === 'function'
             )
           ) {
-            const settings = configManager.loadSettings();
+            const settings = configManager.getCurrentSettings();
             isDynamicSplitEnabled = settings.dynamicSplitDirection !== false;
           }
         } catch {
