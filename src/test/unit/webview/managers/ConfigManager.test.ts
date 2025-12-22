@@ -130,7 +130,7 @@ describe('ConfigManager', () => {
 
   describe('Settings Validation', () => {
     it('should validate fontSize within range', () => {
-      const settings = configManager.loadSettings();
+      const _settings = configManager.loadSettings();
 
       // Too small
       configManager.saveSettings({ fontSize: 4 });

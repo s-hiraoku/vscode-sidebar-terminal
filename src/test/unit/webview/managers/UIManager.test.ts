@@ -58,7 +58,7 @@ describe('UIManager', () => {
 
     it('should dispose resources properly', () => {
       // Create some state
-      const header = uiManager.createTerminalHeader('test-1', 'Test Terminal');
+      const _header = uiManager.createTerminalHeader('test-1', 'Test Terminal');
       expect(uiManager.headerElementsCache.size).to.be.greaterThan(0);
 
       // Dispose
