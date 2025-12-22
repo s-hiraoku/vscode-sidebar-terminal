@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Split Layout Overlap**: Prevent stacked terminals from clipping by letting split wrappers flex naturally
+  and ensuring containers are tagged for wrapper relocation during layout rebuilds.
+
 ## [0.1.181] - 2025-12-22
 
 ### Fixed

@@ -16,6 +16,7 @@ export class TerminalBorderService {
   private activeBorderMode: ActiveBorderMode = 'multipleOnly';
   private currentTerminalCount = 1;
   private isFullscreen = false;
+  private isLightTheme = false;
 
   /**
    * Update borders for all terminals based on active state
@@ -88,6 +89,15 @@ export class TerminalBorderService {
   }
 
   /**
+   * Set light theme state (used for inactive border color)
+   * Light theme shows gray border, dark theme shows transparent
+   */
+  public setLightTheme(isLight: boolean): void {
+    this.isLightTheme = isLight;
+    this.refreshAllBorders();
+  }
+
+  /**
    * Refresh borders on all terminal containers based on current settings
    *
    * 🔧 FIX: Actually update border styles, not just CSS classes.
@@ -154,6 +164,9 @@ export class TerminalBorderService {
       container.classList.add('no-highlight-border');
     }
 
+    // Inactive border color: gray for light theme, transparent for dark theme
+    const inactiveBorderColor = this.isLightTheme ? '#999' : 'transparent';
+
     if (isActive) {
       container.classList.add('active');
       container.classList.remove('inactive');
@@ -165,8 +178,8 @@ export class TerminalBorderService {
         container.style.setProperty('box-shadow', 'none', 'important');
         container.style.setProperty('z-index', '2', 'important');
       } else {
-        // Active but highlight disabled
-        container.style.setProperty('border-color', 'transparent', 'important');
+        // Active but highlight disabled - use theme-aware border
+        container.style.setProperty('border-color', inactiveBorderColor, 'important');
         container.style.setProperty('border-radius', '4px', 'important');
         container.style.setProperty('box-shadow', 'none', 'important');
         container.style.setProperty('z-index', '1', 'important');
@@ -175,15 +188,15 @@ export class TerminalBorderService {
       container.classList.remove('active');
       container.classList.add('inactive');
 
-      // Inactive terminal - transparent border
-      container.style.setProperty('border-color', 'transparent', 'important');
+      // Inactive terminal - theme-aware border
+      container.style.setProperty('border-color', inactiveBorderColor, 'important');
       container.style.setProperty('border-radius', '4px', 'important');
       container.style.setProperty('box-shadow', 'none', 'important');
       container.style.setProperty('z-index', '1', 'important');
     }
 
     uiLogger.debug(
-      `Border updated: ${container.dataset.terminalId}, active: ${isActive}, visible: ${shouldShow}`
+      `Border updated: ${container.dataset.terminalId}, active: ${isActive}, visible: ${shouldShow}, lightTheme: ${this.isLightTheme}`
     );
   }
 }

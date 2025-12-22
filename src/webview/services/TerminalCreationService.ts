@@ -246,11 +246,31 @@ export class TerminalCreationService implements Disposable {
           }
         }
 
+        // Get current theme from settings to apply at creation time
+        // This prevents flash of dark theme when light theme is configured
+        // Try multiple sources: ConfigManager first, then coordinator's currentSettings
+        let currentSettings = configManager?.getCurrentSettings?.();
+
+        // If ConfigManager returns 'auto' theme, also check coordinator's currentSettings
+        // This handles the case where applySettings was called on coordinator but ConfigManager
+        // hasn't been updated yet (race condition)
+        if (!currentSettings?.theme || currentSettings.theme === 'auto') {
+          const coordinatorSettings = (this.coordinator as any)?.currentSettings;
+          if (coordinatorSettings?.theme && coordinatorSettings.theme !== 'auto') {
+            currentSettings = { ...currentSettings, ...coordinatorSettings };
+            terminalLogger.info(`🎨 [THEME] Using coordinator settings (theme: ${coordinatorSettings.theme})`);
+          }
+        }
+
+        const resolvedTheme = getWebviewTheme(currentSettings);
+        terminalLogger.info(`🎨 [THEME] Creating terminal with theme: ${currentSettings?.theme} -> bg=${resolvedTheme.background}`);
+
         // Merge config with defaults using TerminalConfigService
-        // Include font settings in the merge to ensure they're applied from the start
+        // Include font settings and theme in the merge to ensure they're applied from the start
         const configWithFonts = {
           ...(config as Parameters<typeof TerminalConfigService.mergeConfig>[0]),
           ...fontOverrides,
+          theme: resolvedTheme, // Apply theme at creation time
         };
         const terminalConfig = TerminalConfigService.mergeConfig(configWithFonts);
 
@@ -261,8 +281,7 @@ export class TerminalCreationService implements Disposable {
         // Get link modifier from settings (VS Code standard behavior)
         // When multiCursorModifier is 'alt', links open with Cmd/Ctrl+Click
         // When multiCursorModifier is 'ctrlCmd', links open with Alt+Click
-        // Note: configManager was already retrieved above for font settings
-        const currentSettings = configManager?.getCurrentSettings?.();
+        // Note: currentSettings already retrieved above for theme
         const multiCursorModifier = currentSettings?.multiCursorModifier ?? 'alt';
         const linkModifier = multiCursorModifier === 'alt' ? 'alt' : 'ctrlCmd';
 

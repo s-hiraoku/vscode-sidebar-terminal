@@ -386,6 +386,11 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     this.terminalTabManager = new TerminalTabManager();
     this.terminalTabManager.setCoordinator(this);
 
+    // Connect UIManager with TerminalTabManager for theme synchronization
+    this.uiManager.setTabThemeUpdater((theme) => {
+      this.terminalTabManager?.updateTheme(theme);
+    });
+
     // Input Manager - 重要：入力機能のために必須 (Issue #216: constructor injection)
     this.inputManager = new InputManager(this);
     this.inputManager.initialize(); // 🔧 Initialize InputManager to register keyboard listeners

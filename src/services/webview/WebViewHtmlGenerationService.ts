@@ -11,6 +11,8 @@ export interface HtmlGenerationOptions {
   includeSplitStyles?: boolean;
   includeCliAgentStyles?: boolean;
   customStyles?: string;
+  /** Initial theme to apply immediately (prevents flash of wrong theme) */
+  initialTheme?: 'light' | 'dark' | 'auto';
 }
 
 /**
@@ -224,14 +226,36 @@ export class WebViewHtmlGenerationService {
     const splitStyles = options.includeSplitStyles !== false ? this._getSplitStyles() : '';
     const cliAgentStyles = options.includeCliAgentStyles !== false ? this._getCliAgentStyles() : '';
     const customStyles = options.customStyles || '';
+    const initialThemeStyles = this._getInitialThemeStyles(options.initialTheme);
 
     return `
         ${baseStyles}
         ${terminalStyles}
         ${splitStyles}
         ${cliAgentStyles}
+        ${initialThemeStyles}
         ${customStyles}
     `;
+  }
+
+  /**
+   * Generate initial theme CSS to prevent flash of wrong theme
+   */
+  private _getInitialThemeStyles(theme?: 'light' | 'dark' | 'auto'): string {
+    if (theme === 'light') {
+      return `
+        /* Initial light theme - prevents flash of dark theme */
+        body, html {
+          background-color: #ffffff !important;
+          color: #333333 !important;
+        }
+        #terminal-body {
+          background: #ffffff !important;
+        }
+      `;
+    }
+    // For 'dark' or 'auto', use default (VS Code CSS variables handle this)
+    return '';
   }
 
   /**
@@ -356,7 +380,7 @@ export class WebViewHtmlGenerationService {
     return `
         /* CLI Agent status indicators */
         .terminal-name {
-            color: var(--vscode-foreground) !important;
+            /* Color is set by inline style from UIManager/HeaderFactory */
             font-weight: normal;
         }
 

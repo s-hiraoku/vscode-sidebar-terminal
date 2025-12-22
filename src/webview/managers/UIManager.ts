@@ -9,7 +9,7 @@
 
 import { Terminal } from '@xterm/xterm';
 import { PartialTerminalSettings, WebViewFontSettings, ActiveBorderMode } from '../../types/shared';
-import { getWebviewTheme, WEBVIEW_THEME_CONSTANTS } from '../utils/WebviewThemeUtils';
+import { getWebviewTheme, WEBVIEW_THEME_CONSTANTS, TerminalTheme } from '../utils/WebviewThemeUtils';
 import { IUIManager } from '../interfaces/ManagerInterfaces';
 import { HeaderFactory, TerminalHeaderElements } from '../factories/HeaderFactory';
 import { DOMUtils } from '../utils/DOMUtils';
@@ -53,6 +53,9 @@ export class UIManager extends BaseManager implements IUIManager {
   private readonly borderService: TerminalBorderService;
   private readonly cliAgentService: CliAgentStatusService;
 
+  // Callback for tab theme updates (set by coordinator)
+  private tabThemeUpdater: ((theme: TerminalTheme) => void) | null = null;
+
   constructor() {
     super('UIManager', {
       enableLogging: true,
@@ -86,11 +89,21 @@ export class UIManager extends BaseManager implements IUIManager {
     this.currentTheme = null;
     this.themeApplied = false;
     this.headerElementsCache.clear();
+    this.tabThemeUpdater = null;
 
     // 🔧 FIX: Clear resize observer keys tracking
     this.resizeObserverKeys.clear();
 
     this.logger('✅ UIManager resources disposed');
+  }
+
+  /**
+   * Set callback for tab theme updates
+   * Called by coordinator to connect UIManager with TerminalTabManager
+   */
+  public setTabThemeUpdater(updater: (theme: TerminalTheme) => void): void {
+    this.tabThemeUpdater = updater;
+    uiLogger.info('Tab theme updater registered');
   }
 
   /**
@@ -218,6 +231,107 @@ export class UIManager extends BaseManager implements IUIManager {
     // Only update this specific terminal's container backgrounds
     // Previously this updated ALL terminals, causing theme bleed when creating new terminals
     this.updateContainerBackgrounds(theme.background, terminal);
+
+    // Update headers to match terminal theme (PR #317 follow-up)
+    this.updateHeaderTheme(theme);
+  }
+
+  /**
+   * Update all terminal headers to match the terminal theme
+   * Ensures header colors are consistent with secondaryTerminal.theme setting
+   */
+  private updateHeaderTheme(theme: TerminalTheme): void {
+    // Adjust foreground color for better contrast on light theme
+    const isLightTheme = this.isLightBackground(theme.background);
+    const headerForeground = isLightTheme ? '#000000' : theme.foreground;
+
+    // Update border service with theme state for inactive border colors
+    this.borderService.setLightTheme(isLightTheme);
+
+    this.headerElementsCache.forEach((elements, terminalId) => {
+      const container = elements.container;
+
+      // Update header background and foreground
+      container.style.backgroundColor = theme.background;
+      container.style.color = headerForeground;
+      container.style.borderBottomColor = headerForeground + '33'; // Semi-transparent border
+
+      // Update terminal name text color explicitly
+      if (elements.nameSpan) {
+        elements.nameSpan.style.color = headerForeground;
+      }
+
+      // Update title section color
+      if (elements.titleSection) {
+        elements.titleSection.style.color = headerForeground;
+      }
+
+      // Update button colors
+      if (elements.closeButton) {
+        elements.closeButton.style.color = headerForeground;
+      }
+      if (elements.aiAgentToggleButton) {
+        elements.aiAgentToggleButton.style.color = headerForeground;
+      }
+      if (elements.splitButton) {
+        elements.splitButton.style.color = headerForeground;
+      }
+
+      uiLogger.debug(`🎨 [THEME] Updated header for terminal ${terminalId}`);
+    });
+
+    // Update terminal body/container background
+    this.updateTerminalBodyBackground(theme.background);
+
+    // Update tabs via callback
+    if (this.tabThemeUpdater) {
+      // Pass adjusted foreground for light theme
+      const adjustedTheme = isLightTheme
+        ? { ...theme, foreground: headerForeground }
+        : theme;
+      this.tabThemeUpdater(adjustedTheme);
+    }
+
+    uiLogger.info(`🎨 [THEME] Updated ${this.headerElementsCache.size} headers to match terminal theme`);
+  }
+
+  /**
+   * Check if a background color is light (for contrast adjustment)
+   */
+  private isLightBackground(hexColor: string): boolean {
+    const hex = hexColor.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    // Calculate relative luminance
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.5;
+  }
+
+  /**
+   * Update terminal body/container background to match theme
+   *
+   * Uses setProperty with 'important' priority to override initial theme CSS
+   * that was injected with !important to prevent flash of wrong theme.
+   */
+  private updateTerminalBodyBackground(backgroundColor: string): void {
+    // Update document.documentElement (html) and document.body
+    // Use 'important' priority to override initial theme CSS with !important
+    document.documentElement.style.setProperty('background-color', backgroundColor, 'important');
+    document.body.style.setProperty('background-color', backgroundColor, 'important');
+
+    const terminalBody = document.getElementById('terminal-body');
+    if (terminalBody) {
+      terminalBody.style.setProperty('background-color', backgroundColor, 'important');
+      terminalBody.style.setProperty('background', backgroundColor, 'important');
+    }
+
+    const terminalContainer = document.getElementById('terminal-container');
+    if (terminalContainer) {
+      terminalContainer.style.setProperty('background-color', backgroundColor, 'important');
+    }
+
+    uiLogger.debug(`🎨 [THEME] Updated all backgrounds to: ${backgroundColor}`);
   }
 
   /**
@@ -431,11 +545,18 @@ export class UIManager extends BaseManager implements IUIManager {
       timestamp: Date.now(),
     });
 
+    // Determine theme colors based on current theme
+    const isLight = this.currentTheme ? this.isLightBackground(this.currentTheme) : false;
+    const backgroundColor = this.currentTheme || undefined;
+    const foregroundColor = isLight ? '#000000' : undefined;
+
     // HeaderFactoryを使用してシンプルな構造を作成
     const headerElements = HeaderFactory.createTerminalHeader({
       terminalId,
       terminalName,
       onAiAgentToggleClick,
+      backgroundColor,
+      foregroundColor,
     });
 
     // 🔍 FIX: Ensure header visibility with explicit styling

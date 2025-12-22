@@ -5,6 +5,7 @@
 
 import { Terminal } from '@xterm/xterm';
 import { webview as log } from '../../utils/logger';
+import { TerminalTheme } from '../types/theme.types';
 
 export interface TerminalTab {
   id: string;
@@ -33,7 +34,6 @@ export interface TerminalTabEvents {
 export class TerminalTabList {
   private container: HTMLElement;
   private tabsContainer!: HTMLElement;
-  private addButton!: HTMLElement;
   private modeIndicatorContainer!: HTMLElement;
   private modeIndicatorSymbol!: HTMLElement;
   private tabs: Map<string, TerminalTab> = new Map();
@@ -64,21 +64,11 @@ export class TerminalTabList {
             <!-- Tabs will be inserted here -->
           </div>
         </div>
-        <div class="terminal-tab-actions">
-          <button class="terminal-tab-add" title="New Terminal" aria-label="Create new terminal" role="button" type="button">
-            <span class="codicon codicon-plus" aria-hidden="true"></span>
-          </button>
-        </div>
       </div>
     `;
     this.tabsContainer = this.container.querySelector('.terminal-tabs-wrapper')!;
     this.modeIndicatorContainer = this.container.querySelector('.terminal-mode-indicator')!;
     this.modeIndicatorSymbol = this.container.querySelector('.terminal-mode-indicator-symbol')!;
-    this.addButton = this.container.querySelector('.terminal-tab-add')!;
-
-    this.addButton.addEventListener('click', () => {
-      this.events.onNewTab();
-    });
 
     // 🆕 Mode indicator click -> toggle display mode
     this.modeIndicatorContainer.addEventListener('click', () => {
@@ -262,31 +252,6 @@ export class TerminalTabList {
 
       .terminal-tab:hover .terminal-tab-close {
         color: #ffffff !important;
-      }
-
-      .terminal-tab-actions {
-        display: flex;
-        align-items: center;
-        padding: 0 2px;
-        border-left: 1px solid var(--vscode-tab-border);
-      }
-
-      .terminal-tab-add {
-        width: 20px;
-        height: 20px;
-        border: none;
-        background: transparent;
-        color: var(--vscode-tab-inactiveForeground);
-        cursor: pointer;
-        border-radius: 2px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-
-      .terminal-tab-add:hover {
-        background: var(--vscode-toolbar-hoverBackground);
-        color: var(--vscode-tab-activeForeground);
       }
 
       .drop-indicator {
@@ -840,6 +805,63 @@ export class TerminalTabList {
     // Show/hide tabs based on count and configuration
     const tabCount = this.tabs.size;
     this.container.style.display = tabCount > 1 ? 'flex' : 'none';
+  }
+
+  /**
+   * Update tab list theme to match terminal theme
+   * Ensures tabs are consistent with secondaryTerminal.theme setting
+   */
+  public updateTheme(theme: TerminalTheme): void {
+    // Update container background
+    this.container.style.backgroundColor = theme.background;
+    this.container.style.borderBottomColor = theme.foreground + '33';
+
+    // Update tabs list background
+    const tabsList = this.container.querySelector('.terminal-tabs-list') as HTMLElement;
+    if (tabsList) {
+      tabsList.style.backgroundColor = theme.background;
+    }
+
+    // Update mode indicator
+    if (this.modeIndicatorContainer) {
+      this.modeIndicatorContainer.style.color = theme.foreground;
+      this.modeIndicatorContainer.style.borderRightColor = theme.foreground + '33';
+    }
+
+    // Update all tab elements
+    const tabElements = this.tabsContainer.querySelectorAll('.terminal-tab') as NodeListOf<HTMLElement>;
+    tabElements.forEach((tabElement) => {
+      const isActive = tabElement.classList.contains('active');
+      if (isActive) {
+        tabElement.style.backgroundColor = theme.background;
+        tabElement.style.color = theme.foreground;
+      } else {
+        // Slightly different background for inactive tabs
+        tabElement.style.backgroundColor = this.adjustBrightness(theme.background, -10);
+        tabElement.style.color = theme.foreground + 'cc'; // Slightly transparent
+      }
+      tabElement.style.borderRightColor = theme.foreground + '33';
+
+      // Update close button color
+      const closeButton = tabElement.querySelector('.terminal-tab-close') as HTMLElement;
+      if (closeButton) {
+        closeButton.style.color = theme.foreground;
+      }
+    });
+
+    log(`🎨 [TAB-LIST] Updated theme: bg=${theme.background}, fg=${theme.foreground}`);
+  }
+
+  /**
+   * Adjust brightness of a hex color
+   */
+  private adjustBrightness(hex: string, percent: number): string {
+    const num = parseInt(hex.replace('#', ''), 16);
+    const amt = Math.round(2.55 * percent);
+    const R = Math.max(0, Math.min(255, (num >> 16) + amt));
+    const G = Math.max(0, Math.min(255, ((num >> 8) & 0x00ff) + amt));
+    const B = Math.max(0, Math.min(255, (num & 0x0000ff) + amt));
+    return `#${((1 << 24) + (R << 16) + (G << 8) + B).toString(16).slice(1)}`;
   }
 
   public dispose(): void {

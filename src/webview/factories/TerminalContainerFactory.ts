@@ -56,8 +56,8 @@ export class TerminalContainerFactory {
       margin: '0',
       padding: '0',
       position: 'relative' as const,
-      // 🔧 FIX: Remove default border, let UIManager handle it
-      // border: '2px solid transparent',  // REMOVED - UIManager will handle borders
+      // Default transparent border - TerminalBorderService handles theme-aware styling
+      border: '2px solid transparent',
       borderRadius: '4px',
       boxSizing: 'border-box' as const,
       flex: '1 1 auto',
@@ -80,7 +80,7 @@ export class TerminalContainerFactory {
     split: {
       height: 'auto',
       minHeight: '150px',
-      border: '1px solid var(--vscode-widget-border, #ccc)',
+      border: '1px solid transparent',
     },
     active: {
       borderColor: 'var(--vscode-focusBorder, #007acc)',
@@ -238,6 +238,8 @@ export class TerminalContainerFactory {
       this.applyStyles(container, this.DEFAULT_STYLES.active);
       container.setAttribute('data-active', 'true');
     } else {
+      // Use theme-aware gray border for inactive terminals
+      // TerminalBorderService handles theme-aware border colors
       container.style.borderColor = 'transparent';
       container.style.boxShadow = 'none';
       container.removeAttribute('data-active');

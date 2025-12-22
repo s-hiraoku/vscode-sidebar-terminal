@@ -50,6 +50,8 @@ export interface ITerminalTabManager {
   hasPendingDeletion(terminalId: string): boolean;
   /** Get all terminal IDs currently pending deletion */
   getPendingDeletions(): Set<string>;
+  /** Update tab list theme to match terminal theme */
+  updateTheme?(theme: { background: string; foreground: string }): void;
   dispose(): void;
 }
 
