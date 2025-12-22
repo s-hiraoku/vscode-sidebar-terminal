@@ -185,6 +185,48 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     log('✅ [PROVIDER] SecondaryTerminalProvider constructed with all services');
 
     this._registerInitializationWatchdogs();
+
+    // 🎨 Auto theme synchronization: Listen for VS Code theme changes
+    this._registerThemeChangeListener();
+  }
+
+  /**
+   * Register listener for VS Code theme changes
+   * When theme setting is 'auto', automatically sync terminal theme with VS Code
+   */
+  private _registerThemeChangeListener(): void {
+    const disposable = vscode.window.onDidChangeActiveColorTheme((colorTheme) => {
+      const currentSettings = this._settingsService.getCurrentSettings();
+      const themeMode = currentSettings.theme as 'light' | 'dark' | 'auto' | undefined;
+
+      // Only react when theme is set to 'auto'
+      if (themeMode !== 'auto') {
+        log(`🎨 [THEME] Theme change detected but mode is '${themeMode}', ignoring`);
+        return;
+      }
+
+      const isDark =
+        colorTheme.kind === vscode.ColorThemeKind.Dark ||
+        colorTheme.kind === vscode.ColorThemeKind.HighContrast;
+
+      const newTheme = isDark ? 'dark' : 'light';
+      log(`🎨 [THEME] VS Code theme changed to ${newTheme}, syncing to WebView`);
+
+      // Send theme change message to WebView
+      const view = this._lifecycleManager.getView();
+      if (view) {
+        void view.webview.postMessage({
+          command: 'themeChanged',
+          theme: newTheme,
+        });
+        log(`🎨 [THEME] Sent themeChanged message to WebView: ${newTheme}`);
+      } else {
+        log('⚠️ [THEME] WebView not available, theme change will be applied on next initialization');
+      }
+    });
+
+    this._cleanupService.addDisposable(disposable);
+    log('🎨 [PROVIDER] Theme change listener registered');
   }
 
   public resolveWebviewView(

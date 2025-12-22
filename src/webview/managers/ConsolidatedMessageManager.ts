@@ -156,6 +156,7 @@ export class ConsolidatedMessageManager implements IMessageManager {
       'openSettings',
       'versionInfo',
       'stateUpdate',
+      'themeChanged',
     ];
     settingsCommands.forEach((cmd) =>
       registry.set(cmd, (msg, coord) => this.settingsHandler.handleMessage(msg, coord))

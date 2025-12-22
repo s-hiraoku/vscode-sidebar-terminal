@@ -98,6 +98,48 @@ export class TerminalBorderService {
   }
 
   /**
+   * Update theme colors based on TerminalTheme
+   * Detects light/dark theme from background color luminance
+   */
+  public updateThemeColors(theme: { background: string; foreground: string }): void {
+    // Determine if light theme by checking background luminance
+    const isLight = this.isLightBackground(theme.background);
+    this.setLightTheme(isLight);
+  }
+
+  /**
+   * Check if a color is a light background using luminance calculation
+   */
+  private isLightBackground(color: string): boolean {
+    // Parse hex color
+    let r = 0, g = 0, b = 0;
+
+    if (color.startsWith('#')) {
+      const hex = color.slice(1);
+      if (hex.length === 3) {
+        r = parseInt(hex[0] + hex[0], 16);
+        g = parseInt(hex[1] + hex[1], 16);
+        b = parseInt(hex[2] + hex[2], 16);
+      } else if (hex.length === 6) {
+        r = parseInt(hex.slice(0, 2), 16);
+        g = parseInt(hex.slice(2, 4), 16);
+        b = parseInt(hex.slice(4, 6), 16);
+      }
+    } else if (color.startsWith('rgb')) {
+      const match = color.match(/\d+/g);
+      if (match && match.length >= 3) {
+        r = parseInt(match[0], 10);
+        g = parseInt(match[1], 10);
+        b = parseInt(match[2], 10);
+      }
+    }
+
+    // Calculate relative luminance (WCAG formula)
+    const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+    return luminance > 0.5;
+  }
+
+  /**
    * Refresh borders on all terminal containers based on current settings
    *
    * 🔧 FIX: Actually update border styles, not just CSS classes.

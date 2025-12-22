@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.183] - 2025-12-23
+
+### Added
+
+- **Auto Theme Synchronization**: Terminal automatically syncs with VS Code theme changes
+  - When `secondaryTerminal.theme` is set to `auto` (default), theme changes are instantly applied
+  - Listens to `onDidChangeActiveColorTheme` for real-time VS Code theme detection
+  - Updates terminal background, foreground, and all 16 ANSI colors from VS Code CSS variables
+  - Headers, borders, and tab list also sync with VS Code theme colors
+  - Works with any VS Code color theme (not just built-in light/dark)
+
 ## [0.1.182] - 2025-12-22
 
 ### Fixed

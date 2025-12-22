@@ -159,6 +159,12 @@ export interface IManagerCoordinator {
   writeToTerminal?(data: string, terminalId?: string): boolean;
   switchToTerminal?(terminalId: string): Promise<boolean>;
   applySettings?(settings: unknown): void;
+  // テーマ一括更新（auto テーマ連動機能）
+  updateAllTerminalThemes?(theme: {
+    background: string;
+    foreground: string;
+    cursor: string;
+  }): void;
   // Claude状態管理（レガシー）
   updateClaudeStatus(
     activeTerminalName: string | null,

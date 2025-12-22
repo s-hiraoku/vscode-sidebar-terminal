@@ -107,6 +107,91 @@ export class UIManager extends BaseManager implements IUIManager {
   }
 
   /**
+   * Update theme for all UI components
+   * Called when VS Code theme changes and settings.theme is 'auto'
+   */
+  public updateTheme(theme: TerminalTheme): void {
+    log(`🎨 [UI] Updating UI theme`);
+
+    // Update cached theme
+    this.currentTheme = theme.background;
+    this.themeApplied = true;
+
+    // Update tab list theme
+    if (this.tabThemeUpdater) {
+      this.tabThemeUpdater(theme);
+      log(`🎨 [UI] Tab theme updated`);
+    }
+
+    // Update terminal borders with new theme colors
+    this.borderService.updateThemeColors(theme);
+    log(`🎨 [UI] Border colors updated`);
+
+    // Update header background colors using VS Code CSS variables
+    this.updateAllHeaderThemes();
+    log(`🎨 [UI] Header themes updated`);
+  }
+
+  /**
+   * Update all header elements with VS Code theme colors
+   */
+  private updateAllHeaderThemes(): void {
+    const style = getComputedStyle(document.documentElement);
+
+    // Get header colors from VS Code CSS variables
+    const headerBg = style.getPropertyValue('--vscode-sideBarSectionHeader-background').trim()
+      || style.getPropertyValue('--vscode-editor-background').trim()
+      || '';
+    const headerFg = style.getPropertyValue('--vscode-sideBarSectionHeader-foreground').trim()
+      || style.getPropertyValue('--vscode-editor-foreground').trim()
+      || '';
+
+    log(`🎨 [UI] Header theme colors: bg=${headerBg}, fg=${headerFg}`);
+
+    // Update all terminal headers from cache
+    for (const headerElements of this.headerElementsCache.values()) {
+      // Use 'container' - the actual header element (not 'header' which doesn't exist)
+      if (headerElements.container) {
+        if (headerBg) {
+          headerElements.container.style.backgroundColor = headerBg;
+        }
+        if (headerFg) {
+          headerElements.container.style.color = headerFg;
+        }
+        // Also update nameSpan color
+        if (headerElements.nameSpan && headerFg) {
+          headerElements.nameSpan.style.color = headerFg;
+        }
+      }
+    }
+
+    // Also update all terminal headers by CSS class (fallback for uncached elements)
+    const allTerminalHeaders = document.querySelectorAll('.terminal-header');
+    allTerminalHeaders.forEach((header) => {
+      const el = header as HTMLElement;
+      if (headerBg) {
+        el.style.backgroundColor = headerBg;
+      }
+      if (headerFg) {
+        el.style.color = headerFg;
+      }
+    });
+
+    // Also update the main webview header
+    const webviewHeader = document.getElementById('webview-header');
+    if (webviewHeader) {
+      if (headerBg) {
+        webviewHeader.style.backgroundColor = headerBg;
+      }
+      if (headerFg) {
+        webviewHeader.style.color = headerFg;
+      }
+    }
+
+    log(`🎨 [UI] Updated ${allTerminalHeaders.length} terminal headers`);
+  }
+
+  /**
    * Update borders for all terminals based on active state
    * Delegates to TerminalBorderService
    */
