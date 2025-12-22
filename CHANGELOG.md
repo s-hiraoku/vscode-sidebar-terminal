@@ -7,10 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.182] - 2025-12-22
+
 ### Fixed
+
+- **Theme Synchronization**: Sync theme across all UI components when terminal theme changes
+  - Headers, tabs, and terminal body now update together with terminal background
+  - Foreground color automatically adjusts for better contrast on light backgrounds
+  - Prevents visual inconsistency between terminal and surrounding UI elements
+
+- **Light Theme Border Visibility**: Fix inactive terminal borders not visible in light theme
+  - Inactive terminals now show gray (#999) borders in light theme
+  - Dark theme maintains transparent borders for inactive terminals
+  - Active terminal border (blue) remains unchanged
+
+- **Initial Theme Flash**: Prevent flash of wrong theme color on WebView load
+  - Light theme setting now injects initial CSS to show correct background immediately
+  - Eliminates brief dark flash when loading with light theme configured
 
 - **Split Layout Overlap**: Prevent stacked terminals from clipping by letting split wrappers flex naturally
   and ensuring containers are tagged for wrapper relocation during layout rebuilds.
+
+### Changed
+
+- **Tab List UI**: Remove duplicate add button from tab list (already available in header)
 
 ## [0.1.181] - 2025-12-22
 
