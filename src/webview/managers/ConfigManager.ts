@@ -28,7 +28,7 @@ export class ConfigManager implements IConfigManager {
     fontFamily: 'Consolas, "Courier New", monospace',
     theme: 'auto',
     cursorBlink: true,
-    scrollback: 1000,
+    scrollback: 2000, // Match package.json default
     bellSound: false,
     altClickMovesCursor: false,
     multiCursorModifier: 'alt',
@@ -72,7 +72,7 @@ export class ConfigManager implements IConfigManager {
     defaultProfileOsx: null,
     inheritVSCodeProfiles: true,
     enableProfileAutoDetection: true,
-    scrollback: 1000,
+    scrollback: 2000, // Match package.json default
     activeBorderMode: 'multipleOnly',
     bellSound: false,
     altClickMovesCursor: false,

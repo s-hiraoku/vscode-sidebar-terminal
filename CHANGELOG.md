@@ -7,6 +7,88 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.181] - 2025-12-22
+
+### Fixed
+
+- **File Reference Keyboard Shortcuts**: Fix `Cmd+Alt+L` not responding on first press
+  - **Root Cause**: Chord keybinding `Cmd+Alt+L Cmd+Alt+L` caused VS Code to wait for second keypress
+  - **Fix**: Changed "Insert All Open Files" shortcut from chord to single key `Cmd+Alt+A`
+  - **New Shortcuts**:
+    - `Cmd+Alt+L` (Mac) / `Ctrl+Alt+L` (Win/Linux) - Insert current file reference
+    - `Cmd+Alt+A` (Mac) / `Ctrl+Alt+A` (Win/Linux) - Insert all open files
+
+## [0.1.180] - 2025-12-22
+
+### Fixed
+
+- **DSR Response Handling for CLI Tools** (Issue #341): Fix cursor position queries failing in tools like Codex
+  - **Root Cause**: `PerformanceManager.coordinator` was never initialized, so DSR responses were silently dropped
+  - **Symptom**: CLI tools using `ESC[6n` (cursor position query) would timeout with "cursor position could not be read"
+  - **Fix**: Call `initializePerformance(this)` during manager initialization to enable DSR response routing
+  - **Affected Tools**: Codex CLI, and any tool that queries terminal cursor position
+
+## [0.1.179] - 2025-12-22
+
+### Improved
+
+- **Default Profile Setting Documentation** (Issue #329): Clarify that `defaultProfile` expects a profile name, not a path
+  - Updated setting descriptions with examples: `PowerShell 7`, `bash`, `zsh`
+  - Added validation to detect when users enter file paths instead of profile names
+  - Shows helpful warning message guiding users to correct usage
+  - Points to `Terminal: Select Default Profile` command to discover available profiles
+
+## [0.1.178] - 2025-12-21
+
+### Fixed
+
+- **Active Border Mode Setting**: Fix activeBorderMode setting changes not taking effect
+  - `refreshAllBorders()` now properly updates inline border styles, not just CSS classes
+  - Mode changes are immediately reflected without requiring terminal recreation
+
+- **Fullscreen Border Visibility**: Hide active border in fullscreen mode for `multipleOnly` setting
+  - When `activeBorderMode` is `multipleOnly`, border now hides in fullscreen (single terminal visible)
+  - Border reappears when switching to split view with multiple terminals
+
+## [0.1.177] - 2025-12-21
+
+### Added
+
+- **Active Border Mode Dropdown**: Replace checkbox with dropdown for terminal border display (PR #319 by @tonydehnke)
+  - New `activeBorderMode` setting with options: `always`, `multipleOnly`, `none`
+  - `always`: Show border on active terminal even with single terminal
+  - `multipleOnly`: Show border only when multiple terminals exist (default)
+  - `none`: Never show active border
+  - Migrates existing `highlightActiveBorder` setting automatically
+
+- **Cmd+V Image Paste for Claude Code**: Enable image paste on macOS (PR #320 by @tonydehnke)
+  - Paste images from clipboard using Cmd+V in Claude Code sessions
+  - Images are saved as temporary files and sent as file references
+  - Works alongside existing text paste functionality
+
+### Fixed
+
+- **Scrollback Persistence on Reload**: Fix scrollback not being restored after Reload Window (Issue #341)
+  - **Root Cause**: VS Code terminates process before `deactivate()` completes, so session save never finished
+  - **Fix**: Auto-save session immediately (2s debounce) after scrollback cache update
+  - **Result**: Scrollback is now reliably restored after Reload Window or restart
+
+- **Terminal Initialization**: Improve terminal initialization reliability
+  - Notify WebView after successful session restoration
+  - Add null check for terminalId after createTerminal()
+
+### Removed
+
+- **Simplified WebView Mode**: Remove experimental simplified WebView implementation
+  - Delete `src/webview/simple/` directory (4 files)
+  - Remove `useSimplifiedWebView` setting from package.json
+  - Consolidate to single, stable WebView implementation
+
+### Changed
+
+- **Default Scrollback**: Update default scrollback buffer from 1000 to 2000 lines
+- **Logger**: Improve development mode detection for better debugging
+
 ## [0.1.176] - 2025-12-21
 
 ### Fixed
@@ -32,7 +114,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Send All Open Files Shortcut**: New keyboard shortcut to insert references for all open files
-  - `Cmd+Alt+L Cmd+Alt+L` (Mac) / `Ctrl+Alt+L Ctrl+Alt+L` (Win/Linux) - Press the shortcut twice
+  - `Cmd+Alt+A` (Mac) / `Ctrl+Alt+A` (Win/Linux)
   - Sends all open files as `@path` references to connected CLI agents (Claude Code, etc.)
   - Each file is sent on a separate line for better readability
   - Complements the existing single-file shortcut (`Cmd+Alt+L`)

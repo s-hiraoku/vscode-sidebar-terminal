@@ -11,7 +11,6 @@ export interface HtmlGenerationOptions {
   includeSplitStyles?: boolean;
   includeCliAgentStyles?: boolean;
   customStyles?: string;
-  useSimplifiedWebView?: boolean;
 }
 
 /**
@@ -47,11 +46,6 @@ export class WebViewHtmlGenerationService {
    * Generate the main WebView HTML content
    */
   generateMainHtml(options: HtmlGenerationOptions): string {
-    // Check if simplified WebView should be used
-    if (options.useSimplifiedWebView) {
-      return this.generateSimplifiedHtml(options);
-    }
-
     try {
       log('🎨 [HtmlGeneration] Generating main WebView HTML');
 
@@ -101,57 +95,6 @@ export class WebViewHtmlGenerationService {
     } catch (error) {
       log('❌ [HtmlGeneration] Failed to generate main HTML:', error);
       throw new Error(`HTML generation failed: ${String(error)}`);
-    }
-  }
-
-  /**
-   * Generate simplified WebView HTML content
-   *
-   * VS Code Standard Pattern Implementation:
-   * - Minimal HTML structure
-   * - Single script bundle (webview-simple.js)
-   * - No complex inline scripts
-   * - Simplified styles
-   */
-  generateSimplifiedHtml(options: HtmlGenerationOptions): string {
-    try {
-      log('🎨 [HtmlGeneration] Generating simplified WebView HTML');
-
-      const { webview, extensionUri } = options;
-
-      // Generate script URI for simplified bundle
-      const scriptUri = this._generateSimplifiedScriptUri(webview, extensionUri);
-
-      // Generate nonce for CSP
-      const nonce = generateNonce();
-
-      // Generate CSP header
-      const csp = this._generateCSPHeader(webview, nonce);
-
-      // Generate simplified styles
-      const styles = this._generateSimplifiedStyles();
-
-      const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    ${csp}
-    <style>
-        ${styles}
-    </style>
-</head>
-<body>
-    <div id="terminal-body" role="main" aria-label="Terminal workspace"></div>
-    <script nonce="${nonce}" src="${scriptUri.toString()}" id="webview-main-script"></script>
-</body>
-</html>`;
-
-      log(`✅ [HtmlGeneration] Simplified HTML generated successfully (${html.length} chars)`);
-      return html;
-    } catch (error) {
-      log('❌ [HtmlGeneration] Failed to generate simplified HTML:', error);
-      throw new Error(`Simplified HTML generation failed: ${String(error)}`);
     }
   }
 
@@ -263,158 +206,6 @@ export class WebViewHtmlGenerationService {
       log('❌ [HtmlGeneration] Failed to generate script URI:', error);
       throw new Error(`Script URI generation failed: ${String(error)}`);
     }
-  }
-
-  /**
-   * Generate script URI for simplified WebView bundle
-   */
-  private _generateSimplifiedScriptUri(
-    webview: vscode.Webview,
-    extensionUri: vscode.Uri
-  ): vscode.Uri {
-    try {
-      const webviewJsPath = vscode.Uri.joinPath(extensionUri, 'dist', 'webview-simple.js');
-      return webview.asWebviewUri(webviewJsPath);
-    } catch (error) {
-      log('❌ [HtmlGeneration] Failed to generate simplified script URI:', error);
-      throw new Error(`Simplified script URI generation failed: ${String(error)}`);
-    }
-  }
-
-  /**
-   * Generate simplified CSS styles
-   *
-   * Minimal styles for the simplified WebView:
-   * - Full viewport utilization
-   * - VS Code theme variables
-   * - Terminal-optimized layout
-   */
-  private _generateSimplifiedStyles(): string {
-    return `
-        *, *::before, *::after {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        html, body {
-            width: 100%;
-            height: 100%;
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-        }
-
-        body {
-            background-color: var(--vscode-terminal-background, var(--vscode-editor-background, #1e1e1e));
-            color: var(--vscode-terminal-foreground, var(--vscode-foreground, #cccccc));
-            font-family: var(--vscode-editor-font-family, 'Consolas', 'Courier New', monospace);
-        }
-
-        #terminal-body {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            background: var(--vscode-terminal-background, #1e1e1e);
-        }
-
-        /* Terminal container styles */
-        .terminal-container {
-            flex: 1 1 auto;
-            min-height: 0;
-            min-width: 0;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .terminal-container.active {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .terminal-container:not(.active) {
-            display: none;
-        }
-
-        /* Terminal header styles */
-        .terminal-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 4px 8px;
-            background: var(--vscode-terminal-tab-activeBackground, var(--vscode-editor-background, #1e1e1e));
-            border-bottom: 1px solid var(--vscode-panel-border, #454545);
-            flex-shrink: 0;
-        }
-
-        .terminal-name {
-            color: var(--vscode-terminal-foreground, var(--vscode-foreground, #cccccc));
-            font-size: 12px;
-            font-weight: 500;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .terminal-close-btn {
-            background: transparent;
-            border: none;
-            color: var(--vscode-foreground, #cccccc);
-            cursor: pointer;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 14px;
-            line-height: 1;
-            opacity: 0.7;
-        }
-
-        .terminal-close-btn:hover {
-            opacity: 1;
-            background: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, 0.31));
-        }
-
-        /* Terminal wrapper (xterm container) */
-        .terminal-wrapper {
-            flex: 1 1 auto;
-            min-height: 0;
-            overflow: hidden;
-        }
-
-        /* XTerm scrollbar styling */
-        .xterm-viewport::-webkit-scrollbar {
-            width: 10px;
-        }
-
-        .xterm-viewport::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        .xterm-viewport::-webkit-scrollbar-thumb {
-            background: var(--vscode-scrollbarSlider-background, rgba(121, 121, 121, 0.4));
-            border-radius: 5px;
-        }
-
-        .xterm-viewport::-webkit-scrollbar-thumb:hover {
-            background: var(--vscode-scrollbarSlider-hoverBackground, rgba(100, 100, 100, 0.7));
-        }
-
-        /* Terminals wrapper for multiple terminals */
-        #terminals-wrapper {
-            display: flex;
-            flex-direction: column;
-            flex: 1 1 auto;
-            width: 100%;
-            height: 100%;
-            min-width: 0;
-            min-height: 0;
-            overflow: hidden;
-            padding: 4px;
-            gap: 4px;
-            box-sizing: border-box;
-        }
-    `;
   }
 
   /**

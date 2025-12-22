@@ -378,22 +378,12 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private _initializeWebviewContent(webviewView: vscode.WebviewView): void {
     log('🔧 [PROVIDER] Step 4: Setting webview HTML...');
 
-    // Check if simplified WebView is enabled
-    const useSimplifiedWebView = vscode.workspace
-      .getConfiguration('secondaryTerminal')
-      .get<boolean>('useSimplifiedWebView', false);
-
-    if (useSimplifiedWebView) {
-      log('🔄 [PROVIDER] Using simplified WebView implementation');
-    }
-
     // Generate HTML content
     const htmlContent = this._htmlGenerationService.generateMainHtml({
       webview: webviewView.webview,
       extensionUri: this._extensionContext.extensionUri,
-      includeSplitStyles: !useSimplifiedWebView,
-      includeCliAgentStyles: !useSimplifiedWebView,
-      useSimplifiedWebView,
+      includeSplitStyles: true,
+      includeCliAgentStyles: true,
     });
 
     // Set HTML using lifecycle manager
@@ -787,8 +777,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    * This is sent AFTER WebView's message handlers are fully set up
    */
   private async _handleWebviewInitialized(_message: WebviewMessage): Promise<void> {
-    log('🔥 [TERMINAL-INIT] === _handleWebviewInitialized CALLED ===');
+    log('🎯 [TERMINAL-INIT] === _handleWebviewInitialized CALLED ===');
     log('🎯 [TERMINAL-INIT] WebView fully initialized - starting terminal initialization');
+    log(`🔍 [TERMINAL-INIT] _pendingPanelMoveReinit: ${this._pendingPanelMoveReinit}`);
 
     // Handle panel move reinit first
     if (this._pendingPanelMoveReinit) {
@@ -1460,6 +1451,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   private _ensureMultipleTerminals(): void {
+    log('🔥 [ENSURE] _ensureMultipleTerminals called');
     try {
       const currentTerminals = this._terminalManager.getTerminals().length;
       log(`🔍 [ENSURE] Current terminal count: ${currentTerminals}`);
@@ -1468,8 +1460,23 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         log('🎯 [ENSURE] Creating minimum terminal (1)');
         const terminalId = this._terminalManager.createTerminal();
         log(`✅ [ENSURE] Created terminal: ${terminalId}`);
+
+        if (!terminalId) {
+          log('❌ [ENSURE] createTerminal() returned null/undefined!');
+          return;
+        }
+
         this._terminalManager.setActiveTerminal(terminalId);
         log(`🎯 [ENSURE] Set terminal as active: ${terminalId}`);
+
+        // 🎯 FIX: Notify WebView about the newly created terminal
+        log('🎯 [ENSURE] About to call _initializeTerminal...');
+        void this._initializeTerminal().then(() => {
+          log('🎯 [ENSURE] _initializeTerminal completed');
+        }).catch((err) => {
+          log(`❌ [ENSURE] _initializeTerminal failed: ${err}`);
+        });
+        log('🎯 [ENSURE] Called _initializeTerminal (async)');
       } else {
         log(`✅ [ENSURE] Sufficient terminals already exist: ${currentTerminals}`);
       }

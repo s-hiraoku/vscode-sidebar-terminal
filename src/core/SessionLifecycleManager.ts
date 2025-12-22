@@ -96,6 +96,12 @@ export class SessionLifecycleManager {
 
   /**
    * Save session for simple session management on exit
+   *
+   * 🔧 FIX: Do NOT call prefetchScrollbackForSave() here.
+   * WebView may already be closed during deactivate(), and waiting for
+   * the 2-second timeout would cause the process to exit before saving.
+   * The pushedScrollbackCache is already updated every 30 seconds by
+   * TerminalAutoSaveService, so we can save immediately from cache.
    */
   public async saveSimpleSessionOnExit(): Promise<void> {
     const extensionPersistenceService = this.deps.getExtensionPersistenceService();
@@ -104,9 +110,10 @@ export class SessionLifecycleManager {
       return;
     }
 
-    log('💾 [STANDARD_SESSION] Saving session on exit...');
+    log('💾 [STANDARD_SESSION] Saving session on exit (using cached scrollback)...');
     try {
-      await extensionPersistenceService.prefetchScrollbackForSave();
+      // Use preferCache: true to skip WebView communication and save immediately
+      // The cache is updated every 30 seconds by TerminalAutoSaveService
       const result = await extensionPersistenceService.saveCurrentSession({ preferCache: true });
       if (result.success) {
         log(`✅ [STANDARD_SESSION] Session saved on exit: ${result.terminalCount} terminals`);

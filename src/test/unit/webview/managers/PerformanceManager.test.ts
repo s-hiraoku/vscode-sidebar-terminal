@@ -8,15 +8,29 @@ import sinon from 'sinon';
 import { PerformanceManager } from '../../../../webview/managers/PerformanceManager';
 import { IManagerCoordinator } from '../../../../webview/interfaces/ManagerInterfaces';
 
-// Mock Terminal interface
+// Mock Terminal interface with buffer for DSR testing
 interface MockTerminal {
   write: sinon.SinonStub;
   resize: sinon.SinonStub;
+  buffer: {
+    active: {
+      cursorX: number;
+      cursorY: number;
+    };
+  };
 }
 
 // Mock FitAddon interface
 interface MockFitAddon {
   fit: sinon.SinonStub;
+}
+
+// DSR response message type for test assertions
+interface DSRResponseMessage {
+  command: string;
+  data: string;
+  timestamp: number;
+  terminalId?: string;
 }
 
 describe('PerformanceManager', () => {
@@ -29,10 +43,16 @@ describe('PerformanceManager', () => {
   beforeEach(() => {
     clock = sinon.useFakeTimers();
 
-    // Create mock terminal
+    // Create mock terminal with buffer for DSR testing
     mockTerminal = {
       write: sinon.stub(),
       resize: sinon.stub(),
+      buffer: {
+        active: {
+          cursorX: 0, // 0-based column
+          cursorY: 0, // 0-based row
+        },
+      },
     };
 
     // Create mock FitAddon
@@ -424,6 +444,143 @@ describe('PerformanceManager', () => {
       // CLI Agent moderate output should be immediate
       expect(responseTime).to.be.lessThan(1);
       expect(mockTerminal.write.calledOnce).to.be.true;
+    });
+  });
+
+  /**
+   * DSR (Device Status Report) Handling Tests
+   * @see https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/341
+   *
+   * CLI tools like codex send \x1b[6n to query cursor position.
+   * Terminal should respond with \x1b[row;colR format.
+   */
+  describe('DSR (Device Status Report) Handling', () => {
+    it('should detect DSR query sequence \\x1b[6n and send cursor position response', () => {
+      const terminalId = 'terminal-1';
+
+      // Set cursor position (0-based in xterm.js)
+      mockTerminal.buffer.active.cursorX = 4; // column 5 (1-based)
+      mockTerminal.buffer.active.cursorY = 9; // row 10 (1-based)
+
+      // Send output containing DSR query
+      performanceManager.bufferedWrite('\x1b[6n', mockTerminal as any, terminalId);
+
+      // Should send DSR response back to extension
+      expect(mockCoordinator.postMessageToExtension.calledOnce).to.be.true;
+
+      const call = mockCoordinator.postMessageToExtension.getCall(0);
+      const message = call.args[0] as DSRResponseMessage;
+      expect(message.command).to.equal('input');
+      expect(message.terminalId).to.equal(terminalId);
+      // Response should be \x1b[10;5R (row 10, column 5 in 1-based format)
+      expect(message.data).to.equal('\x1b[10;5R');
+    });
+
+    it('should handle DSR at cursor position (1,1) correctly', () => {
+      const terminalId = 'terminal-1';
+
+      // Set cursor at origin (0,0 in 0-based)
+      mockTerminal.buffer.active.cursorX = 0;
+      mockTerminal.buffer.active.cursorY = 0;
+
+      performanceManager.bufferedWrite('\x1b[6n', mockTerminal as any, terminalId);
+
+      expect(mockCoordinator.postMessageToExtension.calledOnce).to.be.true;
+
+      const call = mockCoordinator.postMessageToExtension.getCall(0);
+      // Response should be \x1b[1;1R (row 1, column 1 in 1-based format)
+      expect((call.args[0] as DSRResponseMessage).data).to.equal('\x1b[1;1R');
+    });
+
+    it('should handle DSR embedded in larger output', () => {
+      const terminalId = 'terminal-1';
+
+      mockTerminal.buffer.active.cursorX = 9; // column 10
+      mockTerminal.buffer.active.cursorY = 4; // row 5
+
+      // DSR query embedded in other output
+      const mixedOutput = 'Hello\x1b[6nWorld';
+      performanceManager.bufferedWrite(mixedOutput, mockTerminal as any, terminalId);
+
+      // Should still detect and respond to DSR
+      expect(mockCoordinator.postMessageToExtension.calledOnce).to.be.true;
+
+      const call = mockCoordinator.postMessageToExtension.getCall(0);
+      expect((call.args[0] as DSRResponseMessage).data).to.equal('\x1b[5;10R');
+    });
+
+    it('should not send DSR response for non-DSR sequences', () => {
+      const terminalId = 'terminal-1';
+
+      // Various escape sequences that are NOT DSR
+      const nonDsrSequences = [
+        '\x1b[H', // Cursor home
+        '\x1b[2J', // Clear screen
+        '\x1b[m', // Reset attributes
+        '\x1b[1;31m', // Set color
+        'Hello World', // Plain text
+      ];
+
+      nonDsrSequences.forEach((seq) => {
+        mockCoordinator.postMessageToExtension.resetHistory();
+        performanceManager.bufferedWrite(seq, mockTerminal as any, terminalId);
+
+        // Should NOT send any DSR response
+        expect(
+          mockCoordinator.postMessageToExtension.called,
+          `Unexpected DSR response for: ${seq.replace(/\x1b/g, '\\x1b')}`
+        ).to.be.false;
+      });
+    });
+
+    it('should handle DSR when coordinator is not initialized', () => {
+      // Create a new manager without coordinator
+      const uninitializedManager = new PerformanceManager();
+      // Don't call initializePerformance
+
+      // Should not throw when DSR is detected without coordinator
+      expect(() => {
+        uninitializedManager.bufferedWrite('\x1b[6n', mockTerminal as any, 'terminal-1');
+      }).to.not.throw();
+
+      uninitializedManager.dispose();
+    });
+
+    it('should respond to multiple DSR queries in sequence', () => {
+      const terminalId = 'terminal-1';
+
+      // First query at position (0,0)
+      mockTerminal.buffer.active.cursorX = 0;
+      mockTerminal.buffer.active.cursorY = 0;
+      performanceManager.bufferedWrite('\x1b[6n', mockTerminal as any, terminalId);
+
+      // Second query at different position
+      mockTerminal.buffer.active.cursorX = 19; // column 20
+      mockTerminal.buffer.active.cursorY = 14; // row 15
+      performanceManager.bufferedWrite('\x1b[6n', mockTerminal as any, terminalId);
+
+      expect(mockCoordinator.postMessageToExtension.callCount).to.equal(2);
+
+      // First response: row 1, col 1
+      expect(
+        (mockCoordinator.postMessageToExtension.getCall(0).args[0] as DSRResponseMessage).data
+      ).to.equal('\x1b[1;1R');
+
+      // Second response: row 15, col 20
+      expect(
+        (mockCoordinator.postMessageToExtension.getCall(1).args[0] as DSRResponseMessage).data
+      ).to.equal('\x1b[15;20R');
+    });
+
+    it('should include timestamp in DSR response message', () => {
+      const terminalId = 'terminal-1';
+
+      performanceManager.bufferedWrite('\x1b[6n', mockTerminal as any, terminalId);
+
+      const call = mockCoordinator.postMessageToExtension.getCall(0);
+      const message = call.args[0] as DSRResponseMessage;
+      expect(message.timestamp).to.be.a('number');
+      expect(message.timestamp).to.be.greaterThan(0);
     });
   });
 });

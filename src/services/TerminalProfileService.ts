@@ -14,6 +14,7 @@ import {
   CONFIG_SECTIONS,
   CONFIG_KEYS,
 } from '../types/shared';
+import { terminal as log } from '../utils/logger';
 
 export class TerminalProfileService {
   private readonly platform: TerminalPlatform;
@@ -149,7 +150,43 @@ export class TerminalProfileService {
         break;
     }
 
-    return config.get<string | null>(defaultKey, null);
+    const profileName = config.get<string | null>(defaultKey, null);
+
+    // Validate: warn if user entered a path instead of a profile name
+    if (profileName && this.looksLikePath(profileName)) {
+      log(
+        `⚠️ [PROFILE] Warning: "${profileName}" looks like a file path. ` +
+          `The defaultProfile setting expects a profile NAME (e.g., "PowerShell 7", "bash"), not a path. ` +
+          `Run "Terminal: Select Default Profile" from Command Palette to see available profile names.`
+      );
+      vscode.window.showWarningMessage(
+        `Secondary Terminal: "${profileName}" looks like a file path. ` +
+          `Please enter a profile name (e.g., "PowerShell 7") instead. ` +
+          `Run "Terminal: Select Default Profile" to see available profiles.`
+      );
+      return null; // Ignore invalid path input
+    }
+
+    return profileName;
+  }
+
+  /**
+   * Check if value looks like a file path rather than a profile name
+   */
+  private looksLikePath(value: string): boolean {
+    // Windows paths: C:\, D:\, \\, etc.
+    if (/^[A-Za-z]:[\\\/]/.test(value) || value.startsWith('\\\\')) {
+      return true;
+    }
+    // Unix paths: /usr/bin, ./script, ~/bin, etc.
+    if (/^[\/~.]/.test(value)) {
+      return true;
+    }
+    // Contains file extensions commonly used for shells
+    if (/\.(exe|sh|bash|zsh|fish|cmd|bat)$/i.test(value)) {
+      return true;
+    }
+    return false;
   }
 
   /**

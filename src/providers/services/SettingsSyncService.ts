@@ -76,6 +76,8 @@ export class SettingsSyncService {
     return {
       cursorBlink: settings.cursorBlink,
       theme: settings.theme || 'auto',
+      // Scrollback buffer size (secondaryTerminal.scrollback setting)
+      scrollback: configService.get('secondaryTerminal', 'scrollback', 2000),
       // VS Code standard settings for Alt+Click functionality
       altClickMovesCursor: altClickSettings.altClickMovesCursor,
       multiCursorModifier: altClickSettings.multiCursorModifier,

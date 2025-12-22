@@ -50,10 +50,11 @@ export class TerminalInitializationCoordinator {
     if (!restorationSucceeded) {
       log('🆕 [TERMINAL-INIT] No sessions found - creating default terminals');
       this.actions.ensureMinimumTerminals();
+    } else {
+      // 🎯 FIX: After restoration, notify WebView about the restored terminals
+      log('🎯 [TERMINAL-INIT] Restoration succeeded - notifying WebView about restored terminals');
+      await this.actions.initializeTerminal();
     }
-
-    // 🎯 VS Code Pattern: No additional delays
-    // scheduleUnifiedInitializationComplete() handles all timing
   }
 
   private async attemptSessionRestoration(): Promise<boolean> {
