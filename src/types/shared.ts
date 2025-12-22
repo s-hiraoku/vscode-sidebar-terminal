@@ -602,7 +602,6 @@ export interface WebviewMessage {
     | 'relayoutTerminals' // Terminal relayout command
     | 'deleteTerminalResponse' // 🎯 FIX: 削除処理統一化で追加
     | 'copyToClipboard' // 📋 Clipboard: Copy text to system clipboard
-    | 'pasteText' // 📋 Clipboard: Paste text from WebView's clipboardData
     | 'requestClipboardContent' // 📋 Clipboard: Request clipboard content for paste
     | 'pasteText' // 📋 Clipboard: Paste text from WebView clipboard read
     | 'pasteImage' // 📋 Clipboard: Paste image for Claude Code
