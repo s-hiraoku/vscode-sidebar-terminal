@@ -198,6 +198,12 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
     // 分割方向を決定（パネル位置に応じて）
     const direction = splitManager.getOptimalSplitDirection(currentLocation);
 
+    // 🔧 FIX: Ensure terminals-wrapper class matches the chosen split direction
+    const terminalsWrapper = document.getElementById('terminals-wrapper');
+    if (terminalsWrapper) {
+      terminalsWrapper.classList.toggle('terminal-split-horizontal', direction === 'horizontal');
+    }
+
     // 分割モードを準備
     splitManager.prepareSplitMode(direction);
     const containerManager = this.coordinator?.getTerminalContainerManager?.();
@@ -215,6 +221,27 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
 
     containerManager.applyDisplayState(displayState);
 
+    // 🔧 FIX: Ensure container heights are aligned with the split direction
+    const allContainers = containerManager.getAllContainers();
+    if (direction === 'horizontal') {
+      // Clear any fixed heights from prior vertical splits/fullscreen
+      allContainers.forEach((container) => {
+        container.style.removeProperty('height');
+        container.style.removeProperty('maxHeight');
+      });
+    } else {
+      // Vertical split: explicitly divide height after layout settles
+      const redistribute = () => {
+        const availableHeight = terminalsWrapper?.clientHeight ?? 0;
+        if (availableHeight > 0) {
+          splitManager.redistributeSplitTerminals(availableHeight);
+        }
+      };
+      redistribute();
+      requestAnimationFrame(redistribute);
+      setTimeout(redistribute, 100);
+    }
+
     this.currentMode = 'split';
     this.previousMode = 'split';
     this.fullscreenTerminalId = null;
@@ -222,10 +249,10 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
     this.syncVisibilityFromSnapshot();
     this.refreshSplitToggleState();
 
-    // 🔧 FIX: Resize all terminals immediately after applying split layout
-    // This ensures each terminal has the correct size in the split view
-    // Note: Terminal resize is handled by the terminal container manager
-    this.log('🔄 [SPLIT] Split layout applied, terminals will auto-resize');
+    // 🔧 FIX: Explicitly refit terminals after fullscreen -> split transition.
+    // Relying on ResizeObserver alone can miss layout changes when the wrapper is created later.
+    this.coordinator.refitAllTerminals?.();
+    this.log('🔄 [SPLIT] Split layout applied, terminals refit scheduled');
 
     this.log('All terminals are now in split view');
     this.notifyModeChanged('split');

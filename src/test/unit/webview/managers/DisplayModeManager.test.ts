@@ -78,6 +78,7 @@ describe('DisplayModeManager - Fullscreen Display (Issue #198)', function () {
       prepareSplitMode: sinon.stub().callsFake(() => {
         isSplitMode = true;
       }),
+      redistributeSplitTerminals: sinon.stub(),
     } as any;
 
     // Create mock coordinator

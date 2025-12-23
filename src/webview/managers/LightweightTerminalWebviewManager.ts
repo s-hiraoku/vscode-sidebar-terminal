@@ -521,7 +521,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
    * Refit all terminals to their container dimensions
    * 委譲: ResizeCoordinator
    */
-  private refitAllTerminals(): void {
+  public refitAllTerminals(): void {
     this.resizeCoordinator.refitAllTerminals();
   }
 
