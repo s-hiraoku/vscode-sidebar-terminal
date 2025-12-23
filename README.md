@@ -3,6 +3,7 @@
 [![Version](https://img.shields.io/visual-studio-marketplace/v/s-hiraoku.vscode-sidebar-terminal)](https://marketplace.visualstudio.com/items?itemName=s-hiraoku.vscode-sidebar-terminal)
 [![Installs](https://img.shields.io/visual-studio-marketplace/i/s-hiraoku.vscode-sidebar-terminal)](https://marketplace.visualstudio.com/items?itemName=s-hiraoku.vscode-sidebar-terminal)
 [![Rating](https://img.shields.io/visual-studio-marketplace/r/s-hiraoku.vscode-sidebar-terminal)](https://marketplace.visualstudio.com/items?itemName=s-hiraoku.vscode-sidebar-terminal)
+[![Open VSX](https://img.shields.io/open-vsx/v/s-hiraoku/vscode-sidebar-terminal)](https://open-vsx.org/extension/s-hiraoku/vscode-sidebar-terminal)
 [![License](https://img.shields.io/github/license/s-hiraoku/vscode-sidebar-terminal)](https://github.com/s-hiraoku/vscode-sidebar-terminal/blob/main/LICENSE)
 [![Ask DeepWiki](https://img.shields.io/badge/Ask-DeepWiki-blue)](https://deepwiki.com/s-hiraoku/vscode-sidebar-terminal)
 
@@ -19,8 +20,9 @@
 ### Installation
 
 1. **VS Code Marketplace**: Search "Secondary Terminal" in Extensions
-2. **Command Line**: `code --install-extension s-hiraoku.vscode-sidebar-terminal`
-3. **Manual**: Download VSIX from [releases](https://github.com/s-hiraoku/vscode-sidebar-terminal/releases)
+2. **Open VSX** (VS Codium, Gitpod, etc.): Search "Secondary Terminal" or visit [Open VSX](https://open-vsx.org/extension/s-hiraoku/vscode-sidebar-terminal)
+3. **Command Line**: `code --install-extension s-hiraoku.vscode-sidebar-terminal`
+4. **Manual**: Download VSIX from [releases](https://github.com/s-hiraoku/vscode-sidebar-terminal/releases)
 
 ### First Use
 
