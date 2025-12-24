@@ -81,13 +81,45 @@ const xtermMock = {
       writeln: () => {},
       clear: () => {},
       resize: () => {},
+      refresh: () => {}, // For triggering re-renders
+      reset: () => {},
+      scrollToBottom: () => {},
+      scrollToTop: () => {},
+      scrollLines: () => {},
+      scrollPages: () => {},
+      scrollToLine: () => {},
+      select: () => {},
+      selectAll: () => {},
+      selectLines: () => {},
+      clearSelection: () => {},
+      hasSelection: () => false,
+      getSelection: () => '',
+      getSelectionPosition: () => undefined,
+      paste: () => {},
       focus: () => {},
       blur: () => {},
       dispose: () => {},
       open: () => {},
+      attachCustomKeyEventHandler: () => {},
+      registerLinkMatcher: () => 0,
+      deregisterLinkMatcher: () => {},
+      registerLinkProvider: () => ({ dispose: () => {} }),
+      registerCharacterJoiner: () => 0,
+      deregisterCharacterJoiner: () => {},
+      registerMarker: () => ({ dispose: () => {}, line: 0, isDisposed: false }),
+      registerDecoration: () => ({ dispose: () => {}, marker: { line: 0, isDisposed: false }, element: null, isDisposed: false }),
       onData: () => ({ dispose: () => {} }),
+      onBinary: () => ({ dispose: () => {} }),
       onResize: () => ({ dispose: () => {} }),
       onKey: () => ({ dispose: () => {} }),
+      onTitleChange: () => ({ dispose: () => {} }),
+      onSelectionChange: () => ({ dispose: () => {} }),
+      onScroll: () => ({ dispose: () => {} }),
+      onRender: () => ({ dispose: () => {} }),
+      onLineFeed: () => ({ dispose: () => {} }),
+      onBell: () => ({ dispose: () => {} }),
+      onCursorMove: () => ({ dispose: () => {} }),
+      onWriteParsed: () => ({ dispose: () => {} }),
       loadAddon: () => {},
       options: {},
       rows: 24,
@@ -151,35 +183,49 @@ const xtermMock = {
   },
 };
 
-// Module.prototype.requireをハイジャックしてxterm.jsをモック
+// xterm.jsモジュールをモックするためにrequire.cacheを直接設定
+// (Module.prototype.requireをハイジャックするとnyc coverage instrumentationが壊れるため)
 const Module = require('module');
-const originalRequire = Module.prototype.require;
+const path = require('path');
 
-Module.prototype.require = function (id) {
-  // xterm関連のすべてのrequireをインターセプト
-  if (
-    id === '@xterm/xterm' ||
-    id === 'xterm' ||
-    id === '@xterm/addon-fit' ||
-    id === 'xterm-addon-fit' ||
-    id === '@xterm/addon-web-links' ||
-    id === '@xterm/addon-search' ||
-    id === '@xterm/addon-webgl' ||
-    id === '@xterm/addon-unicode11' ||
-    id === '@xterm/addon-serialize' ||
-    id.startsWith('@xterm/') ||
-    (id.includes('xterm') && !id.includes('node_modules') && !id.includes('test'))
-  ) {
-    return xtermMock;
+// xtermモジュール名のリスト
+const xtermModules = [
+  '@xterm/xterm',
+  'xterm',
+  '@xterm/addon-fit',
+  'xterm-addon-fit',
+  '@xterm/addon-web-links',
+  '@xterm/addon-search',
+  '@xterm/addon-webgl',
+  '@xterm/addon-unicode11',
+  '@xterm/addon-serialize',
+];
+
+// 各モジュールのキャッシュに直接登録
+xtermModules.forEach((moduleName) => {
+  try {
+    // モジュールパスを解決してキャッシュに登録
+    const possiblePaths = [
+      moduleName,
+      path.join(process.cwd(), 'node_modules', moduleName),
+    ];
+
+    possiblePaths.forEach((modulePath) => {
+      try {
+        const resolvedPath = require.resolve(modulePath);
+        require.cache[resolvedPath] = {
+          id: resolvedPath,
+          filename: resolvedPath,
+          loaded: true,
+          exports: xtermMock,
+        };
+      } catch (e) {
+        // モジュールが見つからない場合は無視
+      }
+    });
+  } catch (e) {
+    // 無視
   }
-
-  // package.jsonからの相対パスでxterm.jsを参照する場合も対応
-  if (id.includes('node_modules/@xterm') || id.includes('node_modules/xterm')) {
-    return xtermMock;
-  }
-
-  // その他のモジュールは元のrequireに委譲
-  return originalRequire.apply(this, arguments);
-};
+});
 
 console.log('✅ xterm.js mock loaded successfully');

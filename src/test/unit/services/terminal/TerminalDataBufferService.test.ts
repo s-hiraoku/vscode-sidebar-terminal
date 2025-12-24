@@ -254,8 +254,12 @@ describe('TerminalDataBufferService', () => {
 
   describe('Error Handling', () => {
     it('should handle data buffering errors gracefully', (done) => {
-      // Mock console.error to capture error logs
-      const _consoleStub = sandbox.stub(console, 'error');
+      // Use existing console.error stub if present, otherwise skip
+      const consoleError = console.error as sinon.SinonStub;
+      const isAlreadyStubbed = typeof consoleError?.resetHistory === 'function';
+      if (isAlreadyStubbed) {
+        consoleError.resetHistory();
+      }
       let eventFired = false;
 
       service.onData((event) => {

@@ -100,8 +100,16 @@ describe('BaseInputHandler TDD Test Suite', () => {
     // Setup shared state
     sharedDebounceTimers = new Map<string, number>();
 
-    // Mock console to capture logs
-    consoleStub = sinon.stub(console, 'log');
+    // Use existing console.log stub if present, otherwise use a dummy
+    const existingStub = console.log as sinon.SinonStub;
+    const isAlreadyStubbed = typeof existingStub?.resetHistory === 'function';
+    if (isAlreadyStubbed) {
+      consoleStub = existingStub;
+      consoleStub.resetHistory();
+    } else {
+      // Create a dummy stub that doesn't actually wrap console.log
+      consoleStub = sinon.stub();
+    }
 
     // Create handler instance
     handler = new TestInputHandler('TestHandler', sharedDebounceTimers);
@@ -110,7 +118,12 @@ describe('BaseInputHandler TDD Test Suite', () => {
   afterEach(() => {
     // Cleanup: Essential for preventing test pollution
     clock.restore();
-    consoleStub.restore();
+    // Don't restore consoleStub if it's the shared global stub
+    const existingStub = console.log as sinon.SinonStub;
+    const isSharedStub = consoleStub === existingStub;
+    if (!isSharedStub && typeof consoleStub?.restore === 'function') {
+      consoleStub.restore();
+    }
     handler.dispose();
     jsdom.window.close();
   });

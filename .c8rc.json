@@ -1,0 +1,19 @@
+{
+  "all": true,
+  "check-coverage": false,
+  "include": ["out/**/*.js"],
+  "exclude": [
+    "out/test/**",
+    "out/**/*.test.js",
+    "out/**/*.spec.js",
+    "dist/**",
+    "node_modules/**"
+  ],
+  "reporter": ["text", "html", "lcov", "json"],
+  "report-dir": "./coverage",
+  "temp-directory": "./coverage/.c8_output",
+  "lines": 70,
+  "functions": 70,
+  "branches": 60,
+  "statements": 70
+}
