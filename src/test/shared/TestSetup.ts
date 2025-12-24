@@ -93,6 +93,22 @@ import { JSDOM } from 'jsdom';
 // Set up chai plugins
 chai.use(sinonChai);
 
+// ============================================================================
+// TEST POLLUTION PREVENTION - Module-level state for cleanup
+// ============================================================================
+
+/**
+ * Store original Module.prototype.require for restoration
+ * CRITICAL: This must be restored in cleanupTestEnvironment to prevent test pollution
+ */
+let originalModuleRequire: NodeRequire | null = null;
+let moduleRequireOverridden = false;
+
+/**
+ * Store original process.env for restoration
+ */
+let originalProcessEnv: NodeJS.ProcessEnv | null = null;
+
 // Async setup for chai-as-promised ES module
 let chaiAsPromisedSetup = false;
 async function setupChaiAsPromised() {
@@ -338,14 +354,19 @@ export async function setupTestEnvironment(): Promise<void> {
   // Note: xterm mocks are handled by xterm-mock.js which is loaded first
 
   // Minimal hook ONLY for 'vscode' module (which has no physical file to cache)
-  const originalRequire = Module.prototype.require;
+  // CRITICAL: Store original require for restoration in cleanupTestEnvironment
+  if (!moduleRequireOverridden) {
+    originalModuleRequire = Module.prototype.require;
+    moduleRequireOverridden = true;
+  }
+  const savedOriginalRequire = originalModuleRequire || Module.prototype.require;
   Module.prototype.require = function (id: string) {
     if (id === 'vscode') {
       return mockVscode;
     }
     // All other modules pass through to original require (preserves nyc instrumentation)
     // eslint-disable-next-line prefer-rest-params, @typescript-eslint/no-unsafe-return
-    return originalRequire.apply(this, arguments);
+    return savedOriginalRequire.apply(this, arguments);
   };
 
   // Mock Node.js modules
@@ -429,6 +450,10 @@ export async function setupTestEnvironment(): Promise<void> {
   }
 
   // テスト用の環境変数を一時的に設定（復元可能な形で）
+  // CRITICAL: Save original env for restoration
+  if (!originalProcessEnv) {
+    originalProcessEnv = { ...process.env };
+  }
   if (!process.env.NODE_ENV) {
     process.env.NODE_ENV = 'test';
   }
@@ -814,8 +839,38 @@ export function restoreGlobalState(snapshot: GlobalStateSnapshot): void {
 }
 
 /**
+ * Helper function to reset all stubs in an object recursively
+ * Resets both call history and behavior
+ */
+function resetStubsRecursively(obj: any, depth: number = 0): void {
+  if (!obj || typeof obj !== 'object' || depth > 3) return;
+
+  Object.keys(obj).forEach(key => {
+    try {
+      const value = obj[key];
+      if (value && typeof value === 'function') {
+        // Reset stub history if it's a sinon stub
+        if (typeof value.resetHistory === 'function') {
+          value.resetHistory();
+        }
+        if (typeof value.reset === 'function') {
+          value.reset();
+        }
+      } else if (value && typeof value === 'object' && !Array.isArray(value)) {
+        // Recurse into nested objects
+        resetStubsRecursively(value, depth + 1);
+      }
+    } catch (e) {
+      // Ignore errors for individual stub resets
+    }
+  });
+}
+
+/**
  * テスト分離とクリーンアップのためのリセット関数
  * テスト間で状態が持ち越されることを防ぐ
+ *
+ * CRITICAL: This function now performs comprehensive cleanup to prevent test pollution
  */
 export function resetTestEnvironment(): void {
   // Clear all Sinon state safely
@@ -833,12 +888,23 @@ export function resetTestEnvironment(): void {
     console.debug('Sinon restore warning:', error);
   }
 
-  // Reset mockVscode stubs
+  // CRITICAL: Reset ALL mockVscode stubs to prevent call history accumulation
   try {
-    if (mockVscode && mockVscode.workspace && mockVscode.workspace.getConfiguration) {
-      if (typeof mockVscode.workspace.getConfiguration.reset === 'function') {
-        mockVscode.workspace.getConfiguration.reset();
-      }
+    if (mockVscode) {
+      // Reset workspace stubs
+      resetStubsRecursively(mockVscode.workspace);
+
+      // Reset window stubs
+      resetStubsRecursively(mockVscode.window);
+
+      // Reset commands stubs
+      resetStubsRecursively(mockVscode.commands);
+
+      // Reset Uri stubs
+      resetStubsRecursively(mockVscode.Uri);
+
+      // Reset env stubs
+      resetStubsRecursively(mockVscode.env);
     }
   } catch (error) {
     console.debug('MockVscode reset warning:', error);
@@ -882,6 +948,9 @@ export function setupCompleteTestEnvironment(htmlContent?: string): {
 /**
  * sinon サンドボックスとテスト環境のクリーンアップ
  * afterEach で呼び出してテスト間の状態リセットを行う
+ *
+ * CRITICAL: This function now restores Module.prototype.require and process.env
+ * to prevent test pollution between test files
  */
 export function cleanupTestEnvironment(
   sandbox?: sinon.SinonSandbox,
@@ -917,6 +986,9 @@ export function cleanupTestEnvironment(
     }
   }
 
+  // CRITICAL: Reset mockVscode stubs to prevent call history accumulation
+  resetTestEnvironment();
+
   // グローバル状態をクリア
   try {
     const config = mockVscode.workspace.getConfiguration();
@@ -948,6 +1020,134 @@ export function cleanupTestEnvironment(
       console.debug('Global cleanup warning:', error);
     }
   }
+}
+
+/**
+ * Full test environment teardown - restores Module.prototype.require
+ * Call this at the end of a test suite (in after()) to fully restore Node.js state
+ *
+ * CRITICAL: This prevents test pollution between test files
+ */
+export function teardownTestEnvironment(): void {
+  // Restore Module.prototype.require
+  if (originalModuleRequire && moduleRequireOverridden) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const Module = require('module');
+      Module.prototype.require = originalModuleRequire;
+      moduleRequireOverridden = false;
+    } catch (error) {
+      console.debug('Module.prototype.require restore warning:', error);
+    }
+  }
+
+  // Restore process.env
+  if (originalProcessEnv) {
+    try {
+      // Clear current env and restore original
+      Object.keys(process.env).forEach(key => {
+        if (!(key in originalProcessEnv!)) {
+          delete process.env[key];
+        }
+      });
+      Object.assign(process.env, originalProcessEnv);
+    } catch (error) {
+      console.debug('process.env restore warning:', error);
+    }
+  }
+
+  // Clear require.cache entries we added
+  try {
+    const modulesToClear = ['vscode', 'node-pty', '@homebridge/node-pty-prebuilt-multiarch'];
+    modulesToClear.forEach(moduleName => {
+      try {
+        const modulePath = require.resolve(moduleName, { paths: [process.cwd()] });
+        delete require.cache[modulePath];
+      } catch (e) {
+        // Module not found, skip
+      }
+    });
+  } catch (error) {
+    console.debug('require.cache cleanup warning:', error);
+  }
+}
+
+/**
+ * Create an isolated test context with automatic cleanup
+ * Use this for tests that need complete isolation
+ *
+ * @example
+ * describe('MyTest', () => {
+ *   const ctx = createIsolatedTestContext();
+ *
+ *   beforeEach(() => ctx.setup());
+ *   afterEach(() => ctx.cleanup());
+ *
+ *   it('should work', () => {
+ *     // Test code
+ *   });
+ * });
+ */
+export function createIsolatedTestContext(): {
+  setup: () => { dom: JSDOM; document: Document; window: any; sandbox: sinon.SinonSandbox };
+  cleanup: () => void;
+  getSandbox: () => sinon.SinonSandbox;
+} {
+  let dom: JSDOM | null = null;
+  let globalSnapshot: GlobalStateSnapshot | null = null;
+  let sandbox: sinon.SinonSandbox | null = null;
+
+  return {
+    setup: () => {
+      // Create sandbox first
+      sandbox = sinon.createSandbox();
+
+      // Backup global state
+      globalSnapshot = backupGlobalState();
+
+      // Setup JSDOM
+      const result = setupJSDOMEnvironment();
+      dom = result.dom;
+
+      return {
+        dom: result.dom,
+        document: result.document,
+        window: result.window,
+        sandbox,
+      };
+    },
+
+    cleanup: () => {
+      // Use try-finally to ensure all cleanup happens
+      try {
+        if (sandbox) {
+          sandbox.restore();
+        }
+      } finally {
+        try {
+          if (dom) {
+            dom.window.close();
+          }
+        } finally {
+          if (globalSnapshot) {
+            restoreGlobalState(globalSnapshot);
+          }
+        }
+      }
+
+      // Reset references
+      dom = null;
+      globalSnapshot = null;
+      sandbox = null;
+    },
+
+    getSandbox: () => {
+      if (!sandbox) {
+        throw new Error('Test context not set up. Call setup() first.');
+      }
+      return sandbox;
+    },
+  };
 }
 
 // Fix process.removeListener issue for Mocha
@@ -1032,14 +1232,19 @@ export function setupTestEnvironmentSync(): void {
   }
 
   // Minimal hook ONLY for 'vscode' module (which has no physical file to cache)
-  const originalRequireSync = Module.prototype.require;
+  // CRITICAL: Store original require for restoration in teardownTestEnvironment
+  if (!moduleRequireOverridden) {
+    originalModuleRequire = Module.prototype.require;
+    moduleRequireOverridden = true;
+  }
+  const savedOriginalRequireSync = originalModuleRequire || Module.prototype.require;
   Module.prototype.require = function (id: string) {
     if (id === 'vscode') {
       return mockVscode;
     }
     // All other modules pass through to original require (preserves nyc instrumentation)
     // eslint-disable-next-line prefer-rest-params, @typescript-eslint/no-unsafe-return
-    return originalRequireSync.apply(this, arguments);
+    return savedOriginalRequireSync.apply(this, arguments);
   };
 
   // Set up DOM environment

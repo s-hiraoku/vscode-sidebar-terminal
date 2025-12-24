@@ -2,20 +2,15 @@
  * CliAgentStatusService Test Suite - CLI Agent status display management
  *
  * TDD Pattern: Covers status updates, debouncing, and header integration
+ *
+ * CRITICAL FIX: JSDOM is now created in beforeEach and cleaned up in afterEach
+ * to prevent test pollution between test files.
  */
 
 import { expect } from 'chai';
 import { describe, it, beforeEach, afterEach } from 'mocha';
 import sinon from 'sinon';
 import { JSDOM } from 'jsdom';
-
-// Setup JSDOM
-const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
-  url: 'http://localhost',
-});
-(global as any).document = dom.window.document;
-(global as any).window = dom.window;
-(global as any).HTMLElement = dom.window.HTMLElement;
 
 import { CliAgentStatusService } from '../../../../../webview/managers/ui/CliAgentStatusService';
 import { HeaderFactory, TerminalHeaderElements } from '../../../../../webview/factories/HeaderFactory';
@@ -28,8 +23,19 @@ describe('CliAgentStatusService', () => {
   let insertCliAgentStatusStub: sinon.SinonStub;
   let removeCliAgentStatusStub: sinon.SinonStub;
   let setAiAgentToggleButtonVisibilityStub: sinon.SinonStub;
+  let dom: JSDOM;
 
   beforeEach(() => {
+    // CRITICAL: Create JSDOM in beforeEach to prevent test pollution
+    dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
+      url: 'http://localhost',
+    });
+
+    // Set up global DOM
+    (global as any).document = dom.window.document;
+    (global as any).window = dom.window;
+    (global as any).HTMLElement = dom.window.HTMLElement;
+
     // Create mock header elements
     const createMockHeaderElements = (terminalName: string): TerminalHeaderElements => {
       const container = document.createElement('div');
@@ -71,7 +77,20 @@ describe('CliAgentStatusService', () => {
   });
 
   afterEach(() => {
-    sinon.restore();
+    // CRITICAL: Use try-finally to ensure all cleanup happens
+    try {
+      sinon.restore();
+    } finally {
+      try {
+        // CRITICAL: Close JSDOM window to prevent memory leaks
+        dom.window.close();
+      } finally {
+        // CRITICAL: Clean up global DOM state to prevent test pollution
+        delete (global as any).document;
+        delete (global as any).window;
+        delete (global as any).HTMLElement;
+      }
+    }
   });
 
   describe('Initialization', () => {

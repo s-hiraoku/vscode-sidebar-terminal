@@ -35,9 +35,27 @@ describe('ResizeManager', () => {
   });
 
   afterEach(() => {
-    sandbox.restore();
-    // Clean up ResizeManager state
-    ResizeManager.dispose();
+    // CRITICAL: Use try-finally to ensure all cleanup happens
+    try {
+      sandbox.restore();
+    } finally {
+      try {
+        // Clean up ResizeManager state
+        ResizeManager.dispose();
+      } finally {
+        try {
+          // CRITICAL: Close JSDOM window to prevent memory leaks
+          dom.window.close();
+        } finally {
+          // CRITICAL: Clean up global DOM state to prevent test pollution
+          delete (global as any).window;
+          delete (global as any).document;
+          delete (global as any).Element;
+          delete (global as any).HTMLElement;
+          delete (global as any).ResizeObserver;
+        }
+      }
+    }
   });
 
   describe('debounceResize', () => {

@@ -44,14 +44,30 @@ describe('PerformanceUtils', () => {
   });
 
   afterEach(() => {
-    if (sandbox) {
-      sandbox.restore();
-    }
-    if (clock) {
-      clock.restore();
-    }
-    if (dom) {
-      dom.window.close();
+    // CRITICAL: Use try-finally to ensure all cleanup happens
+    try {
+      if (sandbox) {
+        sandbox.restore();
+      }
+    } finally {
+      try {
+        if (clock) {
+          clock.restore();
+        }
+      } finally {
+        try {
+          // CRITICAL: Close JSDOM window to prevent memory leaks
+          if (dom) {
+            dom.window.close();
+          }
+        } finally {
+          // CRITICAL: Clean up global DOM state to prevent test pollution
+          delete (global as any).document;
+          delete (global as any).window;
+          delete (global as any).requestAnimationFrame;
+          delete (global as any).cancelAnimationFrame;
+        }
+      }
     }
   });
 

@@ -116,16 +116,35 @@ describe('BaseInputHandler TDD Test Suite', () => {
   });
 
   afterEach(() => {
-    // Cleanup: Essential for preventing test pollution
-    clock.restore();
-    // Don't restore consoleStub if it's the shared global stub
-    const existingStub = console.log as sinon.SinonStub;
-    const isSharedStub = consoleStub === existingStub;
-    if (!isSharedStub && typeof consoleStub?.restore === 'function') {
-      consoleStub.restore();
+    // CRITICAL: Use try-finally to ensure all cleanup happens
+    try {
+      clock.restore();
+    } finally {
+      try {
+        // Don't restore consoleStub if it's the shared global stub
+        const existingStub = console.log as sinon.SinonStub;
+        const isSharedStub = consoleStub === existingStub;
+        if (!isSharedStub && typeof consoleStub?.restore === 'function') {
+          consoleStub.restore();
+        }
+      } finally {
+        try {
+          handler.dispose();
+        } finally {
+          try {
+            // CRITICAL: Close JSDOM window to prevent memory leaks
+            jsdom.window.close();
+          } finally {
+            // CRITICAL: Clean up global DOM state to prevent test pollution
+            delete (global as any).window;
+            delete (global as any).document;
+            delete (global as any).Event;
+            delete (global as any).KeyboardEvent;
+            delete (global as any).MouseEvent;
+          }
+        }
+      }
     }
-    handler.dispose();
-    jsdom.window.close();
   });
 
   describe('TDD Red Phase: Initialization and Configuration', () => {

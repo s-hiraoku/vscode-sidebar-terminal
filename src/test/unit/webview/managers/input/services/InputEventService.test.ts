@@ -57,10 +57,27 @@ describe('InputEventService TDD Test Suite', () => {
   });
 
   afterEach(() => {
-    // Cleanup: Essential for preventing test pollution
-    clock.restore();
-    eventService.dispose();
-    jsdom.window.close();
+    // CRITICAL: Use try-finally to ensure all cleanup happens
+    try {
+      clock.restore();
+    } finally {
+      try {
+        eventService.dispose();
+      } finally {
+        try {
+          // CRITICAL: Close JSDOM window to prevent memory leaks
+          jsdom.window.close();
+        } finally {
+          // CRITICAL: Clean up global DOM state to prevent test pollution
+          delete (global as any).window;
+          delete (global as any).document;
+          delete (global as any).Event;
+          delete (global as any).KeyboardEvent;
+          delete (global as any).MouseEvent;
+          delete (global as any).performance;
+        }
+      }
+    }
   });
 
   describe('TDD Red Phase: Service Initialization and Configuration', () => {

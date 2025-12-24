@@ -2,6 +2,9 @@
  * NotificationManager Test Suite - User feedback and notifications
  *
  * TDD Pattern: Covers notification creation, display, and lifecycle
+ *
+ * CRITICAL FIX: JSDOM is now created in beforeEach and cleaned up in afterEach
+ * to prevent test pollution between test files.
  */
 
 import { expect } from 'chai';
@@ -9,24 +12,24 @@ import { describe, it, beforeEach, afterEach } from 'mocha';
 import sinon from 'sinon';
 import { JSDOM } from 'jsdom';
 
-// Setup JSDOM
-const dom = new JSDOM('<!DOCTYPE html><html><body><div id="terminal-container"></div></body></html>', {
-  url: 'http://localhost',
-});
-(global as any).document = dom.window.document;
-(global as any).window = dom.window;
-(global as any).HTMLElement = dom.window.HTMLElement;
-(global as any).CustomEvent = dom.window.CustomEvent;
-
 import { NotificationManager } from '../../../../webview/managers/NotificationManager';
 
 describe('NotificationManager', () => {
   let notificationManager: NotificationManager;
   let clock: sinon.SinonFakeTimers;
+  let dom: JSDOM;
 
   beforeEach(() => {
-    // Reset DOM
-    document.body.innerHTML = '<div id="terminal-container"></div>';
+    // CRITICAL: Create JSDOM in beforeEach to prevent test pollution
+    dom = new JSDOM('<!DOCTYPE html><html><body><div id="terminal-container"></div></body></html>', {
+      url: 'http://localhost',
+    });
+
+    // Set up global DOM
+    (global as any).document = dom.window.document;
+    (global as any).window = dom.window;
+    (global as any).HTMLElement = dom.window.HTMLElement;
+    (global as any).CustomEvent = dom.window.CustomEvent;
 
     clock = sinon.useFakeTimers();
     notificationManager = new NotificationManager();
@@ -34,9 +37,29 @@ describe('NotificationManager', () => {
   });
 
   afterEach(() => {
-    notificationManager.dispose();
-    clock.restore();
-    sinon.restore();
+    // CRITICAL: Use try-finally to ensure all cleanup happens
+    try {
+      notificationManager.dispose();
+    } finally {
+      try {
+        clock.restore();
+      } finally {
+        try {
+          sinon.restore();
+        } finally {
+          try {
+            // CRITICAL: Close JSDOM window to prevent memory leaks
+            dom.window.close();
+          } finally {
+            // CRITICAL: Clean up global DOM state to prevent test pollution
+            delete (global as any).document;
+            delete (global as any).window;
+            delete (global as any).HTMLElement;
+            delete (global as any).CustomEvent;
+          }
+        }
+      }
+    }
   });
 
   describe('Initialization and Lifecycle', () => {

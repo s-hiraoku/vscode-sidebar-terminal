@@ -57,17 +57,34 @@ describe('IMEHandler Cursor Visibility', () => {
   });
 
   afterEach(() => {
-    handler.dispose();
-    eventService.dispose();
-    stateManager.dispose();
-    clock.restore();
-
-    jsdom.window.close();
-    delete (global as any).window;
-    delete (global as any).document;
-    delete (global as any).Event;
-    delete (global as any).CompositionEvent;
-    delete (global as any).InputEvent;
+    // CRITICAL: Use try-finally to ensure all cleanup happens
+    try {
+      handler.dispose();
+    } finally {
+      try {
+        eventService.dispose();
+      } finally {
+        try {
+          stateManager.dispose();
+        } finally {
+          try {
+            clock.restore();
+          } finally {
+            try {
+              // CRITICAL: Close JSDOM window to prevent memory leaks
+              jsdom.window.close();
+            } finally {
+              // CRITICAL: Clean up global DOM state to prevent test pollution
+              delete (global as any).window;
+              delete (global as any).document;
+              delete (global as any).Event;
+              delete (global as any).CompositionEvent;
+              delete (global as any).InputEvent;
+            }
+          }
+        }
+      }
+    }
   });
 
   it('toggles IME cursor class during composition lifecycle', () => {

@@ -2,6 +2,9 @@
  * EventHandlerManager Test Suite - Event listener management and lifecycle
  *
  * TDD Pattern: Covers event registration, removal, and cleanup
+ *
+ * CRITICAL FIX: JSDOM is now created in beforeEach and cleaned up in afterEach
+ * to prevent test pollution between test files.
  */
 
 import { expect } from 'chai';
@@ -9,35 +12,57 @@ import { describe, it, beforeEach, afterEach } from 'mocha';
 import sinon from 'sinon';
 import { JSDOM } from 'jsdom';
 
-// Setup JSDOM
-const dom = new JSDOM('<!DOCTYPE html><html><body><div id="test-element"></div></body></html>', {
-  url: 'http://localhost',
-});
-(global as any).document = dom.window.document;
-(global as any).window = dom.window;
-(global as any).HTMLElement = dom.window.HTMLElement;
-(global as any).Event = dom.window.Event;
-(global as any).KeyboardEvent = dom.window.KeyboardEvent;
-(global as any).MouseEvent = dom.window.MouseEvent;
-(global as any).FocusEvent = dom.window.FocusEvent;
-(global as any).MessageEvent = dom.window.MessageEvent;
-(global as any).CustomEvent = dom.window.CustomEvent;
-
 import { EventHandlerManager } from '../../../../webview/managers/EventHandlerManager';
 
 describe('EventHandlerManager', () => {
   let eventHandlerManager: EventHandlerManager;
+  let dom: JSDOM;
 
   beforeEach(() => {
-    // Reset DOM
-    document.body.innerHTML = '<div id="test-element"></div>';
+    // CRITICAL: Create JSDOM in beforeEach to prevent test pollution
+    dom = new JSDOM('<!DOCTYPE html><html><body><div id="test-element"></div></body></html>', {
+      url: 'http://localhost',
+    });
+
+    // Set up global DOM
+    (global as any).document = dom.window.document;
+    (global as any).window = dom.window;
+    (global as any).HTMLElement = dom.window.HTMLElement;
+    (global as any).Event = dom.window.Event;
+    (global as any).KeyboardEvent = dom.window.KeyboardEvent;
+    (global as any).MouseEvent = dom.window.MouseEvent;
+    (global as any).FocusEvent = dom.window.FocusEvent;
+    (global as any).MessageEvent = dom.window.MessageEvent;
+    (global as any).CustomEvent = dom.window.CustomEvent;
 
     eventHandlerManager = new EventHandlerManager();
   });
 
   afterEach(() => {
-    eventHandlerManager.dispose();
-    sinon.restore();
+    // CRITICAL: Use try-finally to ensure all cleanup happens
+    try {
+      eventHandlerManager.dispose();
+    } finally {
+      try {
+        sinon.restore();
+      } finally {
+        try {
+          // CRITICAL: Close JSDOM window to prevent memory leaks
+          dom.window.close();
+        } finally {
+          // CRITICAL: Clean up global DOM state to prevent test pollution
+          delete (global as any).document;
+          delete (global as any).window;
+          delete (global as any).HTMLElement;
+          delete (global as any).Event;
+          delete (global as any).KeyboardEvent;
+          delete (global as any).MouseEvent;
+          delete (global as any).FocusEvent;
+          delete (global as any).MessageEvent;
+          delete (global as any).CustomEvent;
+        }
+      }
+    }
   });
 
   describe('Initialization and Lifecycle', () => {

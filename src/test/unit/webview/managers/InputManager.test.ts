@@ -51,9 +51,26 @@ describe('InputManager', () => {
   });
 
   afterEach(() => {
-    clock.restore();
-    inputManager.dispose();
-    jsdom.window.close();
+    // CRITICAL: Use try-finally to ensure all cleanup happens
+    try {
+      clock.restore();
+    } finally {
+      try {
+        inputManager.dispose();
+      } finally {
+        try {
+          jsdom.window.close();
+        } finally {
+          // CRITICAL: Clean up global DOM state to prevent test pollution
+          delete (global as any).window;
+          delete (global as any).document;
+          delete (global as any).Event;
+          delete (global as any).CompositionEvent;
+          delete (global as any).KeyboardEvent;
+          delete (global as any).MouseEvent;
+        }
+      }
+    }
   });
 
   describe('IME Composition Handling', () => {
@@ -229,13 +246,15 @@ describe('InputManager', () => {
     it('should handle events when IME listener setup fails', () => {
       // Mock document.addEventListener to throw error
       const originalAddEventListener = document.addEventListener;
-      document.addEventListener = sinon.stub().throws(new Error('Setup failed'));
+      try {
+        document.addEventListener = sinon.stub().throws(new Error('Setup failed'));
 
-      // Should not throw
-      expect(() => inputManager.setupIMEHandling()).to.not.throw();
-
-      // Restore original
-      document.addEventListener = originalAddEventListener;
+        // Should not throw
+        expect(() => inputManager.setupIMEHandling()).to.not.throw();
+      } finally {
+        // CRITICAL: Always restore original to prevent test pollution
+        document.addEventListener = originalAddEventListener;
+      }
     });
 
     it('should gracefully handle missing coordinator in event emission', () => {

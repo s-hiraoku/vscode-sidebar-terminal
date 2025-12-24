@@ -22,8 +22,15 @@ describe('TerminalTabManager addTab duplicate handling', () => {
   });
 
   afterEach(() => {
-    delete (global as any).window;
-    delete (global as any).document;
+    // CRITICAL: Use try-finally to ensure all cleanup happens
+    try {
+      // CRITICAL: Close JSDOM window to prevent memory leaks
+      dom.window.close();
+    } finally {
+      // CRITICAL: Clean up global DOM state to prevent test pollution
+      delete (global as any).window;
+      delete (global as any).document;
+    }
   });
 
   it('does not create duplicate entries when the same terminal id is added twice', () => {

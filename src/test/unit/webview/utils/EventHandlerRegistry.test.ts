@@ -45,8 +45,29 @@ describe('EventHandlerRegistry', () => {
   });
 
   afterEach(() => {
-    registry.dispose();
-    sandbox.restore();
+    // CRITICAL: Use try-finally to ensure all cleanup happens
+    try {
+      registry.dispose();
+    } finally {
+      try {
+        sandbox.restore();
+      } finally {
+        try {
+          // CRITICAL: Close JSDOM window to prevent memory leaks
+          dom.window.close();
+        } finally {
+          // CRITICAL: Clean up global DOM state to prevent test pollution
+          delete (global as any).window;
+          delete (global as any).document;
+          delete (global as any).Element;
+          delete (global as any).HTMLElement;
+          delete (global as any).EventTarget;
+          delete (global as any).Event;
+          delete (global as any).MouseEvent;
+          delete (global as any).KeyboardEvent;
+        }
+      }
+    }
   });
 
   describe('register', () => {

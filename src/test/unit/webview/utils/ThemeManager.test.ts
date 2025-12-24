@@ -54,12 +54,28 @@ describe('ThemeManager', () => {
   });
 
   afterEach(() => {
-    sandbox.restore();
-    // Clean up ThemeManager
+    // CRITICAL: Use try-finally to ensure all cleanup happens
     try {
-      ThemeManager.dispose();
-    } catch (error) {
-      // Ignore disposal errors in tests
+      sandbox.restore();
+    } finally {
+      try {
+        // Clean up ThemeManager
+        ThemeManager.dispose();
+      } catch (error) {
+        // Ignore disposal errors in tests
+      } finally {
+        try {
+          // CRITICAL: Close JSDOM window to prevent memory leaks
+          dom.window.close();
+        } finally {
+          // CRITICAL: Clean up global DOM state to prevent test pollution
+          delete (global as any).window;
+          delete (global as any).document;
+          delete (global as any).Element;
+          delete (global as any).HTMLElement;
+          delete (global as any).getComputedStyle;
+        }
+      }
     }
   });
 

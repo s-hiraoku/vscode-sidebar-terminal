@@ -56,9 +56,24 @@ describe('TerminalContainerManager - Display State Management (Issue #198)', fun
   });
 
   afterEach(function () {
-    containerManager.dispose();
-    dom.window.close();
-    sinon.restore();
+    // CRITICAL: Use try-finally to ensure all cleanup happens
+    try {
+      containerManager.dispose();
+    } finally {
+      try {
+        sinon.restore();
+      } finally {
+        try {
+          // CRITICAL: Close JSDOM window to prevent memory leaks
+          dom.window.close();
+        } finally {
+          // CRITICAL: Clean up global DOM state to prevent test pollution
+          delete (global as any).window;
+          delete (global as any).document;
+          delete (global as any).HTMLElement;
+        }
+      }
+    }
   });
 
   describe('Container Registration', function () {
