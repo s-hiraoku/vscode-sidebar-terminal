@@ -1,16 +1,20 @@
 /**
  * TerminalInitializationWatchdog Unit Tests
  *
- * Vitest Migration: Converted from Mocha/Chai to Vitest
+ * Vitest Migration: Converted from Mocha/Chai/Sinon to Vitest
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import '../../../../shared/TestSetup';
 
 import { TerminalInitializationWatchdog } from '../../../../../providers/services/TerminalInitializationWatchdog';
 
 describe('TerminalInitializationWatchdog', () => {
+  let callback: ReturnType<typeof vi.fn>;
+
   beforeEach(() => {
     vi.useFakeTimers();
+    callback = vi.fn();
   });
 
   afterEach(() => {
@@ -18,7 +22,6 @@ describe('TerminalInitializationWatchdog', () => {
   });
 
   it('invokes callback for each attempt until maxAttempts is reached', () => {
-    const callback = vi.fn();
     const watchdog = new TerminalInitializationWatchdog(callback, {
       initialDelayMs: 100,
       maxAttempts: 3,
@@ -39,11 +42,13 @@ describe('TerminalInitializationWatchdog', () => {
 
     vi.advanceTimersByTime(400);
     expect(callback).toHaveBeenCalledTimes(3);
-    expect(callback).toHaveBeenLastCalledWith('terminal-1', { attempt: 3, isFinalAttempt: true });
+    expect(callback).toHaveBeenLastCalledWith('terminal-1', {
+      attempt: 3,
+      isFinalAttempt: true,
+    });
   });
 
   it('stops timers when stop() is invoked', () => {
-    const callback = vi.fn();
     const watchdog = new TerminalInitializationWatchdog(callback, {
       initialDelayMs: 100,
       maxAttempts: 2,
@@ -58,7 +63,6 @@ describe('TerminalInitializationWatchdog', () => {
   });
 
   it('applies per-start override options', () => {
-    const callback = vi.fn();
     const watchdog = new TerminalInitializationWatchdog(callback);
 
     watchdog.start('terminal-3', 'override', {

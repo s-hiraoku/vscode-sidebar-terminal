@@ -1,13 +1,12 @@
 /**
  * WebviewCoordinator Unit Tests
  *
- * Vitest Migration: Converted from Mocha/Chai to Vitest
- *
- * Tests message routing and command dispatching to appropriate handlers
+ * Vitest Migration: Converted from Mocha/Chai/Sinon to Vitest
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
+import '../../../../shared/TestSetup';
 import { WebviewCoordinator } from '../../../../../webview/coordinators/WebviewCoordinator';
 import { MessageCommand } from '../../../../../webview/managers/messageTypes';
 
@@ -90,13 +89,13 @@ describe('WebviewCoordinator', () => {
   it('dispatches lifecycle commands to the lifecycle handler', async () => {
     const message = { command: 'init' } as MessageCommand;
     await coordinator.dispatch(message, {} as any);
-    expect(lifecycleHandler.handleMessage).toHaveBeenCalledTimes(1);
+    expect(lifecycleHandler.handleMessage).toHaveBeenCalledOnce();
   });
 
   it('routes session restore events to the session controller', async () => {
     const message = { command: 'sessionRestore' } as MessageCommand;
     await coordinator.dispatch(message, {} as any);
-    expect(sessionController.handleSessionRestoreMessage).toHaveBeenCalledTimes(1);
+    expect(sessionController.handleSessionRestoreMessage).toHaveBeenCalledOnce();
   });
 
   it('logs a warning for unknown commands', async () => {
