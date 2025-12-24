@@ -2,16 +2,18 @@
  * DIContainer Unit Tests
  *
  * Tests for the lightweight dependency injection container.
+ *
+ * Vitest Migration: Converted from Mocha/Chai to Vitest
  */
 
-import { expect } from 'chai';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
   DIContainer,
   ServiceLifetime,
   createServiceToken,
   CircularDependencyError,
   ServiceNotRegisteredError,
-} from '../../../core/DIContainer';
+} from '../../../../core/DIContainer';
 
 describe('DIContainer', () => {
   let container: DIContainer;
@@ -31,7 +33,7 @@ describe('DIContainer', () => {
 
       container.register(ILogger, () => logger, ServiceLifetime.Singleton);
 
-      expect(container.isRegistered(ILogger)).to.be.true;
+      expect(container.isRegistered(ILogger)).toBe(true);
     });
 
     it('should throw error when registering duplicate service', () => {
@@ -41,7 +43,7 @@ describe('DIContainer', () => {
 
       expect(() =>
         container.register(ILogger, () => ({ log: () => {} }), ServiceLifetime.Singleton)
-      ).to.throw('Service already registered: ILogger');
+      ).toThrow('Service already registered: ILogger');
     });
 
     it('should return service count', () => {
@@ -51,7 +53,7 @@ describe('DIContainer', () => {
       container.register(ILogger, () => ({}), ServiceLifetime.Singleton);
       container.register(IConfig, () => ({}), ServiceLifetime.Singleton);
 
-      expect(container.serviceCount).to.equal(2);
+      expect(container.serviceCount).toBe(2);
     });
   });
 
@@ -65,8 +67,8 @@ describe('DIContainer', () => {
       const instance1 = container.resolve(ILogger);
       const instance2 = container.resolve(ILogger);
 
-      expect(instance1).to.equal(instance2);
-      expect(instance1.id).to.equal(1);
+      expect(instance1).toBe(instance2);
+      expect(instance1.id).toBe(1);
     });
   });
 
@@ -80,9 +82,9 @@ describe('DIContainer', () => {
       const instance1 = container.resolve(ILogger);
       const instance2 = container.resolve(ILogger);
 
-      expect(instance1).to.not.equal(instance2);
-      expect(instance1.id).to.equal(1);
-      expect(instance2.id).to.equal(2);
+      expect(instance1).not.toBe(instance2);
+      expect(instance1.id).toBe(1);
+      expect(instance2.id).toBe(2);
     });
   });
 
@@ -97,8 +99,8 @@ describe('DIContainer', () => {
       const instance1 = scope.resolve(ILogger);
       const instance2 = scope.resolve(ILogger);
 
-      expect(instance1).to.equal(instance2);
-      expect(instance1.id).to.equal(1);
+      expect(instance1).toBe(instance2);
+      expect(instance1.id).toBe(1);
 
       scope.dispose();
     });
@@ -115,9 +117,9 @@ describe('DIContainer', () => {
       const instance1 = scope1.resolve(ILogger);
       const instance2 = scope2.resolve(ILogger);
 
-      expect(instance1).to.not.equal(instance2);
-      expect(instance1.id).to.equal(1);
-      expect(instance2.id).to.equal(2);
+      expect(instance1).not.toBe(instance2);
+      expect(instance1.id).toBe(1);
+      expect(instance2.id).toBe(2);
 
       scope1.dispose();
       scope2.dispose();
@@ -140,7 +142,7 @@ describe('DIContainer', () => {
         ServiceLifetime.Singleton
       );
 
-      expect(() => container.resolve(IServiceA)).to.throw(CircularDependencyError);
+      expect(() => container.resolve(IServiceA)).toThrow(CircularDependencyError);
     });
 
     it('should include dependency chain in error', () => {
@@ -162,10 +164,10 @@ describe('DIContainer', () => {
         container.resolve(IServiceA);
         expect.fail('Should have thrown CircularDependencyError');
       } catch (error) {
-        expect(error).to.be.instanceof(CircularDependencyError);
+        expect(error).toBeInstanceOf(CircularDependencyError);
         const circularError = error as CircularDependencyError;
-        expect(circularError.dependencyChain).to.include('IServiceA');
-        expect(circularError.dependencyChain).to.include('IServiceB');
+        expect(circularError.dependencyChain).toContain('IServiceA');
+        expect(circularError.dependencyChain).toContain('IServiceB');
       }
     });
   });
@@ -174,10 +176,7 @@ describe('DIContainer', () => {
     it('should throw error when resolving unregistered service', () => {
       const ILogger = createServiceToken<object>('ILogger');
 
-      expect(() => container.resolve(ILogger)).to.throw(
-        ServiceNotRegisteredError,
-        'Service not registered: ILogger'
-      );
+      expect(() => container.resolve(ILogger)).toThrow(ServiceNotRegisteredError);
     });
 
     it('should return undefined for tryResolve with unregistered service', () => {
@@ -185,7 +184,7 @@ describe('DIContainer', () => {
 
       const result = container.tryResolve(ILogger);
 
-      expect(result).to.be.undefined;
+      expect(result).toBeUndefined();
     });
 
     it('should resolve dependencies recursively', () => {
@@ -208,7 +207,7 @@ describe('DIContainer', () => {
 
       const service = container.resolve(IService);
 
-      expect(service.logger).to.exist;
+      expect(service.logger).toBeDefined();
     });
   });
 
@@ -232,7 +231,7 @@ describe('DIContainer', () => {
 
       container.dispose();
 
-      expect(disposedCount).to.equal(1);
+      expect(disposedCount).toBe(1);
     });
 
     it('should dispose singletons in reverse registration order', () => {
@@ -266,7 +265,7 @@ describe('DIContainer', () => {
 
       container.dispose();
 
-      expect(disposalOrder).to.deep.equal([2, 1]);
+      expect(disposalOrder).toEqual([2, 1]);
     });
 
     it('should throw error when using disposed container', () => {
@@ -275,7 +274,7 @@ describe('DIContainer', () => {
 
       container.dispose();
 
-      expect(() => container.resolve(IService)).to.throw('Cannot use disposed DIContainer');
+      expect(() => container.resolve(IService)).toThrow('Cannot use disposed DIContainer');
     });
 
     it('should dispose all scopes when container is disposed', () => {
@@ -300,7 +299,7 @@ describe('DIContainer', () => {
 
       container.dispose();
 
-      expect(scopeDisposedCount).to.equal(2);
+      expect(scopeDisposedCount).toBe(2);
     });
   });
 
@@ -313,7 +312,7 @@ describe('DIContainer', () => {
       const scope = container.createScope();
       const logger = scope.resolve(ILogger);
 
-      expect(logger.id).to.equal(1);
+      expect(logger.id).toBe(1);
 
       scope.dispose();
     });
@@ -325,7 +324,7 @@ describe('DIContainer', () => {
 
       const scope = container.createScope();
 
-      expect(scope.isRegistered(ILogger)).to.be.true;
+      expect(scope.isRegistered(ILogger)).toBe(true);
 
       scope.dispose();
     });

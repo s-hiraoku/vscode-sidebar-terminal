@@ -1,7 +1,11 @@
-import { expect } from 'chai';
+/**
+ * TerminalLifecycleService Tests
+ *
+ * Vitest Migration: Converted from Mocha/Chai to Vitest
+ */
 
-import '../../shared/TestSetup';
-import { TerminalLifecycleService } from '../../../terminals/core/TerminalLifecycleService';
+import { describe, it, expect } from 'vitest';
+import { TerminalLifecycleService } from '../../../../terminals/core/TerminalLifecycleService';
 
 describe('TerminalLifecycleService', () => {
   it('serializes delete operations through the shared queue', async () => {
@@ -19,20 +23,20 @@ describe('TerminalLifecycleService', () => {
     const p2 = enqueueOp(2, 0);
 
     await Promise.all([p1, p2]);
-    expect(order).to.deep.equal([1, 2]);
+    expect(order).toEqual([1, 2]);
   });
 
   it('tracks terminals currently being killed', () => {
     const service = new TerminalLifecycleService();
 
     service.markBeingKilled('t1');
-    expect(service.isBeingKilled('t1')).to.be.true;
+    expect(service.isBeingKilled('t1')).toBe(true);
 
     service.unmarkBeingKilled('t1');
-    expect(service.isBeingKilled('t1')).to.be.false;
+    expect(service.isBeingKilled('t1')).toBe(false);
 
     service.markBeingKilled('t2');
     service.clear();
-    expect(service.isBeingKilled('t2')).to.be.false;
+    expect(service.isBeingKilled('t2')).toBe(false);
   });
 });

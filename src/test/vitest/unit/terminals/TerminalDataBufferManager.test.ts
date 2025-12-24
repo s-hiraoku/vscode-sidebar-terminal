@@ -1,9 +1,13 @@
-import { expect } from 'chai';
-import * as sinon from 'sinon';
-import '../../shared/TestSetup';
+/**
+ * TerminalDataBufferManager Tests
+ *
+ * Vitest Migration: Converted from Mocha/Chai/Sinon to Vitest
+ */
+
+import { describe, it, expect, vi } from 'vitest';
 import * as vscode from 'vscode';
-import { TerminalDataBufferManager } from '../../../terminals/TerminalDataBufferManager';
-import type { TerminalEvent, TerminalInstance } from '../../../types/shared';
+import { TerminalDataBufferManager } from '../../../../terminals/TerminalDataBufferManager';
+import type { TerminalEvent, TerminalInstance } from '../../../../types/shared';
 
 describe('TerminalDataBufferManager', () => {
   it('strips CSI 3 J (erase scrollback) even when split across chunks', () => {
@@ -12,7 +16,7 @@ describe('TerminalDataBufferManager', () => {
 
     const emitter = new vscode.EventEmitter<TerminalEvent>();
     const cliAgentService = {
-      detectFromOutput: sinon.stub(),
+      detectFromOutput: vi.fn(),
     } as any;
 
     const bufferManager = new TerminalDataBufferManager(terminals, emitter, cliAgentService);
@@ -24,8 +28,8 @@ describe('TerminalDataBufferManager', () => {
     bufferManager.bufferData('terminal-1', '3Jhello');
     bufferManager.flushBuffer('terminal-1');
 
-    expect(received).to.have.length(1);
-    expect(received[0]?.data).to.equal('hello');
+    expect(received).toHaveLength(1);
+    expect(received[0]?.data).toBe('hello');
 
     sub.dispose();
     bufferManager.dispose();
@@ -37,7 +41,7 @@ describe('TerminalDataBufferManager', () => {
 
     const emitter = new vscode.EventEmitter<TerminalEvent>();
     const cliAgentService = {
-      detectFromOutput: sinon.stub(),
+      detectFromOutput: vi.fn(),
     } as any;
 
     const bufferManager = new TerminalDataBufferManager(terminals, emitter, cliAgentService);
@@ -48,8 +52,8 @@ describe('TerminalDataBufferManager', () => {
     bufferManager.bufferData('terminal-1', '\u001b[2Jhi');
     bufferManager.flushBuffer('terminal-1');
 
-    expect(received).to.have.length(1);
-    expect(received[0]?.data).to.equal('\u001b[2Jhi');
+    expect(received).toHaveLength(1);
+    expect(received[0]?.data).toBe('\u001b[2Jhi');
 
     sub.dispose();
     bufferManager.dispose();
@@ -61,7 +65,7 @@ describe('TerminalDataBufferManager', () => {
 
     const emitter = new vscode.EventEmitter<TerminalEvent>();
     const cliAgentService = {
-      detectFromOutput: sinon.stub(),
+      detectFromOutput: vi.fn(),
     } as any;
 
     const bufferManager = new TerminalDataBufferManager(terminals, emitter, cliAgentService);
@@ -73,11 +77,10 @@ describe('TerminalDataBufferManager', () => {
     bufferManager.bufferData('terminal-1', 'X');
     bufferManager.flushBuffer('terminal-1');
 
-    expect(received).to.have.length(1);
-    expect(received[0]?.data).to.equal('\u001bX');
+    expect(received).toHaveLength(1);
+    expect(received[0]?.data).toBe('\u001bX');
 
     sub.dispose();
     bufferManager.dispose();
   });
 });
-
