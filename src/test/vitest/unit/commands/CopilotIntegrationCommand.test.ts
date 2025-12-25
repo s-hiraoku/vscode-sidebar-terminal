@@ -1,14 +1,7 @@
-/**
- * CopilotIntegrationCommand Unit Tests
- *
- * Vitest Migration: Converted from Mocha/Chai/Sinon to Vitest
- */
-
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as vscode from 'vscode';
 
 // Import shared test setup
-import '../../../shared/TestSetup';
 import { CopilotIntegrationCommand } from '../../../../commands/CopilotIntegrationCommand';
 
 describe('CopilotIntegrationCommand', () => {
@@ -22,15 +15,15 @@ describe('CopilotIntegrationCommand', () => {
     const mockConfig = {
       get: vi.fn().mockReturnValue(true), // GitHub Copilot integration enabled by default
     };
-    vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue(mockConfig as any);
+    (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockConfig);
 
     // Mock commands
-    vi.spyOn(vscode.commands, 'executeCommand').mockResolvedValue(undefined);
+    (vscode.commands.executeCommand as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
 
     // Mock notifications
-    vi.spyOn(vscode.window, 'showInformationMessage').mockResolvedValue(undefined);
-    vi.spyOn(vscode.window, 'showErrorMessage').mockResolvedValue(undefined);
-    vi.spyOn(vscode.window, 'showWarningMessage').mockResolvedValue(undefined);
+    (vscode.window.showInformationMessage as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    (vscode.window.showErrorMessage as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    (vscode.window.showWarningMessage as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -40,6 +33,7 @@ describe('CopilotIntegrationCommand', () => {
   describe('handleActivateCopilot', () => {
     beforeEach(() => {
       // Mock workspace folders
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (vscode.workspace as any).workspaceFolders = [
         {
           uri: { fsPath: '/workspace/project' },
@@ -55,6 +49,7 @@ describe('CopilotIntegrationCommand', () => {
         start: { line: 0 },
         end: { line: 0 },
       };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (vscode.window as any).activeTextEditor = {
         document: mockDocument,
         selection: mockSelection,
@@ -66,11 +61,15 @@ describe('CopilotIntegrationCommand', () => {
 
       expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
         'workbench.action.chat.open',
-        expect.objectContaining({ query: expect.stringContaining('#file:') })
+        {
+          query: '#file:src/test.ts  ',
+          isPartialQuery: true,
+        }
       );
     });
 
     it('should activate Copilot Chat without file reference when no file is open', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (vscode.window as any).activeTextEditor = null;
 
       copilotIntegrationCommand.handleActivateCopilot();
@@ -80,13 +79,13 @@ describe('CopilotIntegrationCommand', () => {
 
     it('should show information message when integration is disabled', () => {
       // Reset executeCommand spy to ensure clean state
-      vi.mocked(vscode.commands.executeCommand).mockClear();
+      (vscode.commands.executeCommand as unknown as ReturnType<typeof vi.fn>).mockClear();
 
       // Mock integration disabled
       const mockConfig = {
         get: vi.fn().mockReturnValue(false),
       };
-      vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue(mockConfig as any);
+      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockConfig);
 
       copilotIntegrationCommand.handleActivateCopilot();
 
@@ -98,7 +97,7 @@ describe('CopilotIntegrationCommand', () => {
 
     it('should handle command execution errors gracefully', async () => {
       // Mock command failure
-      vi.mocked(vscode.commands.executeCommand).mockRejectedValue(new Error('Command failed'));
+      (vscode.commands.executeCommand as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Command failed'));
 
       // Should handle error gracefully without throwing
       await expect(copilotIntegrationCommand.handleActivateCopilot()).resolves.not.toThrow();
@@ -114,6 +113,7 @@ describe('CopilotIntegrationCommand', () => {
         relativePath: 'src/test.ts',
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = (copilotIntegrationCommand as any).formatCopilotFileReference(fileInfo);
 
       expect(result).toBe('#file:src/test.ts  ');
@@ -129,6 +129,7 @@ describe('CopilotIntegrationCommand', () => {
         },
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = (copilotIntegrationCommand as any).formatCopilotFileReference(fileInfo);
 
       // Line numbers are not included in #file: format
@@ -145,6 +146,7 @@ describe('CopilotIntegrationCommand', () => {
         },
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = (copilotIntegrationCommand as any).formatCopilotFileReference(fileInfo);
 
       // Line numbers are not included in #file: format
@@ -154,6 +156,7 @@ describe('CopilotIntegrationCommand', () => {
 
   describe('isGitHubCopilotIntegrationEnabled', () => {
     it('should return true when setting is enabled', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = (copilotIntegrationCommand as any).isGitHubCopilotIntegrationEnabled();
       expect(result).toBe(true);
     });
@@ -162,8 +165,9 @@ describe('CopilotIntegrationCommand', () => {
       const mockConfig = {
         get: vi.fn().mockReturnValue(false),
       };
-      vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue(mockConfig as any);
+      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockConfig);
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = (copilotIntegrationCommand as any).isGitHubCopilotIntegrationEnabled();
       expect(result).toBe(false);
     });
@@ -172,8 +176,9 @@ describe('CopilotIntegrationCommand', () => {
       const mockConfig = {
         get: vi.fn().mockImplementation((key: string, defaultValue: any) => defaultValue),
       };
-      vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue(mockConfig as any);
+      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockConfig);
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = (copilotIntegrationCommand as any).isGitHubCopilotIntegrationEnabled();
       expect(result).toBe(true); // Default value should be true
     });

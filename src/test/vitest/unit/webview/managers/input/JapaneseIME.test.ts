@@ -8,7 +8,6 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { JSDOM } from 'jsdom';
 import {
   InputEventService,
   EventHandlerConfig as _EventHandlerConfig,
@@ -155,38 +154,32 @@ class MockJapaneseIME {
     const imeState = this.stateManager.getStateSection('ime');
     if (imeState.isActive) {
       // Force composition end
-      this.element.dispatchEvent(
-        new (global as any).CompositionEvent('compositionend', {
-          data: this.currentComposition,
-        })
-      );
+      this.dispatchCompositionEvent('compositionend', this.currentComposition);
     }
+  }
+
+  // Helper to dispatch composition events with correct data property
+  public dispatchCompositionEvent(type: string, data: string): void {
+    const event = new CompositionEvent(type, { data });
+    // Force data property if not correctly set by constructor (common in some DOM mocks)
+    if (event.data !== data) {
+      Object.defineProperty(event, 'data', { value: data });
+    }
+    this.element.dispatchEvent(event);
   }
 
   // Simulate Japanese input sequence
   public simulateJapaneseInput(sequence: string[], finalText: string): void {
     // Start composition
-    this.element.dispatchEvent(
-      new (global as any).CompositionEvent('compositionstart', {
-        data: sequence[0] || '',
-      })
-    );
+    this.dispatchCompositionEvent('compositionstart', sequence[0] || '');
 
     // Simulate incremental composition updates
     for (let i = 1; i < sequence.length; i++) {
-      this.element.dispatchEvent(
-        new (global as any).CompositionEvent('compositionupdate', {
-          data: sequence[i],
-        })
-      );
+      this.dispatchCompositionEvent('compositionupdate', sequence[i]);
     }
 
     // End composition with final result
-    this.element.dispatchEvent(
-      new (global as any).CompositionEvent('compositionend', {
-        data: finalText,
-      })
-    );
+    this.dispatchCompositionEvent('compositionend', finalText);
   }
 
   public getCurrentComposition(): string {
@@ -198,15 +191,8 @@ class MockJapaneseIME {
   }
 }
 
-/**
- * SKIP REASON: These tests rely on timer/debounce behavior that doesn't work correctly
- * with Vitest fake timers + JSDOM event dispatch. The debounce implementation uses
- * real setTimeout calls that don't interact correctly with vi.useFakeTimers().
- * TODO: Investigate using real timers or mocking the debounce implementation directly.
- */
-describe.skip('Japanese IME Input Handling TDD Test Suite', () => {
-  let jsdom: JSDOM;
-  let inputElement: Element;
+describe('Japanese IME Input Handling TDD Test Suite', () => {
+  let inputElement: HTMLInputElement;
   let eventService: InputEventService;
   let stateManager: InputStateManager;
   let japaneseIME: MockJapaneseIME;
@@ -215,33 +201,14 @@ describe.skip('Japanese IME Input Handling TDD Test Suite', () => {
   beforeEach(() => {
     vi.useFakeTimers();
 
-    // Arrange: Setup DOM environment with Japanese locale
-    jsdom = new JSDOM(
-      `
-      <!DOCTYPE html>
-      <html lang="ja">
-        <body>
-          <input type="text" id="japanese-input" lang="ja" />
-          <div id="terminal" contenteditable="true" lang="ja"></div>
-        </body>
-      </html>
-    `,
-      {
-        url: 'http://localhost',
-        pretendToBeVisual: true,
-        resources: 'usable',
-      }
-    );
-
-    // Setup global environment
-    (global as any).window = jsdom.window;
-    (global as any).document = jsdom.window.document;
-    (global as any).Event = jsdom.window.Event;
-    (global as any).KeyboardEvent = jsdom.window.KeyboardEvent;
-    (global as any).CompositionEvent = jsdom.window.CompositionEvent;
+    // Set up DOM elements in the existing environment
+    document.body.innerHTML = `
+      <input type="text" id="japanese-input" lang="ja" />
+      <div id="terminal" contenteditable="true" lang="ja"></div>
+    `;
 
     // Setup input element
-    inputElement = (global as any).document.getElementById('japanese-input')!;
+    inputElement = document.getElementById('japanese-input') as HTMLInputElement;
 
     // Setup services
     logMessages = [];
@@ -257,32 +224,11 @@ describe.skip('Japanese IME Input Handling TDD Test Suite', () => {
   });
 
   afterEach(() => {
-    // CRITICAL: Use try-finally to ensure all cleanup happens
-    try {
-      vi.useRealTimers();
-    } finally {
-      try {
-        eventService.dispose();
-      } finally {
-        try {
-          stateManager.dispose();
-        } finally {
-          try {
-            // CRITICAL: Close JSDOM window to prevent memory leaks
-            jsdom.window.close();
-          } finally {
-            // CRITICAL: Clean up global DOM state to prevent test pollution
-            delete (global as any).window;
-            delete (global as any).document;
-            delete (global as any).Event;
-            delete (global as any).CompositionEvent;
-            delete (global as any).KeyboardEvent;
-            delete (global as any).MouseEvent;
-            delete (global as any).performance;
-          }
-        }
-      }
-    }
+    vi.useRealTimers();
+    eventService?.dispose();
+    stateManager?.dispose();
+    document.body.innerHTML = '';
+    vi.clearAllMocks();
   });
 
   describe('TDD Red Phase: Basic Japanese IME Composition', () => {
@@ -318,29 +264,13 @@ describe.skip('Japanese IME Input Handling TDD Test Suite', () => {
         });
 
         // Act: Simulate step-by-step composition
-        inputElement.dispatchEvent(
-          new (global as any).CompositionEvent('compositionstart', {
-            data: 'k',
-          })
-        );
+        japaneseIME.dispatchCompositionEvent('compositionstart', 'k');
 
-        inputElement.dispatchEvent(
-          new (global as any).CompositionEvent('compositionupdate', {
-            data: 'ko',
-          })
-        );
+        japaneseIME.dispatchCompositionEvent('compositionupdate', 'ko');
 
-        inputElement.dispatchEvent(
-          new (global as any).CompositionEvent('compositionupdate', {
-            data: 'kon',
-          })
-        );
+        japaneseIME.dispatchCompositionEvent('compositionupdate', 'kon');
 
-        inputElement.dispatchEvent(
-          new (global as any).CompositionEvent('compositionend', {
-            data: 'こん',
-          })
-        );
+        japaneseIME.dispatchCompositionEvent('compositionend', 'こん');
 
         // Assert: Should track each composition stage
         expect(stateChanges.length).toBe(4); // start + 2 updates + end
@@ -358,24 +288,12 @@ describe.skip('Japanese IME Input Handling TDD Test Suite', () => {
 
       it('should handle composition cancellation during hiragana input', () => {
         // Act: Start composition and cancel
-        inputElement.dispatchEvent(
-          new (global as any).CompositionEvent('compositionstart', {
-            data: 'konni',
-          })
-        );
+        japaneseIME.dispatchCompositionEvent('compositionstart', 'konni');
 
-        inputElement.dispatchEvent(
-          new (global as any).CompositionEvent('compositionupdate', {
-            data: 'konnichiwa',
-          })
-        );
+        japaneseIME.dispatchCompositionEvent('compositionupdate', 'konnichiwa');
 
         // Cancel composition (empty result)
-        inputElement.dispatchEvent(
-          new (global as any).CompositionEvent('compositionend', {
-            data: '',
-          })
-        );
+        japaneseIME.dispatchCompositionEvent('compositionend', '');
 
         // Assert: Should handle cancellation gracefully
         const imeState = stateManager.getStateSection('ime');
@@ -391,35 +309,19 @@ describe.skip('Japanese IME Input Handling TDD Test Suite', () => {
 
         // Act: Simulate hiragana to kanji conversion
         // First phase: romaji to hiragana
-        inputElement.dispatchEvent(
-          new (global as any).CompositionEvent('compositionstart', {
-            data: 'n',
-          })
-        );
+        japaneseIME.dispatchCompositionEvent('compositionstart', 'n');
 
         testData.composition.forEach((stage, index) => {
           if (index > 0) {
-            inputElement.dispatchEvent(
-              new (global as any).CompositionEvent('compositionupdate', {
-                data: stage,
-              })
-            );
+            japaneseIME.dispatchCompositionEvent('compositionupdate', stage);
           }
         });
 
         // Intermediate state: hiragana before conversion
-        inputElement.dispatchEvent(
-          new (global as any).CompositionEvent('compositionupdate', {
-            data: testData.intermediate,
-          })
-        );
+        japaneseIME.dispatchCompositionEvent('compositionupdate', testData.intermediate);
 
         // Final conversion to kanji
-        inputElement.dispatchEvent(
-          new (global as any).CompositionEvent('compositionend', {
-            data: testData.result,
-          })
-        );
+        japaneseIME.dispatchCompositionEvent('compositionend', testData.result);
 
         // Assert: Final result should be kanji
         const imeState = stateManager.getStateSection('ime');
@@ -441,35 +343,19 @@ describe.skip('Japanese IME Input Handling TDD Test Suite', () => {
         });
 
         // Act: Simulate extended kanji selection process
-        inputElement.dispatchEvent(
-          new (global as any).CompositionEvent('compositionstart', {
-            data: 'nihon',
-          })
-        );
+        japaneseIME.dispatchCompositionEvent('compositionstart', 'nihon');
 
         // Show hiragana intermediate
-        inputElement.dispatchEvent(
-          new (global as any).CompositionEvent('compositionupdate', {
-            data: testData.intermediate,
-          })
-        );
+        japaneseIME.dispatchCompositionEvent('compositionupdate', testData.intermediate);
 
         // Simulate candidate selection (multiple updates)
         testData.candidates.forEach((candidate, _index) => {
           vi.advanceTimersByTime(100); // Time between candidate changes
-          inputElement.dispatchEvent(
-            new (global as any).CompositionEvent('compositionupdate', {
-              data: candidate,
-            })
-          );
+          japaneseIME.dispatchCompositionEvent('compositionupdate', candidate);
         });
 
         // Final selection
-        inputElement.dispatchEvent(
-          new (global as any).CompositionEvent('compositionend', {
-            data: testData.result,
-          })
-        );
+        japaneseIME.dispatchCompositionEvent('compositionend', testData.result);
 
         // Assert: Should track all candidate changes
         expect(stateHistory.length).toBeGreaterThan(testData.candidates.length);
@@ -488,31 +374,15 @@ describe.skip('Japanese IME Input Handling TDD Test Suite', () => {
         const testData = JAPANESE_IME_TEST_DATA.nihon;
 
         // Act: Start kanji conversion process
-        inputElement.dispatchEvent(
-          new (global as any).CompositionEvent('compositionstart', {
-            data: 'nihon',
-          })
-        );
+        japaneseIME.dispatchCompositionEvent('compositionstart', 'nihon');
 
-        inputElement.dispatchEvent(
-          new (global as any).CompositionEvent('compositionupdate', {
-            data: testData.intermediate, // にほん
-          })
-        );
+        japaneseIME.dispatchCompositionEvent('compositionupdate', testData.intermediate, // にほん);
 
         // Show some kanji candidates
-        inputElement.dispatchEvent(
-          new (global as any).CompositionEvent('compositionupdate', {
-            data: '日本',
-          })
-        );
+        japaneseIME.dispatchCompositionEvent('compositionupdate', '日本');
 
         // User decides to abandon kanji and stick with hiragana
-        inputElement.dispatchEvent(
-          new (global as any).CompositionEvent('compositionend', {
-            data: testData.intermediate, // Back to にほん
-          })
-        );
+        japaneseIME.dispatchCompositionEvent('compositionend', testData.intermediate);
 
         // Assert: Should handle abandonment gracefully
         const imeState = stateManager.getStateSection('ime');
@@ -529,11 +399,7 @@ describe.skip('Japanese IME Input Handling TDD Test Suite', () => {
         const testData = JAPANESE_IME_TEST_DATA.phrase;
 
         // Act: Simulate complex phrase input
-        inputElement.dispatchEvent(
-          new (global as any).CompositionEvent('compositionstart', {
-            data: 'k',
-          })
-        );
+        japaneseIME.dispatchCompositionEvent('compositionstart', 'k');
 
         // Simulate incremental building of the entire phrase
         const romajiPhrase = testData.segments.map((seg) => seg.romaji).join(' ');
@@ -541,27 +407,15 @@ describe.skip('Japanese IME Input Handling TDD Test Suite', () => {
 
         for (let i = 0; i < romajiPhrase.length; i++) {
           currentComposition += romajiPhrase[i];
-          inputElement.dispatchEvent(
-            new (global as any).CompositionEvent('compositionupdate', {
-              data: currentComposition,
-            })
-          );
+          japaneseIME.dispatchCompositionEvent('compositionupdate', currentComposition);
         }
 
         // Convert to hiragana
         const hiraganaPhrase = testData.segments.map((seg) => seg.hiragana).join('');
-        inputElement.dispatchEvent(
-          new (global as any).CompositionEvent('compositionupdate', {
-            data: hiraganaPhrase,
-          })
-        );
+        japaneseIME.dispatchCompositionEvent('compositionupdate', hiraganaPhrase);
 
         // Final kanji conversion
-        inputElement.dispatchEvent(
-          new (global as any).CompositionEvent('compositionend', {
-            data: testData.result,
-          })
-        );
+        japaneseIME.dispatchCompositionEvent('compositionend', testData.result);
 
         // Assert: Should handle complex phrase correctly
         const imeState = stateManager.getStateSection('ime');
@@ -575,32 +429,16 @@ describe.skip('Japanese IME Input Handling TDD Test Suite', () => {
 
       it('should handle partial phrase conversion with mixed results', () => {
         // Act: Simulate partial conversion where some words become kanji, others remain hiragana
-        inputElement.dispatchEvent(
-          new (global as any).CompositionEvent('compositionstart', {
-            data: 'kyouwaii',
-          })
-        );
+        japaneseIME.dispatchCompositionEvent('compositionstart', 'kyouwaii');
 
         // Convert first part to kanji
-        inputElement.dispatchEvent(
-          new (global as any).CompositionEvent('compositionupdate', {
-            data: '今日はいい',
-          })
-        );
+        japaneseIME.dispatchCompositionEvent('compositionupdate', '今日はいい');
 
         // Add more text
-        inputElement.dispatchEvent(
-          new (global as any).CompositionEvent('compositionupdate', {
-            data: '今日はいいてんき',
-          })
-        );
+        japaneseIME.dispatchCompositionEvent('compositionupdate', '今日はいいてんき');
 
         // Final mixed result
-        inputElement.dispatchEvent(
-          new (global as any).CompositionEvent('compositionend', {
-            data: '今日はいい天気',
-          })
-        );
+        japaneseIME.dispatchCompositionEvent('compositionend', '今日はいい天気');
 
         // Assert: Should handle mixed conversion results
         const imeState = stateManager.getStateSection('ime');
@@ -632,25 +470,13 @@ describe.skip('Japanese IME Input Handling TDD Test Suite', () => {
           '今日は',
         ];
 
-        inputElement.dispatchEvent(
-          new (global as any).CompositionEvent('compositionstart', {
-            data: stages[0],
-          })
-        );
+        japaneseIME.dispatchCompositionEvent('compositionstart', stages[0]);
 
         stages.slice(1).forEach((stage) => {
-          inputElement.dispatchEvent(
-            new (global as any).CompositionEvent('compositionupdate', {
-              data: stage,
-            })
-          );
+          japaneseIME.dispatchCompositionEvent('compositionupdate', stage);
         });
 
-        inputElement.dispatchEvent(
-          new (global as any).CompositionEvent('compositionend', {
-            data: '今日は',
-          })
-        );
+        japaneseIME.dispatchCompositionEvent('compositionend', '今日は');
 
         // Assert: Should track all intermediate stages
         expect(compositionStages.length).toBeGreaterThan(stages.length);
@@ -662,16 +488,12 @@ describe.skip('Japanese IME Input Handling TDD Test Suite', () => {
     describe('IME Mode Switching', () => {
       it('should handle IME mode toggle during composition', () => {
         // Act: Start composition
-        inputElement.dispatchEvent(
-          new (global as any).CompositionEvent('compositionstart', {
-            data: 'test',
-          })
-        );
+        japaneseIME.dispatchCompositionEvent('compositionstart', 'test');
 
         expect(stateManager.getStateSection('ime').isActive).toBe(true);
 
         // Act: Simulate IME mode toggle (Alt+~)
-        const altTildeEvent = new (global as any).KeyboardEvent('keydown', {
+        const altTildeEvent = new KeyboardEvent('keydown', {
           key: '~',
           altKey: true,
         });
@@ -690,14 +512,10 @@ describe.skip('Japanese IME Input Handling TDD Test Suite', () => {
         // Act: Rapid mode switching
         for (let i = 0; i < 5; i++) {
           // Start composition
-          inputElement.dispatchEvent(
-            new (global as any).CompositionEvent('compositionstart', {
-              data: `test${i}`,
-            })
-          );
+          japaneseIME.dispatchCompositionEvent('compositionstart', `test${i}`,);
 
           // Toggle IME mode
-          const toggleEvent = new (global as any).KeyboardEvent('keydown', {
+          const toggleEvent = new KeyboardEvent('keydown', {
             key: '~',
             altKey: true,
           });
@@ -860,11 +678,7 @@ describe.skip('Japanese IME Input Handling TDD Test Suite', () => {
         const startTime = Date.now();
 
         // Act: Simulate very rapid Japanese typing
-        inputElement.dispatchEvent(
-          new (global as any).CompositionEvent('compositionstart', {
-            data: 'a',
-          })
-        );
+        japaneseIME.dispatchCompositionEvent('compositionstart', 'a');
 
         // Generate rapid composition updates (typical for fast Japanese typing)
         const rapidSequence = [
@@ -885,19 +699,11 @@ describe.skip('Japanese IME Input Handling TDD Test Suite', () => {
         ];
 
         rapidSequence.forEach((stage, _index) => {
-          inputElement.dispatchEvent(
-            new (global as any).CompositionEvent('compositionupdate', {
-              data: stage,
-            })
-          );
+          japaneseIME.dispatchCompositionEvent('compositionupdate', stage);
           vi.advanceTimersByTime(1); // Minimal time between updates
         });
 
-        inputElement.dispatchEvent(
-          new (global as any).CompositionEvent('compositionend', {
-            data: 'ありがとうございます',
-          })
-        );
+        japaneseIME.dispatchCompositionEvent('compositionend', 'ありがとうございます');
 
         const endTime = Date.now();
 
@@ -927,26 +733,14 @@ describe.skip('Japanese IME Input Handling TDD Test Suite', () => {
         });
 
         // Act: Generate many rapid updates
-        inputElement.dispatchEvent(
-          new (global as any).CompositionEvent('compositionstart', {
-            data: 'n',
-          })
-        );
+        japaneseIME.dispatchCompositionEvent('compositionstart', 'n');
 
         for (let i = 1; i <= 100; i++) {
           const data = 'n'.repeat(i % 10) + 'ih' + 'o'.repeat(i % 5);
-          inputElement.dispatchEvent(
-            new (global as any).CompositionEvent('compositionupdate', {
-              data: data,
-            })
-          );
+          japaneseIME.dispatchCompositionEvent('compositionupdate', data);
         }
 
-        inputElement.dispatchEvent(
-          new (global as any).CompositionEvent('compositionend', {
-            data: '日本語入力テスト',
-          })
-        );
+        japaneseIME.dispatchCompositionEvent('compositionend', '日本語入力テスト');
 
         // Assert: Should track all updates accurately
         expect(updateCount).toBe(102); // 1 start + 100 updates + 1 end
@@ -958,23 +752,11 @@ describe.skip('Japanese IME Input Handling TDD Test Suite', () => {
     describe('Edge Cases in Japanese IME', () => {
       it('should handle empty composition data gracefully', () => {
         // Act: Various empty data scenarios
-        inputElement.dispatchEvent(
-          new (global as any).CompositionEvent('compositionstart', {
-            data: '',
-          })
-        );
+        japaneseIME.dispatchCompositionEvent('compositionstart', '');
 
-        inputElement.dispatchEvent(
-          new (global as any).CompositionEvent('compositionupdate', {
-            data: '',
-          })
-        );
+        japaneseIME.dispatchCompositionEvent('compositionupdate', '');
 
-        inputElement.dispatchEvent(
-          new (global as any).CompositionEvent('compositionend', {
-            data: '',
-          })
-        );
+        japaneseIME.dispatchCompositionEvent('compositionend', '');
 
         // Assert: Should handle empty data without errors
         const imeState = stateManager.getStateSection('ime');
@@ -987,26 +769,14 @@ describe.skip('Japanese IME Input Handling TDD Test Suite', () => {
 
       it('should handle very long Japanese composition strings', () => {
         // Arrange: Create very long Japanese composition
-        const longJapaneseText = 'これは非常に長い日本語の文章です。'.repeat(50); // 50 repetitions
+        const longJapaneseText = 'これは非常に長い日本語の文章です。'.repeat(100); // 50 repetitions
 
         // Act: Process long composition
-        inputElement.dispatchEvent(
-          new (global as any).CompositionEvent('compositionstart', {
-            data: 'k',
-          })
-        );
+        japaneseIME.dispatchCompositionEvent('compositionstart', 'k');
 
-        inputElement.dispatchEvent(
-          new (global as any).CompositionEvent('compositionupdate', {
-            data: longJapaneseText,
-          })
-        );
+        japaneseIME.dispatchCompositionEvent('compositionupdate', longJapaneseText);
 
-        inputElement.dispatchEvent(
-          new (global as any).CompositionEvent('compositionend', {
-            data: longJapaneseText,
-          })
-        );
+        japaneseIME.dispatchCompositionEvent('compositionend', longJapaneseText);
 
         // Assert: Should handle long text without issues
         const imeState = stateManager.getStateSection('ime');
@@ -1037,17 +807,9 @@ describe.skip('Japanese IME Input Handling TDD Test Suite', () => {
         ];
 
         specialCharacters.forEach((char, _index) => {
-          inputElement.dispatchEvent(
-            new (global as any).CompositionEvent('compositionstart', {
-              data: char,
-            })
-          );
+          japaneseIME.dispatchCompositionEvent('compositionstart', char);
 
-          inputElement.dispatchEvent(
-            new (global as any).CompositionEvent('compositionend', {
-              data: char,
-            })
-          );
+          japaneseIME.dispatchCompositionEvent('compositionend', char);
 
           // Verify each character is handled
           const imeState = stateManager.getStateSection('ime');
@@ -1063,25 +825,13 @@ describe.skip('Japanese IME Input Handling TDD Test Suite', () => {
         // Act: Simulate corrupted/malformed events
         try {
           // Null data
-          inputElement.dispatchEvent(
-            new (global as any).CompositionEvent('compositionstart', {
-              data: null as any,
-            })
-          );
+          japaneseIME.dispatchCompositionEvent('compositionstart', null as any);
 
           // Undefined data
-          inputElement.dispatchEvent(
-            new (global as any).CompositionEvent('compositionupdate', {
-              data: undefined as any,
-            })
-          );
+          japaneseIME.dispatchCompositionEvent('compositionupdate', undefined as any);
 
           // Very unusual data
-          inputElement.dispatchEvent(
-            new (global as any).CompositionEvent('compositionend', {
-              data: '\uFEFF\u200B\u200C', // Zero-width characters
-            })
-          );
+          japaneseIME.dispatchCompositionEvent('compositionend', '\uFEFF\u200B\u200C', // Zero-width characters);
         } catch (error) {
           // Should not throw errors
         }
@@ -1101,26 +851,14 @@ describe.skip('Japanese IME Input Handling TDD Test Suite', () => {
         // Act: Simulate extended Japanese input session
         for (let session = 0; session < 10; session++) {
           for (let phrase = 0; phrase < 20; phrase++) {
-            inputElement.dispatchEvent(
-              new (global as any).CompositionEvent('compositionstart', {
-                data: 'test',
-              })
-            );
+            japaneseIME.dispatchCompositionEvent('compositionstart', 'test');
 
             // Simulate complex phrase
             for (let stage = 0; stage < 15; stage++) {
-              inputElement.dispatchEvent(
-                new (global as any).CompositionEvent('compositionupdate', {
-                  data: `日本語テスト${session}${phrase}${stage}`,
-                })
-              );
+              japaneseIME.dispatchCompositionEvent('compositionupdate', `日本語テスト${session}${phrase}${stage}`,);
             }
 
-            inputElement.dispatchEvent(
-              new (global as any).CompositionEvent('compositionend', {
-                data: `日本語テスト完了${session}${phrase}`,
-              })
-            );
+            japaneseIME.dispatchCompositionEvent('compositionend', `日本語テスト完了${session}${phrase}`,);
           }
         }
 

@@ -1,19 +1,8 @@
-/**
- * TDD Test Suite for Async Operations and Edge Cases Strategy
- *
- * Vitest Migration: Converted from Mocha/Chai/Sinon to Vitest
- *
- * Comprehensive testing framework for complex async scenarios in VS Code Sidebar Terminal:
- * 1. RED: Define async behaviors that must work reliably
- * 2. GREEN: Implement robust async handling with proper error recovery
- * 3. REFACTOR: Optimize performance and resource management
- */
-
-import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 describe('Async Operations', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    // No sandbox needed with vitest, mocks are reset automatically or manually
   });
 
   afterEach(() => {
@@ -122,7 +111,7 @@ describe('Async Operations', () => {
           {
             resolve: (value: any) => void;
             reject: (error: any) => void;
-            timeoutId: ReturnType<typeof setTimeout>;
+            timeoutId: NodeJS.Timeout;
           }
         >();
 
@@ -226,6 +215,11 @@ describe('Async Operations', () => {
       // GREEN: Implement safe concurrent terminal creation
       class ConcurrentTerminalManager {
         private activeCreations = new Set<string>();
+        private creationQueue: Array<{
+          id: string;
+          resolve: (result: any) => void;
+          reject: (error: any) => void;
+        }> = [];
         private maxConcurrentCreations = 2;
 
         async createTerminalsSimultaneously(count: number): Promise<{
@@ -417,8 +411,9 @@ describe('Async Operations', () => {
       // REFACTOR: Improve CLI agent detection performance
       class OptimizedCLIAgentDetector {
         private detectionCache = new Map<string, { result: string | null; timestamp: number }>();
-        private debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
+        private debounceTimers = new Map<string, NodeJS.Timeout>();
         private readonly CACHE_TTL_MS = 5000;
+        private readonly DEBOUNCE_MS = 200;
 
         async detectAgent(terminalId: string, output: string): Promise<string | null> {
           // Check cache first
@@ -566,7 +561,7 @@ describe('Async Operations', () => {
 
       expect(result1.success).toBe(true);
       expect(result1.result).toBe('success-result');
-      expect(cleanupSpy1).toHaveBeenCalledOnce();
+      expect(cleanupSpy1).toHaveBeenCalledTimes(1);
 
       // Test failed operation
       const cleanupSpy2 = vi.fn();
@@ -582,7 +577,7 @@ describe('Async Operations', () => {
 
       expect(result2.success).toBe(false);
       expect(result2.error).toContain('Operation failed');
-      expect(cleanupSpy2).toHaveBeenCalledOnce(); // Cleanup should still happen
+      expect(cleanupSpy2).toHaveBeenCalledTimes(1); // Cleanup should still happen
 
       expect(resourceManager.getActiveResourceCount()).toBe(0);
     });
@@ -680,12 +675,13 @@ describe('Async Operations', () => {
 
       // Should have some failures and circuit should eventually open
       const failedResults = results.filter((r) => !r.success);
+      const _circuitOpenResults = results.filter((r) => r.circuitOpen);
 
       expect(failedResults.length).toBeGreaterThan(0);
 
       // Test circuit recovery
       circuitBreakerService.reset();
-      await circuitBreakerService.performOperation();
+      const _recoveryResult = await circuitBreakerService.performOperation();
 
       // After reset, circuit should allow operations again
       expect(circuitBreakerService.getCircuitState().state).toBe('CLOSED');

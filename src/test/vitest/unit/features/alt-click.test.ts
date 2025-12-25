@@ -1,21 +1,23 @@
 /**
  * Alt+Click functionality tests
- *
- * Vitest Migration: Converted from Mocha/Chai/Sinon to Vitest
- *
  * Tests the VS Code standard Alt+Click cursor positioning feature
  */
-
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import '../../../shared/TestSetup';
+// Define MockVSCode interface if not already defined (or reuse if exported)
+interface MockVSCode {
+  workspace: {
+    getConfiguration: ReturnType<typeof vi.fn>;
+  };
+}
 
 describe('Alt+Click Cursor Positioning', () => {
-  let mockVSCode: {
-    workspace: {
-      getConfiguration: ReturnType<typeof vi.fn>;
-    };
-  };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let mockVSCode: any;
 
   beforeEach(() => {
     // Mock VS Code configuration
@@ -28,12 +30,12 @@ describe('Alt+Click Cursor Positioning', () => {
     };
 
     // Set up global mocks
-    (global as Record<string, unknown>).vscode = mockVSCode;
+    (global as any).vscode = mockVSCode;
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
-    delete (global as Record<string, unknown>).vscode;
+    delete (global as any).vscode;
   });
 
   describe('VS Code Settings Integration', () => {
@@ -94,6 +96,7 @@ describe('Alt+Click Cursor Positioning', () => {
         '🔧 [DEBUG] TerminalManager.createTerminal called',
       ];
 
+      // This would use the actual detection patterns from webview main.ts
       const claudeCodePattern = /claude.code|🔧.*\[DEBUG\]|CLI Agent:/i;
 
       testOutputs.forEach((output) => {
@@ -122,6 +125,7 @@ describe('Alt+Click Cursor Positioning', () => {
     it('should detect high-frequency output scenarios', () => {
       // Simulate high-frequency output detection
       const outputChunks = ['chunk1', 'chunk2', 'chunk3', 'chunk4', 'chunk5'];
+      const timeWindow = 2000; // 2 seconds
       const threshold = 500; // characters
 
       let totalChars = 0;
@@ -250,7 +254,7 @@ describe('Alt+Click Cursor Positioning', () => {
       }
 
       expect(isNormalClick).toBe(true);
-      expect(mockNormalClick.stopPropagation).toHaveBeenCalledOnce();
+      expect(mockNormalClick.stopPropagation).toHaveBeenCalledTimes(1);
     });
   });
 

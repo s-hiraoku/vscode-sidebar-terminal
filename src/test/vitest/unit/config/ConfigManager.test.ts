@@ -1,24 +1,14 @@
-/**
- * ConfigManager Unit Tests
- *
- * Vitest Migration: Converted from Mocha/Chai/Sinon to Vitest
- */
-
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as vscode from 'vscode';
 import { ConfigManager, getConfigManager } from '../../../../config/ConfigManager';
 
 describe('ConfigManager', () => {
-  let mockWorkspaceConfiguration: {
-    get: ReturnType<typeof vi.fn>;
-    has: ReturnType<typeof vi.fn>;
-    inspect: ReturnType<typeof vi.fn>;
-    update: ReturnType<typeof vi.fn>;
-  };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let mockWorkspaceConfiguration: any;
   let configManager: ConfigManager;
 
   beforeEach(() => {
-    // Clear singleton instance before creating new mocks
+    // Clear singleton instance before creating new stubs
     const configManagerClass = ConfigManager as unknown as { _instance: ConfigManager | undefined };
     configManagerClass._instance = undefined;
 
@@ -29,15 +19,17 @@ describe('ConfigManager', () => {
       update: vi.fn(),
     };
 
-    vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue(
-      mockWorkspaceConfiguration as unknown as vscode.WorkspaceConfiguration
-    );
+    // Mock vscode.workspace.getConfiguration
+    (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockWorkspaceConfiguration);
+
+    // Mock vscode.workspace.onDidChangeConfiguration
+    (vscode.workspace.onDidChangeConfiguration as unknown as ReturnType<typeof vi.fn>).mockReturnValue({ dispose: vi.fn() });
 
     configManager = getConfigManager();
   });
 
   afterEach(() => {
-    // Clear singleton before restoring mocks
+    // Clear singleton before restoring stubs
     const configManagerClass = ConfigManager as unknown as { _instance: ConfigManager | undefined };
     configManagerClass._instance = undefined;
 
@@ -62,14 +54,12 @@ describe('ConfigManager', () => {
 
     it('should return user-configured values', () => {
       // Setup specific values
-      mockWorkspaceConfiguration.get.mockImplementation((key: string) => {
-        const values: Record<string, any> = {
-          maxTerminals: 3,
-          shell: '/bin/zsh',
-          fontSize: 16,
-          fontFamily: 'Courier New',
-        };
-        return values[key];
+      mockWorkspaceConfiguration.get.mockImplementation((key: string, defaultValue?: any) => {
+        if (key === 'maxTerminals') return 3;
+        if (key === 'shell') return '/bin/zsh';
+        if (key === 'fontSize') return 16;
+        if (key === 'fontFamily') return 'Courier New';
+        return defaultValue;
       });
 
       const config = configManager.getExtensionTerminalConfig();
@@ -100,7 +90,7 @@ describe('ConfigManager', () => {
       const callback = vi.fn();
       const mockDisposable = { dispose: vi.fn() };
 
-      vi.spyOn(vscode.workspace, 'onDidChangeConfiguration').mockReturnValue(mockDisposable);
+      (vscode.workspace.onDidChangeConfiguration as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockDisposable);
 
       const disposable = configManager.onConfigurationChange(callback);
 
@@ -112,9 +102,9 @@ describe('ConfigManager', () => {
   describe('clearCache', () => {
     it('should clear configuration cache', () => {
       // First get a config to populate cache
-      mockWorkspaceConfiguration.get.mockImplementation((key: string) => {
+      mockWorkspaceConfiguration.get.mockImplementation((key: string, defaultValue: any) => {
         if (key === 'maxTerminals') return 5;
-        return undefined;
+        return defaultValue;
       });
       configManager.getExtensionTerminalConfig();
 
@@ -133,12 +123,10 @@ describe('ConfigManager', () => {
 
   describe('getCompleteTerminalSettings', () => {
     it('should return complete terminal settings with alt-click configuration', () => {
-      mockWorkspaceConfiguration.get.mockImplementation((key: string) => {
-        const values: Record<string, any> = {
-          altClickMovesCursor: true,
-          multiCursorModifier: 'alt',
-        };
-        return values[key];
+      mockWorkspaceConfiguration.get.mockImplementation((key: string, defaultValue: any) => {
+        if (key === 'altClickMovesCursor') return true;
+        if (key === 'multiCursorModifier') return 'alt';
+        return defaultValue;
       });
 
       const settings = configManager.getCompleteTerminalSettings();
@@ -156,25 +144,25 @@ describe('ConfigManager', () => {
 
       // Test Windows
       Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
-      mockWorkspaceConfiguration.get.mockImplementation((key: string) => {
+      mockWorkspaceConfiguration.get.mockImplementation((key: string, defaultValue: any) => {
         if (key === 'shell.windows') return 'powershell.exe';
-        return undefined;
+        return defaultValue;
       });
       expect(configManager.getShellForPlatform()).toBe('powershell.exe');
 
       // Test macOS
       Object.defineProperty(process, 'platform', { value: 'darwin', configurable: true });
-      mockWorkspaceConfiguration.get.mockImplementation((key: string) => {
+      mockWorkspaceConfiguration.get.mockImplementation((key: string, defaultValue: any) => {
         if (key === 'shell.osx') return '/bin/zsh';
-        return undefined;
+        return defaultValue;
       });
       expect(configManager.getShellForPlatform()).toBe('/bin/zsh');
 
       // Test Linux
       Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });
-      mockWorkspaceConfiguration.get.mockImplementation((key: string) => {
+      mockWorkspaceConfiguration.get.mockImplementation((key: string, defaultValue: any) => {
         if (key === 'shell.linux') return '/bin/bash';
-        return undefined;
+        return defaultValue;
       });
       expect(configManager.getShellForPlatform()).toBe('/bin/bash');
 

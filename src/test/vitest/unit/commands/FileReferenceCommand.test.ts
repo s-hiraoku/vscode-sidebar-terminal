@@ -1,28 +1,19 @@
-/**
- * FileReferenceCommand Unit Tests
- *
- * Vitest Migration: Converted from Mocha/Chai/Sinon to Vitest
- */
-
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as vscode from 'vscode';
 
-import '../../../shared/TestSetup';
+// Import shared test setup
 import { FileReferenceCommand } from '../../../../commands/FileReferenceCommand';
+import { TerminalManager } from '../../../../terminals/TerminalManager';
 
 describe('FileReferenceCommand', () => {
   let fileReferenceCommand: FileReferenceCommand;
-  let mockTerminalManager: {
-    hasActiveTerminal: ReturnType<typeof vi.fn>;
-    getActiveTerminalId: ReturnType<typeof vi.fn>;
-    getConnectedAgents: ReturnType<typeof vi.fn>;
-    sendInput: ReturnType<typeof vi.fn>;
-    focusTerminal: ReturnType<typeof vi.fn>;
-    refreshCliAgentState: ReturnType<typeof vi.fn>;
-    getCurrentGloballyActiveAgent: ReturnType<typeof vi.fn>;
-  };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let mockTerminalManager: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockActiveEditor: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockDocument: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockSelection: any;
 
   beforeEach(() => {
@@ -36,25 +27,23 @@ describe('FileReferenceCommand', () => {
           agentInfo: { type: 'claude' },
         },
       ]),
-      sendInput: vi.fn(),
+      getCurrentGloballyActiveAgent: vi.fn(),
       focusTerminal: vi.fn(),
-      refreshCliAgentState: vi.fn().mockReturnValue(false),
-      getCurrentGloballyActiveAgent: vi.fn().mockReturnValue({
-        terminalId: 'terminal-1',
-        agentType: 'claude',
-      }),
+      sendInput: vi.fn(),
     };
 
     // Create FileReferenceCommand instance
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     fileReferenceCommand = new FileReferenceCommand(mockTerminalManager as any);
 
     // Mock VS Code workspace configuration
     const mockConfig = {
       get: vi.fn().mockReturnValue(true), // CLI Agent integration enabled
     };
-    vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue(mockConfig as any);
+    (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockConfig);
 
     // Mock workspace folders
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (vscode.workspace as any).workspaceFolders = [
       {
         uri: { fsPath: '/workspace/project' },
@@ -79,14 +68,15 @@ describe('FileReferenceCommand', () => {
       selection: mockSelection,
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (vscode.window as any).activeTextEditor = mockActiveEditor;
 
     // Mock commands
-    vi.spyOn(vscode.commands, 'executeCommand').mockResolvedValue(undefined);
+    (vscode.commands.executeCommand as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
 
     // Mock notifications
-    vi.spyOn(vscode.window, 'showInformationMessage').mockResolvedValue(undefined);
-    vi.spyOn(vscode.window, 'showWarningMessage').mockResolvedValue(undefined);
+    (vscode.window.showInformationMessage as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    (vscode.window.showWarningMessage as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -95,6 +85,7 @@ describe('FileReferenceCommand', () => {
 
   describe('getActiveFileInfo', () => {
     it('should return file info without selection when no text is selected', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = (fileReferenceCommand as any).getActiveFileInfo();
 
       expect(result).toEqual({
@@ -111,6 +102,7 @@ describe('FileReferenceCommand', () => {
       mockSelection.start = { line: 4 }; // 0-based
       mockSelection.end = { line: 4 }; // 0-based
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = (fileReferenceCommand as any).getActiveFileInfo();
 
       expect(result).toEqual({
@@ -131,6 +123,7 @@ describe('FileReferenceCommand', () => {
       mockSelection.start = { line: 2 }; // 0-based
       mockSelection.end = { line: 6 }; // 0-based
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = (fileReferenceCommand as any).getActiveFileInfo();
 
       expect(result).toEqual({
@@ -146,8 +139,10 @@ describe('FileReferenceCommand', () => {
     });
 
     it('should return null when no active editor', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (vscode.window as any).activeTextEditor = null;
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = (fileReferenceCommand as any).getActiveFileInfo();
 
       expect(result).toBeNull();
@@ -160,6 +155,7 @@ describe('FileReferenceCommand', () => {
         relativePath: 'src/test.ts',
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = (fileReferenceCommand as any).formatFileReference(fileInfo);
 
       expect(result).toBe('@src/test.ts ');
@@ -175,6 +171,7 @@ describe('FileReferenceCommand', () => {
         },
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = (fileReferenceCommand as any).formatFileReference(fileInfo);
 
       expect(result).toBe('@src/test.ts#L5 ');
@@ -190,6 +187,7 @@ describe('FileReferenceCommand', () => {
         },
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = (fileReferenceCommand as any).formatFileReference(fileInfo);
 
       expect(result).toBe('@src/test.ts#L3-L7 ');
@@ -200,11 +198,12 @@ describe('FileReferenceCommand', () => {
     it('should send file reference without line numbers when no selection', async () => {
       fileReferenceCommand.handleSendAtMention();
 
-      // Wait for async operations
-      await new Promise((resolve) => setTimeout(resolve, 200));
-
       // Verify that the correct text was sent
-      expect(mockTerminalManager.sendInput).toHaveBeenCalledWith('@src/test.ts ', 'terminal-1');
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      expect(mockTerminalManager.sendInput).toHaveBeenCalledWith(
+        '@src/test.ts ',
+        'terminal-1'
+      );
     });
 
     it('should send file reference with line numbers when text is selected', async () => {
@@ -215,10 +214,8 @@ describe('FileReferenceCommand', () => {
 
       fileReferenceCommand.handleSendAtMention();
 
-      // Wait for async operations
-      await new Promise((resolve) => setTimeout(resolve, 200));
-
       // Verify that the correct text with line range was sent
+      await new Promise((resolve) => setTimeout(resolve, 200));
       expect(mockTerminalManager.sendInput).toHaveBeenCalledWith(
         '@src/test.ts#L3-L7 ',
         'terminal-1'
@@ -226,6 +223,7 @@ describe('FileReferenceCommand', () => {
     });
 
     it('should show warning when no active editor', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (vscode.window as any).activeTextEditor = null;
 
       fileReferenceCommand.handleSendAtMention();
@@ -239,7 +237,7 @@ describe('FileReferenceCommand', () => {
       const mockConfig = {
         get: vi.fn().mockReturnValue(false), // CLI Agent integration disabled
       };
-      vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue(mockConfig as any);
+      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockConfig);
 
       fileReferenceCommand.handleSendAtMention();
 
