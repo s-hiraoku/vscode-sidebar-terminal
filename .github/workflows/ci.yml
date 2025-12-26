@@ -204,3 +204,70 @@ jobs:
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
+
+  vrt:
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: 'npm'
+
+      - name: Configure npm settings
+        run: |
+          npm config set fetch-timeout 600000
+          npm config set fetch-retry-mintimeout 60000
+          npm config set fetch-retry-maxtimeout 120000
+          npm config set progress false
+
+      - name: Install dependencies (non-Windows)
+        if: runner.os != 'Windows'
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Install dependencies (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          npm ci --prefer-offline --no-audit --ignore-scripts
+          New-Item -ItemType Directory -Force -Path "node_modules\node-pty"
+          Set-Content -Path "node_modules\node-pty\package.json" -Value '{"name":"node-pty","version":"1.0.0","main":"index.js"}'
+          Set-Content -Path "node_modules\node-pty\index.js" -Value 'module.exports = { spawn: () => ({ pid: 1234, onData: () => {}, onExit: () => {}, write: () => {}, resize: () => {}, kill: () => {} }) };'
+        shell: pwsh
+        env:
+          NODE_PTY_SKIP_DOWNLOAD_BINARY: 1
+
+      - name: Install Playwright Browsers
+        run: npx playwright install chromium
+
+      - name: Run VRT Tests
+        run: npm run test:vrt
+        timeout-minutes: 10
+
+      - name: Upload VRT Diff Screenshots
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: vrt-diff-${{ matrix.os }}
+          path: |
+            test-results/**/*-diff.png
+            test-results/**/*-actual.png
+            test-results/**/*-expected.png
+          retention-days: 7
+
+      - name: Upload VRT Report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: vrt-report-${{ matrix.os }}
+          path: playwright-report/
+          retention-days: 7
