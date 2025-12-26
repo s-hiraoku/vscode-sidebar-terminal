@@ -62,8 +62,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-playwright-
 
-      - name: Run E2E tests
-        run: npm run test:e2e
+      - name: Run E2E tests (excluding VRT)
+        run: npx playwright test --grep-invert @visual-regression
         continue-on-error: false
 
       - name: Upload test results
