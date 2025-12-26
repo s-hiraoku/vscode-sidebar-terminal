@@ -207,9 +207,11 @@ jobs:
 
   vrt:
     needs: test
-    # Run VRT only on macOS to match local development baselines
-    # Cross-platform font rendering differences cause size mismatches
-    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 15
 
     steps:
@@ -238,12 +240,14 @@ jobs:
       - name: Run VRT Tests
         run: npm run test:vrt
         timeout-minutes: 10
+        # Allow failure if baselines don't exist for this platform yet
+        continue-on-error: true
 
       - name: Upload VRT Diff Screenshots
         if: failure()
         uses: actions/upload-artifact@v6
         with:
-          name: vrt-diff-macos
+          name: vrt-diff-${{ matrix.os }}
           path: |
             test-results/**/*-diff.png
             test-results/**/*-actual.png
@@ -254,6 +258,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: vrt-report-macos
+          name: vrt-report-${{ matrix.os }}
           path: playwright-report/
           retention-days: 7

@@ -26,7 +26,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
 
 jobs:
@@ -100,6 +100,26 @@ jobs:
           name: vrt-baselines-${{ matrix.os }}
           path: src/test/e2e/__screenshots__/
           retention-days: 30
+
+      - name: Commit Updated Baselines
+        if: ${{ github.event.inputs.update_baselines == 'true' }}
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add src/test/e2e/__screenshots__/
+          git diff --staged --quiet || git commit -m "chore(vrt): update ${{ runner.os }} baselines
+
+          🤖 Generated with GitHub Actions
+          Platform: ${{ matrix.os }}
+          Workflow: ${{ github.workflow }}
+          Run: ${{ github.run_id }}"
+
+      - name: Push Updated Baselines
+        if: ${{ github.event.inputs.update_baselines == 'true' }}
+        run: |
+          # Pull with rebase to handle parallel matrix job commits
+          git pull --rebase origin ${{ github.ref_name }} || true
+          git push
 
       - name: Upload Diff Screenshots on Failure
         if: failure()

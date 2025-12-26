@@ -25,8 +25,8 @@ export default defineConfig({
     },
   },
 
-  // VRT snapshot path template - unified baselines for all platforms
-  snapshotPathTemplate: '{testDir}/__screenshots__/{testFilePath}/{arg}{ext}',
+  // VRT snapshot path template - platform-specific baselines
+  snapshotPathTemplate: '{testDir}/__screenshots__/{platform}/{testFilePath}/{arg}{ext}',
 
   // Test execution settings
   fullyParallel: true,
