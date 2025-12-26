@@ -97,9 +97,6 @@ jobs:
       - name: Run lint
         run: npm run lint
 
-      - name: Compile tests
-        run: npm run compile-tests
-
       - name: Setup xvfb (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -121,14 +118,15 @@ jobs:
           NODE_PTY_SKIP_DOWNLOAD_BINARY: 1
         timeout-minutes: 6
 
-      - name: Run unit tests with coverage (macOS/Windows)
+      - name: Run unit tests (macOS/Windows)
         if: runner.os != 'Linux'
-        run: npm run compile-tests && echo "Tests compiled successfully on ${{ runner.os }}"
-        timeout-minutes: 15
+        run: |
+          echo "🧪 Running Vitest unit tests on ${{ runner.os }}..."
+          npm run test
+        timeout-minutes: 10
         env:
           NODE_PTY_SKIP_DOWNLOAD_BINARY: 1
           NODE_OPTIONS: --max-old-space-size=4096
-          VSCODE_TEST_DATA_DIR: ${{ runner.temp }}/vscode-test
 
       - name: Build extension
         run: npm run package
