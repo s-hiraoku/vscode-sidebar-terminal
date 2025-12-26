@@ -183,17 +183,6 @@ export class InputEventService {
         } else {
           originalHandler(event);
         }
-
-        // Update metrics
-        const endTime = performance.now();
-        const processingTime = endTime - startTime;
-
-        registeredEvent.metrics.callCount++;
-        registeredEvent.metrics.totalProcessingTime += processingTime;
-
-        this.metrics.totalProcessed++;
-        this.metrics.lastEventTimestamp = Date.now();
-        this.updateAverageProcessingTime(processingTime);
       } catch (error) {
         // Handle errors
         registeredEvent.metrics.errorCount++;
@@ -204,6 +193,17 @@ export class InputEventService {
         // Prevent further propagation on error
         event.preventDefault();
         event.stopPropagation();
+      } finally {
+        // Update metrics regardless of success/error
+        const endTime = performance.now();
+        const processingTime = endTime - startTime;
+
+        registeredEvent.metrics.callCount++;
+        registeredEvent.metrics.totalProcessingTime += processingTime;
+
+        this.metrics.totalProcessed++;
+        this.metrics.lastEventTimestamp = Date.now();
+        this.updateAverageProcessingTime(processingTime);
       }
     };
   }

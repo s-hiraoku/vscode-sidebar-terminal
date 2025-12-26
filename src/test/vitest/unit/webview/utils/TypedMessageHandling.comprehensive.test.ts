@@ -26,7 +26,6 @@ import {
   TypedMessageHandler,
   TypedMessageRegistration,
   MESSAGE_COMMANDS,
-  LoggerFunction,
 } from '../../../../../webview/utils/TypedMessageHandling';
 
 describe('TypedMessageHandling - Comprehensive TDD Suite', () => {

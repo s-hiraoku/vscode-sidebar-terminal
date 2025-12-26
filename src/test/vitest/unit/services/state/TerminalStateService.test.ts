@@ -5,7 +5,7 @@
  * Tests for the terminal state management service.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { EventBus } from '../../../../../core/EventBus';
 import {
   TerminalStateService,

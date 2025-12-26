@@ -9,7 +9,6 @@ import { InputManager } from '../../../../webview/managers/InputManager';
 import { ConsolidatedMessageManager } from '../../../../webview/managers/ConsolidatedMessageManager';
 import { PerformanceManager } from '../../../../webview/managers/PerformanceManager';
 import {
-  IManagerCoordinator,
   IUIManager,
   IConfigManager,
   INotificationManager,

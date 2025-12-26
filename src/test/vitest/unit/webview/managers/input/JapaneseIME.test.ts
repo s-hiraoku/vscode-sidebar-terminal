@@ -376,7 +376,7 @@ describe('Japanese IME Input Handling TDD Test Suite', () => {
         // Act: Start kanji conversion process
         japaneseIME.dispatchCompositionEvent('compositionstart', 'nihon');
 
-        japaneseIME.dispatchCompositionEvent('compositionupdate', testData.intermediate, // にほん);
+        japaneseIME.dispatchCompositionEvent('compositionupdate', testData.intermediate);
 
         // Show some kanji candidates
         japaneseIME.dispatchCompositionEvent('compositionupdate', '日本');
@@ -831,7 +831,7 @@ describe('Japanese IME Input Handling TDD Test Suite', () => {
           japaneseIME.dispatchCompositionEvent('compositionupdate', undefined as any);
 
           // Very unusual data
-          japaneseIME.dispatchCompositionEvent('compositionend', '\uFEFF\u200B\u200C', // Zero-width characters);
+          japaneseIME.dispatchCompositionEvent('compositionend', '\uFEFF\u200B\u200C'); // Zero-width characters
         } catch (error) {
           // Should not throw errors
         }
@@ -855,10 +855,10 @@ describe('Japanese IME Input Handling TDD Test Suite', () => {
 
             // Simulate complex phrase
             for (let stage = 0; stage < 15; stage++) {
-              japaneseIME.dispatchCompositionEvent('compositionupdate', `日本語テスト${session}${phrase}${stage}`,);
+              japaneseIME.dispatchCompositionEvent('compositionupdate', `日本語テスト${session}${phrase}${stage}`);
             }
 
-            japaneseIME.dispatchCompositionEvent('compositionend', `日本語テスト完了${session}${phrase}`,);
+            japaneseIME.dispatchCompositionEvent('compositionend', `日本語テスト完了${session}${phrase}`);
           }
         }
 

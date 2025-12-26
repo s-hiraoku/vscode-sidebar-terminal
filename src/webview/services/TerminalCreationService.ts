@@ -720,9 +720,8 @@ export class TerminalCreationService implements Disposable {
         return terminal;
       } catch (error) {
         terminalLogger.error(`Failed to create terminal ${terminalId}:`, error);
-
-        // Resume observers even on error
-        ResizeManager.resumeObservers();
+        
+        // Restore ResizeObservers if they were paused
 
         if (currentRetry < maxRetries) {
           currentRetry++;

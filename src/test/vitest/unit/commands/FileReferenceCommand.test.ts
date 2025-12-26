@@ -3,7 +3,6 @@ import * as vscode from 'vscode';
 
 // Import shared test setup
 import { FileReferenceCommand } from '../../../../commands/FileReferenceCommand';
-import { TerminalManager } from '../../../../terminals/TerminalManager';
 
 describe('FileReferenceCommand', () => {
   let fileReferenceCommand: FileReferenceCommand;

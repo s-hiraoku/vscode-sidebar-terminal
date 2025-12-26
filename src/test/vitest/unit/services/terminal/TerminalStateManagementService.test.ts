@@ -128,19 +128,20 @@ describe('TerminalStateManagementService', () => {
 
     it('should emit state update event on remove', async () => {
       const terminal = createMockTerminal();
-      service.addTerminal(terminal);
-
+      
       let eventCount = 0;
       await new Promise<void>((resolve) => {
+        // Attach listener BEFORE adding and removing
         service.onStateUpdate(() => {
           eventCount++;
           if (eventCount === 2) {
-            // Second event is for removal
+            // Second event is for removal (first was for add)
             expect(service.getTerminalCount()).toBe(0);
             resolve();
           }
         });
 
+        service.addTerminal(terminal);
         service.removeTerminal(terminal.id);
       });
     });

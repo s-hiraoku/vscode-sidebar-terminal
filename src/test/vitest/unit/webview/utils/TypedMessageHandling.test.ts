@@ -9,16 +9,13 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
+  MessageDataValidator,
+  IMessageValidator,
+  LoggerFunction,
   TypedMessageRouter,
   TypedMessageSender,
-  MessageDataValidator,
-  createTypedMessageEventListener,
   MESSAGE_COMMANDS,
-  TerminalMessageData,
-  SessionMessageData,
-  MessageProcessingResult,
-  VSCodeWebviewAPI,
-  LoggerFunction,
+  createTypedMessageEventListener,
 } from '../../../../../webview/utils/TypedMessageHandling';
 
 describe('TypedMessageHandling - 型安全なメッセージシステム', () => {

@@ -19,7 +19,6 @@ import type * as vscode from 'vscode';
 
 describe('SecondaryTerminalProvider - Dynamic Split Direction (Issue #148)', function () {
   let mockTerminalManager: any;
-  let mockContext: vscode.ExtensionContext;
   let mockWebviewView: vscode.WebviewView;
   let mockWebview: vscode.Webview;
   let executeCommandMock: ReturnType<typeof vi.fn>;
@@ -42,16 +41,6 @@ describe('SecondaryTerminalProvider - Dynamic Split Direction (Issue #148)', fun
       resizeTerminal: vi.fn(),
       dispose: vi.fn(),
     };
-
-    mockContext = {
-      subscriptions: [],
-      extensionUri: { fsPath: '/test/extension', scheme: 'file' } as any,
-      globalState: {
-        get: vi.fn(),
-        update: vi.fn(),
-        keys: vi.fn().mockReturnValue([]),
-      },
-    } as any;
 
     // Setup executeCommand mock
     executeCommandMock = vi.fn().mockResolvedValue(undefined);

@@ -157,10 +157,13 @@ export class TerminalProcessCoordinator {
       const signal = typeof event === 'object' ? event.signal : undefined;
 
       // Update process state based on exit conditions
-      if (terminal.processState === ProcessState.Launching) {
-        terminal.processState = ProcessState.KilledDuringLaunch;
-      } else {
-        terminal.processState = ProcessState.KilledByProcess;
+      // Only transition to KilledByProcess/KilledDuringLaunch if not already KilledByUser
+      if (terminal.processState !== ProcessState.KilledByUser) {
+        if (terminal.processState === ProcessState.Launching) {
+          terminal.processState = ProcessState.KilledDuringLaunch;
+        } else {
+          terminal.processState = ProcessState.KilledByProcess;
+        }
       }
 
       this.notifyProcessStateChange(terminal, terminal.processState);

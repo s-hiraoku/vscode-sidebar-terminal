@@ -23,29 +23,30 @@ describe('FeatureFlagService', () => {
     get: ReturnType<typeof vi.fn>;
   };
   let configChangeEmitter: vscode.EventEmitter<vscode.ConfigurationChangeEvent>;
-  let mockGetConfiguration: ReturnType<typeof vi.fn>;
-  let mockOnDidChangeConfiguration: ReturnType<typeof vi.fn>;
-
   beforeEach(() => {
-    // Create configuration change emitter
-    configChangeEmitter = new vscode.EventEmitter<vscode.ConfigurationChangeEvent>();
+    // Reset mocks
+    vi.restoreAllMocks();
 
-    // Mock configuration
     mockConfiguration = {
       get: vi.fn(),
     };
 
-    // Mock workspace
-    mockGetConfiguration = vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue(mockConfiguration as any);
+    const mockWorkspace = {
+      getConfiguration: vi.fn().mockReturnValue(mockConfiguration),
+      onDidChangeConfiguration: vi.fn(),
+    };
 
-    // Mock onDidChangeConfiguration
-    mockOnDidChangeConfiguration = vi.spyOn(vscode.workspace, 'onDidChangeConfiguration').mockImplementation(
-      (listener) => configChangeEmitter.event(listener)
-    );
+    (vscode.workspace as any).getConfiguration = mockWorkspace.getConfiguration;
+    (vscode.workspace as any).onDidChangeConfiguration = mockWorkspace.onDidChangeConfiguration;
 
-    // Create service instance
+    configChangeEmitter = new vscode.EventEmitter<vscode.ConfigurationChangeEvent>();
+    mockWorkspace.onDidChangeConfiguration.mockImplementation((callback: any) => {
+      return configChangeEmitter.event(callback);
+    });
+
     featureFlagService = new FeatureFlagService();
   });
+
 
   afterEach(() => {
     featureFlagService.dispose();

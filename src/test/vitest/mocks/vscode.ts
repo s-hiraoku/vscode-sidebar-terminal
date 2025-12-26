@@ -28,8 +28,13 @@ export class Uri {
   }
 
   static parse(value: string): Uri {
-    const url = new URL(value);
-    return new Uri(url.protocol.replace(':', ''), url.host, url.pathname);
+    try {
+      const url = new URL(value);
+      return new Uri(url.protocol.replace(':', ''), url.host, url.pathname, url.search.substring(1), url.hash.substring(1));
+    } catch {
+      // Fallback for non-URL strings
+      return new Uri('file', '', value);
+    }
   }
 
   static joinPath(base: Uri, ...pathSegments: string[]): Uri {

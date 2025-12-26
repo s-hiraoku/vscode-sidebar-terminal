@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { JSDOM } from 'jsdom';
+
 import {
   InputEventService,
   EventHandlerConfig as _EventHandlerConfig,
@@ -49,6 +49,10 @@ const VS_CODE_KEYBINDINGS = {
   'ctrl+k ctrl+c': 'editor.action.addCommentLine',
   'ctrl+k ctrl+u': 'editor.action.removeCommentLine',
   'ctrl+k ctrl+s': 'workbench.action.openKeyboardShortcuts',
+
+  // Other commands
+  'ctrl+,': 'workbench.action.openSettings',
+  'ctrl+`': 'workbench.action.terminal.toggleTerminal',
 
   // Multi-cursor
   'alt+click': 'editor.action.insertCursorAtEndOfEachLineSelected',
@@ -281,9 +285,8 @@ class MockVSCodeTerminalIntegration {
  * real setTimeout calls that don't interact correctly with vi.useFakeTimers().
  * TODO: Investigate using real timers or mocking the debounce implementation directly.
  */
-describe.skip('VS Code Compatibility Pattern TDD Test Suite', () => {
-  let jsdom: JSDOM;
-  let terminalElement: Element;
+describe('VS Code Compatibility Pattern TDD Test Suite', () => {
+  let terminalElement: HTMLElement;
   let eventService: InputEventService;
   let stateManager: InputStateManager;
   let vscodeIntegration: MockVSCodeTerminalIntegration;
@@ -292,38 +295,19 @@ describe.skip('VS Code Compatibility Pattern TDD Test Suite', () => {
   beforeEach(() => {
     vi.useFakeTimers();
 
-    // Arrange: Setup VS Code-like DOM environment
-    jsdom = new JSDOM(
-      `
-      <!DOCTYPE html>
-      <html>
-        <body>
-          <div class="monaco-workbench">
-            <div class="terminal-outer-container">
-              <div class="terminal-wrapper">
-                <div id="terminal" class="xterm" tabindex="0"></div>
-              </div>
-            </div>
+    // Set up DOM elements in the existing environment
+    document.body.innerHTML = `
+      <div class="monaco-workbench">
+        <div class="terminal-outer-container">
+          <div class="terminal-wrapper">
+            <div id="terminal" class="xterm" tabindex="0"></div>
           </div>
-        </body>
-      </html>
-    `,
-      {
-        url: 'vscode-webview://terminal',
-        pretendToBeVisual: true,
-        resources: 'usable',
-      }
-    );
-
-    // Setup global environment
-    (global as any).window = jsdom.window;
-    (global as any).document = jsdom.window.document;
-    (global as any).Event = jsdom.window.Event;
-    (global as any).KeyboardEvent = jsdom.window.KeyboardEvent;
-    (global as any).MouseEvent = jsdom.window.MouseEvent;
+        </div>
+      </div>
+    `;
 
     // Setup terminal element
-    terminalElement = (global as any).document.getElementById('terminal')!;
+    terminalElement = document.getElementById('terminal') as HTMLElement;
 
     // Setup services
     logMessages = [];
@@ -343,31 +327,11 @@ describe.skip('VS Code Compatibility Pattern TDD Test Suite', () => {
   });
 
   afterEach(() => {
-    // CRITICAL: Use try-finally to ensure all cleanup happens
-    try {
-      vi.useRealTimers();
-    } finally {
-      try {
-        eventService.dispose();
-      } finally {
-        try {
-          stateManager.dispose();
-        } finally {
-          try {
-            // CRITICAL: Close JSDOM window to prevent memory leaks
-            jsdom.window.close();
-          } finally {
-            // CRITICAL: Clean up global DOM state to prevent test pollution
-            delete (global as any).window;
-            delete (global as any).document;
-            delete (global as any).Event;
-            delete (global as any).KeyboardEvent;
-            delete (global as any).MouseEvent;
-            delete (global as any).performance;
-          }
-        }
-      }
-    }
+    vi.useRealTimers();
+    eventService?.dispose();
+    stateManager?.dispose();
+    document.body.innerHTML = '';
+    vi.clearAllMocks();
   });
 
   describe('TDD Red Phase: VS Code Alt+Click Integration', () => {
@@ -381,7 +345,7 @@ describe.skip('VS Code Compatibility Pattern TDD Test Suite', () => {
         const altClickCallback = vi.fn();
         vscodeIntegration.registerKeybindingCallback('alt+click', altClickCallback);
 
-        const altClickEvent = new jsdom.window.MouseEvent('click', {
+        const altClickEvent = new MouseEvent('click', {
           clientX: 100,
           clientY: 200,
           altKey: true,
@@ -413,7 +377,7 @@ describe.skip('VS Code Compatibility Pattern TDD Test Suite', () => {
         const altClickCallback = vi.fn();
         vscodeIntegration.registerKeybindingCallback('alt+click', altClickCallback);
 
-        const altClickEvent = new jsdom.window.MouseEvent('click', {
+        const altClickEvent = new MouseEvent('click', {
           clientX: 150,
           clientY: 250,
           altKey: true,
@@ -437,7 +401,7 @@ describe.skip('VS Code Compatibility Pattern TDD Test Suite', () => {
         });
 
         // Act: Simulate Option+Click on macOS
-        const optionClickEvent = new jsdom.window.MouseEvent('click', {
+        const optionClickEvent = new MouseEvent('click', {
           clientX: 300,
           clientY: 400,
           altKey: true, // Alt key represents Option on macOS
@@ -459,15 +423,15 @@ describe.skip('VS Code Compatibility Pattern TDD Test Suite', () => {
       it('should prevent default Alt+Click behavior when VS Code handles it', () => {
         // Arrange: Mock preventDefault tracking
         let preventDefaultCalled = false;
-        const originalPreventDefault = jsdom.window.MouseEvent.prototype.preventDefault;
+        const originalPreventDefault = MouseEvent.prototype.preventDefault;
 
-        jsdom.window.MouseEvent.prototype.preventDefault = function () {
+        MouseEvent.prototype.preventDefault = function () {
           preventDefaultCalled = true;
           originalPreventDefault.call(this);
         };
 
         // Act: Perform Alt+Click
-        const altClickEvent = new jsdom.window.MouseEvent('click', {
+        const altClickEvent = new MouseEvent('click', {
           clientX: 100,
           clientY: 200,
           altKey: true,
@@ -481,7 +445,7 @@ describe.skip('VS Code Compatibility Pattern TDD Test Suite', () => {
         expect(preventDefaultCalled).toBe(true);
 
         // Restore
-        jsdom.window.MouseEvent.prototype.preventDefault = originalPreventDefault;
+        MouseEvent.prototype.preventDefault = originalPreventDefault;
       });
     });
 
@@ -510,7 +474,7 @@ describe.skip('VS Code Compatibility Pattern TDD Test Suite', () => {
         });
 
         // Act: Still track Alt key state for other purposes
-        const keyEvent = new jsdom.window.KeyboardEvent('keydown', {
+        const keyEvent = new KeyboardEvent('keydown', {
           key: 'Alt',
           altKey: true,
         });
@@ -556,7 +520,7 @@ describe.skip('VS Code Compatibility Pattern TDD Test Suite', () => {
         ];
 
         keys.forEach(({ key, ctrlKey, shiftKey = false, callback }) => {
-          const keyEvent = new jsdom.window.KeyboardEvent('keydown', {
+          const keyEvent = new KeyboardEvent('keydown', {
             key,
             ctrlKey,
             shiftKey,
@@ -584,7 +548,7 @@ describe.skip('VS Code Compatibility Pattern TDD Test Suite', () => {
         vscodeIntegration.registerKeybindingCallback('ctrl+l', vscodeCallback);
 
         // Act: Send Ctrl+L (should go to shell)
-        const ctrlL = new jsdom.window.KeyboardEvent('keydown', {
+        const ctrlL = new KeyboardEvent('keydown', {
           key: 'l',
           ctrlKey: true,
         });
@@ -595,7 +559,7 @@ describe.skip('VS Code Compatibility Pattern TDD Test Suite', () => {
         expect(vscodeCallback).not.toHaveBeenCalled();
 
         // Act: Send Ctrl+C (should be handled by VS Code due to skip list)
-        const ctrlC = new jsdom.window.KeyboardEvent('keydown', {
+        const ctrlC = new KeyboardEvent('keydown', {
           key: 'c',
           ctrlKey: true,
         });
@@ -617,7 +581,7 @@ describe.skip('VS Code Compatibility Pattern TDD Test Suite', () => {
         ];
 
         keySequences.forEach(({ key, ctrlKey = false, shiftKey = false, altKey = false }) => {
-          const keyEvent = new jsdom.window.KeyboardEvent('keydown', {
+          const keyEvent = new KeyboardEvent('keydown', {
             key,
             ctrlKey,
             shiftKey,
@@ -657,7 +621,7 @@ describe.skip('VS Code Compatibility Pattern TDD Test Suite', () => {
         );
 
         // Act: Execute chord sequence (Ctrl+K, then C)
-        const ctrlK = new jsdom.window.KeyboardEvent('keydown', {
+        const ctrlK = new KeyboardEvent('keydown', {
           key: 'k',
           ctrlKey: true,
           bubbles: true,
@@ -671,7 +635,7 @@ describe.skip('VS Code Compatibility Pattern TDD Test Suite', () => {
         expect(keyboardState.isInChordMode).toBe(true);
 
         // Act: Complete chord with 'C'
-        const cKey = new jsdom.window.KeyboardEvent('keydown', {
+        const cKey = new KeyboardEvent('keydown', {
           key: 'c',
           ctrlKey: false,
         });
@@ -695,7 +659,7 @@ describe.skip('VS Code Compatibility Pattern TDD Test Suite', () => {
         vscodeIntegration.registerKeybindingCallback('ctrl+k c', chordCallback);
 
         // Act: Try chord sequence
-        const ctrlK = new jsdom.window.KeyboardEvent('keydown', {
+        const ctrlK = new KeyboardEvent('keydown', {
           key: 'k',
           ctrlKey: true,
         });
@@ -717,7 +681,7 @@ describe.skip('VS Code Compatibility Pattern TDD Test Suite', () => {
         });
 
         // Act: Start chord sequence
-        const ctrlK = new jsdom.window.KeyboardEvent('keydown', {
+        const ctrlK = new KeyboardEvent('keydown', {
           key: 'k',
           ctrlKey: true,
         });
@@ -726,7 +690,7 @@ describe.skip('VS Code Compatibility Pattern TDD Test Suite', () => {
         expect(stateManager.getStateSection('keyboard').isInChordMode).toBe(true);
 
         // Act: Press Escape to cancel chord
-        const escKey = new jsdom.window.KeyboardEvent('keydown', {
+        const escKey = new KeyboardEvent('keydown', {
           key: 'Escape',
         });
 
@@ -739,7 +703,7 @@ describe.skip('VS Code Compatibility Pattern TDD Test Suite', () => {
 
       it('should track chord mode as critical state', () => {
         // Act: Enter chord mode
-        const ctrlK = new jsdom.window.KeyboardEvent('keydown', {
+        const ctrlK = new KeyboardEvent('keydown', {
           key: 'k',
           ctrlKey: true,
         });
@@ -750,7 +714,7 @@ describe.skip('VS Code Compatibility Pattern TDD Test Suite', () => {
         expect(stateManager.hasCriticalStateActive()).toBe(true);
 
         // Act: Exit chord mode
-        const cKey = new jsdom.window.KeyboardEvent('keydown', {
+        const cKey = new KeyboardEvent('keydown', {
           key: 'c',
         });
 
@@ -774,7 +738,7 @@ describe.skip('VS Code Compatibility Pattern TDD Test Suite', () => {
         vscodeIntegration.registerKeybindingCallback('ctrl+pagedown', navigationCallback);
 
         // Act: Use navigation keys
-        const navigationKey = new jsdom.window.KeyboardEvent('keydown', {
+        const navigationKey = new KeyboardEvent('keydown', {
           key: 'PageDown',
           ctrlKey: true,
         });
@@ -794,7 +758,7 @@ describe.skip('VS Code Compatibility Pattern TDD Test Suite', () => {
         ];
 
         focusEvents.forEach(({ key, ctrlKey = false, expectFocusChange: _expectFocusChange }) => {
-          const keyEvent = new jsdom.window.KeyboardEvent('keydown', {
+          const keyEvent = new KeyboardEvent('keydown', {
             key,
             ctrlKey,
             bubbles: true,
@@ -834,7 +798,7 @@ describe.skip('VS Code Compatibility Pattern TDD Test Suite', () => {
         ];
 
         managementKeys.forEach(({ key, ctrlKey = false, shiftKey = false, callback }) => {
-          const keyEvent = new jsdom.window.KeyboardEvent('keydown', {
+          const keyEvent = new KeyboardEvent('keydown', {
             key,
             ctrlKey,
             shiftKey,
@@ -942,7 +906,7 @@ describe.skip('VS Code Compatibility Pattern TDD Test Suite', () => {
 
         vscodeIntegration.registerKeybindingCallback('ctrl+,', commandCallbacks.openSettings);
         vscodeIntegration.registerKeybindingCallback(
-          'ctrl+k s',
+          'ctrl+k ctrl+s',
           commandCallbacks.openKeyboardShortcuts
         );
         vscodeIntegration.registerKeybindingCallback('ctrl+`', commandCallbacks.toggleTerminal);
@@ -967,7 +931,7 @@ describe.skip('VS Code Compatibility Pattern TDD Test Suite', () => {
         };
 
         vscodeIntegration.registerKeybindingCallback(
-          'shift+alt+f',
+          'alt+shift+f',
           extensionCallbacks.formatDocument
         );
         vscodeIntegration.registerKeybindingCallback('ctrl+p', extensionCallbacks.quickOpen);
@@ -985,7 +949,7 @@ describe.skip('VS Code Compatibility Pattern TDD Test Suite', () => {
 
         extensionKeys.forEach(
           ({ key, ctrlKey = false, shiftKey = false, altKey = false, callback }) => {
-            const keyEvent = new jsdom.window.KeyboardEvent('keydown', {
+            const keyEvent = new KeyboardEvent('keydown', {
               key,
               ctrlKey,
               shiftKey,
@@ -1008,7 +972,7 @@ describe.skip('VS Code Compatibility Pattern TDD Test Suite', () => {
 
         for (let i = 0; i < 1000; i++) {
           // Simulate rapid key combinations
-          const keyEvent = new jsdom.window.KeyboardEvent('keydown', {
+          const keyEvent = new KeyboardEvent('keydown', {
             key: String.fromCharCode(65 + (i % 26)), // A-Z
             ctrlKey: i % 3 === 0,
             shiftKey: i % 5 === 0,
@@ -1019,7 +983,7 @@ describe.skip('VS Code Compatibility Pattern TDD Test Suite', () => {
 
           // Occasional Alt+Click
           if (i % 50 === 0) {
-            const clickEvent = new jsdom.window.MouseEvent('click', {
+            const clickEvent = new MouseEvent('click', {
               clientX: i % 500,
               clientY: i % 300,
               altKey: true,
@@ -1053,7 +1017,7 @@ describe.skip('VS Code Compatibility Pattern TDD Test Suite', () => {
         for (let session = 0; session < 10; session++) {
           // Alt+Click session
           for (let i = 0; i < 20; i++) {
-            const clickEvent = new jsdom.window.MouseEvent('click', {
+            const clickEvent = new MouseEvent('click', {
               clientX: 100 + i,
               clientY: 200 + i,
               altKey: true,
@@ -1064,12 +1028,12 @@ describe.skip('VS Code Compatibility Pattern TDD Test Suite', () => {
 
           // Chord command session
           for (let i = 0; i < 5; i++) {
-            const ctrlK = new jsdom.window.KeyboardEvent('keydown', {
+            const ctrlK = new KeyboardEvent('keydown', {
               key: 'k',
               ctrlKey: true,
             });
 
-            const cKey = new jsdom.window.KeyboardEvent('keydown', {
+            const cKey = new KeyboardEvent('keydown', {
               key: 'c',
             });
 
@@ -1095,9 +1059,9 @@ describe.skip('VS Code Compatibility Pattern TDD Test Suite', () => {
       it('should handle malformed VS Code events gracefully', () => {
         // Act: Send malformed events
         const malformedEvents = [
-          new jsdom.window.KeyboardEvent('keydown', { key: null as any }),
-          new jsdom.window.KeyboardEvent('keydown', { key: undefined as any }),
-          new jsdom.window.MouseEvent('click', { clientX: NaN, clientY: NaN }),
+          new KeyboardEvent('keydown', { key: null as any }),
+          new KeyboardEvent('keydown', { key: undefined as any }),
+          new MouseEvent('click', { clientX: NaN, clientY: NaN }),
         ];
 
         malformedEvents.forEach((event) => {
@@ -1127,7 +1091,7 @@ describe.skip('VS Code Compatibility Pattern TDD Test Suite', () => {
 
         // Should handle events without throwing
         expect(() => {
-          const keyEvent = new jsdom.window.KeyboardEvent('keydown', {
+          const keyEvent = new KeyboardEvent('keydown', {
             key: 'l',
             ctrlKey: true,
           });
@@ -1150,7 +1114,7 @@ describe.skip('VS Code Compatibility Pattern TDD Test Suite', () => {
         vscodeIntegration.registerKeybindingCallback('ctrl+pagedown', callbacks.navigation);
 
         // Generate some activity
-        const clickEvent = new jsdom.window.MouseEvent('click', {
+        const clickEvent = new MouseEvent('click', {
           clientX: 100,
           clientY: 200,
           altKey: true,

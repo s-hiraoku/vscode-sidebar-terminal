@@ -134,23 +134,6 @@ describe('ResizeManager', () => {
 
     it('should handle callback with ResizeObserverEntry', () => {
       const callback = vi.fn();
-      const mockEntry = {
-        target: testElement,
-        contentRect: {
-          width: 100,
-          height: 200,
-          top: 0,
-          left: 0,
-          bottom: 200,
-          right: 100,
-          x: 0,
-          y: 0,
-          toJSON: () => ({}),
-        },
-        borderBoxSize: [],
-        contentBoxSize: [],
-        devicePixelContentBoxSize: [],
-      } as ResizeObserverEntry;
 
       ResizeManager.observeResize('test-key', testElement, callback);
 

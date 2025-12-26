@@ -6,7 +6,7 @@
  * Vitest Migration: Converted from Mocha/Chai to Vitest
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { ConfigManager } from '../../../../../webview/managers/ConfigManager';
 import { PartialTerminalSettings, WebViewFontSettings } from '../../../../../types/shared';
 

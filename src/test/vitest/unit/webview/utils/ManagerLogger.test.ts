@@ -9,6 +9,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ManagerLogger, inputLogger, splitLogger, terminalLogger, messageLogger, uiLogger } from '../../../../../webview/utils/ManagerLogger';
 
 describe('ManagerLogger', () => {
+  let consoleSpy: any;
   let logSpy: any;
   let warnSpy: any;
   let errorSpy: any;

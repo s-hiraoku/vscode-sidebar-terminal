@@ -67,7 +67,6 @@ vi.mock('@xterm/addon-fit', () => {
 
 // Mock TerminalAddonManager
 vi.mock('../../../../../webview/managers/TerminalAddonManager', () => {
-  const { FitAddon } = vi.importActual('@xterm/addon-fit') as any;
   return {
     TerminalAddonManager: class {
       loadAllAddons = vi.fn().mockImplementation(async () => {

@@ -6,7 +6,7 @@
  * Vitest Migration: Converted from Mocha/Chai to Vitest
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { ConsolidatedMessageManager } from '../../../../../webview/managers/ConsolidatedMessageManager';
 import { IManagerCoordinator } from '../../../../../webview/interfaces/ManagerInterfaces';
 import { MessageCommand } from '../../../../../webview/managers/messageTypes';

@@ -4,11 +4,8 @@
  * Vitest Migration: Converted from Mocha/Chai/Sinon to Vitest
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { JSDOM } from 'jsdom';
-import * as vscode from 'vscode';
-
-import '../../../shared/TestSetup';
 import {
   generateTerminalId,
   ActiveTerminalManager,
@@ -16,7 +13,7 @@ import {
   getFirstItem,
   getFirstValue,
   delay,
-  safeStringify,
+  safeStringify
 } from '../../../../utils/common';
 
 describe('Common Utils', () => {
