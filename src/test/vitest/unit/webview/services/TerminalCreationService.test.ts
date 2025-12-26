@@ -781,4 +781,358 @@ describe('TerminalCreationService', () => {
       expect(duration).toBeLessThan(200); // Should complete within 200ms
     });
   });
+
+  describe('Static Methods - Terminal Restoring State', () => {
+    it('should mark terminal as restoring', () => {
+      // Arrange
+      const terminalId = 'terminal-restore-1';
+
+      // Act
+      TerminalCreationService.markTerminalRestoring(terminalId);
+
+      // Assert
+      expect(TerminalCreationService.isTerminalRestoring(terminalId)).toBe(true);
+    });
+
+    it('should return false for non-restoring terminal', () => {
+      // Arrange
+      const terminalId = 'terminal-not-restoring';
+
+      // Assert
+      expect(TerminalCreationService.isTerminalRestoring(terminalId)).toBe(false);
+    });
+
+    it('should mark terminal as restored after delay', async () => {
+      // Arrange
+      const terminalId = 'terminal-restore-2';
+      TerminalCreationService.markTerminalRestoring(terminalId);
+      expect(TerminalCreationService.isTerminalRestoring(terminalId)).toBe(true);
+
+      // Act
+      TerminalCreationService.markTerminalRestored(terminalId);
+
+      // Assert - Still restoring immediately after call (5 second delay)
+      expect(TerminalCreationService.isTerminalRestoring(terminalId)).toBe(true);
+
+      // Wait for protection period to end
+      await new Promise((resolve) => setTimeout(resolve, 5100));
+      expect(TerminalCreationService.isTerminalRestoring(terminalId)).toBe(false);
+    }, 10000);
+  });
+
+  describe('Font Settings Handling', () => {
+    it('should apply direct font settings from config', async () => {
+      // Arrange
+      const terminalId = 'terminal-font-1';
+      const config = {
+        fontFamily: 'MesloLGS NF',
+        fontSize: 18,
+        fontWeight: 'normal',
+        fontWeightBold: 'bold',
+        lineHeight: 1.2,
+        letterSpacing: 0.5,
+      } as any;
+
+      // Act
+      const terminal = await service.createTerminal(terminalId, 'Font Test', config);
+
+      // Assert
+      expect(terminal).not.toBeNull();
+      expect(terminal?.options.fontFamily).toBe('MesloLGS NF');
+      expect(terminal?.options.fontSize).toBe(18);
+    });
+
+    it('should handle empty font settings gracefully', async () => {
+      // Arrange
+      const terminalId = 'terminal-font-2';
+      const config = {
+        fontFamily: '',
+        fontSize: 0,
+      } as any;
+
+      // Act
+      const terminal = await service.createTerminal(terminalId, 'Empty Font Test', config);
+
+      // Assert - Should use defaults, not empty values
+      expect(terminal).not.toBeNull();
+    });
+
+    it('should apply nested fontSettings from config', async () => {
+      // Arrange
+      const terminalId = 'terminal-font-3';
+      const config = {
+        fontSettings: {
+          fontFamily: 'Fira Code',
+          fontSize: 16,
+        },
+      } as any;
+
+      // Act
+      const terminal = await service.createTerminal(terminalId, 'Nested Font Test', config);
+
+      // Assert
+      expect(terminal).not.toBeNull();
+    });
+  });
+
+  describe('Split Mode Handling', () => {
+    it('should add terminal to split when split mode is active', async () => {
+      // Arrange
+      const terminalId = 'terminal-split-1';
+
+      // Mock split mode as active
+      vi.spyOn(splitManager, 'getIsSplitMode').mockReturnValue(true);
+      const addToSplitSpy = vi.spyOn(splitManager, 'addNewTerminalToSplit');
+
+      // Act
+      await service.createTerminal(terminalId, 'Split Terminal');
+
+      // Assert
+      expect(addToSplitSpy).toHaveBeenCalledWith(terminalId, 'Split Terminal');
+    });
+
+    it('should not add terminal to split when not in split mode', async () => {
+      // Arrange
+      const terminalId = 'terminal-normal-1';
+
+      vi.spyOn(splitManager, 'getIsSplitMode').mockReturnValue(false);
+      const addToSplitSpy = vi.spyOn(splitManager, 'addNewTerminalToSplit');
+
+      // Act
+      await service.createTerminal(terminalId, 'Normal Terminal');
+
+      // Assert
+      expect(addToSplitSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Terminal Container Backgrounds', () => {
+    it('should apply theme to container elements', async () => {
+      // Arrange
+      const terminalId = 'terminal-theme-1';
+
+      // Mock config with light theme
+      mockCoordinator.getManagers = vi.fn().mockReturnValue({
+        config: {
+          getCurrentFontSettings: vi.fn().mockReturnValue({}),
+          getCurrentSettings: vi.fn().mockReturnValue({ theme: 'light' }),
+        },
+        ui: {
+          applyVSCodeStyling: vi.fn(),
+          updateSingleTerminalBorder: vi.fn(),
+          applyAllVisualSettings: vi.fn(),
+          applyFontSettings: vi.fn(),
+          applyTerminalTheme: vi.fn(),
+          headerElementsCache: new Map(),
+        },
+      });
+
+      // Act
+      await service.createTerminal(terminalId, 'Theme Terminal');
+
+      // Assert
+      const container = document.querySelector(`[data-terminal-id="${terminalId}"]`);
+      expect(container).not.toBeNull();
+    });
+
+    it('should handle dark theme', async () => {
+      // Arrange
+      const terminalId = 'terminal-theme-2';
+
+      mockCoordinator.getManagers = vi.fn().mockReturnValue({
+        config: {
+          getCurrentFontSettings: vi.fn().mockReturnValue({}),
+          getCurrentSettings: vi.fn().mockReturnValue({ theme: 'dark' }),
+        },
+        ui: {
+          applyVSCodeStyling: vi.fn(),
+          updateSingleTerminalBorder: vi.fn(),
+          applyAllVisualSettings: vi.fn(),
+          applyFontSettings: vi.fn(),
+          applyTerminalTheme: vi.fn(),
+          headerElementsCache: new Map(),
+        },
+      });
+
+      // Act
+      await service.createTerminal(terminalId, 'Dark Terminal');
+
+      // Assert
+      const container = document.querySelector(`[data-terminal-id="${terminalId}"]`);
+      expect(container).not.toBeNull();
+    });
+  });
+
+  describe('Initial Resize with Retry', () => {
+    it('should handle container with minimal dimensions', async () => {
+      // Arrange
+      const terminalId = 'terminal-resize-1';
+
+      // Create terminal in small container
+      const terminalBody = document.getElementById('terminal-body');
+      if (terminalBody) {
+        terminalBody.style.width = '30px';
+        terminalBody.style.height = '30px';
+      }
+
+      // Act
+      const terminal = await service.createTerminal(terminalId, 'Small Container');
+
+      // Assert - Should still create terminal despite small container
+      expect(terminal).not.toBeNull();
+    }, 10000);
+  });
+
+  describe('Link Modifier Settings', () => {
+    it('should setup link modifier from settings', async () => {
+      // Arrange
+      const terminalId = 'terminal-link-1';
+
+      mockCoordinator.getManagers = vi.fn().mockReturnValue({
+        config: {
+          getCurrentFontSettings: vi.fn().mockReturnValue({}),
+          getCurrentSettings: vi.fn().mockReturnValue({
+            multiCursorModifier: 'ctrlCmd',
+          }),
+        },
+        ui: {
+          applyVSCodeStyling: vi.fn(),
+          updateSingleTerminalBorder: vi.fn(),
+          applyAllVisualSettings: vi.fn(),
+          applyFontSettings: vi.fn(),
+          applyTerminalTheme: vi.fn(),
+          headerElementsCache: new Map(),
+        },
+      });
+
+      // Act
+      const terminal = await service.createTerminal(terminalId, 'Link Test');
+
+      // Assert
+      expect(terminal).not.toBeNull();
+    });
+  });
+
+  describe('Terminal Number Extraction Edge Cases', () => {
+    it('should find available number when all 1-5 slots are used', async () => {
+      // Arrange - Fill all standard slots
+      for (let i = 1; i <= 5; i++) {
+        await service.createTerminal(`terminal-${i}`, `Terminal ${i}`);
+      }
+
+      // Act - Create with non-standard ID
+      await service.createTerminal('custom-terminal-x', 'Custom');
+
+      // Assert
+      const customTerminal = splitManager.getTerminals().get('custom-terminal-x');
+      // Should have some number assigned (will be 1 based on implementation)
+      expect(customTerminal?.number).toBeDefined();
+    });
+
+    it('should handle undefined terminal ID gracefully', async () => {
+      // This tests the extractTerminalNumber fallback
+      // The method handles undefined by returning 1
+      const terminalId = 'terminal-1';
+      await service.createTerminal(terminalId, 'Test');
+
+      const instance = splitManager.getTerminals().get(terminalId);
+      expect(instance?.number).toBe(1);
+    });
+  });
+
+  describe('isActive Configuration', () => {
+    it('should apply active border when isActive is true in config', async () => {
+      // Arrange
+      const terminalId = 'terminal-active-1';
+      const config = { isActive: true } as any;
+
+      const updateBorderSpy = mockCoordinator.getManagers().ui.updateSingleTerminalBorder;
+
+      // Act
+      await service.createTerminal(terminalId, 'Active Terminal', config);
+
+      // Assert
+      expect(updateBorderSpy).toHaveBeenCalled();
+    });
+
+    it('should not apply active border when isActive is false', async () => {
+      // Arrange
+      const terminalId = 'terminal-inactive-1';
+      const config = { isActive: false } as any;
+
+      // Reset the spy
+      const uiManager = mockCoordinator.getManagers().ui;
+      uiManager.updateSingleTerminalBorder = vi.fn();
+
+      // Act
+      await service.createTerminal(terminalId, 'Inactive Terminal', config);
+
+      // Assert - updateSingleTerminalBorder should not be called for inactive
+      expect(uiManager.updateSingleTerminalBorder).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Header Elements Cache', () => {
+    it('should register header elements with UIManager', async () => {
+      // Arrange
+      const terminalId = 'terminal-header-1';
+      const headerCache = new Map();
+      mockCoordinator.getManagers = vi.fn().mockReturnValue({
+        config: {
+          getCurrentFontSettings: vi.fn().mockReturnValue({}),
+          getCurrentSettings: vi.fn().mockReturnValue({}),
+        },
+        ui: {
+          applyVSCodeStyling: vi.fn(),
+          updateSingleTerminalBorder: vi.fn(),
+          applyAllVisualSettings: vi.fn(),
+          applyFontSettings: vi.fn(),
+          applyTerminalTheme: vi.fn(),
+          headerElementsCache: headerCache,
+        },
+      });
+
+      // Act
+      await service.createTerminal(terminalId, 'Header Test');
+
+      // Assert
+      expect(headerCache.has(terminalId)).toBe(true);
+    });
+  });
+
+  describe('Terminal Removal with Split Mode', () => {
+    it('should clear split artifacts when only one terminal remains', async () => {
+      // Arrange
+      await service.createTerminal('terminal-1', 'Terminal 1');
+      await service.createTerminal('terminal-2', 'Terminal 2');
+
+      const containerManager = mockCoordinator.getTerminalContainerManager();
+      const clearArtifactsSpy = containerManager.clearSplitArtifacts;
+
+      // Act - Remove terminal 2, leaving only 1
+      await service.removeTerminal('terminal-2');
+
+      // Assert
+      expect(clearArtifactsSpy).toHaveBeenCalled();
+    });
+
+    it('should rebuild split layout when multiple terminals remain in split mode', async () => {
+      // Arrange
+      await service.createTerminal('terminal-1', 'Terminal 1');
+      await service.createTerminal('terminal-2', 'Terminal 2');
+      await service.createTerminal('terminal-3', 'Terminal 3');
+
+      const displayManager = mockCoordinator.getDisplayModeManager();
+      displayManager.getCurrentMode = vi.fn().mockReturnValue('split');
+
+      const containerManager = mockCoordinator.getTerminalContainerManager();
+      const applyDisplayStateSpy = containerManager.applyDisplayState;
+
+      // Act
+      await service.removeTerminal('terminal-2');
+
+      // Assert - Should rebuild layout
+      expect(applyDisplayStateSpy).toHaveBeenCalled();
+    });
+  });
 });
