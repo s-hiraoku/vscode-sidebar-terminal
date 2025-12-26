@@ -5,7 +5,7 @@
  * Tests for the terminal state management service.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { EventBus } from '../../../../../core/EventBus';
 import {
   TerminalStateService,
@@ -483,18 +483,22 @@ describe('TerminalStateService', () => {
       }
     });
 
-    it('should get terminals ordered by activity', async () => {
+    it('should get terminals ordered by activity', () => {
+      vi.useFakeTimers();
+
       service.registerTerminal('term1', {});
       service.registerTerminal('term2', {});
       service.registerTerminal('term3', {});
 
-      // Update activity in specific order
-      await new Promise<void>((resolve) => {
-        setTimeout(() => service.updateLastActiveTime('term2'), 10);
-        setTimeout(() => service.updateLastActiveTime('term3'), 20);
-        setTimeout(() => service.updateLastActiveTime('term1'), 30);
-        setTimeout(resolve, 50);
-      });
+      // Update activity in specific order with time advancement
+      vi.advanceTimersByTime(10);
+      service.updateLastActiveTime('term2');
+
+      vi.advanceTimersByTime(10);
+      service.updateLastActiveTime('term3');
+
+      vi.advanceTimersByTime(10);
+      service.updateLastActiveTime('term1');
 
       const ordered = service.getTerminalsByActivity();
 
@@ -502,7 +506,9 @@ describe('TerminalStateService', () => {
       expect(ordered[0]).toBe('term1');
       expect(ordered[1]).toBe('term3');
       expect(ordered[2]).toBe('term2');
-    }, 100);
+
+      vi.useRealTimers();
+    });
   });
 
   describe('Clear and Disposal', () => {
