@@ -10,8 +10,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   MessageDataValidator,
-  IMessageValidator,
-  LoggerFunction,
   TypedMessageRouter,
   TypedMessageSender,
   MESSAGE_COMMANDS,

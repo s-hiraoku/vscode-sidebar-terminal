@@ -9,7 +9,6 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ConsolidatedMessageService } from '../../../../messaging/ConsolidatedMessageService';
-import { IMessageManager } from '../../../webview/interfaces/ManagerInterfaces';
 import { WebviewMessage } from '../../../../types/common';
 
 describe('ConsolidatedMessageService', () => {

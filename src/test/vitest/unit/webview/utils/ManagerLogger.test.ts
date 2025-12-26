@@ -9,12 +9,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ManagerLogger, inputLogger, splitLogger, terminalLogger, messageLogger, uiLogger } from '../../../../../webview/utils/ManagerLogger';
 
 describe('ManagerLogger', () => {
-  let consoleSpy: any;
-  let logSpy: any;
-  let warnSpy: any;
-  let errorSpy: any;
-  let infoSpy: any;
-  let debugSpy: any;
+  let logSpy: ReturnType<typeof vi.spyOn>;
+  let errorSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     // Clear history before spying to avoid interference
@@ -22,10 +18,10 @@ describe('ManagerLogger', () => {
 
     // Mock console methods
     logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
     errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
-    debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
+    vi.spyOn(console, 'info').mockImplementation(() => {});
+    vi.spyOn(console, 'debug').mockImplementation(() => {});
   });
 
   afterEach(() => {
