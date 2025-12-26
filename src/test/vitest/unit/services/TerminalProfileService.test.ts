@@ -1,21 +1,28 @@
+
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as os from 'os';
 import * as fs from 'fs';
-import * as vscode from 'vscode';
 import { TerminalProfileService } from '../../../../services/TerminalProfileService';
 
-// Mock vscode
-const mockConfig = {
-  get: vi.fn(),
-  update: vi.fn(),
-};
+// Hoist mocks to be accessible inside vi.mock factory
+const mocks = vi.hoisted(() => {
+  const mockConfig = {
+    get: vi.fn(),
+    update: vi.fn(),
+  };
+  return {
+    mockConfig,
+    getConfigurationMock: vi.fn(() => mockConfig),
+    showWarningMessageMock: vi.fn(),
+  };
+});
 
 vi.mock('vscode', () => ({
   workspace: {
-    getConfiguration: vi.fn(() => mockConfig),
+    getConfiguration: mocks.getConfigurationMock,
   },
   window: {
-    showWarningMessage: vi.fn(),
+    showWarningMessage: mocks.showWarningMessageMock,
   },
   ConfigurationTarget: {
     Global: 1,
@@ -47,7 +54,10 @@ describe('TerminalProfileService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (os.platform as any).mockReturnValue('linux'); // Default to linux
-    mockConfig.get.mockImplementation((key, defaultValue) => defaultValue);
+    
+    // Reset default config behavior
+    mocks.mockConfig.get.mockImplementation((key, defaultValue) => defaultValue);
+    mocks.getConfigurationMock.mockReturnValue(mocks.mockConfig);
   });
 
   afterEach(() => {
@@ -58,8 +68,7 @@ describe('TerminalProfileService', () => {
     it('should detect windows platform', () => {
       (os.platform as any).mockReturnValue('win32');
       service = new TerminalProfileService();
-      // Access private property or test behavior dependent on platform
-      // Since platform is private, we can infer it from createFallbackProfile behavior via resolveProfile
+      // Platform detection happens in constructor
     });
   });
 
@@ -75,17 +84,8 @@ describe('TerminalProfileService', () => {
         'Bash': { path: '/bin/bash', args: [] }
       };
 
-      // Mock config get calls
-      mockConfig.get.mockImplementation((key) => {
-        if (key === 'inheritVSCodeProfiles') return true;
-        if (key === 'profiles.linux') return customProfiles; // For getConfiguredProfiles
-        if (key === 'profiles.linux') return vscodeProfiles; // For getVSCodeProfiles (same key name issue in mock?)
-        return undefined;
-      });
-
-      // We need to differentiate based on section.
-      const getConfigurationMock = vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>;
-      getConfigurationMock.mockImplementation((section: string) => {
+      // Mock getConfiguration to return different configs based on section
+      mocks.getConfigurationMock.mockImplementation((section: string) => {
         return {
           get: (key: string, defaultValue: any) => {
             if (section === 'secondaryTerminal') {
@@ -111,7 +111,7 @@ describe('TerminalProfileService', () => {
   describe('getDefaultProfile', () => {
     it('should return configured default profile', () => {
       service = new TerminalProfileService();
-      mockConfig.get.mockReturnValue('My Profile');
+      mocks.mockConfig.get.mockReturnValue('My Profile');
       
       const defaultProfile = service.getDefaultProfile();
       expect(defaultProfile).toBe('My Profile');
@@ -119,12 +119,12 @@ describe('TerminalProfileService', () => {
 
     it('should warn and return null if default profile looks like a path', () => {
       service = new TerminalProfileService();
-      mockConfig.get.mockReturnValue('/bin/bash');
+      mocks.mockConfig.get.mockReturnValue('/bin/bash');
       
       const defaultProfile = service.getDefaultProfile();
       
       expect(defaultProfile).toBeNull();
-      expect(vscode.window.showWarningMessage).toHaveBeenCalled();
+      expect(mocks.showWarningMessageMock).toHaveBeenCalled();
     });
   });
 
@@ -133,8 +133,7 @@ describe('TerminalProfileService', () => {
       service = new TerminalProfileService();
       const profiles = { 'Custom': { path: '/bin/custom' } };
       
-      const getConfigurationMock = vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>;
-      getConfigurationMock.mockReturnValue({
+      mocks.getConfigurationMock.mockReturnValue({
         get: (key: string) => key === 'profiles.linux' ? profiles : undefined,
         update: vi.fn(),
       });
@@ -150,8 +149,7 @@ describe('TerminalProfileService', () => {
       service = new TerminalProfileService();
       const profiles = { 'Default': { path: '/bin/default' } };
       
-      const getConfigurationMock = vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>;
-      getConfigurationMock.mockImplementation((section: string) => ({
+      mocks.getConfigurationMock.mockImplementation((_section: string) => ({
         get: (key: string) => {
           if (key === 'profiles.linux') return profiles;
           if (key === 'defaultProfile.linux') return 'Default';
@@ -170,8 +168,7 @@ describe('TerminalProfileService', () => {
       service = new TerminalProfileService();
       const profiles = { 'First': { path: '/bin/first' } };
       
-      const getConfigurationMock = vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>;
-      getConfigurationMock.mockImplementation((section: string) => ({
+      mocks.getConfigurationMock.mockImplementation((_section: string) => ({
         get: (key: string) => {
           if (key === 'profiles.linux') return profiles;
           return undefined;
@@ -187,8 +184,10 @@ describe('TerminalProfileService', () => {
 
     it('should create fallback profile if nothing configured', async () => {
       service = new TerminalProfileService();
-      const getConfigurationMock = vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>;
-      getConfigurationMock.mockReturnValue({ get: () => undefined, update: vi.fn() });
+      mocks.getConfigurationMock.mockReturnValue({ 
+        get: (_key: string, defaultValue: any) => defaultValue, 
+        update: vi.fn() 
+      });
 
       const result = await service.resolveProfile();
       
