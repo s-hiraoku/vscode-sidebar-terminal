@@ -19,14 +19,14 @@ export default defineConfig({
     timeout: 5 * 1000, // 5 seconds for expect assertions
     // VRT (Visual Regression Testing) configuration
     toHaveScreenshot: {
-      maxDiffPixels: 100, // Maximum allowed pixel differences
-      threshold: 0.1, // Per-pixel color comparison threshold (0-1)
+      maxDiffPixels: 200, // Maximum allowed pixel differences (increased for cross-platform)
+      threshold: 0.2, // Per-pixel color comparison threshold (increased for font differences)
       animations: 'disabled', // Disable animations for deterministic screenshots
     },
   },
 
-  // VRT snapshot path template - platform-specific baselines
-  snapshotPathTemplate: '{testDir}/__screenshots__/{platform}/{testFilePath}/{arg}{ext}',
+  // VRT snapshot path template - unified baselines for all platforms
+  snapshotPathTemplate: '{testDir}/__screenshots__/{testFilePath}/{arg}{ext}',
 
   // Test execution settings
   fullyParallel: true,
