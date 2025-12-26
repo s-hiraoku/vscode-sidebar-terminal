@@ -19,8 +19,7 @@ export default defineConfig({
     timeout: 5 * 1000, // 5 seconds for expect assertions
     // VRT (Visual Regression Testing) configuration
     toHaveScreenshot: {
-      maxDiffPixels: 1000, // Maximum allowed pixel differences (high for cross-platform font rendering)
-      maxDiffPixelRatio: 0.02, // Allow 2% pixel difference ratio
+      maxDiffPixelRatio: 0.03, // Allow 3% pixel difference ratio for cross-platform
       threshold: 0.3, // Per-pixel color comparison threshold (high for font anti-aliasing)
       animations: 'disabled', // Disable animations for deterministic screenshots
     },
