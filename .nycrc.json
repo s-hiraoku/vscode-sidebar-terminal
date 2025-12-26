@@ -1,5 +1,4 @@
 {
-  "extends": "@istanbuljs/nyc-config-typescript",
   "all": true,
   "check-coverage": false,
   "reporter": [
@@ -9,24 +8,19 @@
     "json"
   ],
   "include": [
-    "out/src/**/*.js"
+    "out/**/*.js"
   ],
   "exclude": [
-    "out/src/test/**",
-    "out/src/**/*.test.js",
-    "out/src/**/*.spec.js",
-    "src/test/**",
-    "src/**/*.test.ts",
-    "src/**/*.spec.ts",
-    "dist/**",
     "out/test/**",
-    "node_modules/**",
-    "**/*.d.ts"
+    "out/**/*.test.js",
+    "out/**/*.spec.js",
+    "dist/**",
+    "node_modules/**"
   ],
   "extension": [
-    ".ts"
+    ".js"
   ],
-  "cache": true,
+  "cache": false,
   "temp-dir": "./coverage/.nyc_output",
   "report-dir": "./coverage",
   "source-map": true,

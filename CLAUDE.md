@@ -44,6 +44,15 @@ git stash pop
 
 If build issues occur, ask the user before discarding any changes.
 
+## Related Documentation
+
+This project has domain-specific CLAUDE.md files with detailed implementation guidance:
+
+| File | Purpose |
+|------|---------|
+| `src/webview/CLAUDE.md` | WebView architecture, Manager patterns, debugging |
+| `src/test/CLAUDE.md` | TDD workflow, test patterns, quality gates |
+
 ## Essential Development Commands
 
 ### Core Development
@@ -142,14 +151,21 @@ The extension uses a **singleton TerminalManager** pattern with atomic operation
 The WebView uses a **Manager-Coordinator pattern**:
 
 ```
-TerminalWebviewManager (Coordinator)
-├── MessageManager     # Handles Extension ↔ WebView communication
-├── UIManager         # Theme management and visual feedback
-├── InputManager      # Keyboard/IME handling, Alt+Click support
-├── PerformanceManager # Output buffering (16ms flush interval)
-├── NotificationManager # User notifications
-└── TerminalLifecycleManager # Terminal creation/deletion
+LightweightTerminalWebviewManager (Coordinator)
+├── ConsolidatedMessageManager  # Extension ↔ WebView communication
+├── UIManager                   # Theme management and visual feedback
+├── InputManager                # Keyboard/IME handling, Alt+Click support
+├── PerformanceManager          # Output buffering (16ms flush interval)
+├── NotificationManager         # User notifications
+├── TerminalLifecycleCoordinator # Terminal creation/deletion
+├── SplitManager                # Terminal split layout
+├── ConfigManager               # Settings persistence
+├── TerminalTabManager          # Tab management
+├── DisplayModeManager          # Display mode control
+└── HeaderManager               # Terminal header UI
 ```
+
+> **Note**: For detailed WebView implementation guidance, see `src/webview/CLAUDE.md`
 
 ### Terminal Rendering Optimization (Phase 1-3)
 **OpenSpec Implementation**: `optimize-terminal-rendering` (Completed)
@@ -403,6 +419,8 @@ MAX_STORAGE_SIZE = 20MB; // Maximum storage for scrollback
 
 ## Testing Strategy
 
+> **Note**: For detailed TDD implementation guidance, see `src/test/CLAUDE.md`
+
 ### Test Execution Priority
 1. **Unit tests first**: Fastest, most reliable
 2. **Integration tests**: Component interaction
@@ -421,297 +439,51 @@ npm run tdd:quality-gate # Verify TDD compliance
 
 ### Test Coverage Overview
 
-**Total Scenarios**: 69 comprehensive end-to-end tests
-**Critical (P0)**: 18 scenarios - Must pass 100% for release
-**Important (P1)**: 38 scenarios - Must pass ≥95% for release
-**Nice-to-have (P2)**: 13 scenarios - Must pass ≥80% for release
+| Priority | Scenarios | Release Requirement |
+|----------|-----------|---------------------|
+| P0 (Critical) | 18 | 100% pass rate |
+| P1 (Important) | 38 | ≥95% pass rate |
+| P2 (Nice-to-have) | 13 | ≥80% pass rate |
 
-**Test Implementation Status**: 74% complete (84/113 tasks done)
+**Implementation Status**: 87% complete (60+ scenarios)
 **Test Files Location**: `src/test/e2e/tests/`
 
-### Test Execution Commands
+### Quick Commands
 
 ```bash
-# Run E2E tests (when npx playwright command is configured)
 npx playwright test                    # Run all E2E tests
-npx playwright test --headed           # Run with visible browser (debugging)
-npx playwright test --debug            # Run in debug mode with Playwright Inspector
-npx playwright test --ui               # Run with Playwright UI mode
-
-# Run specific test files
-npx playwright test tests/terminal/    # Run all terminal tests
-npx playwright test tests/agents/      # Run AI agent detection tests
-
-# Generate test report
-npx playwright show-report             # View HTML test report
-
-# Update test snapshots
-npx playwright test --update-snapshots # Update visual regression baselines
+npx playwright test --headed           # With visible browser
+npx playwright test --debug            # Debug mode
+npx playwright show-report             # View test report
 ```
-
-### Test Areas by Priority
-
-#### 1. Terminal Lifecycle Management (6 scenarios)
-**Priority**: P0: 4 | P1: 2
-
-**Critical Tests (P0)**:
-- Single terminal creation (<500ms)
-- Multiple terminal creation (up to 5 terminals)
-- Terminal deletion with cleanup verification
-- Terminal ID recycling (IDs 1-5)
-
-**Important Tests (P1)**:
-- Rapid terminal creation (race condition testing)
-- Last terminal protection (prevent deleting final terminal)
-
-**Test Files**: `tests/terminal/creation.spec.ts`, `tests/terminal/deletion.spec.ts`
-
-#### 2. Session Persistence (5 scenarios)
-**Priority**: P0: 3 | P1: 2
-
-**Critical Tests (P0)**:
-- Basic session save/restore functionality
-- Scrollback restoration with 1000 lines
-- Multi-terminal session restoration
-
-**Important Tests (P1)**:
-- Session expiry cleanup (7-day retention)
-- AI agent session handling
-
-**Performance Target**: Session restore <3s for typical workloads
-
-#### 3. AI Agent Detection (6 scenarios)
-**Priority**: P0: 2 | P1: 3 | P2: 1
-
-**Critical Tests (P0)**:
-- Claude Code detection with visual status indicator
-- Security: False positive prevention (substring attack protection)
-
-**Important Tests (P1)**:
-- GitHub Copilot detection
-- Gemini CLI detection
-- Multi-agent concurrent detection
-
-**Test Files**: `tests/agents/detection.spec.ts`
-**Detection Time**: <500ms for agent pattern matching
-
-#### 4. WebView Interactions (8 scenarios)
-**Priority**: P0: 4 | P1: 3 | P2: 1
-
-**Critical Tests (P0)**:
-- Keyboard input handling
-- Alt+Click cursor positioning
-- Scrolling behavior (smooth scrolling, wheel events)
-- ANSI color rendering validation
-
-**Important Tests (P1)**:
-- IME composition (Japanese/Chinese input)
-- Copy/Paste functionality
-- Theme changes (dark/light mode)
-
-**Test Files**: `tests/webview/keyboard-input.spec.ts`, `tests/visual/ansi-colors.spec.ts`
-
-#### 5. Configuration Management (4 scenarios)
-**Priority**: P0: 2 | P1: 2
-
-**Critical Tests (P0)**:
-- Font settings application
-- Max terminals limit enforcement
-
-**Important Tests (P1)**:
-- Shell selection (bash/zsh/fish)
-- Feature toggles (enable/disable features)
-
-**Test Files**: `tests/config/settings.spec.ts`
-
-#### 6. Error Handling (5 scenarios)
-**Priority**: P0: 2 | P1: 3
-
-**Critical Tests (P0)**:
-- Invalid shell path handling
-- Rapid terminal operations (concurrent operation safety)
-
-**Important Tests (P1)**:
-- Non-existent working directory recovery
-- Memory leak prevention validation
-- Large output handling (>10MB)
-
-**Test Files**: `tests/errors/error-scenarios.spec.ts`, `tests/errors/concurrent-operations.spec.ts`
 
 ### Performance Benchmarks
 
-All E2E tests must meet these performance targets:
-
-```typescript
+```
 Terminal creation: <500ms
-Session restore: <3s (1000 lines of scrollback)
-AI agent detection: <500ms (pattern matching + UI update)
-WebView load: <3s (initial render + terminal ready)
-Theme switching: <200ms (visual update)
-Terminal deletion: <100ms (cleanup + dispose)
+Session restore: <3s (1000 lines)
+AI agent detection: <500ms
+WebView load: <3s
+Terminal deletion: <100ms
 ```
 
-### Debugging E2E Tests
+### Detailed Documentation
 
-#### Visual Debugging
-```bash
-# Run tests with visible browser window
-npx playwright test --headed
+For comprehensive E2E testing guides, see `src/test/e2e/`:
 
-# Run specific test in debug mode
-npx playwright test tests/terminal/creation.spec.ts --debug
+| Document | Purpose |
+|----------|---------|
+| [QUICK_START.md](src/test/e2e/QUICK_START.md) | Get started in 5 minutes |
+| [DEBUGGING.md](src/test/e2e/DEBUGGING.md) | Debug failing/flaky tests |
+| [MAINTENANCE.md](src/test/e2e/MAINTENANCE.md) | Test suite maintenance |
+| [TEST_PLAN.md](src/test/e2e/TEST_PLAN.md) | Full test scenarios |
+| [TEST_IMPLEMENTATION_STATUS.md](src/test/e2e/TEST_IMPLEMENTATION_STATUS.md) | Current status |
 
-# Use Playwright Inspector for step-by-step debugging
-npx playwright test --debug
-```
+### Playwright Agents (Claude Code)
 
-#### Trace Analysis
-```bash
-# Collect traces on failure (configured by default)
-npx playwright test
-
-# View trace for failed test
-npx playwright show-trace test-results/trace.zip
-```
-
-#### Screenshot and Video Debugging
-- **Screenshots**: Automatically captured on failure → `test-results/`
-- **Videos**: Recorded on failure → `test-results/`
-- **Traces**: Available on first retry → `test-results/`
-
-### CI/CD Integration
-
-#### GitHub Actions Configuration
-```yaml
-- name: Run E2E Tests
-  run: npx playwright test
-  env:
-    CI: true
-
-- name: Upload Test Results
-  if: always()
-  uses: actions/upload-artifact@v3
-  with:
-    name: playwright-report
-    path: playwright-report/
-```
-
-#### Required Environment
-- **Workers**: 1 worker in CI (sequential execution)
-- **Retries**: 2 retries on failure in CI
-- **Timeout**: 30s per test
-- **Browsers**: Chromium (VS Code Electron base)
-
-### Release Quality Gates
-
-**Required for Release**:
-- ✅ P0 Tests: 100% pass rate (18/18 scenarios)
-- ✅ P1 Tests: ≥95% pass rate (36+/38 scenarios)
-- ✅ P2 Tests: ≥80% pass rate (10+/13 scenarios)
-- ✅ Performance benchmarks: All targets met
-- ✅ No memory leaks detected
-- ✅ Cross-platform validation (Windows/macOS/Linux)
-
-**Test Execution Time**:
-- **Local**: ~5-10 minutes (parallel execution)
-- **CI**: ~10-15 minutes (sequential with retries)
-
-### Test Development Guidelines
-
-#### Adding New E2E Tests
-
-1. **Identify test area**: Classify as Terminal/Session/Agent/WebView/Config/Error
-2. **Assign priority**: P0 (critical) / P1 (important) / P2 (nice-to-have)
-3. **Create test file**: Use existing structure in `src/test/e2e/tests/`
-4. **Follow naming convention**: `feature-name.spec.ts`
-5. **Add to TEST_PLAN.md**: Document test scenario and expected behavior
-
-#### Test Structure Pattern
-```typescript
-import { test, expect } from '@playwright/test';
-import { VSCodeTestHelper } from '../helpers/vscode-helper';
-
-test.describe('Feature Area', () => {
-  let helper: VSCodeTestHelper;
-
-  test.beforeEach(async ({ page }) => {
-    helper = new VSCodeTestHelper(page);
-    await helper.initialize();
-  });
-
-  test('P0: Critical functionality', async () => {
-    // Arrange
-    await helper.openTerminal();
-
-    // Act
-    const result = await helper.performAction();
-
-    // Assert
-    expect(result).toBeTruthy();
-  });
-});
-```
-
-#### Best Practices
-- **Use page object pattern**: Create helper classes for reusable actions
-- **Set explicit waits**: Use `waitForSelector` instead of `setTimeout`
-- **Clean up resources**: Ensure terminals are disposed in `afterEach`
-- **Test isolation**: Each test should be independent
-- **Meaningful assertions**: Use descriptive expect messages
-- **Performance tracking**: Log execution times for benchmarking
-
-### Common E2E Test Issues
-
-#### Issue: Tests timeout in CI
-**Solution**:
-- Increase timeout in `playwright.config.ts`
-- Use sequential workers in CI (`workers: 1`)
-- Add explicit waits for async operations
-
-#### Issue: Flaky tests
-**Solution**:
-- Add retry logic (`retries: 2` in CI)
-- Use `waitForSelector` with proper conditions
-- Verify element visibility before interaction
-- Add debouncing for rapid UI updates
-
-#### Issue: Screenshots not captured
-**Solution**:
-- Verify `screenshot: 'only-on-failure'` in config
-- Check `test-results/` directory permissions
-- Ensure test failure is properly thrown
-
-### Additional E2E Testing Resources
-
-For comprehensive guides on E2E testing, refer to these detailed documents in `src/test/e2e/`:
-
-- **[QUICK_START.md](src/test/e2e/QUICK_START.md)**: Get started with E2E testing in 5 minutes
-  - Installation and setup
-  - Running your first test
-  - Writing basic tests
-  - Common patterns and examples
-  - FAQ and troubleshooting
-
-- **[DEBUGGING.md](src/test/e2e/DEBUGGING.md)**: Debug failing or flaky tests
-  - Visual debugging strategies
-  - Playwright Inspector usage
-  - Trace viewer analysis
-  - Common issues and solutions
-  - Performance debugging
-
-- **[MAINTENANCE.md](src/test/e2e/MAINTENANCE.md)**: Maintain test suite health
-  - Test review process
-  - Naming conventions
-  - Page object patterns
-  - Test data management
-  - Failure triage procedures
-  - CI/CD integration
-
-**Playwright Agent Usage** (Claude Code):
-- Use `playwright-test-planner` agent to generate test scenarios
-- Use `playwright-test-generator` agent to implement tests
-- Use `playwright-test-healer` agent to debug and fix failing tests
-- All agents accessible via Task tool in Claude Code
+- `playwright-test-planner` - Generate test scenarios
+- `playwright-test-generator` - Implement tests
+- `playwright-test-healer` - Debug and fix failing tests
 
 ## Emergency Response Procedures
 

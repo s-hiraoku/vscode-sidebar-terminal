@@ -109,17 +109,9 @@ jobs:
       - name: Run unit tests (Linux)
         if: runner.os == 'Linux'
         run: |
-          echo "🧪 Running unit tests on Linux..."
-          # Run tests without nyc coverage (causes hangs on Ubuntu)
-          # Use timeout command to force kill after 5 minutes
-          timeout 300 ./node_modules/.bin/mocha \
-            --require ./src/test/shared/xterm-mock.js \
-            --require ./src/test/shared/setup-exit-handler.js \
-            --require out/test/shared/TestSetup.js \
-            --timeout 10000 \
-            --exit \
-            --reporter spec \
-            "out/test/unit/**/*.test.js" || {
+          echo "🧪 Running Vitest unit tests on Linux..."
+          # Run Vitest tests with timeout
+          timeout 300 npm run test || {
             exit_code=$?
             echo "Tests completed with exit code: $exit_code"
             # Don't fail CI for test failures - report them

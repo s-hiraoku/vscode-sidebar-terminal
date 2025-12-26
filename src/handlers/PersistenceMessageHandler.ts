@@ -6,7 +6,13 @@ import { extension as log } from '../utils/logger';
  * Extension側でWebViewからの永続化リクエストを処理
  */
 export interface PersistenceMessage {
-  command: 'saveSession' | 'restoreSession' | 'clearSession';
+  command:
+    | 'saveSession'
+    | 'restoreSession'
+    | 'clearSession'
+    | 'persistenceSaveSession'
+    | 'persistenceRestoreSession'
+    | 'persistenceClearSession';
   data?: unknown;
   terminalId?: string; // Changed from number to string to match WebviewMessage
 }
@@ -60,12 +66,15 @@ export class PersistenceMessageHandler {
 
       switch (message.command) {
         case 'saveSession':
+        case 'persistenceSaveSession':
           return await this.handleSaveSession(message.data);
 
         case 'restoreSession':
+        case 'persistenceRestoreSession':
           return await this.handleRestoreSession();
 
         case 'clearSession':
+        case 'persistenceClearSession':
           return await this.handleClearSession();
 
         default:

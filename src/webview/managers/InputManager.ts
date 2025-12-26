@@ -80,8 +80,11 @@ export class InputManager extends BaseManager implements IInputManager {
   private imeHandler: IIMEHandler;
 
   // Debounce timers for events
-  private eventDebounceTimers = new Map<string, number>();
-  private pendingInputBuffers = new Map<string, { data: string[]; timer: number | null }>();
+  private eventDebounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private pendingInputBuffers = new Map<
+    string,
+    { data: string[]; timer: ReturnType<typeof setTimeout> | null }
+  >();
   // Simple arrow key handling for agent interactions
   private agentInteractionMode = false;
 
@@ -953,12 +956,14 @@ export class InputManager extends BaseManager implements IInputManager {
     try {
       // Debounce focus events to prevent spam
       if (type === 'focus') {
-        const key = `${type}-${terminalId}`;
+        // Use a generic key for focus events to debounce across all terminals
+        // This ensures that rapid switching (T1 -> T2 -> T3) only sends the final focus (T3)
+        const key = `${type}-event`;
         if (this.eventDebounceTimers.has(key)) {
           clearTimeout(this.eventDebounceTimers.get(key));
         }
 
-        const timer = window.setTimeout(() => {
+        const timer = setTimeout(() => {
           manager.postMessageToExtension({
             command: 'terminalInteraction',
             type,
@@ -1281,7 +1286,7 @@ export class InputManager extends BaseManager implements IInputManager {
       return;
     }
 
-    entry.timer = window.setTimeout(() => {
+    entry.timer = setTimeout(() => {
       entry!.timer = null;
       this.flushPendingInput(terminalId);
     }, 0);

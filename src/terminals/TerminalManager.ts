@@ -604,10 +604,12 @@ export class TerminalManager {
         // Handle CLI agent termination on process exit
         this._cliAgentService.handleTerminalRemoved(terminalId);
 
+        // 🔧 FIX: Fire events BEFORE deleting from map so listeners can still access the instance
+        this._exitEmitter.fire({ terminalId, exitCode });
+
         // Clean up terminal and notify listeners
         this._terminals.delete(terminalId);
         this._terminalRemovedEmitter.fire(terminalId);
-        this._exitEmitter.fire({ terminalId, exitCode });
         this._stateCoordinator.notifyStateUpdate();
 
         log(`🗑️ [TERMINAL] Terminal ${terminalId} cleaned up after exit`);
