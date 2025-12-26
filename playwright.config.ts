@@ -17,7 +17,16 @@ export default defineConfig({
   // Test expectations timeout
   expect: {
     timeout: 5 * 1000, // 5 seconds for expect assertions
+    // VRT (Visual Regression Testing) configuration
+    toHaveScreenshot: {
+      maxDiffPixels: 100, // Maximum allowed pixel differences
+      threshold: 0.1, // Per-pixel color comparison threshold (0-1)
+      animations: 'disabled', // Disable animations for deterministic screenshots
+    },
   },
+
+  // VRT snapshot path template - platform-specific baselines
+  snapshotPathTemplate: '{testDir}/__screenshots__/{platform}/{testFilePath}/{arg}{ext}',
 
   // Test execution settings
   fullyParallel: true,
