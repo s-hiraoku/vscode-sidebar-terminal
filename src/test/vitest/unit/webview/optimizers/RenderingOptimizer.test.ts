@@ -17,6 +17,8 @@ describe('RenderingOptimizer', () => {
     // Create mock terminal
     mockTerminal = {
       loadAddon: vi.fn(),
+      refresh: vi.fn(),
+      rows: 24,
       options: {
         smoothScrollDuration: 0,
       },
@@ -27,11 +29,29 @@ describe('RenderingOptimizer', () => {
       fit: vi.fn(),
     };
 
-    // Create mock container
-    mockContainer = {
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-    };
+    // Create mock container using a real element for DOM compatibility
+    mockContainer = document.createElement('div');
+    mockContainer.className = 'terminal-container';
+    
+    // Add required internal structure for resetXtermInlineStyles
+    const terminalContent = document.createElement('div');
+    terminalContent.className = 'terminal-content';
+    mockContainer.appendChild(terminalContent);
+    
+    const xterm = document.createElement('div');
+    xterm.className = 'xterm';
+    terminalContent.appendChild(xterm);
+    
+    const viewport = document.createElement('div');
+    viewport.className = 'xterm-viewport';
+    xterm.appendChild(viewport);
+    
+    const screen = document.createElement('div');
+    screen.className = 'xterm-screen';
+    xterm.appendChild(screen);
+    
+    const canvas = document.createElement('canvas');
+    screen.appendChild(canvas);
 
     // Create optimizer with default options
     optimizer = new RenderingOptimizer();
@@ -45,8 +65,8 @@ describe('RenderingOptimizer', () => {
   });
 
   describe('Dimension Validation', () => {
-    // SKIP: Debounce timing is flaky in test environment
-    it.skip('should accept valid dimensions (>50px)', async () => {
+    it('should accept valid dimensions (>50px)', async () => {
+      vi.useFakeTimers();
       // Create with specific min dimensions
       const customOptimizer = new RenderingOptimizer({
         minWidth: 50,
@@ -84,13 +104,15 @@ describe('RenderingOptimizer', () => {
       resizeCallback([mockEntry]);
 
       // Wait for debounce
-      await new Promise((resolve) => setTimeout(resolve, 150));
+      vi.advanceTimersByTime(150);
       expect(mockFitAddon.fit).toHaveBeenCalled();
 
       customOptimizer.dispose();
+      vi.useRealTimers();
     });
 
     it('should reject invalid dimensions (≤50px)', async () => {
+      vi.useFakeTimers();
       const customOptimizer = new RenderingOptimizer({
         minWidth: 50,
         minHeight: 50,
@@ -127,10 +149,11 @@ describe('RenderingOptimizer', () => {
       resizeCallback([mockEntry]);
 
       // Wait for debounce
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      vi.advanceTimersByTime(50);
       expect(mockFitAddon.fit).not.toHaveBeenCalled();
 
       customOptimizer.dispose();
+      vi.useRealTimers();
     });
   });
 
@@ -165,14 +188,38 @@ describe('RenderingOptimizer', () => {
       expect(mockTerminal.options.smoothScrollDuration).toBe(125);
     });
 
+    it('should handle errors in updateSmoothScrollDuration', () => {
+      const faultyTerminal = {
+        get options() { throw new Error('Faulty'); }
+      } as any;
+      
+      expect(() => optimizer.updateSmoothScrollDuration(faultyTerminal, 100)).not.toThrow();
+    });
+
     it('should setup smooth scrolling with passive listener', () => {
+      const addEventListenerSpy = vi.spyOn(mockContainer, 'addEventListener');
       optimizer.setupSmoothScrolling(mockTerminal, mockContainer, 'test-terminal');
 
-      expect(mockContainer.addEventListener).toHaveBeenCalled();
-      expect(mockContainer.addEventListener.mock.calls[0][0]).toBe('wheel');
-      expect(mockContainer.addEventListener.mock.calls[0][2]).toEqual({
+      expect(addEventListenerSpy).toHaveBeenCalled();
+      expect(addEventListenerSpy.mock.calls[0][0]).toBe('wheel');
+      expect(addEventListenerSpy.mock.calls[0][2]).toEqual({
         passive: true,
       });
+    });
+
+    it('should update duration when wheel event is triggered', () => {
+      optimizer.setupSmoothScrolling(mockTerminal, mockContainer, 'test-terminal');
+      
+      // Simulate wheel event (deltaMode 1 = lines/mouse)
+      const wheelEvent = new CustomEvent('wheel', { 
+        bubbles: true, 
+        cancelable: true 
+      }) as any;
+      wheelEvent.deltaMode = 1;
+      
+      mockContainer.dispatchEvent(wheelEvent);
+      
+      expect(mockTerminal.options.smoothScrollDuration).toBe(125);
     });
   });
 
@@ -207,6 +254,15 @@ describe('RenderingOptimizer', () => {
 
       // Verify cleanup
       expect(() => optimizer.dispose()).not.toThrow();
+    });
+
+    it('should dispose webglAddon if present', () => {
+      const mockAddon = { dispose: vi.fn() };
+      (optimizer as any).webglAddon = mockAddon;
+      
+      optimizer.dispose();
+      
+      expect(mockAddon.dispose).toHaveBeenCalled();
     });
   });
 });

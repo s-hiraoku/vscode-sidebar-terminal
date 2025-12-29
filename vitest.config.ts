@@ -26,11 +26,7 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'html', 'lcov'],
       include: ['src/**/*.ts'],
-      exclude: [
-        'src/test/**',
-        'src/**/*.d.ts',
-        'src/webview/bundle/**',
-      ],
+      exclude: ['src/test/**', 'src/**/*.d.ts', 'src/webview/bundle/**'],
       thresholds: {
         lines: 70,
         functions: 70,
@@ -60,7 +56,10 @@ export default defineConfig({
       vscode: path.resolve(__dirname, 'src/test/vitest/mocks/vscode.ts'),
       // Mock node-pty
       'node-pty': path.resolve(__dirname, 'src/test/vitest/mocks/node-pty.ts'),
-      '@homebridge/node-pty-prebuilt-multiarch': path.resolve(__dirname, 'src/test/vitest/mocks/node-pty.ts'),
+      '@homebridge/node-pty-prebuilt-multiarch': path.resolve(
+        __dirname,
+        'src/test/vitest/mocks/node-pty.ts'
+      ),
     },
   },
 });

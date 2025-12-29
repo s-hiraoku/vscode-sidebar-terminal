@@ -1,106 +1,132 @@
+/**
+ * DOMUtils Unit Tests
+ */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { JSDOM } from 'jsdom';
 import { DOMUtils } from '../../../../../webview/utils/DOMUtils';
 
 describe('DOMUtils', () => {
-  let dom: JSDOM;
-
   beforeEach(() => {
-    dom = new JSDOM('<!DOCTYPE html><html><body><div id="container"><span id="child"></span></div></body></html>');
-    vi.stubGlobal('window', dom.window);
-    vi.stubGlobal('document', dom.window.document);
-    vi.stubGlobal('HTMLElement', dom.window.HTMLElement);
-    vi.stubGlobal('getComputedStyle', dom.window.getComputedStyle);
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-    dom.window.close();
+    document.body.innerHTML = '';
   });
 
   describe('createElement', () => {
-    it('should create an element with styles and attributes', () => {
-      const el = DOMUtils.createElement('div', 
-        { color: 'red', display: 'flex' },
-        { id: 'my-div', className: 'box', 'data-test': 'val' }
-      );
-
+    it('should create element with tag name', () => {
+      const el = DOMUtils.createElement('div');
       expect(el.tagName).toBe('DIV');
+    });
+
+    it('should apply styles', () => {
+      const el = DOMUtils.createElement('div', { color: 'red', display: 'flex' });
       expect(el.style.color).toBe('red');
       expect(el.style.display).toBe('flex');
-      expect(el.id).toBe('my-div');
-      expect(el.className).toBe('box');
-      expect(el.getAttribute('data-test')).toBe('val');
     });
 
-    it('should set textContent and block innerHTML', () => {
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      const el = DOMUtils.createElement('span', {}, { textContent: 'text', innerHTML: '<p>unsafe</p>' } as Record<string, string>);
-      
-      expect(el.textContent).toBe('<p>unsafe</p>'); // innerHTML should be handled as textContent
-      expect(warnSpy).toHaveBeenCalled();
-      warnSpy.mockRestore();
-    });
-  });
-
-  describe('getOrCreateElement', () => {
-    it('should find existing element', () => {
-      const existing = DOMUtils.getOrCreateElement('#child', 'span');
-      expect(existing.id).toBe('child');
-      expect(document.querySelectorAll('#child').length).toBe(1);
+    it('should apply attributes', () => {
+      const el = DOMUtils.createElement('div', {}, { id: 'test-id', 'data-value': '123' });
+      expect(el.id).toBe('test-id');
+      expect(el.getAttribute('data-value')).toBe('123');
     });
 
-    it('should create element if not exists', () => {
-      const created = DOMUtils.getOrCreateElement('#new-el', 'div');
-      expect(created.id).toBe('new-el');
-      expect(created.tagName).toBe('DIV');
+    it('should set textContent', () => {
+      const el = DOMUtils.createElement('div', {}, { textContent: 'hello world' });
+      expect(el.textContent).toBe('hello world');
+    });
+
+    it('should block innerHTML for security', () => {
+      const el = DOMUtils.createElement('div', {}, { innerHTML: '<span>unsafe</span>' } as any);
+      expect(el.innerHTML).not.toContain('<span>');
+      expect(el.textContent).toBe('<span>unsafe</span>');
     });
   });
 
-  describe('Hierarchy Operations', () => {
-    it('should prepend a child', () => {
-      const parent = document.getElementById('container')!;
-      const newChild = document.createElement('p');
-      DOMUtils.prependChild(parent, newChild);
-      
-      expect(parent.firstChild).toBe(newChild);
+  describe('Style Manipulation', () => {
+    it('should apply style string', () => {
+      const el = document.createElement('div');
+      DOMUtils.applyStyleString(el, 'color: blue; margin: 10px;');
+      expect(el.style.color).toBe('blue');
+      expect(el.style.margin).toBe('10px');
     });
 
-    it('should safely remove an element', () => {
-      const child = document.getElementById('child')!;
-      DOMUtils.safeRemove(child);
-      expect(document.getElementById('child')).toBeNull();
-    });
-  });
-
-  describe('CSS Variables', () => {
     it('should set and get CSS variables', () => {
-      DOMUtils.setCSSVariable('test-color', '#fff');
-      // jsdom might need explicit style check on root
-      expect(document.documentElement.style.getPropertyValue('--test-color')).toBe('#fff');
+      DOMUtils.setCSSVariable('test-var', '100px');
+      // getCSSVariable uses getComputedStyle which might be limited in JSDOM/HappyDOM
+      // but we can check the inline style on documentElement
+      expect(document.documentElement.style.getPropertyValue('--test-var')).toBe('100px');
     });
   });
 
-  describe('resetXtermInlineStyles', () => {
-    it('should clear inline styles on container and children', () => {
-      const container = document.createElement('div');
-      container.style.width = '100px';
+  describe('Element Retrieval and Life-cycle', () => {
+    it('should safely remove element', () => {
+      const el = document.createElement('div');
+      document.body.appendChild(el);
+      expect(document.body.contains(el)).toBe(true);
       
-      const content = document.createElement('div');
-      content.className = 'terminal-content';
-      content.style.maxWidth = '50px';
-      container.appendChild(content);
-
-      const result = DOMUtils.resetXtermInlineStyles(container, false);
-      
-      expect(result).toBe(true);
-      expect(container.style.width).toBe('');
-      expect(content.style.maxWidth).toBe('');
+      DOMUtils.safeRemove(el);
+      expect(document.body.contains(el)).toBe(false);
     });
 
-    it('should return false for null container', () => {
-      expect(DOMUtils.resetXtermInlineStyles(null)).toBe(false);
+    it('should check if element exists', () => {
+      document.body.innerHTML = '<div class="test"></div>';
+      expect(DOMUtils.exists('.test')).toBe(true);
+      expect(DOMUtils.exists('.missing')).toBe(false);
+    });
+
+    it('should get or create element', () => {
+      const el1 = DOMUtils.getOrCreateElement('#new-el', 'div', document.body);
+      expect(el1.id).toBe('new-el');
+      expect(document.body.contains(el1)).toBe(true);
+
+      const el2 = DOMUtils.getOrCreateElement('#new-el', 'div');
+      expect(el1).toBe(el2);
+    });
+  });
+
+  describe('Child Management', () => {
+    it('should append multiple children', () => {
+      const parent = document.createElement('div');
+      const c1 = document.createElement('span');
+      const c2 = document.createElement('span');
+      
+      DOMUtils.appendChildren(parent, c1, c2);
+      expect(parent.children.length).toBe(2);
+      expect(parent.firstChild).toBe(c1);
+    });
+
+    it('should prepend child', () => {
+      const parent = document.createElement('div');
+      const c1 = document.createElement('span');
+      const c2 = document.createElement('span');
+      
+      parent.appendChild(c1);
+      DOMUtils.prependChild(parent, c2);
+      
+      expect(parent.firstChild).toBe(c2);
+    });
+  });
+
+  describe('xterm Style Reset', () => {
+    it('should reset inline styles on xterm elements', () => {
+      const container = document.createElement('div');
+      container.className = 'terminal-container';
+      container.style.width = '500px';
+      
+      const xterm = document.createElement('div');
+      xterm.className = 'xterm';
+      xterm.style.height = '300px';
+      container.appendChild(xterm);
+      
+      const canvas = document.createElement('canvas');
+      const screen = document.createElement('div');
+      screen.className = 'xterm-screen';
+      screen.appendChild(canvas);
+      container.appendChild(screen);
+
+      DOMUtils.resetXtermInlineStyles(container, false);
+
+      expect(container.style.width).toBe('');
+      expect(xterm.style.height).toBe('');
+      expect(canvas.style.width).toBe('100%');
     });
   });
 });

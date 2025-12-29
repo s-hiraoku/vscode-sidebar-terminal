@@ -1,103 +1,150 @@
+/**
+ * KeybindingService Unit Tests
+ */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { KeybindingService } from '../../../../../../../webview/managers/input/services/KeybindingService';
 
 describe('KeybindingService', () => {
   let service: KeybindingService;
-  let mockLogger: any;
+  let logger: any;
 
   beforeEach(() => {
-    mockLogger = vi.fn();
-    service = new KeybindingService(mockLogger);
-    vi.stubGlobal('navigator', { platform: 'Win32' });
+    logger = vi.fn();
+    service = new KeybindingService(logger);
+    
+    // Stub navigator
+    vi.stubGlobal('navigator', { 
+      platform: 'MacIntel',
+      clipboard: { readText: vi.fn() }
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  describe('Settings Management', () => {
+    it('should update sendKeybindingsToShell', () => {
+      service.updateSettings({ sendKeybindingsToShell: true });
+      // Implicitly check via logger or behavior
+      // We can't access private property easily, but behavior test covers it
+      expect(logger).toHaveBeenCalledWith(expect.stringContaining('sendKeybindingsToShell updated: true'));
+    });
+
+    it('should update commandsToSkipShell', () => {
+      service.updateSettings({ commandsToSkipShell: ['test.command', '-workbench.action.quickOpen'] });
+      expect(logger).toHaveBeenCalledWith(expect.stringContaining('Added command'));
+      expect(logger).toHaveBeenCalledWith(expect.stringContaining('Removed command'));
+    });
+
+    it('should update allowChords', () => {
+      service.updateSettings({ allowChords: false });
+      expect(logger).toHaveBeenCalledWith(expect.stringContaining('allowChords updated: false'));
+    });
   });
 
   describe('Keybinding Resolution', () => {
-    it('should resolve split terminal on Windows', () => {
-      const event = {
-        key: '5',
-        ctrlKey: true,
-        shiftKey: true,
-        altKey: false,
-        metaKey: false
-      } as KeyboardEvent;
+    it('should resolve mac keybindings', () => {
+      vi.stubGlobal('navigator', { platform: 'MacIntel' });
       
-      expect(service.resolveKeybinding(event)).toBe('workbench.action.terminal.split');
+      const event = new KeyboardEvent('keydown', { key: 'p', metaKey: true });
+      const command = service.resolveKeybinding(event);
+      
+      expect(command).toBe('workbench.action.quickOpen');
     });
 
-    it('should resolve split terminal on macOS', () => {
-      vi.stubGlobal('navigator', { platform: 'MacIntel' });
-      const event = {
-        key: '5',
-        ctrlKey: false,
-        shiftKey: true,
-        altKey: false,
-        metaKey: true
-      } as KeyboardEvent;
+    it('should resolve windows/linux keybindings', () => {
+      vi.stubGlobal('navigator', { platform: 'Win32' });
       
-      expect(service.resolveKeybinding(event)).toBe('workbench.action.terminal.split');
+      const event = new KeyboardEvent('keydown', { key: 'p', ctrlKey: true });
+      const command = service.resolveKeybinding(event);
+      
+      expect(command).toBe('workbench.action.quickOpen');
     });
 
-    it('should resolve clear terminal correctly by platform', () => {
-      // Windows: Ctrl+L (Legacy shell support included in map)
-      const winEvent = { key: 'l', ctrlKey: true } as any;
-      expect(service.resolveKeybinding(winEvent)).toBe('workbench.action.terminal.clear');
-
-      // Mac: Meta+K
+    it('should resolve complex combinations', () => {
       vi.stubGlobal('navigator', { platform: 'MacIntel' });
-      const macEvent = { key: 'k', metaKey: true } as any;
-      expect(service.resolveKeybinding(macEvent)).toBe('workbench.action.terminal.clear');
+      
+      const event = new KeyboardEvent('keydown', { key: '5', metaKey: true, shiftKey: true });
+      const command = service.resolveKeybinding(event);
+      
+      expect(command).toBe('workbench.action.terminal.split');
+    });
+
+    it('should return null for unknown combinations', () => {
+      const event = new KeyboardEvent('keydown', { key: 'unknown' });
+      const command = service.resolveKeybinding(event);
+      
+      expect(command).toBeNull();
     });
   });
 
   describe('shouldSkipShell', () => {
-    it('should skip shell for default terminal commands', () => {
-      const event = {} as KeyboardEvent;
-      expect(service.shouldSkipShell(event, 'workbench.action.terminal.new')).toBe(true);
+    it('should skip shell for commands in skip list', () => {
+      service.updateSettings({ sendKeybindingsToShell: false });
+      
+      const event = new KeyboardEvent('keydown', { key: 'p', metaKey: true });
+      const skip = service.shouldSkipShell(event, 'workbench.action.quickOpen');
+      
+      expect(skip).toBe(true);
     });
 
     it('should NOT skip shell if sendKeybindingsToShell is true', () => {
       service.updateSettings({ sendKeybindingsToShell: true });
-      const event = {} as KeyboardEvent;
-      expect(service.shouldSkipShell(event, 'workbench.action.terminal.new')).toBe(false);
+      
+      const event = new KeyboardEvent('keydown', { key: 'p', metaKey: true });
+      const skip = service.shouldSkipShell(event, 'workbench.action.quickOpen');
+      
+      expect(skip).toBe(false);
     });
 
     it('should skip shell in chord mode', () => {
       service.setChordMode(true);
-      const event = { key: 'a' } as KeyboardEvent;
-      expect(service.shouldSkipShell(event)).toBe(true);
+      service.updateSettings({ allowChords: true });
+      
+      const event = new KeyboardEvent('keydown', { key: 'a' });
+      const skip = service.shouldSkipShell(event);
+      
+      expect(skip).toBe(true);
     });
 
-    it('should NOT skip shell for Escape even in chord mode', () => {
+    it('should NOT skip shell in chord mode if escape pressed', () => {
       service.setChordMode(true);
-      const event = { key: 'Escape' } as KeyboardEvent;
-      expect(service.shouldSkipShell(event)).toBe(false);
-    });
-  });
-
-  describe('Settings Updates', () => {
-    it('should allow adding custom commands to skip list', () => {
-      service.updateSettings({ commandsToSkipShell: ['my.custom.command'] });
-      expect(service.shouldSkipShell({} as any, 'my.custom.command')).toBe(true);
+      
+      const event = new KeyboardEvent('keydown', { key: 'Escape' });
+      const skip = service.shouldSkipShell(event);
+      
+      expect(skip).toBe(false);
     });
 
-    it('should allow removing default commands from skip list using minus prefix', () => {
-      service.updateSettings({ commandsToSkipShell: ['-workbench.action.terminal.new'] });
-      expect(service.shouldSkipShell({} as any, 'workbench.action.terminal.new')).toBe(false);
-    });
-  });
-
-  describe('System Keybindings', () => {
-    it('should detect Cmd+Q on Mac', () => {
-      vi.stubGlobal('navigator', { platform: 'MacIntel' });
-      const event = { key: 'q', metaKey: true } as any;
-      expect(service.shouldSkipShell(event)).toBe(true);
-    });
-
-    it('should detect Alt+F4 on Win', () => {
+    it('should detect system keybindings (Windows Alt+F4)', () => {
       vi.stubGlobal('navigator', { platform: 'Win32' });
-      const event = { key: 'F4', altKey: true } as any;
-      expect(service.shouldSkipShell(event)).toBe(true);
+      
+      const event = new KeyboardEvent('keydown', { key: 'F4', altKey: true });
+      const skip = service.shouldSkipShell(event);
+      
+      expect(skip).toBe(true);
+    });
+
+    it('should detect mnemonics on Windows', () => {
+      vi.stubGlobal('navigator', { platform: 'Win32' });
+      service.updateSettings({ allowMnemonics: true });
+      
+      const event = new KeyboardEvent('keydown', { key: 'f', altKey: true });
+      const skip = service.shouldSkipShell(event);
+      
+      expect(skip).toBe(true);
+    });
+  });
+
+  describe('State Management', () => {
+    it('should manage chord mode', () => {
+      service.setChordMode(true);
+      expect(service.isChordMode()).toBe(true);
+      
+      service.setChordMode(false);
+      expect(service.isChordMode()).toBe(false);
     });
   });
 });

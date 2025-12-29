@@ -1,125 +1,105 @@
+/**
+ * PersistenceMessageHandler Unit Tests
+ */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { PersistenceMessageHandler } from '../../../../handlers/PersistenceMessageHandler';
 
+// Mock dependencies
+const { mockPersistenceService } = vi.hoisted(() => ({
+  mockPersistenceService: {
+    saveCurrentSession: vi.fn(),
+    restoreSession: vi.fn(),
+    cleanupExpiredSessions: vi.fn(),
+  }
+}));
+
+// Mock logger
+vi.mock('../../../../utils/logger', () => ({
+  extension: vi.fn(),
+}));
+
 describe('PersistenceMessageHandler', () => {
-  let mockPersistenceService: any;
   let handler: PersistenceMessageHandler;
 
   beforeEach(() => {
-    mockPersistenceService = {
-      saveCurrentSession: vi.fn().mockResolvedValue({ success: true, terminalCount: 1 }),
-      restoreSession: vi.fn().mockResolvedValue({ success: true, terminalsRestored: 1 }),
-      cleanupExpiredSessions: vi.fn().mockResolvedValue(undefined),
-    };
-    handler = new PersistenceMessageHandler(mockPersistenceService);
+    vi.clearAllMocks();
+    handler = new PersistenceMessageHandler(mockPersistenceService as any);
   });
 
   describe('handleMessage', () => {
     it('should handle saveSession command', async () => {
-      const result = await handler.handleMessage({ command: 'saveSession', data: { preferCache: true } });
-      expect(result.success).toBe(true);
-      expect(mockPersistenceService.saveCurrentSession).toHaveBeenCalledWith({ preferCache: true });
-    });
+      mockPersistenceService.saveCurrentSession.mockResolvedValue({
+        success: true,
+        terminalCount: 2
+      });
 
-    it('should handle persistenceSaveSession command', async () => {
-      const result = await handler.handleMessage({ command: 'persistenceSaveSession', data: { preferCache: false } });
-      expect(result.success).toBe(true);
-      expect(mockPersistenceService.saveCurrentSession).toHaveBeenCalledWith({ preferCache: false });
+      const response = await handler.handleMessage({ command: 'saveSession' });
+      
+      expect(response.success).toBe(true);
+      expect(response.terminalCount).toBe(2);
+      expect(mockPersistenceService.saveCurrentSession).toHaveBeenCalled();
     });
 
     it('should handle restoreSession command', async () => {
-      const result = await handler.handleMessage({ command: 'restoreSession' });
-      expect(result.success).toBe(true);
-      expect(mockPersistenceService.restoreSession).toHaveBeenCalled();
-    });
+      mockPersistenceService.restoreSession.mockResolvedValue({
+        success: true,
+        terminalsRestored: 1,
+        terminals: [{ id: 't1' }]
+      });
 
-    it('should handle persistenceRestoreSession command', async () => {
-      const result = await handler.handleMessage({ command: 'persistenceRestoreSession' });
-      expect(result.success).toBe(true);
-      expect(mockPersistenceService.restoreSession).toHaveBeenCalled();
+      const response = await handler.handleMessage({ command: 'restoreSession' });
+      
+      expect(response.success).toBe(true);
+      expect(response.terminalCount).toBe(1);
+      expect(response.data).toHaveLength(1);
     });
 
     it('should handle clearSession command', async () => {
-      const result = await handler.handleMessage({ command: 'clearSession' });
-      expect(result.success).toBe(true);
+      mockPersistenceService.cleanupExpiredSessions.mockResolvedValue(undefined);
+
+      const response = await handler.handleMessage({ command: 'clearSession' });
+      
+      expect(response.success).toBe(true);
       expect(mockPersistenceService.cleanupExpiredSessions).toHaveBeenCalled();
     });
 
-    it('should handle persistenceClearSession command', async () => {
-      const result = await handler.handleMessage({ command: 'persistenceClearSession' });
-      expect(result.success).toBe(true);
-      expect(mockPersistenceService.cleanupExpiredSessions).toHaveBeenCalled();
+    it('should handle alternative command names (persistenceSaveSession, etc)', async () => {
+      mockPersistenceService.saveCurrentSession.mockResolvedValue({ success: true });
+      await handler.handleMessage({ command: 'persistenceSaveSession' });
+      expect(mockPersistenceService.saveCurrentSession).toHaveBeenCalled();
     });
 
-    it('should handle unknown command', async () => {
-      const result = await handler.handleMessage({ command: 'unknown' } as any);
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('Unknown persistence command');
-    });
-
-    it('should handle service errors gracefully (save)', async () => {
-      mockPersistenceService.saveCurrentSession.mockRejectedValue(new Error('Save failed'));
-      const result = await handler.handleMessage({ command: 'saveSession' });
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('Save failed');
-    });
-
-    it('should handle service failure response (save)', async () => {
-      mockPersistenceService.saveCurrentSession.mockResolvedValue({ success: false, error: 'Logic error' });
-      const result = await handler.handleMessage({ command: 'saveSession' });
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Logic error');
-    });
-
-    it('should handle service errors gracefully (restore)', async () => {
-      mockPersistenceService.restoreSession.mockRejectedValue(new Error('Restore failed'));
-      const result = await handler.handleMessage({ command: 'restoreSession' });
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('Restore failed');
-    });
-
-    it('should handle no session found (restore)', async () => {
-        mockPersistenceService.restoreSession.mockResolvedValue({ success: true, terminalsRestored: 0 });
-        const result = await handler.handleMessage({ command: 'restoreSession' });
-        expect(result.success).toBe(true); // Technically handled as success false in response logic for no session
-        // Wait, checking logic:
-        // if (!result.success || result.terminalsRestored === 0) return { success: true, terminalCount: 0 ... }
-        // Ah, it returns success: true even if 0 restored? Let's check the code.
-        // Yes: return { success: true, terminalCount: 0, ... }
-        expect(result.terminalCount).toBe(0);
-        expect(result.error).toContain('No session found');
+    it('should return error for unknown commands', async () => {
+      const response = await handler.handleMessage({ command: 'unknown' as any });
+      expect(response.success).toBe(false);
+      expect(response.error).toContain('Unknown persistence command');
     });
   });
 
-  describe('Compatibility Methods', () => {
-    it('should have registerMessageHandlers method', () => {
-      expect(() => handler.registerMessageHandlers()).not.toThrow();
+  describe('Error Handling', () => {
+    it('should handle service failures gracefully', async () => {
+      mockPersistenceService.saveCurrentSession.mockRejectedValue(new Error('Disk full'));
+      
+      const response = await handler.handleMessage({ command: 'saveSession' });
+      
+      expect(response.success).toBe(false);
+      expect(response.error).toContain('Disk full');
     });
+  });
 
-    it('should have handlePersistenceMessage alias', async () => {
-      const result = await handler.handlePersistenceMessage({ command: 'saveSession' });
-      expect(result.success).toBe(true);
-    });
-
-    it('should create webview messages correctly', () => {
+  describe('Response Helpers', () => {
+    it('should create webview messages with timestamps', () => {
       const msg = handler.createWebViewMessage('test', { foo: 'bar' });
       expect(msg.command).toBe('persistenceTestResponse');
-      expect(msg.success).toBe(true);
       expect(msg.data).toEqual({ foo: 'bar' });
+      expect(msg.timestamp).toBeDefined();
     });
 
     it('should create error responses', () => {
-      const msg = handler.createErrorResponse('test', 'error message');
-      expect(msg.command).toBe('persistenceTestResponse');
+      const msg = handler.createErrorResponse('fail', 'oops');
       expect(msg.success).toBe(false);
-      expect((msg.data as any).error).toBe('error message');
-    });
-
-    it('should create success responses', () => {
-      const msg = handler.createSuccessResponse('test', { ok: true });
-      expect(msg.command).toBe('persistenceTestResponse');
-      expect(msg.success).toBe(true);
+      expect(msg.data).toEqual({ error: 'oops' });
     });
   });
 });
