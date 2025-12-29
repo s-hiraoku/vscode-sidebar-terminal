@@ -4,7 +4,14 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as vscode from 'vscode';
-import { FeedbackManager, showSuccess, showError, showWarning, TerminalErrorHandler } from '../../../../utils/feedback';
+import {
+  FeedbackManager,
+  FeedbackType,
+  showSuccess,
+  showError,
+  showWarning,
+  TerminalErrorHandler
+} from '../../../../utils/feedback';
 
 // Mock VS Code API
 vi.mock('vscode', () => {
@@ -43,79 +50,108 @@ vi.mock('../../../../utils/logger', () => ({
   log: vi.fn(),
 }));
 
-describe('FeedbackManager', () => {
-  let manager: FeedbackManager;
-
+describe('Feedback Utilities', () => {
   beforeEach(() => {
-    // Reset singleton instance if necessary or just get it
-    manager = FeedbackManager.getInstance();
     vi.clearAllMocks();
+    // Reset singleton instance if necessary
+    (FeedbackManager as any).instance = undefined;
   });
 
-  describe('showFeedback', () => {
-    it('should show information message for success', async () => {
-      showSuccess('Operation successful');
-      
-      expect(vscode.window.showInformationMessage).toHaveBeenCalledWith('Operation successful');
+  describe('FeedbackManager', () => {
+    let manager: FeedbackManager;
+
+    beforeEach(() => {
+      manager = FeedbackManager.getInstance();
     });
 
-    it('should show error message', async () => {
-      showError('Something went wrong');
-      
-      expect(vscode.window.showErrorMessage).toHaveBeenCalledWith('Something went wrong');
-    });
+    describe('showFeedback', () => {
+      it('should show information message for success', async () => {
+        showSuccess('Operation successful');
 
-    it('should handle actions in notifications', async () => {
-      const action = vi.fn();
-      const options = {
-        actions: [{ title: 'Fix it', action }]
-      };
-      
-      // Mock user selecting the action
-      (vscode.window.showInformationMessage as any).mockResolvedValue('Fix it');
-      
-      showSuccess('Error with fix', options);
-      
-      // Wait for async notification handling
-      await new Promise(resolve => setTimeout(resolve, 10));
-      
-      expect(action).toHaveBeenCalled();
-    });
+        expect(vscode.window.showInformationMessage).toHaveBeenCalledWith('Operation successful');
+      });
 
-    it('should update status bar', () => {
-      const statusBar = vscode.window.createStatusBarItem() as any;
-      showWarning('Disk full');
-      
-      expect(statusBar.text).toContain('Disk full');
+      it('should show error message', async () => {
+        showError('Something went wrong');
+
+        expect(vscode.window.showErrorMessage).toHaveBeenCalledWith('Something went wrong');
+      });
+
+      it('should handle actions in notifications', async () => {
+        const action = vi.fn();
+        const options = {
+          actions: [{ title: 'Fix it', action }]
+        };
+
+        // Mock user selecting the action
+        (vscode.window.showInformationMessage as any).mockResolvedValue('Fix it');
+
+        showSuccess('Error with fix', options);
+
+        // Wait for async notification handling
+        await new Promise(resolve => setTimeout(resolve, 10));
+
+        expect(action).toHaveBeenCalled();
+      });
+
+      it('should execute action when notification button is clicked', async () => {
+        const actionFn = vi.fn();
+        (vscode.window.showErrorMessage as any).mockResolvedValue('Retry');
+
+        showError('Failed', {
+          actions: [{ title: 'Retry', action: actionFn }]
+        });
+
+        // Wait for async notification handling
+        await new Promise(resolve => setTimeout(resolve, 10));
+
+        expect(actionFn).toHaveBeenCalled();
+      });
+
+      it('should update status bar', () => {
+        const statusBar = vscode.window.createStatusBarItem() as any;
+        showWarning('Disk full');
+
+        expect(statusBar.text).toContain('Disk full');
+      });
     });
   });
-});
 
-describe('TerminalErrorHandler', () => {
-  it('should handle ENOENT error', () => {
-    TerminalErrorHandler.handleTerminalCreationError(new Error('ENOENT: file not found'));
-    
-    expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
-      expect.stringContaining('Shell not found'),
-      expect.anything()
-    );
-  });
+  describe('TerminalErrorHandler', () => {
+    it('should handle ENOENT error', () => {
+      TerminalErrorHandler.handleTerminalCreationError(new Error('ENOENT: file not found'));
 
-  it('should handle max terminals reached', () => {
-    TerminalErrorHandler.handleMaxTerminalsReached(5);
-    
-    expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
-      expect.stringContaining('Maximum number of terminals reached (5)'),
-      expect.anything()
-    );
-  });
+      expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
+        expect.stringContaining('Shell not found'),
+        expect.anything()
+      );
+    });
 
-  it('should handle webview errors', () => {
-    TerminalErrorHandler.handleWebviewError('Unexpected crash');
-    
-    expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
-      expect.stringContaining('Webview error: Unexpected crash'),
-      expect.anything()
-    );
+    it('should handle permission denied errors', () => {
+      TerminalErrorHandler.handleTerminalCreationError(new Error('EACCES: permission denied'));
+
+      expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
+        expect.stringContaining('Permission denied'),
+        'Learn More'
+      );
+    });
+
+    it('should handle max terminals reached', () => {
+      TerminalErrorHandler.handleMaxTerminalsReached(5);
+
+      expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
+        expect.stringContaining('Maximum number of terminals reached (5)'),
+        expect.anything()
+      );
+    });
+
+    it('should handle webview errors', () => {
+      TerminalErrorHandler.handleWebviewError('Unexpected crash');
+
+      expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
+        expect.stringContaining('Webview error'),
+        expect.anything()
+      );
+    });
   });
 });

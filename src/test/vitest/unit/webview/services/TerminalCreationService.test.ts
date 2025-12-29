@@ -324,6 +324,21 @@ describe('TerminalCreationService', () => {
       expect(terminal).not.toBeNull();
     }, 5000);
 
+    it('should eventually fail after exceeding max retries', async () => {
+      // Force failure by mocking document.getElementById to always return null
+      const getElementSpy = vi.spyOn(document, 'getElementById').mockReturnValue(null);
+      // And also mock querySelector to ensure recovery fails
+      vi.spyOn(document, 'querySelector').mockReturnValue(null);
+
+      const terminal = await service.createTerminal('fail-term', 'Fail');
+      
+      expect(terminal).toBeNull();
+      // Should have tried at least 3 attempts
+      expect(getElementSpy.mock.calls.length).toBeGreaterThanOrEqual(3);
+      
+      getElementSpy.mockRestore();
+    });
+
     it('should extract terminal number from ID', async () => {
       // Arrange
       const terminalId = 'terminal-5';
@@ -349,6 +364,26 @@ describe('TerminalCreationService', () => {
       const terminalInstance = splitManager.getTerminals().get(terminalId);
       expect(terminalInstance?.number).toBeGreaterThanOrEqual(1);
       expect(terminalInstance?.number).toBeLessThanOrEqual(5);
+    });
+
+    it('should handle partial font settings and apply defaults', async () => {
+      const terminalId = 'terminal-font-test';
+      const config = {
+        fontFamily: '   ', // Empty string
+        fontSize: 0,       // Invalid size
+      } as any;
+
+      const terminal = await service.createTerminal(terminalId, 'Font Test', config);
+      
+      expect(terminal).not.toBeNull();
+      // Should not have applied invalid fonts, should use xterm defaults or system defaults
+      // (Testing that it didn't crash)
+    });
+
+    it('should handle missing container Manager gracefully', async () => {
+      mockCoordinator.getTerminalContainerManager.mockReturnValue(null);
+      const terminal = await service.createTerminal('term-no-mgr', 'No Manager');
+      expect(terminal).not.toBeNull();
     });
   });
 
