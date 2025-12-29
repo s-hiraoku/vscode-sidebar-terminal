@@ -60,8 +60,10 @@ describe('ResourceCleanupService', () => {
       service.registerCleanupCallback(async () => {
         executed = true;
       });
-      
+
       service.dispose();
+      // Wait for microtask queue to flush so async callback completes
+      await Promise.resolve();
       expect(executed).toBe(true);
     });
 

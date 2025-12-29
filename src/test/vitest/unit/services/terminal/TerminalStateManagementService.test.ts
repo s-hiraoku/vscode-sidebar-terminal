@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Mock common utility FIRST
 vi.mock('../../../../../utils/common', () => ({
@@ -27,19 +27,32 @@ vi.mock('vscode', () => ({
 
 vi.mock('../../../../../utils/logger');
 
+/**
+ * Mock terminal interface for testing
+ */
+interface MockTerminal {
+  id: string;
+  name: string;
+  isActive: boolean;
+}
+
 describe('TerminalStateManagementService', () => {
   let service: TerminalStateManagementService;
-  let mockTerminal: any;
+  let mockTerminal: MockTerminal;
 
   beforeEach(() => {
     vi.resetAllMocks();
     service = new TerminalStateManagementService();
-    
+
     mockTerminal = {
       id: 'term-1',
       name: 'Terminal 1',
       isActive: false,
     };
+  });
+
+  afterEach(() => {
+    service.dispose();
   });
 
   describe('addTerminal', () => {

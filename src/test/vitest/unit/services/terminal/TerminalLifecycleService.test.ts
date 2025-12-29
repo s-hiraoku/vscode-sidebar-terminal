@@ -85,13 +85,22 @@ describe('TerminalLifecycleService', () => {
       // Since it's async, we can try to call it twice in parallel.
       const p1 = service.createTerminal();
       const p2 = service.createTerminal();
-      
+
       const [r1, r2] = await Promise.all([p1, p2]);
-      
-      expect(r1.success || r2.success).toBe(true);
-      if (!r1.success || !r2.success) {
-        const failure = !r1.success ? r1 : r2;
-        // @ts-ignore
+
+      // Count successes and failures
+      const results = [r1, r2];
+      const succeeded = results.filter((r) => r.success);
+      const failed = results.filter((r) => !r.success);
+
+      // Exactly one should succeed (the first to acquire the lock)
+      expect(succeeded).toHaveLength(1);
+      // One should fail due to duplicate ID
+      expect(failed).toHaveLength(1);
+
+      // Verify the failure has correct error code
+      const failure = failed[0];
+      if (!failure.success) {
         expect(failure.error.code).toBe('TERMINAL_ALREADY_EXISTS');
       }
     });
