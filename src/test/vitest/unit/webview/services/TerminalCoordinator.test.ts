@@ -2,9 +2,9 @@
  * TerminalCoordinator Unit Tests
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { TerminalCoordinator } from '../../../../../webview/services/TerminalCoordinator';
-import { Terminal } from '@xterm/xterm';
+
 
 // Mock Terminal and Addons
 vi.mock('@xterm/xterm', () => {
@@ -88,7 +88,7 @@ describe('TerminalCoordinator', () => {
     });
 
     it('should activate terminal', () => {
-      const t2Id = 'terminal-2'; // mock expected next ID
+      const _t2Id = 'terminal-2'; // mock expected next ID
       coordinator.activateTerminal(t1Id);
       
       const info = coordinator.getTerminalInfo(t1Id);

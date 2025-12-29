@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import * as os from 'os';
+import { describe, it, expect } from 'vitest';
+
 import { 
   safeProcessCwd, 
   generateTerminalId, 

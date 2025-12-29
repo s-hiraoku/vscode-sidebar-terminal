@@ -2,10 +2,9 @@
  * SettingsSyncService Unit Tests
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import * as vscode from 'vscode';
+import { describe, it, expect } from 'vitest';
+
 import { SettingsSyncService } from '../../../../../providers/services/SettingsSyncService';
-import { getUnifiedConfigurationService } from '../../../../../config/UnifiedConfigurationService';
 
 const { mockUnifiedConfig } = vi.hoisted(() => ({
   mockUnifiedConfig: {

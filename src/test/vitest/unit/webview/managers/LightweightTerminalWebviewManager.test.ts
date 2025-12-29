@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { JSDOM } from 'jsdom';
 import { LightweightTerminalWebviewManager } from '../../../../../webview/managers/LightweightTerminalWebviewManager';
 
@@ -65,7 +65,7 @@ describe('LightweightTerminalWebviewManager', () => {
     });
 
     it('should coordinate active terminal changes across components', () => {
-      const lifecycle = (manager as any).terminalLifecycleManager;
+      const _lifecycle = (manager as any).terminalLifecycleManager;
       const tabs = manager.terminalTabManager;
       const ui = (manager as any).uiManager;
 
@@ -79,7 +79,7 @@ describe('LightweightTerminalWebviewManager', () => {
 
   describe('Terminal Operations', () => {
     it('should coordinate terminal creation', async () => {
-      const lifecycle = (manager as any).terminalLifecycleManager;
+      const _lifecycle = (manager as any).terminalLifecycleManager;
       const tabs = manager.terminalTabManager;
       
       lifecycle.createTerminal.mockResolvedValue({ textarea: { hasAttribute: () => false }, focus: vi.fn() });
@@ -112,7 +112,7 @@ describe('LightweightTerminalWebviewManager', () => {
     });
 
     it('should coordinate terminal removal', async () => {
-      const lifecycle = (manager as any).terminalLifecycleManager;
+      const _lifecycle = (manager as any).terminalLifecycleManager;
       const tabs = manager.terminalTabManager;
       
       lifecycle.removeTerminal.mockResolvedValue(true);
@@ -128,7 +128,7 @@ describe('LightweightTerminalWebviewManager', () => {
   describe('Panel Location Sync', () => {
     it('should handle terminal-panel-location-changed event', () => {
       const splitManager = manager.splitManager;
-      const displayManager = (manager as any).displayModeManager;
+      const _displayManager = (manager as any).displayModeManager;
 
       const event = new dom.window.CustomEvent('terminal-panel-location-changed', {
         detail: { location: 'panel' }
@@ -141,7 +141,7 @@ describe('LightweightTerminalWebviewManager', () => {
 
     it('should switch to split mode if panel location is panel and multiple terminals exist', () => {
       const splitManager = manager.splitManager;
-      const displayManager = (manager as any).displayModeManager;
+      const _displayManager = (manager as any).displayModeManager;
 
       // Mock getting terminals to return size > 1
       (splitManager.getTerminals as any).mockReturnValue(new Map([['t1', {}], ['t2', {}]]));
@@ -223,7 +223,7 @@ describe('LightweightTerminalWebviewManager', () => {
     });
 
     it('should update all terminal themes', () => {
-        const lifecycle = (manager as any).terminalLifecycleManager;
+        const _lifecycle = (manager as any).terminalLifecycleManager;
         const splitManager = manager.splitManager;
         const mockTerminal = {
             options: {},
@@ -245,7 +245,7 @@ describe('LightweightTerminalWebviewManager', () => {
     });
 
     it('should apply font settings', () => {
-        const fontService = (manager as any).fontSettingsService;
+        const _fontService = (manager as any).fontSettingsService;
         // Mock FontSettingsService since it was not mocked in top-level block (or we check if we need to mock it)
         // Actually, it seems FontSettingsService is not mocked above, so it might be real or implicit.
         // Checking constructor: this.fontSettingsService = new FontSettingsService();
@@ -258,7 +258,7 @@ describe('LightweightTerminalWebviewManager', () => {
 
   describe('Scrollback Extraction', () => {
       it('should extract using serializeAddon if available', () => {
-          const lifecycle = (manager as any).terminalLifecycleManager;
+          const _lifecycle = (manager as any).terminalLifecycleManager;
           const mockSerializeAddon = {
               serialize: vi.fn().mockReturnValue('line1\nline2\n')
           };
@@ -275,7 +275,7 @@ describe('LightweightTerminalWebviewManager', () => {
       });
 
       it('should fallback to buffer if serializeAddon missing', () => {
-        const lifecycle = (manager as any).terminalLifecycleManager;
+        const _lifecycle = (manager as any).terminalLifecycleManager;
         const mockBuffer = {
             length: 2,
             getLine: vi.fn((i) => ({ translateToString: () => `line${i+1}` }))
@@ -317,7 +317,7 @@ describe('LightweightTerminalWebviewManager', () => {
   describe('Lifecycle', () => {
     it('should dispose all managers on dispose', () => {
       const apiManager = (manager as any).webViewApiManager;
-      const lifecycle = (manager as any).terminalLifecycleManager;
+      const _lifecycle = (manager as any).terminalLifecycleManager;
       
       manager.dispose();
       

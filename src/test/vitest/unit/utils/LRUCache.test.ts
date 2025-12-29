@@ -1,5 +1,5 @@
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { LRUCache } from '../../../../utils/LRUCache';
 
 describe('LRUCache', () => {

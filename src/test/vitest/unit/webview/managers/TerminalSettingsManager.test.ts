@@ -2,10 +2,9 @@
  * TerminalSettingsManager Unit Tests
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { TerminalSettingsManager } from '../../../../../webview/managers/TerminalSettingsManager';
 import { IUIManager, IConfigManager } from '../../../../../webview/interfaces/ManagerInterfaces';
-import { FontSettingsService } from '../../../../../webview/services/FontSettingsService';
 import { ConfigManager } from '../../../../../webview/managers/ConfigManager';
 
 // Mock generic logger

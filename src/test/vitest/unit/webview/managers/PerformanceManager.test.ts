@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { PerformanceManager } from '../../../../../webview/managers/PerformanceManager';
-import { Terminal } from '@xterm/xterm';
-import { FitAddon } from '@xterm/addon-fit';
+
+
 import { ResizeManager } from '../../../../../webview/utils/ResizeManager';
 import { DOMUtils } from '../../../../../webview/utils/DOMUtils';
 

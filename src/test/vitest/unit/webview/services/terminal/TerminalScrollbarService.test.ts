@@ -2,7 +2,7 @@
  * TerminalScrollbarService Unit Tests
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { TerminalScrollbarService } from '../../../../../../webview/services/terminal/TerminalScrollbarService';
 import { terminalLogger } from '../../../../../../webview/utils/ManagerLogger';
 

@@ -8,7 +8,7 @@
  * - Link activation with modifier key checks
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { TerminalLinkManager } from '../../../../../webview/managers/TerminalLinkManager';
 import type { IManagerCoordinator } from '../../../../../webview/interfaces/ManagerInterfaces';
 import type { Terminal, ILink, IDisposable, IBuffer, IBufferLine } from '@xterm/xterm';
@@ -156,7 +156,7 @@ describe('TerminalLinkManager', () => {
   describe('Link Detection', () => {
     it('should detect absolute file paths', () => {
       const mockTerminal = createMockTerminal(['/path/to/file.ts']);
-      let capturedCallback: ((links: ILink[]) => void) | null = null;
+      let _capturedCallback: ((links: ILink[]) => void) | null = null;
 
       vi.mocked(mockTerminal.registerLinkProvider).mockImplementation((provider) => {
         provider.provideLinks(1, (links) => {

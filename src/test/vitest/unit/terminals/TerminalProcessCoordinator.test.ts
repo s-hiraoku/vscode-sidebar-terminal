@@ -1,7 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import * as vscode from 'vscode';
+import { describe, it, expect, vi } from 'vitest';
+
 import { TerminalProcessCoordinator } from '../../../../terminals/TerminalProcessCoordinator';
-import { ShellIntegrationService } from '../../../../services/ShellIntegrationService';
 import { TerminalInstance, ProcessState } from '../../../../types/shared';
 
 // Mock VS Code
@@ -201,7 +200,7 @@ describe('TerminalProcessCoordinator', () => {
       // First Launching to set timeout
       term.processState = ProcessState.Launching;
       coordinator.notifyProcessStateChange(term, ProcessState.Launching);
-      const timerCount = vi.getTimerCount();
+      const _timerCount = vi.getTimerCount();
       
       // Then Running to clear it
       term.processState = ProcessState.Running;

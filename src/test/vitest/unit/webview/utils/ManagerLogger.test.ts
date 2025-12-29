@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { ManagerLogger } from '../../../../../webview/utils/ManagerLogger';
 import { webview as baseLog } from '../../../../../utils/logger';
 

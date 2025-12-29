@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 // Mock common utility FIRST
 vi.mock('../../../../../utils/common', () => ({
@@ -13,7 +13,7 @@ vi.mock('../../../../../utils/common', () => ({
   },
 }));
 
-import * as vscode from 'vscode';
+
 import { TerminalStateManagementService } from '../../../../../services/terminal/TerminalStateManagementService';
 
 // Mock VS Code

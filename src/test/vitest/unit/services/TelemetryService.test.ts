@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import * as vscode from 'vscode';
+import { describe, it, expect, vi } from 'vitest';
+
 import { TelemetryService, TelemetryEventType } from '../../../../services/TelemetryService';
 
 // Mock VS Code API
@@ -9,7 +9,7 @@ vi.mock('vscode', () => ({
   },
   Disposable: class {
     dispose = vi.fn();
-    static from(...args: any[]) { return { dispose: vi.fn() }; }
+    static from(..._args: any[]) { return { dispose: vi.fn() }; }
   },
 }));
 
