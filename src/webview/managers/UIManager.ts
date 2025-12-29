@@ -11,7 +11,7 @@ import { Terminal } from '@xterm/xterm';
 import { PartialTerminalSettings, WebViewFontSettings, ActiveBorderMode } from '../../types/shared';
 import { getWebviewTheme, WEBVIEW_THEME_CONSTANTS, TerminalTheme } from '../utils/WebviewThemeUtils';
 import { IUIManager } from '../interfaces/ManagerInterfaces';
-import { HeaderFactory, TerminalHeaderElements } from '../factories/HeaderFactory';
+import { TerminalHeaderElements } from '../factories/HeaderFactory';
 import { DOMUtils } from '../utils/DOMUtils';
 import { BaseManager } from './BaseManager';
 import { uiLogger } from '../utils/ManagerLogger';
@@ -25,9 +25,65 @@ import {
   NotificationConfig,
   TerminalBorderService,
   CliAgentStatusService,
+  HeaderService,
+  LoadingIndicatorService,
 } from './ui';
 
 export { NotificationConfig };
+
+// ============================================================================
+// Constants (simplified - service-specific constants are in their services)
+// ============================================================================
+
+/** Element IDs used in UIManager */
+const ElementIds = {
+  TERMINAL_CONTAINER: 'terminal-container',
+  TERMINAL_BODY: 'terminal-body',
+  WEBVIEW_HEADER: 'webview-header',
+} as const;
+
+/** CSS class names used in UIManager */
+const CssClasses = {
+  // Terminal structure
+  TERMINAL_HEADER: 'terminal-header',
+  TERMINAL_STATUS: 'terminal-status',
+  TERMINAL_CONTROLS: 'terminal-controls',
+  TERMINAL_CONTENT: 'terminal-content',
+  TERMINAL_CONTAINER: 'terminal-container',
+  // Focus & Status
+  FOCUSED: 'focused',
+  CLAUDE_STATUS: 'claude-status',
+  CLOSE_BTN: 'close-btn',
+  // xterm
+  XTERM: 'xterm',
+  XTERM_VIEWPORT: 'xterm-viewport',
+  // Split
+  SPLIT_SEPARATOR: 'split-separator',
+} as const;
+
+/** UI timing constants (in milliseconds) */
+const Timing = {
+  FOCUS_INDICATOR_DURATION: 300,
+} as const;
+
+/** UI dimension constants */
+const Dimensions = {
+  SEPARATOR_SIZE: '4px',
+} as const;
+
+/** Theme-related constants */
+const ThemeColors = {
+  LIGHT_FOREGROUND: '#000000',
+  CLI_AGENT_STATUS_COLOR: '#007ACC',
+  CLI_AGENT_STATUS_FONT_SIZE: '11px',
+  CLI_AGENT_STATUS_MARGIN: '10px',
+} as const;
+
+/** Focus indicator styles */
+const FocusStyles = {
+  BOX_SHADOW: '0 0 8px rgba(0, 122, 255, 0.5)',
+  TRANSITION: 'box-shadow 0.2s ease',
+} as const;
 
 export class UIManager extends BaseManager implements IUIManager {
   // Theme cache for performance
@@ -37,10 +93,6 @@ export class UIManager extends BaseManager implements IUIManager {
 
   // Prevent rapid successive updates that could cause duplication
   private readonly UPDATE_DEBOUNCE_MS = 100;
-
-  // Header elements cache for efficient CLI Agent status updates
-  // Public for backward compatibility with TerminalCreationService
-  public headerElementsCache = new Map<string, TerminalHeaderElements>();
 
   // Event registry for proper cleanup
   protected eventRegistry: EventHandlerRegistry;
@@ -52,6 +104,16 @@ export class UIManager extends BaseManager implements IUIManager {
   private readonly notificationService: NotificationService;
   private readonly borderService: TerminalBorderService;
   private readonly cliAgentService: CliAgentStatusService;
+  private readonly headerService: HeaderService;
+  private readonly loadingIndicatorService: LoadingIndicatorService;
+
+  /**
+   * Header elements cache for efficient CLI Agent status updates
+   * Public getter for backward compatibility with TerminalCreationService
+   */
+  public get headerElementsCache(): Map<string, TerminalHeaderElements> {
+    return this.headerService.getHeaderElementsCache();
+  }
 
   // Callback for tab theme updates (set by coordinator)
   private tabThemeUpdater: ((theme: TerminalTheme) => void) | null = null;
@@ -70,6 +132,8 @@ export class UIManager extends BaseManager implements IUIManager {
     this.notificationService = new NotificationService();
     this.borderService = new TerminalBorderService();
     this.cliAgentService = new CliAgentStatusService();
+    this.headerService = new HeaderService();
+    this.loadingIndicatorService = new LoadingIndicatorService();
   }
 
   /**
@@ -88,7 +152,7 @@ export class UIManager extends BaseManager implements IUIManager {
     // Clear caches
     this.currentTheme = null;
     this.themeApplied = false;
-    this.headerElementsCache.clear();
+    this.headerService.clearHeaderCache();
     this.tabThemeUpdater = null;
 
     // 🔧 FIX: Clear resize observer keys tracking
@@ -148,37 +212,11 @@ export class UIManager extends BaseManager implements IUIManager {
 
     log(`🎨 [UI] Header theme colors: bg=${headerBg}, fg=${headerFg}`);
 
-    // Update all terminal headers from cache
-    for (const headerElements of this.headerElementsCache.values()) {
-      // Use 'container' - the actual header element (not 'header' which doesn't exist)
-      if (headerElements.container) {
-        if (headerBg) {
-          headerElements.container.style.backgroundColor = headerBg;
-        }
-        if (headerFg) {
-          headerElements.container.style.color = headerFg;
-        }
-        // Also update nameSpan color
-        if (headerElements.nameSpan && headerFg) {
-          headerElements.nameSpan.style.color = headerFg;
-        }
-      }
-    }
-
-    // Also update all terminal headers by CSS class (fallback for uncached elements)
-    const allTerminalHeaders = document.querySelectorAll('.terminal-header');
-    allTerminalHeaders.forEach((header) => {
-      const el = header as HTMLElement;
-      if (headerBg) {
-        el.style.backgroundColor = headerBg;
-      }
-      if (headerFg) {
-        el.style.color = headerFg;
-      }
-    });
+    // Delegate to HeaderService for cache and DOM updates
+    this.headerService.updateHeadersFromCssVariables(headerBg, headerFg);
 
     // Also update the main webview header
-    const webviewHeader = document.getElementById('webview-header');
+    const webviewHeader = document.getElementById(ElementIds.WEBVIEW_HEADER);
     if (webviewHeader) {
       if (headerBg) {
         webviewHeader.style.backgroundColor = headerBg;
@@ -188,7 +226,7 @@ export class UIManager extends BaseManager implements IUIManager {
       }
     }
 
-    log(`🎨 [UI] Updated ${allTerminalHeaders.length} terminal headers`);
+    log(`🎨 [UI] Header themes updated`);
   }
 
   /**
@@ -248,53 +286,18 @@ export class UIManager extends BaseManager implements IUIManager {
 
   /**
    * Show terminal placeholder when no terminals exist
+   * Delegates to LoadingIndicatorService
    */
   public showTerminalPlaceholder(): void {
-    let placeholder = document.getElementById('terminal-placeholder');
-    if (!placeholder) {
-      placeholder = document.createElement('div');
-      placeholder.id = 'terminal-placeholder';
-      placeholder.className = 'terminal-placeholder';
-
-      // SECURITY: Build DOM structure safely to prevent XSS
-      const contentDiv = document.createElement('div');
-      contentDiv.className = 'placeholder-content';
-
-      const iconDiv = document.createElement('div');
-      iconDiv.className = 'placeholder-icon';
-      iconDiv.textContent = '⚡';
-
-      const titleDiv = document.createElement('div');
-      titleDiv.className = 'placeholder-title';
-      titleDiv.textContent = 'No Terminal Active';
-
-      const subtitleDiv = document.createElement('div');
-      subtitleDiv.className = 'placeholder-subtitle';
-      subtitleDiv.textContent = 'Create a new terminal to get started';
-
-      contentDiv.appendChild(iconDiv);
-      contentDiv.appendChild(titleDiv);
-      contentDiv.appendChild(subtitleDiv);
-      placeholder.appendChild(contentDiv);
-
-      const terminalContainer = document.getElementById('terminal-container');
-      if (terminalContainer) {
-        terminalContainer.appendChild(placeholder);
-      }
-    }
-    placeholder.style.display = 'flex';
-    uiLogger.info('Terminal placeholder shown');
+    this.loadingIndicatorService.showTerminalPlaceholder();
   }
 
   /**
    * Hide terminal placeholder when terminals exist
+   * Delegates to LoadingIndicatorService
    */
   public hideTerminalPlaceholder(): void {
-    const placeholder = document.getElementById('terminal-placeholder');
-    if (placeholder) {
-      placeholder.style.display = 'none';
-      uiLogger.info('Terminal placeholder hidden');
-    }
+    this.loadingIndicatorService.hideTerminalPlaceholder();
   }
 
   /**
@@ -328,42 +331,13 @@ export class UIManager extends BaseManager implements IUIManager {
   private updateHeaderTheme(theme: TerminalTheme): void {
     // Adjust foreground color for better contrast on light theme
     const isLightTheme = this.isLightBackground(theme.background);
-    const headerForeground = isLightTheme ? '#000000' : theme.foreground;
+    const headerForeground = isLightTheme ? ThemeColors.LIGHT_FOREGROUND : theme.foreground;
 
     // Update border service with theme state for inactive border colors
     this.borderService.setLightTheme(isLightTheme);
 
-    this.headerElementsCache.forEach((elements, terminalId) => {
-      const container = elements.container;
-
-      // Update header background and foreground
-      container.style.backgroundColor = theme.background;
-      container.style.color = headerForeground;
-      container.style.borderBottomColor = headerForeground + '33'; // Semi-transparent border
-
-      // Update terminal name text color explicitly
-      if (elements.nameSpan) {
-        elements.nameSpan.style.color = headerForeground;
-      }
-
-      // Update title section color
-      if (elements.titleSection) {
-        elements.titleSection.style.color = headerForeground;
-      }
-
-      // Update button colors
-      if (elements.closeButton) {
-        elements.closeButton.style.color = headerForeground;
-      }
-      if (elements.aiAgentToggleButton) {
-        elements.aiAgentToggleButton.style.color = headerForeground;
-      }
-      if (elements.splitButton) {
-        elements.splitButton.style.color = headerForeground;
-      }
-
-      uiLogger.debug(`🎨 [THEME] Updated header for terminal ${terminalId}`);
-    });
+    // Delegate header theme updates to HeaderService
+    this.headerService.updateAllHeaderThemeColors(theme.background, headerForeground);
 
     // Update terminal body/container background
     this.updateTerminalBodyBackground(theme.background);
@@ -376,8 +350,6 @@ export class UIManager extends BaseManager implements IUIManager {
         : theme;
       this.tabThemeUpdater(adjustedTheme);
     }
-
-    uiLogger.info(`🎨 [THEME] Updated ${this.headerElementsCache.size} headers to match terminal theme`);
   }
 
   /**
@@ -405,13 +377,13 @@ export class UIManager extends BaseManager implements IUIManager {
     document.documentElement.style.setProperty('background-color', backgroundColor, 'important');
     document.body.style.setProperty('background-color', backgroundColor, 'important');
 
-    const terminalBody = document.getElementById('terminal-body');
+    const terminalBody = document.getElementById(ElementIds.TERMINAL_BODY);
     if (terminalBody) {
       terminalBody.style.setProperty('background-color', backgroundColor, 'important');
       terminalBody.style.setProperty('background', backgroundColor, 'important');
     }
 
-    const terminalContainer = document.getElementById('terminal-container');
+    const terminalContainer = document.getElementById(ElementIds.TERMINAL_CONTAINER);
     if (terminalContainer) {
       terminalContainer.style.setProperty('background-color', backgroundColor, 'important');
     }
@@ -433,18 +405,18 @@ export class UIManager extends BaseManager implements IUIManager {
         const terminalElement = terminal.element;
 
         // Find the parent terminal-container
-        const terminalContainer = terminalElement.closest('.terminal-container');
+        const terminalContainer = terminalElement.closest(`.${CssClasses.TERMINAL_CONTAINER}`);
 
         if (terminalContainer) {
           // Update only this terminal's content element
-          const terminalContent = terminalContainer.querySelector<HTMLElement>('.terminal-content');
+          const terminalContent = terminalContainer.querySelector<HTMLElement>(`.${CssClasses.TERMINAL_CONTENT}`);
           if (terminalContent) {
             terminalContent.style.backgroundColor = backgroundColor;
           }
         }
 
         // Update xterm-viewport within this terminal
-        const xtermViewport = terminalElement.querySelector<HTMLElement>('.xterm-viewport');
+        const xtermViewport = terminalElement.querySelector<HTMLElement>(`.${CssClasses.XTERM_VIEWPORT}`);
         if (xtermViewport) {
           xtermViewport.style.backgroundColor = backgroundColor;
         }
@@ -457,19 +429,19 @@ export class UIManager extends BaseManager implements IUIManager {
       }
 
       // Fallback: Update all terminal-content elements (for global theme changes)
-      const terminalContents = document.querySelectorAll<HTMLElement>('.terminal-content');
+      const terminalContents = document.querySelectorAll<HTMLElement>(`.${CssClasses.TERMINAL_CONTENT}`);
       terminalContents.forEach((element) => {
         element.style.backgroundColor = backgroundColor;
       });
 
       // Update all xterm-viewport elements
-      const xtermViewports = document.querySelectorAll<HTMLElement>('.xterm-viewport');
+      const xtermViewports = document.querySelectorAll<HTMLElement>(`.${CssClasses.XTERM_VIEWPORT}`);
       xtermViewports.forEach((element) => {
         element.style.backgroundColor = backgroundColor;
       });
 
       // Update all xterm elements (the main xterm container)
-      const xtermElements = document.querySelectorAll<HTMLElement>('.xterm');
+      const xtermElements = document.querySelectorAll<HTMLElement>(`.${CssClasses.XTERM}`);
       xtermElements.forEach((element) => {
         element.style.backgroundColor = backgroundColor;
       });
@@ -542,60 +514,36 @@ export class UIManager extends BaseManager implements IUIManager {
 
   /**
    * Create loading indicator for terminal operations
+   * Delegates to LoadingIndicatorService
    */
-  public showLoadingIndicator(message: string = 'Loading...'): HTMLElement {
-    const indicator = document.createElement('div');
-    indicator.className = 'loading-indicator';
-
-    // SECURITY: Build DOM structure safely to prevent XSS
-    const spinnerDiv = document.createElement('div');
-    spinnerDiv.className = 'loading-spinner';
-
-    const messageDiv = document.createElement('div');
-    messageDiv.className = 'loading-message';
-    messageDiv.textContent = message; // Safe: textContent escapes HTML
-
-    indicator.appendChild(spinnerDiv);
-    indicator.appendChild(messageDiv);
-
-    const terminalContainer = document.getElementById('terminal-container');
-    if (terminalContainer) {
-      terminalContainer.appendChild(indicator);
-    }
-
-    uiLogger.info(`Loading indicator shown: ${message}`);
-    return indicator;
+  public showLoadingIndicator(message?: string): HTMLElement {
+    return this.loadingIndicatorService.showLoadingIndicator(message);
   }
 
   /**
    * Remove loading indicator
+   * Delegates to LoadingIndicatorService
    */
   public hideLoadingIndicator(indicator?: HTMLElement): void {
-    if (indicator) {
-      indicator.remove();
-    } else {
-      const indicators = document.querySelectorAll('.loading-indicator');
-      indicators.forEach((el) => el.remove());
-    }
-    uiLogger.info('Loading indicator hidden');
+    this.loadingIndicatorService.hideLoadingIndicator(indicator);
   }
 
   /**
    * Add visual focus indicator to terminal
    */
   public addFocusIndicator(container: HTMLElement): void {
-    container.classList.add('focused');
+    container.classList.add(CssClasses.FOCUSED);
 
     // Add subtle glow effect
     const style = container.style;
-    style.boxShadow = '0 0 8px rgba(0, 122, 255, 0.5)';
-    style.transition = 'box-shadow 0.2s ease';
+    style.boxShadow = FocusStyles.BOX_SHADOW;
+    style.transition = FocusStyles.TRANSITION;
 
     // Remove after animation
     setTimeout(() => {
       style.boxShadow = '';
-      container.classList.remove('focused');
-    }, 300);
+      container.classList.remove(CssClasses.FOCUSED);
+    }, Timing.FOCUS_INDICATOR_DURATION);
 
     uiLogger.info('Focus indicator added');
   }
@@ -617,104 +565,49 @@ export class UIManager extends BaseManager implements IUIManager {
 
   /**
    * Create terminal header with title and controls
+   * Delegates to HeaderService
    */
   public createTerminalHeader(
     terminalId: string,
     terminalName: string,
     onAiAgentToggleClick?: (terminalId: string) => void
   ): HTMLElement {
-    // 🔍 DEBUG: Enhanced header creation logging
-    log(`🔍 [DEBUG] Creating terminal header:`, {
-      terminalId,
-      terminalName,
-      timestamp: Date.now(),
-    });
-
-    // Determine theme colors based on current theme
-    const isLight = this.currentTheme ? this.isLightBackground(this.currentTheme) : false;
-    const backgroundColor = this.currentTheme || undefined;
-    const foregroundColor = isLight ? '#000000' : undefined;
-
-    // HeaderFactoryを使用してシンプルな構造を作成
-    const headerElements = HeaderFactory.createTerminalHeader({
-      terminalId,
-      terminalName,
+    return this.headerService.createTerminalHeader(terminalId, terminalName, {
+      currentTheme: this.currentTheme,
       onAiAgentToggleClick,
-      backgroundColor,
-      foregroundColor,
     });
-
-    // 🔍 FIX: Ensure header visibility with explicit styling
-    const container = headerElements.container;
-    container.style.setProperty('display', 'flex', 'important');
-    container.style.setProperty('visibility', 'visible', 'important');
-    container.style.setProperty('opacity', '1', 'important');
-    container.style.setProperty('height', 'auto', 'important');
-    container.style.setProperty('min-height', '28px', 'important');
-    container.style.setProperty('z-index', '10', 'important');
-
-    // 🔍 DEBUG: Log header creation success
-    log(`🔍 [DEBUG] Header created successfully:`, {
-      headerId: container.id,
-      headerClass: container.className,
-      headerDisplay: container.style.display,
-      headerVisibility: container.style.visibility,
-      headerDimensions: {
-        width: container.offsetWidth,
-        height: container.offsetHeight,
-      },
-    });
-
-    // ヘッダー要素をキャッシュ（CLI Agent status更新用）
-    this.headerElementsCache.set(terminalId, headerElements);
-
-    uiLogger.info(`Terminal header created using HeaderFactory for ${terminalId}`);
-    return headerElements.container;
   }
 
   /**
    * Update terminal header title
+   * Delegates to HeaderService
    */
   public updateTerminalHeader(terminalId: string, newName: string): void {
-    const headerElements = this.headerElementsCache.get(terminalId);
-    if (headerElements) {
-      // HeaderFactoryを使用して名前を更新
-      HeaderFactory.updateTerminalName(headerElements, newName);
-    } else {
-      // フォールバック: 直接DOMを更新
-      const header = document.querySelector(`[data-terminal-id="${terminalId}"] .terminal-name`);
-      if (header) {
-        header.textContent = newName;
-        uiLogger.info(`Updated terminal header (fallback) for ${terminalId}: ${newName}`);
-      }
-    }
+    this.headerService.updateTerminalHeader(terminalId, newName);
   }
 
   /**
    * Remove terminal header from cache when terminal is closed
+   * Delegates to HeaderService
    */
   public removeTerminalHeader(terminalId: string): void {
-    if (this.headerElementsCache.has(terminalId)) {
-      this.headerElementsCache.delete(terminalId);
-      uiLogger.debug(`Removed terminal header cache for ${terminalId}`);
-    }
+    this.headerService.removeTerminalHeader(terminalId);
   }
 
   /**
    * Clear all cached header elements
+   * Delegates to HeaderService
    */
   public clearHeaderCache(): void {
-    this.headerElementsCache.clear();
-    uiLogger.debug('Cleared all header cache');
+    this.headerService.clearHeaderCache();
   }
 
   /**
-   * Find all terminal headers in the DOM (moved from DOMManager)
+   * Find all terminal headers in the DOM
+   * Delegates to HeaderService
    */
   public findTerminalHeaders(): HTMLElement[] {
-    const headers = Array.from(document.querySelectorAll<HTMLElement>('.terminal-header'));
-    uiLogger.debug(`Found ${headers.length} terminal headers`);
-    return headers;
+    return this.headerService.findTerminalHeaders();
   }
 
   /**
@@ -815,15 +708,15 @@ export class UIManager extends BaseManager implements IUIManager {
    */
   public createSplitSeparator(direction: 'horizontal' | 'vertical'): HTMLElement {
     const separator = document.createElement('div');
-    separator.className = `split-separator split-separator-${direction}`;
+    separator.className = `${CssClasses.SPLIT_SEPARATOR} ${CssClasses.SPLIT_SEPARATOR}-${direction}`;
     separator.style.background = WEBVIEW_THEME_CONSTANTS.SEPARATOR_COLOR;
     separator.style.cursor = direction === 'horizontal' ? 'row-resize' : 'col-resize';
 
     if (direction === 'horizontal') {
-      separator.style.height = '4px';
+      separator.style.height = Dimensions.SEPARATOR_SIZE;
       separator.style.width = '100%';
     } else {
-      separator.style.width = '4px';
+      separator.style.width = Dimensions.SEPARATOR_SIZE;
       separator.style.height = '100%';
     }
 
@@ -836,12 +729,12 @@ export class UIManager extends BaseManager implements IUIManager {
    */
   public updateLegacyClaudeStatus(terminalId: string, isActive: boolean): void {
     const header = document.querySelector(
-      `[data-terminal-id="${terminalId}"] .terminal-header`
+      `[data-terminal-id="${terminalId}"] .${CssClasses.TERMINAL_HEADER}`
     ) as HTMLElement;
     if (!header) return;
 
     // HeaderFactory構造なので適切なstatusセクションを使用
-    const statusSection = header.querySelector('.terminal-status');
+    const statusSection = header.querySelector(`.${CssClasses.TERMINAL_STATUS}`);
     if (statusSection) {
       statusSection.textContent = ''; // Safe: clearing content
     }
@@ -850,22 +743,22 @@ export class UIManager extends BaseManager implements IUIManager {
       const statusSpan = DOMUtils.createElement(
         'span',
         {
-          color: '#007ACC',
+          color: ThemeColors.CLI_AGENT_STATUS_COLOR,
           fontWeight: 'bold',
-          marginLeft: '10px',
-          fontSize: '11px',
+          marginLeft: ThemeColors.CLI_AGENT_STATUS_MARGIN,
+          fontSize: ThemeColors.CLI_AGENT_STATUS_FONT_SIZE,
         },
         {
-          className: 'claude-status',
+          className: CssClasses.CLAUDE_STATUS,
           textContent: 'CLI Agent Active',
         }
       );
 
-      const controlsContainer = header.querySelector('.terminal-controls');
+      const controlsContainer = header.querySelector(`.${CssClasses.TERMINAL_CONTROLS}`);
       if (controlsContainer) {
         header.insertBefore(statusSpan, controlsContainer);
       } else {
-        const closeButton = header.querySelector('.close-btn');
+        const closeButton = header.querySelector(`.${CssClasses.CLOSE_BTN}`);
         if (closeButton) {
           header.insertBefore(statusSpan, closeButton);
         } else {
