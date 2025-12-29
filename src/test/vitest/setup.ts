@@ -4,6 +4,10 @@
  */
 
 import { vi, beforeEach, afterEach } from 'vitest';
+import vscodeMock from './mocks/vscode';
+
+// Make vscode available globally for tests that rely on it
+(global as any).vscode = vscodeMock;
 
 // ============================================================================
 // Browser API Polyfills

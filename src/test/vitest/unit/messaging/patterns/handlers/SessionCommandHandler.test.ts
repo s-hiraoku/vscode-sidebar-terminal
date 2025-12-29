@@ -1,3 +1,4 @@
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SessionCommandHandler } from '../../../../../../messaging/patterns/handlers/SessionCommandHandler';
 import { IMessageHandlerContext } from '../../../../../../messaging/patterns/core/IMessageHandler';
@@ -39,7 +40,7 @@ describe('SessionCommandHandler', () => {
 
   it('should handle sessionRestoreStarted command', async () => {
     await handler.handle({ command: 'sessionRestoreStarted' } as any, mockContext);
-    expect(mockContext.log).toHaveBeenCalledWith('info', expect.stringContaining('Session restore started'), undefined);
+    expect(mockContext.log).toHaveBeenCalledWith('info', expect.stringContaining('Session restore started'));
   });
 
   it('should handle sessionRestoreProgress command', async () => {
@@ -47,12 +48,12 @@ describe('SessionCommandHandler', () => {
     // BaseCommandHandler.log calls ctx.log(level, msg, ...args)
     // When no args are passed to this.log, args is an empty array in this.log(level, msg, ...args)
     // but context.log receives it as spread.
-    expect(mockContext.log).toHaveBeenCalledWith('debug', expect.stringContaining('1/2'), expect.anything());
+    expect(mockContext.log).toHaveBeenCalledWith('debug', expect.stringContaining('1/2'));
   });
 
   it('should handle sessionRestoreCompleted command', async () => {
     await handler.handle({ command: 'sessionRestoreCompleted', restoredCount: 5 } as any, mockContext);
-    expect(mockContext.log).toHaveBeenCalledWith('info', expect.stringContaining('5 terminals restored'), expect.anything());
+    expect(mockContext.log).toHaveBeenCalledWith('info', expect.stringContaining('5 terminals restored'));
   });
 
   it('should handle sessionRestoreError command', async () => {
@@ -62,12 +63,12 @@ describe('SessionCommandHandler', () => {
 
   it('should handle sessionSaved command', async () => {
     await handler.handle({ command: 'sessionSaved', terminalCount: 3 } as any, mockContext);
-    expect(mockContext.log).toHaveBeenCalledWith('info', expect.stringContaining('Session saved: 3 terminals'), expect.anything());
+    expect(mockContext.log).toHaveBeenCalledWith('info', expect.stringContaining('Session saved: 3 terminals'));
   });
 
   it('should handle sessionCleared command', async () => {
     await handler.handle({ command: 'sessionCleared' } as any, mockContext);
-    expect(mockContext.log).toHaveBeenCalledWith('info', expect.stringContaining('Session cleared'), undefined);
+    expect(mockContext.log).toHaveBeenCalledWith('info', expect.stringContaining('Session cleared'));
   });
 
   it('should handle terminalRestoreError command', async () => {

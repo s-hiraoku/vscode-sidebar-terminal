@@ -2,7 +2,8 @@
  * SettingsSyncService Unit Tests
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import * as vscode from 'vscode';
 
 import { SettingsSyncService } from '../../../../../providers/services/SettingsSyncService';
 

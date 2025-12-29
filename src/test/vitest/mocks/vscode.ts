@@ -77,9 +77,9 @@ export class EventEmitter<T> {
     return { dispose: () => this.listeners.splice(this.listeners.indexOf(listener), 1) };
   };
 
-  fire(data: T): void {
+  fire = vi.fn((data: T): void => {
     this.listeners.forEach(listener => listener(data));
-  }
+  });
 
   dispose(): void {
     this.listeners = [];
@@ -390,6 +390,7 @@ export const window = {
   withProgress: vi.fn().mockImplementation((_options, task) => task({ report: vi.fn() })),
   setStatusBarMessage: vi.fn().mockReturnValue({ dispose: vi.fn() }),
   showTextDocument: vi.fn().mockResolvedValue(undefined),
+  onDidChangeActiveColorTheme: vi.fn().mockReturnValue({ dispose: vi.fn() }),
 };
 
 // Commands mock
@@ -438,6 +439,11 @@ export const env = {
   openExternal: vi.fn().mockResolvedValue(true),
   uriScheme: 'vscode',
   shell: '/bin/bash',
+  createTelemetryLogger: vi.fn().mockReturnValue({
+    logUsage: vi.fn(),
+    logError: vi.fn(),
+    dispose: vi.fn(),
+  }),
 };
 
 // Debug mock
