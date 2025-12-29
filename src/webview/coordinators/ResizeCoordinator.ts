@@ -11,6 +11,7 @@
 import { webview as log } from '../../utils/logger';
 import { DOMUtils } from '../utils/DOMUtils';
 import { Debouncer } from '../utils/DebouncedEventBuffer';
+import { RESIZE_COORDINATOR_CONSTANTS } from '../constants/webview';
 
 /**
  * リサイズに必要な外部依存
@@ -45,7 +46,7 @@ export class ResizeCoordinator {
         log(`📐 [RESIZE] Triggering refitAllTerminals after debounce`);
         this.refitAllTerminals();
       },
-      { delay: 50, name: 'parentResize' }
+      { delay: RESIZE_COORDINATOR_CONSTANTS.PARENT_RESIZE_DEBOUNCE_MS, name: 'parentResize' }
     );
 
     this.windowResizeDebouncer = new Debouncer(
@@ -53,7 +54,7 @@ export class ResizeCoordinator {
         log('📐 Window resize detected - refitting all terminals');
         this.refitAllTerminals();
       },
-      { delay: 100, name: 'windowResize' }
+      { delay: RESIZE_COORDINATOR_CONSTANTS.WINDOW_RESIZE_DEBOUNCE_MS, name: 'windowResize' }
     );
 
     this.bodyResizeDebouncer = new Debouncer(
@@ -61,7 +62,7 @@ export class ResizeCoordinator {
         log('📐 Body resize detected - refitting all terminals');
         this.refitAllTerminals();
       },
-      { delay: 100, name: 'bodyResize' }
+      { delay: RESIZE_COORDINATOR_CONSTANTS.BODY_RESIZE_DEBOUNCE_MS, name: 'bodyResize' }
     );
 
     log('✅ ResizeCoordinator initialized');
