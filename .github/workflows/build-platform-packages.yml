@@ -254,3 +254,38 @@ jobs:
           done
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
+
+  publish-openvsx:
+    name: Publish to Open VSX
+    needs: build
+    runs-on: ubuntu-latest
+    if: always() && startsWith(github.ref, 'refs/tags/v') && needs.build.result == 'success'
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v7
+        with:
+          path: ./artifacts
+
+      - name: Install ovsx
+        run: npm install -g ovsx
+
+      - name: Publish to Open VSX
+        run: |
+          for vsix in ./artifacts/*/*.vsix; do
+            echo "Publishing $vsix to Open VSX..."
+            ovsx publish "$vsix" -p ${{ secrets.OVSX_PAT }}
+          done
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}

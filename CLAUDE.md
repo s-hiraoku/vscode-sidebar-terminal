@@ -96,6 +96,7 @@ git push origin v{version}   # Triggers automated release workflow
 # - Builds packages for 9 platforms (Windows/macOS/Linux variants)
 # - Creates GitHub Release with auto-generated notes
 # - Publishes to VS Code Marketplace with all platform variants
+# - Publishes to Open VSX Registry (if OVSX_PAT secret is configured)
 
 # Benefits of this approach:
 # ✅ Prevents wasting version numbers on failed builds
@@ -135,6 +136,10 @@ npm run vsce:package:linux-x64     # Linux x64
 
 # Publish to VS Code Marketplace
 npm run vsce:publish
+
+# Publish to Open VSX Registry (for VS Codium, Gitpod, Eclipse Theia)
+npm run ovsx:publish              # Build and publish
+npm run ovsx:publish:vsix         # Publish existing VSIX files
 ```
 
 ## Architecture Overview
@@ -588,8 +593,18 @@ The automated release system (`build-platform-packages.yml`) provides:
    - Uses `VSCE_PAT` secret for authentication
    - Ensures users get optimized binaries for their platform
 
+5. **Open VSX Registry Publishing** (Optional):
+   - Publishes to Open VSX for VS Codium, Gitpod, Eclipse Theia users
+   - Runs in parallel with VS Code Marketplace publish
+   - Uses `OVSX_PAT` secret for authentication
+   - Skipped if `OVSX_PAT` is not configured
+
 #### Required Secrets
 - `VSCE_PAT`: Personal Access Token for VS Code Marketplace publishing
+- `OVSX_PAT`: (Optional) Personal Access Token for Open VSX Registry
+  - Create account at [open-vsx.org](https://open-vsx.org/)
+  - Generate token from account settings
+  - Add to GitHub repository secrets
 
 #### Monitoring
 - View workflow status: https://github.com/s-hiraoku/vscode-sidebar-terminal/actions
