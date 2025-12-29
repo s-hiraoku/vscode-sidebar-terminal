@@ -118,52 +118,51 @@ export class MessageQueue implements Disposable {
       let processed = 0;
       const startTime = Date.now();
 
-      // Process high-priority messages first
-      while (this.highPriorityQueue.length > 0) {
-        const message = this.highPriorityQueue.shift()!;
-        const success = await this.sendMessage(message);
-
-        if (!success) {
-          if (message.retryCount < message.maxRetries) {
-            message.retryCount++;
-            this.highPriorityQueue.unshift(message);
-            messageLogger.warn(
-              `Retrying high priority message ${message.id} (attempt ${message.retryCount})`
-            );
-          } else {
-            messageLogger.error(
-              `High priority message ${message.id} failed after ${message.maxRetries} attempts`
-            );
-          }
-          break;
+      // Continue processing as long as there are messages in either queue
+      while (this.highPriorityQueue.length > 0 || this.normalQueue.length > 0) {
+        let message: QueuedMessage;
+        
+        // Always check high priority first in every iteration
+        if (this.highPriorityQueue.length > 0) {
+          message = this.highPriorityQueue.shift()!;
+        } else {
+          message = this.normalQueue.shift()!;
         }
-        processed++;
-      }
 
-      // Process normal priority messages with throttling
-      while (this.normalQueue.length > 0) {
-        const message = this.normalQueue.shift()!;
         const success = await this.sendMessage(message);
 
         if (!success) {
           if (message.retryCount < message.maxRetries) {
             message.retryCount++;
-            this.normalQueue.unshift(message);
+            // Re-queue at the front of the appropriate queue
+            if (message.priority === 'high') {
+              this.highPriorityQueue.unshift(message);
+            } else {
+              this.normalQueue.unshift(message);
+            }
             messageLogger.warn(
-              `Retrying normal message ${message.id} (attempt ${message.retryCount})`
+              `Retrying ${message.priority} priority message ${message.id} (attempt ${message.retryCount})`
             );
           } else {
             messageLogger.error(
-              `Normal message ${message.id} failed after ${message.maxRetries} attempts`
+              `${message.priority} priority message ${message.id} failed after ${message.maxRetries} attempts`
             );
           }
+          // Stop processing on failure to preserve order (or we could continue?)
+          // Current logic breaks.
           break;
         }
 
         processed++;
 
         // Add small delay between normal messages to prevent overwhelming
-        if (this.config.processingDelay > 0) {
+        // Only apply if we just processed a normal message and there are more normal messages
+        if (
+          message.priority === 'normal' &&
+          this.config.processingDelay > 0 &&
+          this.normalQueue.length > 0 &&
+          this.highPriorityQueue.length === 0
+        ) {
           await this.delay(this.config.processingDelay);
         }
       }

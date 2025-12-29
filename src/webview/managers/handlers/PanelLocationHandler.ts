@@ -163,7 +163,6 @@ export class PanelLocationHandler implements IMessageHandler {
   }
 
   private scheduleTerminalsWrapperClassSync(location: 'sidebar' | 'panel'): void {
-    const maxAttempts = 20;
     let attempt = 0;
 
     const timer = setInterval(() => {
@@ -180,10 +179,10 @@ export class PanelLocationHandler implements IMessageHandler {
         return;
       }
 
-      if (attempt >= maxAttempts) {
+      if (attempt >= PANEL_LOCATION_CONSTANTS.CLASS_SYNC_MAX_ATTEMPTS) {
         clearInterval(timer);
       }
-    }, 50);
+    }, PANEL_LOCATION_CONSTANTS.CLASS_SYNC_RETRY_INTERVAL_MS);
   }
 
   /**

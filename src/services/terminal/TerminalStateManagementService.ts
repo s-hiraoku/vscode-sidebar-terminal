@@ -312,7 +312,7 @@ export class TerminalStateManagementService {
    */
   validateDeletion(terminalId: string): { canDelete: boolean; reason?: string } {
     try {
-      if (!this._terminals.has(terminalId)) {
+      if (!this.hasTerminal(terminalId)) {
         return { canDelete: false, reason: 'Terminal not found' };
       }
 
@@ -360,6 +360,7 @@ export class TerminalStateManagementService {
       // Clear all state
       this._terminals.clear();
       this._terminalBeingKilled.clear();
+      this._activeTerminalManager.clearActive();
 
       // Dispose event emitters
       this._stateUpdateEmitter.dispose();

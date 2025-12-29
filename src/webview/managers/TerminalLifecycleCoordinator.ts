@@ -20,6 +20,46 @@ import { EventHandlerRegistry } from '../utils/EventHandlerRegistry';
 import { terminalLogger } from '../utils/ManagerLogger';
 import { DOMUtils } from '../utils/DOMUtils';
 
+// ============================================================================
+// Configuration Constants
+// ============================================================================
+
+/**
+ * Timing constants for terminal lifecycle operations
+ */
+const LifecycleTimings = {
+  /** Delay before focusing terminal after activation (ms) - PHASE 4 optimized */
+  FOCUS_DELAY_MS: 5,
+  /** Debounce delay for individual terminal resize (ms) */
+  RESIZE_DEBOUNCE_DELAY_MS: 100,
+  /** Debounce delay for resizeAllTerminals operation (ms) */
+  RESIZE_ALL_DEBOUNCE_DELAY_MS: 50,
+} as const;
+
+/**
+ * Terminal configuration defaults
+ */
+const TerminalDefaults = {
+  /** Default terminal number when ID is undefined */
+  DEFAULT_TERMINAL_NUMBER: 1,
+  /** Maximum terminal number for ID extraction (1-5 range) */
+  MAX_TERMINAL_NUMBER: 5,
+  /** Tolerance for isAtBottom scroll position check (lines) */
+  SCROLL_BOTTOM_TOLERANCE: 1,
+} as const;
+
+/**
+ * Container styling constants
+ */
+const ContainerStyles = {
+  /** Minimum height for terminal body container (px) */
+  MIN_HEIGHT_PX: 200,
+  /** Padding for terminals wrapper (px) */
+  WRAPPER_PADDING_PX: 4,
+  /** Gap between terminals in wrapper (px) */
+  WRAPPER_GAP_PX: 4,
+} as const;
+
 /**
  * Terminal Lifecycle Coordinator
  *
@@ -94,7 +134,7 @@ export class TerminalLifecycleCoordinator {
           setTimeout(() => {
             terminal.focus();
             terminalLogger.info(`🎯 Focused xterm.js terminal: ${terminalId}`);
-          }, 5);
+          }, LifecycleTimings.FOCUS_DELAY_MS);
         } else {
           terminalLogger.debug(`🎯 Terminal ${terminalId} already focused, skipping focus call`);
         }
@@ -173,7 +213,7 @@ export class TerminalLifecycleCoordinator {
           terminalLogger.error(`Resize failed for ${terminalId}:`, error);
         }
       },
-      { delay: 100 }
+      { delay: LifecycleTimings.RESIZE_DEBOUNCE_DELAY_MS }
     );
   }
 
@@ -269,7 +309,7 @@ export class TerminalLifecycleCoordinator {
     try {
       const buffer = terminal.buffer.active;
       // Tolerance of 1 line to avoid jitter during rapid output/reflow.
-      return Math.abs(buffer.baseY - buffer.viewportY) <= 1;
+      return Math.abs(buffer.baseY - buffer.viewportY) <= TerminalDefaults.SCROLL_BOTTOM_TOLERANCE;
     } catch {
       // If buffer is unavailable for any reason, default to following output.
       return true;
@@ -296,7 +336,7 @@ export class TerminalLifecycleCoordinator {
         flex-direction: column !important;
         width: 100%;
         height: 100%;
-        min-height: 200px;
+        min-height: ${ContainerStyles.MIN_HEIGHT_PX}px;
         overflow: hidden;
         margin: 0;
         padding: 0;
@@ -325,8 +365,8 @@ export class TerminalLifecycleCoordinator {
           min-width: 0;
           min-height: 0;
           overflow: hidden;
-          padding: 4px;
-          gap: 4px;
+          padding: ${ContainerStyles.WRAPPER_PADDING_PX}px;
+          gap: ${ContainerStyles.WRAPPER_GAP_PX}px;
           box-sizing: border-box;
         `;
 
@@ -395,7 +435,7 @@ export class TerminalLifecycleCoordinator {
                   terminalLogger.error(`Failed to resize terminal ${terminalId}:`, error);
                 }
               },
-              { delay: 50 }
+              { delay: LifecycleTimings.RESIZE_ALL_DEBOUNCE_DELAY_MS }
             );
           }
         });
@@ -410,7 +450,7 @@ export class TerminalLifecycleCoordinator {
    */
   private extractTerminalNumber(terminalId: string | undefined): number {
     if (!terminalId) {
-      return 1; // Default to 1 if terminalId is undefined
+      return TerminalDefaults.DEFAULT_TERMINAL_NUMBER; // Default if terminalId is undefined
     }
     const match = terminalId.match(/terminal-(\d+)/);
     if (match && match[1]) {
@@ -426,17 +466,17 @@ export class TerminalLifecycleCoordinator {
       }
     });
 
-    // Find first available number (1-5)
-    for (let i = 1; i <= 5; i++) {
+    // Find first available number (1-MAX_TERMINAL_NUMBER)
+    for (let i = TerminalDefaults.DEFAULT_TERMINAL_NUMBER; i <= TerminalDefaults.MAX_TERMINAL_NUMBER; i++) {
       if (!existingNumbers.has(i)) {
         return i;
       }
     }
 
     terminalLogger.warn(
-      `Could not extract terminal number from ID: ${terminalId}, defaulting to 1`
+      `Could not extract terminal number from ID: ${terminalId}, defaulting to ${TerminalDefaults.DEFAULT_TERMINAL_NUMBER}`
     );
-    return 1;
+    return TerminalDefaults.DEFAULT_TERMINAL_NUMBER;
   }
 
   /**

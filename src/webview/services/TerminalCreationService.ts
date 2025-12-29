@@ -51,11 +51,90 @@ interface Disposable {
   dispose(): void;
 }
 
+// ============================================================================
+// Constants
+// ============================================================================
+
 /**
- * Delay after renderer setup before final theme re-application and refresh.
- * This allows WebGL/DOM renderer to fully initialize before applying final styles.
+ * Element IDs used throughout terminal creation
  */
-const POST_RENDERER_SETUP_DELAY_MS = 200;
+const ElementIds = {
+  TERMINAL_BODY: 'terminal-body',
+  TERMINAL_VIEW: 'terminal-view',
+  TERMINALS_WRAPPER: 'terminals-wrapper',
+} as const;
+
+/**
+ * CSS class names for terminal elements
+ */
+const CssClasses = {
+  TERMINAL_CONTAINER: 'terminal-container',
+  ACTIVE: 'active',
+  XTERM: 'xterm',
+  XTERM_VIEWPORT: 'xterm-viewport',
+} as const;
+
+/**
+ * Timing constants for terminal operations
+ */
+const Timings = {
+  /** Delay after renderer setup before final theme re-application */
+  POST_RENDERER_SETUP_DELAY_MS: 200,
+  /** Initial retry delay for terminal creation */
+  CREATION_RETRY_DELAY_MS: 500,
+  /** Delay before resuming ResizeObservers after creation */
+  RESIZE_OBSERVER_RESUME_DELAY_MS: 100,
+  /** Delay for initial focus setup */
+  FOCUS_SETUP_DELAY_MS: 50,
+  /** Progressive delays for initial resize retries */
+  RESIZE_RETRY_DELAYS: [0, 50, 100, 200, 500] as readonly number[],
+  /** Delay for post-resize CSS transition handling */
+  POST_RESIZE_DELAY_MS: 300,
+} as const;
+
+/**
+ * Limits for terminal operations
+ */
+const Limits = {
+  /** Maximum retry attempts for terminal creation */
+  MAX_CREATION_RETRIES: 2,
+  /** Maximum retry attempts for initial resize */
+  MAX_RESIZE_RETRIES: 5,
+  /** Minimum container dimension for valid resize */
+  MIN_CONTAINER_DIMENSION: 50,
+  /** Maximum terminal number for ID recycling */
+  MAX_TERMINAL_NUMBER: 5,
+} as const;
+
+/**
+ * Default font settings fallback values
+ */
+const FontDefaults = {
+  FONT_WEIGHT: 'normal',
+  FONT_WEIGHT_BOLD: 'bold',
+  LINE_HEIGHT: 1,
+  LETTER_SPACING: 0,
+} as const;
+
+/**
+ * CSS color constants
+ */
+const CssColors = {
+  /** Default terminal background color for fallback */
+  DEFAULT_BACKGROUND: '#000000',
+} as const;
+
+/**
+ * Rendering optimizer configuration defaults
+ */
+const RenderingConfig = {
+  RESIZE_DEBOUNCE_MS: 100,
+  MIN_WIDTH: Limits.MIN_CONTAINER_DIMENSION,
+  MIN_HEIGHT: Limits.MIN_CONTAINER_DIMENSION,
+} as const;
+
+// Legacy constant for backward compatibility
+const POST_RENDERER_SETUP_DELAY_MS = Timings.POST_RENDERER_SETUP_DELAY_MS;
 
 /**
  * Service responsible for terminal creation, removal, and switching operations
@@ -133,7 +212,7 @@ export class TerminalCreationService implements Disposable {
     terminalNumber?: number
   ): Promise<Terminal | null> {
     const performanceMonitor = PerformanceMonitor.getInstance();
-    const maxRetries = 2;
+    const maxRetries = Limits.MAX_CREATION_RETRIES;
     let currentRetry = 0;
 
     const attemptCreation = async (): Promise<Terminal | null> => {
@@ -150,21 +229,21 @@ export class TerminalCreationService implements Disposable {
         );
 
         // Enhanced DOM readiness check with recovery
-        const terminalBody = document.getElementById('terminal-body');
+        const terminalBody = document.getElementById(ElementIds.TERMINAL_BODY);
         if (!terminalBody) {
           terminalLogger.error('Main terminal container not found');
 
           // Recovery - Try to create terminal-body if missing
-          const mainDiv = document.querySelector('#terminal-view') || document.body;
+          const mainDiv = document.querySelector(`#${ElementIds.TERMINAL_VIEW}`) || document.body;
           if (mainDiv) {
             const newTerminalBody = document.createElement('div');
-            newTerminalBody.id = 'terminal-body';
+            newTerminalBody.id = ElementIds.TERMINAL_BODY;
             newTerminalBody.style.cssText = `
               display: flex;
               flex-direction: column;
               width: 100%;
               height: 100%;
-              background: #000000;
+              background: ${CssColors.DEFAULT_BACKGROUND};
             `;
             mainDiv.appendChild(newTerminalBody);
             terminalLogger.info('✅ Created missing terminal-body container');
@@ -173,95 +252,17 @@ export class TerminalCreationService implements Disposable {
           }
         }
 
-        // Get font settings from config (sent by Extension) OR from ConfigManager
-        // Priority: config direct properties > config.fontSettings > ConfigManager
-        // This ensures powerlevel10k icons and other Nerd Font characters display correctly
-        const configManager = this.coordinator.getManagers?.()?.config;
+        // Cache managers reference for reuse throughout terminal creation
+        // This applies DRY pattern and avoids repeated getManagers?.() calls
+        const managers = this.coordinator.getManagers?.();
+        const configManager = managers?.config;
+        const uiManager = managers?.ui;
 
-        // Check BOTH config.fontSettings AND direct config properties
-        // Extension sends fontFamily/fontSize directly in config, not nested in fontSettings
-        const configFontSettings = (config as any)?.fontSettings;
-        const directFontFamily = (config as any)?.fontFamily;
-        const directFontSize = (config as any)?.fontSize;
+        // Prepare font settings using extracted helper method
+        const { fontSettings: currentFontSettings, fontOverrides } = this.prepareFontSettings(config, configManager);
 
-        // Use direct config values if available, otherwise fall back to fontSettings or ConfigManager
-        let currentFontSettings: any;
-        if (directFontFamily || directFontSize) {
-          // Extension sent font settings directly in config
-          currentFontSettings = {
-            fontFamily: directFontFamily || configFontSettings?.fontFamily || configManager?.getCurrentFontSettings?.()?.fontFamily,
-            fontSize: directFontSize || configFontSettings?.fontSize || configManager?.getCurrentFontSettings?.()?.fontSize,
-            fontWeight: (config as any)?.fontWeight || configFontSettings?.fontWeight || 'normal',
-            fontWeightBold: (config as any)?.fontWeightBold || configFontSettings?.fontWeightBold || 'bold',
-            lineHeight: (config as any)?.lineHeight || configFontSettings?.lineHeight || 1,
-            letterSpacing: (config as any)?.letterSpacing ?? configFontSettings?.letterSpacing ?? 0,
-          };
-        } else if (configFontSettings) {
-          currentFontSettings = configFontSettings;
-        } else {
-          currentFontSettings = configManager?.getCurrentFontSettings?.();
-        }
-
-        // Only apply non-empty font settings to prevent overwriting defaults with empty values
-        // This ensures powerlevel10k/Nerd Font settings are actually applied
-        const fontOverrides: Partial<ITerminalOptions> = {};
-        if (currentFontSettings) {
-          // Only include fontFamily if it's a non-empty string
-          if (typeof currentFontSettings.fontFamily === 'string' && currentFontSettings.fontFamily.trim()) {
-            fontOverrides.fontFamily = currentFontSettings.fontFamily.trim();
-          }
-          // Only include fontSize if it's a positive number
-          if (typeof currentFontSettings.fontSize === 'number' && currentFontSettings.fontSize > 0) {
-            fontOverrides.fontSize = currentFontSettings.fontSize;
-          }
-          // Only include fontWeight if it's a non-empty string
-          if (typeof currentFontSettings.fontWeight === 'string' && currentFontSettings.fontWeight.trim()) {
-            fontOverrides.fontWeight = currentFontSettings.fontWeight.trim() as ITerminalOptions['fontWeight'];
-          }
-          // Only include fontWeightBold if it's a non-empty string
-          if (typeof currentFontSettings.fontWeightBold === 'string' && currentFontSettings.fontWeightBold.trim()) {
-            fontOverrides.fontWeightBold = currentFontSettings.fontWeightBold.trim() as ITerminalOptions['fontWeightBold'];
-          }
-          // Only include lineHeight if it's a positive number
-          if (typeof currentFontSettings.lineHeight === 'number' && currentFontSettings.lineHeight > 0) {
-            fontOverrides.lineHeight = currentFontSettings.lineHeight;
-          }
-          // Only include letterSpacing if it's a number (can be 0 or negative)
-          if (typeof currentFontSettings.letterSpacing === 'number') {
-            fontOverrides.letterSpacing = currentFontSettings.letterSpacing;
-          }
-          // Cursor settings
-          if (currentFontSettings.cursorStyle) {
-            fontOverrides.cursorStyle = currentFontSettings.cursorStyle;
-          }
-          if (typeof currentFontSettings.cursorWidth === 'number' && currentFontSettings.cursorWidth > 0) {
-            fontOverrides.cursorWidth = currentFontSettings.cursorWidth;
-          }
-          // Display settings
-          if (typeof currentFontSettings.drawBoldTextInBrightColors === 'boolean') {
-            fontOverrides.drawBoldTextInBrightColors = currentFontSettings.drawBoldTextInBrightColors;
-          }
-          if (typeof currentFontSettings.minimumContrastRatio === 'number') {
-            fontOverrides.minimumContrastRatio = currentFontSettings.minimumContrastRatio;
-          }
-        }
-
-        // Get current theme from settings to apply at creation time
-        // This prevents flash of dark theme when light theme is configured
-        // Try multiple sources: ConfigManager first, then coordinator's currentSettings
-        let currentSettings = configManager?.getCurrentSettings?.();
-
-        // If ConfigManager returns 'auto' theme, also check coordinator's currentSettings
-        // This handles the case where applySettings was called on coordinator but ConfigManager
-        // hasn't been updated yet (race condition)
-        if (!currentSettings?.theme || currentSettings.theme === 'auto') {
-          const coordinatorSettings = (this.coordinator as any)?.currentSettings;
-          if (coordinatorSettings?.theme && coordinatorSettings.theme !== 'auto') {
-            currentSettings = { ...currentSettings, ...coordinatorSettings };
-            terminalLogger.info(`🎨 [THEME] Using coordinator settings (theme: ${coordinatorSettings.theme})`);
-          }
-        }
-
+        // Resolve current settings with theme (handles ConfigManager vs coordinator race conditions)
+        const currentSettings = this.resolveCurrentSettings(configManager);
         const resolvedTheme = getWebviewTheme(currentSettings);
         terminalLogger.info(`🎨 [THEME] Creating terminal with theme: ${currentSettings?.theme} -> bg=${resolvedTheme.background}`);
 
@@ -327,7 +328,7 @@ export class TerminalCreationService implements Disposable {
         const containerConfig: TerminalContainerConfig = {
           id: terminalId,
           name: terminalName,
-          className: 'terminal-container',
+          className: CssClasses.TERMINAL_CONTAINER,
           isSplit: false,
           isActive: isActiveFromConfig,
         };
@@ -380,21 +381,21 @@ export class TerminalCreationService implements Disposable {
         // 🔧 CRITICAL FIX: Append container to DOM BEFORE opening terminal
         // xterm.js needs the element to be in the DOM to render correctly
         // 🔧 FIX: Prefer terminals-wrapper over terminal-body for proper layout
-        const bodyElement = document.getElementById('terminal-body');
+        const bodyElement = document.getElementById(ElementIds.TERMINAL_BODY);
         if (!bodyElement) {
           terminalLogger.error(
-            `❌ terminal-body not found, cannot append container: ${terminalId}`
+            `❌ ${ElementIds.TERMINAL_BODY} not found, cannot append container: ${terminalId}`
           );
-          throw new Error('terminal-body element not found');
+          throw new Error(`${ElementIds.TERMINAL_BODY} element not found`);
         }
 
         // 🔧 FIX: Create terminals-wrapper if it doesn't exist (for session restore timing)
         // Note: Styles are defined in display-modes.css to avoid duplication
-        let terminalsWrapper = document.getElementById('terminals-wrapper');
+        let terminalsWrapper = document.getElementById(ElementIds.TERMINALS_WRAPPER);
         if (!terminalsWrapper) {
-          terminalLogger.info('🆕 Creating terminals-wrapper (not yet initialized)');
+          terminalLogger.info(`🆕 Creating ${ElementIds.TERMINALS_WRAPPER} (not yet initialized)`);
           terminalsWrapper = document.createElement('div');
-          terminalsWrapper.id = 'terminals-wrapper';
+          terminalsWrapper.id = ElementIds.TERMINALS_WRAPPER;
           // 🔧 CRITICAL: Only set minimal inline styles, let CSS handle the rest
           // This prevents inline styles from overriding CSS rules
           terminalsWrapper.style.cssText = `
@@ -411,8 +412,6 @@ export class TerminalCreationService implements Disposable {
 
         // Apply VS Code-like container styling before rendering (non-fatal)
         try {
-          const managers = this.coordinator.getManagers?.();
-          const uiManager = managers?.ui;
           if (uiManager) {
             uiManager.applyVSCodeStyling(container);
           }
@@ -428,8 +427,6 @@ export class TerminalCreationService implements Disposable {
         // This ensures Terminal 1 has consistent styling from the start
         if (isActiveFromConfig) {
           try {
-            const managers = this.coordinator.getManagers?.();
-            const uiManager = managers?.ui;
             if (uiManager) {
               uiManager.updateSingleTerminalBorder(container, true);
               terminalLogger.info(`✅ Active border applied to container: ${terminalId}`);
@@ -516,11 +513,8 @@ export class TerminalCreationService implements Disposable {
 
         // 🎯 VS Code Pattern: Apply font and visual settings AFTER terminal.open()
         // xterm.js requires the terminal to be attached to DOM before settings can be applied
-        // Note: configManager was already retrieved above; reuse it here
+        // Note: managers/uiManager/configManager already retrieved above
         try {
-          const managers = this.coordinator.getManagers?.();
-          const uiManager = managers?.ui;
-
           if (uiManager) {
             // Use currentSettings already retrieved above, or get fresh copy
             const settingsForVisuals = currentSettings ?? configManager?.getCurrentSettings?.();
@@ -574,7 +568,7 @@ export class TerminalCreationService implements Disposable {
         this.linkManager.registerTerminalLinkHandlers(terminal, terminalId);
 
         // Enable VS Code standard scrollbar using TerminalScrollbarService
-        const xtermElement = terminalContent.querySelector('.xterm');
+        const xtermElement = terminalContent.querySelector(`.${CssClasses.XTERM}`);
         this.scrollbarService.enableScrollbarDisplay(xtermElement, terminalId);
 
         // Enable VS Code-style scroll-to-bottom indicator when scrolled away
@@ -645,8 +639,7 @@ export class TerminalCreationService implements Disposable {
         }
 
         // AI Agent Support: Register header elements with UIManager for status updates
-        if (containerElements.headerElements) {
-          const uiManager = this.coordinator.getManagers().ui;
+        if (containerElements.headerElements && uiManager) {
           if (this.hasHeaderElementsCache(uiManager)) {
             uiManager.headerElementsCache.set(terminalId, containerElements.headerElements);
             terminalLogger.info(
@@ -685,28 +678,26 @@ export class TerminalCreationService implements Disposable {
           terminalLogger.info(
             `▶️ Resumed all ResizeObservers after terminal creation: ${terminalId}`
           );
-        }, 100);
+        }, Timings.RESIZE_OBSERVER_RESUME_DELAY_MS);
 
         // 🔧 CRITICAL FIX: Final refresh after all setup is complete
         // This ensures text and cursor display correctly after WebGL/DOM renderer setup
         // Theme must be re-applied after RenderingOptimizer setup to ensure correct colors
         setTimeout(() => {
           try {
-            const managers = this.coordinator.getManagers?.();
-            const uiManager = managers?.ui;
-            const configManager = managers?.config;
-            const currentSettings = configManager?.getCurrentSettings?.();
+            // Use fresh settings to ensure we have the latest theme
+            const finalSettings = configManager?.getCurrentSettings?.();
 
-            terminalLogger.info(`🎨 [DEBUG] Final theme check - currentSettings.theme: ${currentSettings?.theme}`);
+            terminalLogger.info(`🎨 [DEBUG] Final theme check - currentSettings.theme: ${finalSettings?.theme}`);
 
-            if (uiManager && currentSettings) {
+            if (uiManager && finalSettings) {
               // Re-apply theme to ensure correct colors after WebGL setup
-              uiManager.applyTerminalTheme(terminal, currentSettings);
+              uiManager.applyTerminalTheme(terminal, finalSettings);
               terminalLogger.info(`🎨 Final theme re-application for terminal: ${terminalId}`);
 
               // 🔧 CRITICAL FIX: Explicitly update container backgrounds
               // terminal.element may not be available when applyTerminalTheme tries to scope the update
-              this.updateContainerBackgrounds(terminalId, container, terminalContent, currentSettings);
+              this.updateContainerBackgrounds(terminalId, container, terminalContent, finalSettings);
             }
 
             // Force a full terminal refresh
@@ -720,16 +711,15 @@ export class TerminalCreationService implements Disposable {
         return terminal;
       } catch (error) {
         terminalLogger.error(`Failed to create terminal ${terminalId}:`, error);
-
-        // Resume observers even on error
-        ResizeManager.resumeObservers();
+        
+        // Restore ResizeObservers if they were paused
 
         if (currentRetry < maxRetries) {
           currentRetry++;
           terminalLogger.info(
             `Retrying terminal creation: ${terminalId} (${currentRetry}/${maxRetries})`
           );
-          await new Promise((resolve) => setTimeout(resolve, 500));
+          await new Promise((resolve) => setTimeout(resolve, Timings.CREATION_RETRY_DELAY_MS));
           return attemptCreation();
         }
 
@@ -867,13 +857,13 @@ export class TerminalCreationService implements Disposable {
         const currentInstance = this.splitManager.getTerminals().get(currentActiveId);
         if (currentInstance) {
           currentInstance.isActive = false;
-          currentInstance.container.classList.remove('active');
+          currentInstance.container.classList.remove(CssClasses.ACTIVE);
         }
       }
 
       // Activate new terminal
       terminalInstance.isActive = true;
-      terminalInstance.container.classList.add('active');
+      terminalInstance.container.classList.add(CssClasses.ACTIVE);
       onActivate(terminalId);
 
       // Debounced resize for smooth transition
@@ -889,7 +879,7 @@ export class TerminalCreationService implements Disposable {
             terminalLogger.error(`Switch resize failed for ${terminalId}:`, error);
           }
         },
-        { delay: 100 }
+        { delay: RenderingConfig.RESIZE_DEBOUNCE_MS }
       );
 
       terminalLogger.info(`Switched to terminal successfully: ${terminalId}`);
@@ -941,15 +931,15 @@ export class TerminalCreationService implements Disposable {
     container: HTMLElement,
     terminalId: string
   ): void {
-    const maxRetries = 5;
-    const retryDelays = [0, 50, 100, 200, 500]; // Progressive delays
+    const maxRetries = Limits.MAX_RESIZE_RETRIES;
+    const retryDelays = Timings.RESIZE_RETRY_DELAYS;
     let retryCount = 0;
 
     const attemptResize = (): void => {
       try {
         const rect = container.getBoundingClientRect();
 
-        if (rect.width > 50 && rect.height > 50) {
+        if (rect.width > Limits.MIN_CONTAINER_DIMENSION && rect.height > Limits.MIN_CONTAINER_DIMENSION) {
           // 🔧 CRITICAL FIX: Reset xterm inline styles BEFORE fit() to allow width expansion
           DOMUtils.resetXtermInlineStyles(container);
           fitAddon.fit();
@@ -974,7 +964,7 @@ export class TerminalCreationService implements Disposable {
           setTimeout(() => {
             try {
               const finalRect = container.getBoundingClientRect();
-              if (finalRect.width > 50 && finalRect.height > 50) {
+              if (finalRect.width > Limits.MIN_CONTAINER_DIMENSION && finalRect.height > Limits.MIN_CONTAINER_DIMENSION) {
                 // 🔧 FIX: Reset xterm inline styles before delayed fit as well
                 DOMUtils.resetXtermInlineStyles(container);
                 fitAddon.fit();
@@ -987,12 +977,12 @@ export class TerminalCreationService implements Disposable {
             } catch (error) {
               terminalLogger.warn(`Delayed resize failed for ${terminalId}:`, error);
             }
-          }, 300);
+          }, Timings.POST_RESIZE_DELAY_MS);
         } else {
           // Container not ready - retry with increasing delays
           if (retryCount < maxRetries) {
             retryCount++;
-            const delay = retryDelays[retryCount] || 500;
+            const delay = retryDelays[retryCount] || Timings.CREATION_RETRY_DELAY_MS;
             terminalLogger.debug(
               `Container too small, retry ${retryCount}/${maxRetries} in ${delay}ms: ${terminalId} (${rect.width}x${rect.height})`
             );
@@ -1035,9 +1025,9 @@ export class TerminalCreationService implements Disposable {
       // Create RenderingOptimizer instance
       const renderingOptimizer = new RenderingOptimizer({
         enableWebGL: enableGpuAcceleration,
-        resizeDebounceMs: 100,
-        minWidth: 50,
-        minHeight: 50,
+        resizeDebounceMs: RenderingConfig.RESIZE_DEBOUNCE_MS,
+        minWidth: RenderingConfig.MIN_WIDTH,
+        minHeight: RenderingConfig.MIN_HEIGHT,
       });
 
       // Setup optimized resize with dimension validation and debouncing
@@ -1100,8 +1090,8 @@ export class TerminalCreationService implements Disposable {
       }
     });
 
-    // Find first available number (1-5)
-    for (let i = 1; i <= 5; i++) {
+    // Find first available number (1-MAX_TERMINAL_NUMBER)
+    for (let i = 1; i <= Limits.MAX_TERMINAL_NUMBER; i++) {
       if (!existingNumbers.has(i)) {
         return i;
       }
@@ -1111,6 +1101,117 @@ export class TerminalCreationService implements Disposable {
       `Could not extract terminal number from ID: ${terminalId}, defaulting to 1`
     );
     return 1;
+  }
+
+  /**
+   * Resolve current settings with theme, handling ConfigManager vs coordinator race conditions.
+   *
+   * If ConfigManager returns 'auto' theme, also check coordinator's currentSettings.
+   * This handles the case where applySettings was called on coordinator but ConfigManager
+   * hasn't been updated yet.
+   *
+   * @param configManager - Optional ConfigManager for settings retrieval
+   * @returns Resolved settings object with theme
+   */
+  private resolveCurrentSettings(
+    configManager: { getCurrentSettings?: () => any } | undefined
+  ): any {
+    let currentSettings = configManager?.getCurrentSettings?.();
+
+    // If ConfigManager returns 'auto' theme, also check coordinator's currentSettings
+    if (!currentSettings?.theme || currentSettings.theme === 'auto') {
+      const coordinatorSettings = (this.coordinator as any)?.currentSettings;
+      if (coordinatorSettings?.theme && coordinatorSettings.theme !== 'auto') {
+        currentSettings = { ...currentSettings, ...coordinatorSettings };
+        terminalLogger.info(`🎨 [THEME] Using coordinator settings (theme: ${coordinatorSettings.theme})`);
+      }
+    }
+
+    return currentSettings;
+  }
+
+  /**
+   * Prepare font settings from config, applying priority resolution and validation.
+   *
+   * Priority: config direct properties > config.fontSettings > ConfigManager
+   * This ensures powerlevel10k icons and other Nerd Font characters display correctly.
+   *
+   * @param config - Terminal configuration from Extension
+   * @param configManager - Optional ConfigManager for fallback settings
+   * @returns Validated font overrides for ITerminalOptions
+   */
+  private prepareFontSettings(
+    config: TerminalConfig | undefined,
+    configManager: { getCurrentFontSettings?: () => any } | undefined
+  ): { fontSettings: any; fontOverrides: Partial<ITerminalOptions> } {
+    // Check BOTH config.fontSettings AND direct config properties
+    // Extension sends fontFamily/fontSize directly in config, not nested in fontSettings
+    const configFontSettings = (config as any)?.fontSettings;
+    const directFontFamily = (config as any)?.fontFamily;
+    const directFontSize = (config as any)?.fontSize;
+
+    // Use direct config values if available, otherwise fall back to fontSettings or ConfigManager
+    let currentFontSettings: any;
+    if (directFontFamily || directFontSize) {
+      // Extension sent font settings directly in config
+      currentFontSettings = {
+        fontFamily: directFontFamily || configFontSettings?.fontFamily || configManager?.getCurrentFontSettings?.()?.fontFamily,
+        fontSize: directFontSize || configFontSettings?.fontSize || configManager?.getCurrentFontSettings?.()?.fontSize,
+        fontWeight: (config as any)?.fontWeight || configFontSettings?.fontWeight || FontDefaults.FONT_WEIGHT,
+        fontWeightBold: (config as any)?.fontWeightBold || configFontSettings?.fontWeightBold || FontDefaults.FONT_WEIGHT_BOLD,
+        lineHeight: (config as any)?.lineHeight || configFontSettings?.lineHeight || FontDefaults.LINE_HEIGHT,
+        letterSpacing: (config as any)?.letterSpacing ?? configFontSettings?.letterSpacing ?? FontDefaults.LETTER_SPACING,
+      };
+    } else if (configFontSettings) {
+      currentFontSettings = configFontSettings;
+    } else {
+      currentFontSettings = configManager?.getCurrentFontSettings?.();
+    }
+
+    // Only apply non-empty font settings to prevent overwriting defaults with empty values
+    const fontOverrides: Partial<ITerminalOptions> = {};
+    if (currentFontSettings) {
+      // Only include fontFamily if it's a non-empty string
+      if (typeof currentFontSettings.fontFamily === 'string' && currentFontSettings.fontFamily.trim()) {
+        fontOverrides.fontFamily = currentFontSettings.fontFamily.trim();
+      }
+      // Only include fontSize if it's a positive number
+      if (typeof currentFontSettings.fontSize === 'number' && currentFontSettings.fontSize > 0) {
+        fontOverrides.fontSize = currentFontSettings.fontSize;
+      }
+      // Only include fontWeight if it's a non-empty string
+      if (typeof currentFontSettings.fontWeight === 'string' && currentFontSettings.fontWeight.trim()) {
+        fontOverrides.fontWeight = currentFontSettings.fontWeight.trim() as ITerminalOptions['fontWeight'];
+      }
+      // Only include fontWeightBold if it's a non-empty string
+      if (typeof currentFontSettings.fontWeightBold === 'string' && currentFontSettings.fontWeightBold.trim()) {
+        fontOverrides.fontWeightBold = currentFontSettings.fontWeightBold.trim() as ITerminalOptions['fontWeightBold'];
+      }
+      // Only include lineHeight if it's a positive number
+      if (typeof currentFontSettings.lineHeight === 'number' && currentFontSettings.lineHeight > 0) {
+        fontOverrides.lineHeight = currentFontSettings.lineHeight;
+      }
+      // Only include letterSpacing if it's a number (can be 0 or negative)
+      if (typeof currentFontSettings.letterSpacing === 'number') {
+        fontOverrides.letterSpacing = currentFontSettings.letterSpacing;
+      }
+      // Cursor settings
+      if (currentFontSettings.cursorStyle) {
+        fontOverrides.cursorStyle = currentFontSettings.cursorStyle;
+      }
+      if (typeof currentFontSettings.cursorWidth === 'number' && currentFontSettings.cursorWidth > 0) {
+        fontOverrides.cursorWidth = currentFontSettings.cursorWidth;
+      }
+      // Display settings
+      if (typeof currentFontSettings.drawBoldTextInBrightColors === 'boolean') {
+        fontOverrides.drawBoldTextInBrightColors = currentFontSettings.drawBoldTextInBrightColors;
+      }
+      if (typeof currentFontSettings.minimumContrastRatio === 'number') {
+        fontOverrides.minimumContrastRatio = currentFontSettings.minimumContrastRatio;
+      }
+    }
+
+    return { fontSettings: currentFontSettings, fontOverrides };
   }
 
   /**
@@ -1142,11 +1243,11 @@ export class TerminalCreationService implements Disposable {
       terminalContent.style.backgroundColor = backgroundColor;
     }
     if (container) {
-      const xtermElement = container.querySelector<HTMLElement>('.xterm');
+      const xtermElement = container.querySelector<HTMLElement>(`.${CssClasses.XTERM}`);
       if (xtermElement) {
         xtermElement.style.backgroundColor = backgroundColor;
       }
-      const viewport = container.querySelector<HTMLElement>('.xterm-viewport');
+      const viewport = container.querySelector<HTMLElement>(`.${CssClasses.XTERM_VIEWPORT}`);
       if (viewport) {
         viewport.style.backgroundColor = backgroundColor;
       }

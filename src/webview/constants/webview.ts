@@ -61,6 +61,18 @@ export const WEBVIEW_TIMING = {
 } as const;
 
 /**
+ * ResizeCoordinator 定数
+ */
+export const RESIZE_COORDINATOR_CONSTANTS = {
+  /** Parent container resize debounce delay (ms) */
+  PARENT_RESIZE_DEBOUNCE_MS: 50,
+  /** Window resize debounce delay (ms) */
+  WINDOW_RESIZE_DEBOUNCE_MS: 100,
+  /** Body resize debounce delay (ms) */
+  BODY_RESIZE_DEBOUNCE_MS: 100,
+} as const;
+
+/**
  * Rendering Optimizer 定数
  */
 export const RENDERING_CONSTANTS = {
@@ -80,6 +92,10 @@ export const RENDERING_CONSTANTS = {
 export const PANEL_LOCATION_CONSTANTS = {
   /** Aspect ratio threshold for panel detection (width/height) */
   ASPECT_RATIO_THRESHOLD: 1.2,
+  /** Maximum retry attempts for terminals-wrapper class sync */
+  CLASS_SYNC_MAX_ATTEMPTS: 20,
+  /** Retry interval for terminals-wrapper class sync (ms) */
+  CLASS_SYNC_RETRY_INTERVAL_MS: 50,
 } as const;
 
 /**
@@ -92,4 +108,64 @@ export const SPLIT_LAYOUT_CONSTANTS = {
   WRAPPER_PADDING_PX: 4,
   /** Wrapper gap (px) */
   WRAPPER_GAP_PX: 4,
+} as const;
+
+/**
+ * Command Registry 定数
+ */
+export const COMMAND_REGISTRY_CONSTANTS = {
+  /** Slow command detection threshold (ms) - commands taking longer trigger warnings */
+  SLOW_COMMAND_THRESHOLD_MS: 100,
+} as const;
+
+/**
+ * Notification Duration 定数
+ * 通知の表示時間を一元管理
+ */
+export const NOTIFICATION_DURATION_CONSTANTS = {
+  /** Default notification duration when not specified (ms) */
+  DEFAULT_DURATION_MS: 4000,
+  /** CLI agent detected notification duration (ms) */
+  CLI_AGENT_DETECTED_MS: 6000,
+  /** CLI agent session ended notification duration (ms) */
+  CLI_AGENT_ENDED_MS: 3000,
+  /** Alt+Click disabled warning duration (ms) */
+  ALT_CLICK_DISABLED_MS: 4000,
+  /** Alt+Click setting error duration (ms) */
+  ALT_CLICK_SETTING_ERROR_MS: 6000,
+  /** Terminal interaction issue warning duration (ms) */
+  TERMINAL_INTERACTION_ISSUE_MS: 5000,
+} as const;
+
+/**
+ * Dependency Container 定数
+ * メモリ使用量推定に使用する定数
+ */
+export const DEPENDENCY_CONTAINER_CONSTANTS = {
+  /** Base memory overhead per registered service (bytes) */
+  SERVICE_MEMORY_OVERHEAD_BYTES: 200,
+  /** Memory overhead per item in initialization order tracking (bytes) */
+  ORDER_TRACKING_OVERHEAD_BYTES: 50,
+  /** Memory overhead per resolved instance (bytes) */
+  INSTANCE_OVERHEAD_BYTES: 100,
+} as const;
+
+/**
+ * Header Manager 定数
+ * ターミナルカウントバッジの色変更しきい値
+ */
+export const HEADER_MANAGER_CONSTANTS = {
+  /** Terminal count threshold for orange color (moderate usage) */
+  TERMINAL_COUNT_ORANGE_THRESHOLD: 3,
+  /** Terminal count threshold for warning color (high usage) */
+  TERMINAL_COUNT_WARNING_THRESHOLD: 5,
+} as const;
+
+/**
+ * Session Restore Manager 定数
+ * セッション復元に関するタイミング設定
+ */
+export const SESSION_RESTORE_CONSTANTS = {
+  /** Wait delay after terminal creation before proceeding with restoration (ms) */
+  TERMINAL_CREATION_WAIT_MS: 100,
 } as const;

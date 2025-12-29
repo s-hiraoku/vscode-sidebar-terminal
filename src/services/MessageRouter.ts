@@ -39,6 +39,7 @@ export class MessageRouter {
   private readonly config: MessageRouterConfig;
   private readonly activeHandlers = new Set<string>();
   private messageCounter = 0;
+  private disposed = false;
 
   constructor(config: MessageRouterConfig) {
     this.config = config;
@@ -51,6 +52,11 @@ export class MessageRouter {
     command: string,
     handler: MessageHandler<TData, TResponse>
   ): void {
+    if (this.disposed) {
+      this.log(`Cannot register handler for '${command}': MessageRouter is disposed`);
+      return;
+    }
+
     if (this.handlers.has(command)) {
       throw new Error(`Handler for command '${command}' is already registered`);
     }
@@ -63,6 +69,9 @@ export class MessageRouter {
    * Unregister a message handler
    */
   public unregisterHandler(command: string): boolean {
+    if (this.disposed) {
+      return false;
+    }
     const removed = this.handlers.delete(command);
     if (removed) {
       this.log(`Handler unregistered for command: ${command}`);
@@ -78,6 +87,14 @@ export class MessageRouter {
     data?: TData
   ): Promise<MessageResult<TResponse>> {
     const startTime = performance.now();
+
+    if (this.disposed) {
+      return this.createErrorResult<TResponse>(
+        'MessageRouter is disposed',
+        0
+      );
+    }
+
     const messageId = `msg-${++this.messageCounter}`;
 
     this.log(`Routing message: ${command} (${messageId})`);
@@ -237,8 +254,12 @@ export class MessageRouter {
    * Dispose resources
    */
   public dispose(): void {
+    if (this.disposed) {
+      return;
+    }
     this.clearHandlers();
     this.activeHandlers.clear();
+    this.disposed = true;
     this.log('Message router disposed');
   }
 }

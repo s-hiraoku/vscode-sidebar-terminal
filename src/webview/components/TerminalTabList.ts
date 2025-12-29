@@ -42,6 +42,8 @@ export class TerminalTabList {
   private dropIndicator: HTMLElement;
   private dropTargetInfo: { id: string; position: 'before' | 'after' } | null = null;
   private currentMode: 'normal' | 'fullscreen' | 'split' = 'normal';
+  // 🔧 FIX: Store current theme for use in setActiveTab
+  private currentTheme: TerminalTheme | null = null;
 
   constructor(container: HTMLElement, events: TerminalTabEvents) {
     this.container = container;
@@ -443,6 +445,26 @@ export class TerminalTabList {
     const tabElement = this.container.querySelector(`[data-tab-id="${tabId}"]`) as HTMLElement;
     if (tabElement) {
       this.updateTabElement(tabElement, tab);
+
+      // 🔧 FIX: Update active class and inline styles when isActive changes
+      // This was missing, causing the tab's visual state to not update on click
+      if ('isActive' in updates) {
+        tabElement.classList.toggle('active', tab.isActive);
+        tabElement.setAttribute('aria-selected', tab.isActive.toString());
+        tabElement.setAttribute('tabindex', tab.isActive ? '0' : '-1');
+
+        // Update inline styles (required because updateTheme sets inline styles)
+        if (this.currentTheme) {
+          if (tab.isActive) {
+            tabElement.style.backgroundColor = this.currentTheme.background;
+            tabElement.style.color = this.currentTheme.foreground;
+          } else {
+            tabElement.style.backgroundColor = this.adjustBrightness(this.currentTheme.background, -10);
+            tabElement.style.color = this.currentTheme.foreground + 'cc';
+          }
+        }
+      }
+
       // No need to re-attach click/context menu events - they're handled by global delegation
       // Only drag-and-drop needs to be re-attached since it's specific to each element
       this.setupDragAndDrop(tabElement, tab);
@@ -458,6 +480,18 @@ export class TerminalTabList {
         tabElement.classList.toggle('active', tab.isActive);
         tabElement.setAttribute('aria-selected', tab.isActive.toString());
         tabElement.setAttribute('tabindex', tab.isActive ? '0' : '-1');
+
+        // 🔧 FIX: Update inline styles when active state changes
+        // This is necessary because updateTheme sets inline styles that override CSS classes
+        if (this.currentTheme) {
+          if (tab.isActive) {
+            tabElement.style.backgroundColor = this.currentTheme.background;
+            tabElement.style.color = this.currentTheme.foreground;
+          } else {
+            tabElement.style.backgroundColor = this.adjustBrightness(this.currentTheme.background, -10);
+            tabElement.style.color = this.currentTheme.foreground + 'cc';
+          }
+        }
 
         // Focus the newly active tab for keyboard users
         if (tab.isActive) {
@@ -812,6 +846,9 @@ export class TerminalTabList {
    * Ensures tabs are consistent with secondaryTerminal.theme setting
    */
   public updateTheme(theme: TerminalTheme): void {
+    // 🔧 FIX: Store theme for use in setActiveTab
+    this.currentTheme = theme;
+
     // Update container background
     this.container.style.backgroundColor = theme.background;
     this.container.style.borderBottomColor = theme.foreground + '33';

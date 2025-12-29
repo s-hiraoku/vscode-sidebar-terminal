@@ -103,18 +103,21 @@ export abstract class BaseInputHandler extends BaseManager implements IInputHand
 
     let finalHandler = handler;
 
+    // Use unique ID per manager to avoid collisions in shared timers map
+    const uniqueId = `${this.managerName}-${id}`;
+
     // Add debouncing if enabled
     if (enableDebounce && this.config.enableDebouncing) {
-      finalHandler = this.createDebouncedHandler(id, handler);
+      finalHandler = this.createDebouncedHandler(uniqueId, handler);
     }
 
     // Add state tracking wrapper
     if (this.config.enableStateTracking) {
-      finalHandler = this.createStateTrackingHandler(id, finalHandler);
+      finalHandler = this.createStateTrackingHandler(uniqueId, finalHandler);
     }
 
     // Add error handling wrapper
-    finalHandler = this.createErrorHandlingWrapper(id, finalHandler);
+    finalHandler = this.createErrorHandlingWrapper(uniqueId, finalHandler);
 
     // Register with EventHandlerRegistry
     this.eventRegistry.register(id, element, eventType, finalHandler, options);
@@ -212,6 +215,14 @@ export abstract class BaseInputHandler extends BaseManager implements IInputHand
   protected unregisterEventHandler(id: string): void {
     const entry = this.registeredHandlers.get(id);
     if (entry) {
+      // Clear any pending debounce timers
+      const uniqueId = `${this.managerName}-${id}`;
+      const debounceKey = `${uniqueId}-debounce`;
+      if (this.eventDebounceTimers.has(debounceKey)) {
+        clearTimeout(this.eventDebounceTimers.get(debounceKey)!);
+        this.eventDebounceTimers.delete(debounceKey);
+      }
+
       this.eventRegistry.unregister(id);
       this.registeredHandlers.delete(id);
       this.logger(`Unregistered event handler: ${id}`);
@@ -242,7 +253,8 @@ export abstract class BaseInputHandler extends BaseManager implements IInputHand
   public getHandlerState(): Record<string, unknown> {
     const state: Record<string, unknown> = {};
     for (const [key, value] of this.handlerState) {
-      state[key] = value;
+      // Return a deep copy to prevent external modification
+      state[key] = typeof value === 'object' && value !== null ? JSON.parse(JSON.stringify(value)) : value;
     }
     return state;
   }

@@ -1,68 +1,103 @@
 # Secondary Terminal Documentation
 
-This directory contains comprehensive documentation for the Secondary Terminal VS Code extension.
+VS Code Sidebar Terminal 拡張機能のドキュメントです。
 
-## 📁 Directory Structure
+## Directory Structure
 
-### 🏗️ `/architecture`
-Technical architecture and refactoring documentation:
-- `ARCHITECTURE_ANALYSIS.md` - System architecture analysis
-- `MAINTAINABILITY_IMPROVEMENTS.md` - Code maintainability improvements
-- `REFACTORING_GUIDE.md` - Guide for refactoring processes
-- `REFACTORING_RESULTS.md` - Results of refactoring efforts
-- `REFACTORING_SUMMARY.md` - Summary of refactoring activities
+```
+docs/
+├── api/           # API documentation
+├── architecture/  # System architecture & patterns
+├── development/   # Development guides (TDD, debugging)
+├── features/      # Feature specifications
+├── operations/    # CI/CD, releases, rollback
+├── research/      # VS Code terminal research
+├── security/      # Security documentation
+└── testing/       # Testing guides & patterns
+```
 
-### 🔧 `/development`
-Development process and improvement documentation:
-- `AI_STATUS_DETECTION_IMPROVEMENTS.md` - AI agent status detection enhancements
-- `PHASE3_IMPLEMENTATION_SUMMARY.md` - Phase 3 implementation summary
-- `PHASE3_IMPROVEMENT_PLAN.md` - Phase 3 improvement planning
+## Quick Navigation
 
-### 📖 `/guides`
-User guides and implementation documentation:
-- `AGENTS.md` - AI agent integration guide
-- `CLAUDE.md` - Claude Code integration documentation
-- `GITHUB_ISSUE_175_UPDATE.md` - Specific GitHub issue documentation
-- `README_UPDATE.md` - README update guidelines
-- `TERMINAL_RESTORATION_REDESIGN_ISSUE.md` - Terminal restoration design documentation
+| Category | Description | Key Documents |
+|----------|-------------|---------------|
+| [api/](api/) | API reference | [API_DOCUMENTATION.md](api/API_DOCUMENTATION.md) |
+| [architecture/](architecture/) | System design | [ARCHITECTURE_ANALYSIS.md](architecture/ARCHITECTURE_ANALYSIS.md) |
+| [development/](development/) | Dev guides | [TDD_GUIDELINES.md](development/TDD_GUIDELINES.md), [DEBUG.md](development/DEBUG.md) |
+| [features/](features/) | Feature specs | [SPLIT_MODE_SPECIFICATION.md](features/SPLIT_MODE_SPECIFICATION.md) |
+| [operations/](operations/) | CI/CD & releases | [RELEASE_PROCESS.md](operations/RELEASE_PROCESS.md) |
+| [research/](research/) | VS Code patterns | [README.md](research/README.md) |
+| [security/](security/) | Security docs | [SECURITY_AUDIT_REPORT.md](security/SECURITY_AUDIT_REPORT.md) |
+| [testing/](testing/) | Test guides | [README.md](testing/README.md) |
 
-### 🚀 `/releases`
-Release notes and release process documentation:
-- `RELEASE_COMMANDS.md` - Release command reference
-- `RELEASE_NOTES_v*.md` - Version-specific release notes
-- `RELEASE_NOTES.md` - General release notes
+## Directory Details
 
-### 🧪 `/testing`
-Testing documentation and guides:
-- `TERMINAL_RESTORATION_TEST_GUIDE.md` - Terminal restoration testing guide
-- `TEST_COVERAGE_REPORT.md` - Test coverage analysis
+### `/api`
+API documentation and TypeDoc reference.
+- `API_DOCUMENTATION.md` - API documentation guide
 
-## 📚 API Documentation
+### `/architecture`
+System architecture and design patterns.
+- `ARCHITECTURE_ANALYSIS.md` - System architecture overview
+- `COMPONENT-RELATIONSHIPS.md` - Component dependencies
+- `clean-architecture.md` - Clean architecture principles
+- `template-method-pattern.md` - Pattern usage
+- `rendering-optimization-benchmarks.md` - Performance metrics
 
-### 🔍 `/api`
-Auto-generated API documentation using TypeDoc:
-- **[API Documentation Guide](API_DOCUMENTATION.md)** - Comprehensive guide to the API documentation
-- **`api/index.html`** - Generated HTML API reference (open in browser)
-- To generate: `npm run docs:generate`
-- To clean: `npm run docs:clean`
-
-## 📋 Additional Documentation
-
-Root-level documentation files in the docs directory:
-- `TDD_GUIDELINES.md` - Test-Driven Development guidelines
+### `/development`
+Development workflow and debugging guides.
+- `TDD_GUIDELINES.md` - TDD guidelines
 - `TDD-BEST-PRACTICES.md` - TDD best practices
-- `CONTRIBUTING.md` - Contribution guidelines
-- `README_ja.md` - Japanese README
-- Various refactoring and implementation summaries
+- `TDD-OPERATIONS-GUIDE.md` - TDD operations
+- `DEBUG.md` - Debugging guide
+- `logging-guide.md` - Logging guide
 
-## 🚀 Quick Links
+### `/features`
+Feature specifications and comparisons.
+- `ACCESSIBILITY.md` - Accessibility features
+- `AGENT_WORKFLOWS.md` - AI agent workflows
+- `cli-agent-status-specification.md` - CLI agent detection
+- `COMPARISON_WITH_VSCODE_TERMINAL.md` - VS Code comparison
+- `SPLIT_MODE_SPECIFICATION.md` - Split mode spec
+- `TERMINAL_DISPLAY_MODE_SPEC.md` - Display mode spec
 
-- **Getting Started**: See the main [README.md](../README.md) in the project root
-- **AI Agent Integration**: [guides/AGENTS.md](guides/AGENTS.md)
-- **Development Guidelines**: [guides/CLAUDE.md](guides/CLAUDE.md)
-- **Latest Release**: [releases/](releases/)
-- **Testing**: [testing/](testing/)
+### `/operations`
+CI/CD, releases, and operational procedures.
+- `CI-CD-INTEGRATION.md` - CI/CD integration
+- `RELEASE_PROCESS.md` - Release process
+- `AUTOMATED_ROLLBACK_SYSTEM.md` - Automated rollback
+- `EMERGENCY_ROLLBACK.md` - Emergency procedures
+- `ROLLBACK_QUICK_REFERENCE.md` - Quick reference
+- `releases/` - Version-specific release notes
 
-## 🤝 Contributing
+### `/research`
+VS Code terminal implementation research.
+- Terminal initialization patterns
+- WebView message patterns
+- Panel location and layout patterns
+- xterm.js best practices
+- See [research/README.md](research/README.md) for full index
 
-For contribution guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md) or the main project [README.md](../README.md) for getting started with development.
+### `/security`
+Security documentation and audit reports.
+- `SECURITY_AUDIT_REPORT.md` - Security audit report
+- `MEMORY_LEAK_PREVENTION.md` - Memory leak prevention
+
+### `/testing`
+Testing documentation and guides.
+- `getting-started.md` - Getting started
+- `best-practices.md` - Best practices
+- `troubleshooting.md` - Troubleshooting
+- `patterns/` - Testing patterns (unit, integration, e2e)
+- `tools/` - Tool guides (mocha, coverage)
+- See [testing/README.md](testing/README.md) for full index
+
+## Related Documentation
+
+- **Root**: [CLAUDE.md](../CLAUDE.md), [AGENTS.md](../AGENTS.md)
+- **Contributing**: [CONTRIBUTING.md](../CONTRIBUTING.md)
+- **Security**: [SECURITY.md](../SECURITY.md)
+- **Test CLAUDE.md**: [src/test/CLAUDE.md](../src/test/CLAUDE.md)
+- **WebView CLAUDE.md**: [src/webview/CLAUDE.md](../src/webview/CLAUDE.md)
+
+---
+**Last Updated**: 2025-12-24

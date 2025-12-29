@@ -24,8 +24,12 @@ export class TerminalCliAgentIntegrationService {
    * Start CLI Agent detection heartbeat
    */
   startHeartbeat(): void {
-    this._cliAgentService.startHeartbeat();
-    log('💓 [CliAgentIntegration] CLI Agent heartbeat started');
+    try {
+      this._cliAgentService.startHeartbeat();
+      log('💓 [CliAgentIntegration] CLI Agent heartbeat started');
+    } catch (error) {
+      log('❌ [CliAgentIntegration] Error starting CLI Agent heartbeat:', error);
+    }
   }
 
   /**

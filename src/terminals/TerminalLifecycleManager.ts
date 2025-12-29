@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import * as vscode from 'vscode';
-import { TerminalInstance, DeleteResult } from '../types/shared';
+import { TerminalInstance, DeleteResult, ProcessState } from '../types/shared';
 import { ERROR_MESSAGES } from '../constants';
 import { terminal as log } from '../utils/logger';
 import {
@@ -423,6 +423,10 @@ export class TerminalLifecycleManager {
       // 3. Kill process
       log(`🗑️ [DELETE] Killing terminal process: ${terminalId}`);
       this._terminalBeingKilled.add(terminalId);
+
+      // 🔧 FIX: Set process state to KilledByUser BEFORE killing to ensure correct exit state
+      terminal.processState = ProcessState.KilledByUser;
+
       const p = (terminal.ptyProcess || terminal.pty) as { kill?: () => void } | undefined;
       if (p && typeof p.kill === 'function') {
         p.kill();
@@ -434,7 +438,11 @@ export class TerminalLifecycleManager {
       // 5. Return new state (current state since it's async)
       return { success: true, newState: undefined };
     } catch (error) {
-      log(`❌ [DELETE] Error during delete operation:`, error);
+      log(`❌ [DELETE] Error during delete operation for ${terminalId}:`, error);
+      if (error instanceof Error) {
+        log(`❌ [DELETE] Error message: ${error.message}`);
+        log(`❌ [DELETE] Error stack: ${error.stack}`);
+      }
       this._terminalBeingKilled.delete(terminalId);
       return { success: false, reason: `Delete failed: ${String(error)}` };
     }

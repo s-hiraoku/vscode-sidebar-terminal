@@ -7,6 +7,85 @@ import { IUIController, DebugInfo, NotificationOptions, UIControllerConfig } fro
 import { BaseManager } from '../managers/BaseManager';
 
 /**
+ * DOM Element ID Constants
+ */
+const ElementIds = {
+  TERMINAL_TABS_CONTAINER: 'terminal-tabs-container',
+  TERMINAL_COUNT_DISPLAY: 'terminal-count-display',
+  SYSTEM_STATUS_INDICATOR: 'system-status-indicator',
+  CREATE_TERMINAL_BUTTON: 'create-terminal-button',
+  SPLIT_TERMINAL_BUTTON: 'split-terminal-button',
+  NOTIFICATION_CONTAINER: 'notification-container',
+  DEBUG_PANEL: 'debug-panel',
+  DEBUG_TOGGLE_BUTTON: 'debug-toggle-button',
+  CLI_AGENT_STATUS: 'cli-agent-status',
+  TERMINAL_AREA: 'terminal-area',
+  terminalContainer: (id: string) => `terminal-container-${id}`,
+} as const;
+
+/**
+ * CSS Class Name Constants
+ */
+const CssClasses = {
+  // Terminal tabs
+  TERMINAL_TAB: 'terminal-tab',
+  ACTIVE: 'active',
+  TAB_NUMBER: 'tab-number',
+  TAB_CLOSE: 'tab-close',
+  // Terminal count
+  TERMINAL_COUNT_FULL: 'terminal-count-full',
+  TERMINAL_COUNT_NORMAL: 'terminal-count-normal',
+  // System status
+  SYSTEM_STATUS: 'system-status',
+  statusClass: (status: string) => `status-${status.toLowerCase()}`,
+  // Container
+  TERMINAL_CONTAINER: 'terminal-container',
+  ACTIVE_TERMINAL: 'active-terminal',
+  // Buttons
+  BUTTON_ENABLED: 'button-enabled',
+  BUTTON_DISABLED: 'button-disabled',
+  // Debug
+  DEBUG_SECTION: 'debug-section',
+  // Notifications
+  NOTIFICATION: 'notification',
+  notificationType: (type: string) => `notification-${type}`,
+  NOTIFICATION_CONTENT: 'notification-content',
+  NOTIFICATION_MESSAGE: 'notification-message',
+  NOTIFICATION_CLOSE: 'notification-close',
+  NOTIFICATION_ACTIONS: 'notification-actions',
+  NOTIFICATION_ACTION: 'notification-action',
+  // CLI Agent
+  CLI_AGENT_STATUS: 'cli-agent-status',
+  CONNECTED: 'connected',
+  DISCONNECTED: 'disconnected',
+  // Layout
+  TERMINAL_AREA: 'terminal-area',
+  layoutClass: (layout: string) => `layout-${layout}`,
+  // Loading
+  LOADING_OVERLAY: 'loading-overlay',
+  LOADING_CONTENT: 'loading-content',
+  LOADING_SPINNER: 'loading-spinner',
+  LOADING_MESSAGE: 'loading-message',
+} as const;
+
+/**
+ * Custom Event Names
+ */
+const EventNames = {
+  TERMINAL_CLOSE_REQUESTED: 'terminal-close-requested',
+  TERMINAL_SWITCH_REQUESTED: 'terminal-switch-requested',
+  SETTINGS_OPEN_REQUESTED: 'settings-open-requested',
+} as const;
+
+/**
+ * CSS Custom Property Names
+ */
+const CssCustomProperties = {
+  TERMINAL_FONT_FAMILY: '--terminal-font-family',
+  TERMINAL_FONT_SIZE: '--terminal-font-size',
+} as const;
+
+/**
  * UI Controller manages all visual elements and interactions
  */
 export class UIController extends BaseManager implements IUIController {
@@ -48,20 +127,20 @@ export class UIController extends BaseManager implements IUIController {
 
   private initializeUIElements(): void {
     // Ensure required UI elements exist
-    this.ensureElement('terminal-tabs-container', 'div');
-    this.ensureElement('terminal-count-display', 'div');
-    this.ensureElement('system-status-indicator', 'div');
-    this.ensureElement('create-terminal-button', 'button');
-    this.ensureElement('split-terminal-button', 'button');
-    this.ensureElement('notification-container', 'div');
+    this.ensureElement(ElementIds.TERMINAL_TABS_CONTAINER, 'div');
+    this.ensureElement(ElementIds.TERMINAL_COUNT_DISPLAY, 'div');
+    this.ensureElement(ElementIds.SYSTEM_STATUS_INDICATOR, 'div');
+    this.ensureElement(ElementIds.CREATE_TERMINAL_BUTTON, 'button');
+    this.ensureElement(ElementIds.SPLIT_TERMINAL_BUTTON, 'button');
+    this.ensureElement(ElementIds.NOTIFICATION_CONTAINER, 'div');
 
     if (this.config.enableDebugPanel) {
-      this.ensureElement('debug-panel', 'div');
-      this.ensureElement('debug-toggle-button', 'button');
+      this.ensureElement(ElementIds.DEBUG_PANEL, 'div');
+      this.ensureElement(ElementIds.DEBUG_TOGGLE_BUTTON, 'button');
     }
 
     if (this.config.enableCliAgentStatus) {
-      this.ensureElement('cli-agent-status', 'div');
+      this.ensureElement(ElementIds.CLI_AGENT_STATUS, 'div');
     }
   }
 
@@ -77,7 +156,7 @@ export class UIController extends BaseManager implements IUIController {
 
   private setupEventHandlers(): void {
     if (this.config.enableDebugPanel) {
-      const debugToggle = document.getElementById('debug-toggle-button');
+      const debugToggle = document.getElementById(ElementIds.DEBUG_TOGGLE_BUTTON);
       if (debugToggle) {
         debugToggle.addEventListener('click', () => this.toggleDebugPanel());
       }
@@ -88,7 +167,7 @@ export class UIController extends BaseManager implements IUIController {
   public updateTerminalTabs(
     terminalInfos: Array<{ id: string; number: number; isActive: boolean }>
   ): void {
-    const tabsContainer = document.getElementById('terminal-tabs-container');
+    const tabsContainer = document.getElementById(ElementIds.TERMINAL_TABS_CONTAINER);
     if (!tabsContainer) return;
 
     // Clear existing tabs
@@ -109,16 +188,16 @@ export class UIController extends BaseManager implements IUIController {
     isActive: boolean;
   }): HTMLElement {
     const tab = document.createElement('div');
-    tab.className = `terminal-tab ${terminalInfo.isActive ? 'active' : ''}`;
+    tab.className = `${CssClasses.TERMINAL_TAB} ${terminalInfo.isActive ? CssClasses.ACTIVE : ''}`;
     tab.setAttribute('data-terminal-id', terminalInfo.id);
 
     // SECURITY: Build DOM structure safely to prevent XSS
     const numberSpan = document.createElement('span');
-    numberSpan.className = 'tab-number';
+    numberSpan.className = CssClasses.TAB_NUMBER;
     numberSpan.textContent = String(terminalInfo.number);
 
     const closeSpan = document.createElement('span');
-    closeSpan.className = 'tab-close';
+    closeSpan.className = CssClasses.TAB_CLOSE;
     closeSpan.setAttribute('data-action', 'close');
     closeSpan.textContent = '×';
 
@@ -139,53 +218,53 @@ export class UIController extends BaseManager implements IUIController {
   }
 
   private emitTerminalCloseRequest(terminalId: string): void {
-    const event = new CustomEvent('terminal-close-requested', {
+    const event = new CustomEvent(EventNames.TERMINAL_CLOSE_REQUESTED, {
       detail: { terminalId },
     });
     document.dispatchEvent(event);
   }
 
   private emitTerminalSwitchRequest(terminalId: string): void {
-    const event = new CustomEvent('terminal-switch-requested', {
+    const event = new CustomEvent(EventNames.TERMINAL_SWITCH_REQUESTED, {
       detail: { terminalId },
     });
     document.dispatchEvent(event);
   }
 
   public updateActiveTerminalIndicator(terminalId: string | undefined): void {
-    const tabs = document.querySelectorAll('.terminal-tab');
+    const tabs = document.querySelectorAll(`.${CssClasses.TERMINAL_TAB}`);
     tabs.forEach((tab) => {
       const tabElement = tab as HTMLElement;
       const tabTerminalId = tabElement.getAttribute('data-terminal-id');
 
       if (tabTerminalId === terminalId) {
-        tabElement.classList.add('active');
+        tabElement.classList.add(CssClasses.ACTIVE);
       } else {
-        tabElement.classList.remove('active');
+        tabElement.classList.remove(CssClasses.ACTIVE);
       }
     });
   }
 
   public updateTerminalCountDisplay(count: number, maxCount: number): void {
-    const display = document.getElementById('terminal-count-display');
+    const display = document.getElementById(ElementIds.TERMINAL_COUNT_DISPLAY);
     if (display) {
       display.textContent = `${count}/${maxCount}`;
-      display.className = count >= maxCount ? 'terminal-count-full' : 'terminal-count-normal';
+      display.className = count >= maxCount ? CssClasses.TERMINAL_COUNT_FULL : CssClasses.TERMINAL_COUNT_NORMAL;
     }
   }
 
   public updateSystemStatus(status: 'READY' | 'BUSY' | 'ERROR'): void {
-    const indicator = document.getElementById('system-status-indicator');
+    const indicator = document.getElementById(ElementIds.SYSTEM_STATUS_INDICATOR);
     if (indicator) {
       indicator.textContent = status;
-      indicator.className = `system-status status-${status.toLowerCase()}`;
+      indicator.className = `${CssClasses.SYSTEM_STATUS} ${CssClasses.statusClass(status)}`;
     }
   }
 
   // Terminal UI Operations
   public showTerminalContainer(terminalId: string, container: HTMLElement): void {
     // Hide all other containers
-    const allContainers = document.querySelectorAll('.terminal-container');
+    const allContainers = document.querySelectorAll(`.${CssClasses.TERMINAL_CONTAINER}`);
     allContainers.forEach((c) => {
       (c as HTMLElement).style.display = 'none';
     });
@@ -194,7 +273,7 @@ export class UIController extends BaseManager implements IUIController {
     container.style.display = 'block';
 
     // Ensure container is in the terminal area
-    const terminalArea = document.getElementById('terminal-area');
+    const terminalArea = document.getElementById(ElementIds.TERMINAL_AREA);
     if (terminalArea && !terminalArea.contains(container)) {
       terminalArea.appendChild(container);
     }
@@ -203,7 +282,7 @@ export class UIController extends BaseManager implements IUIController {
   }
 
   public hideTerminalContainer(terminalId: string): void {
-    const container = document.getElementById(`terminal-container-${terminalId}`);
+    const container = document.getElementById(ElementIds.terminalContainer(terminalId));
     if (container) {
       container.style.display = 'none';
     }
@@ -211,27 +290,27 @@ export class UIController extends BaseManager implements IUIController {
 
   public highlightActiveTerminal(terminalId: string): void {
     // Remove highlight from all containers
-    const allContainers = document.querySelectorAll('.terminal-container');
-    allContainers.forEach((c) => c.classList.remove('active-terminal'));
+    const allContainers = document.querySelectorAll(`.${CssClasses.TERMINAL_CONTAINER}`);
+    allContainers.forEach((c) => c.classList.remove(CssClasses.ACTIVE_TERMINAL));
 
     // Add highlight to active container
-    const container = document.getElementById(`terminal-container-${terminalId}`);
+    const container = document.getElementById(ElementIds.terminalContainer(terminalId));
     if (container) {
-      container.classList.add('active-terminal');
+      container.classList.add(CssClasses.ACTIVE_TERMINAL);
     }
   }
 
   // Control Elements
   public setCreateButtonEnabled(enabled: boolean): void {
-    const button = document.getElementById('create-terminal-button') as HTMLButtonElement;
+    const button = document.getElementById(ElementIds.CREATE_TERMINAL_BUTTON) as HTMLButtonElement;
     if (button) {
       button.disabled = !enabled;
-      button.className = enabled ? 'button-enabled' : 'button-disabled';
+      button.className = enabled ? CssClasses.BUTTON_ENABLED : CssClasses.BUTTON_DISABLED;
     }
   }
 
   public updateSplitButtonVisibility(visible: boolean): void {
-    const button = document.getElementById('split-terminal-button');
+    const button = document.getElementById(ElementIds.SPLIT_TERMINAL_BUTTON);
     if (button) {
       button.style.display = visible ? 'block' : 'none';
     }
@@ -259,7 +338,7 @@ export class UIController extends BaseManager implements IUIController {
   public toggleDebugPanel(): void {
     if (!this.config.enableDebugPanel) return;
 
-    const debugPanel = document.getElementById('debug-panel');
+    const debugPanel = document.getElementById(ElementIds.DEBUG_PANEL);
     if (debugPanel) {
       this.isDebugPanelVisible = !this.isDebugPanelVisible;
       debugPanel.style.display = this.isDebugPanelVisible ? 'block' : 'none';
@@ -271,7 +350,7 @@ export class UIController extends BaseManager implements IUIController {
   public updateDebugInfo(debugInfo: DebugInfo): void {
     if (!this.config.enableDebugPanel) return;
 
-    const debugPanel = document.getElementById('debug-panel');
+    const debugPanel = document.getElementById(ElementIds.DEBUG_PANEL);
     if (debugPanel) {
       // SECURITY: Build DOM structure safely to prevent XSS
       debugPanel.textContent = ''; // Clear existing content
@@ -280,70 +359,51 @@ export class UIController extends BaseManager implements IUIController {
       h3.textContent = 'Debug Information';
       debugPanel.appendChild(h3);
 
-      // System Status
-      const statusSection = document.createElement('div');
-      statusSection.className = 'debug-section';
-      const statusLabel = document.createElement('strong');
-      statusLabel.textContent = 'System Status: ';
-      statusSection.appendChild(statusLabel);
-      statusSection.appendChild(document.createTextNode(debugInfo.systemStatus));
-      debugPanel.appendChild(statusSection);
+      // Build debug sections using helper
+      const sections: Array<{ label: string; value: string }> = [
+        { label: 'System Status', value: debugInfo.systemStatus },
+        { label: 'Active Terminal', value: debugInfo.activeTerminal || 'None' },
+        { label: 'Terminal Count', value: String(debugInfo.terminalCount) },
+        { label: 'Available Slots', value: String(debugInfo.availableSlots) },
+        { label: 'Uptime', value: debugInfo.uptime },
+      ];
 
-      // Active Terminal
-      const terminalSection = document.createElement('div');
-      terminalSection.className = 'debug-section';
-      const terminalLabel = document.createElement('strong');
-      terminalLabel.textContent = 'Active Terminal: ';
-      terminalSection.appendChild(terminalLabel);
-      terminalSection.appendChild(document.createTextNode(debugInfo.activeTerminal || 'None'));
-      debugPanel.appendChild(terminalSection);
+      for (const section of sections) {
+        debugPanel.appendChild(this.createDebugSection(section.label, section.value));
+      }
 
-      // Terminal Count
-      const countSection = document.createElement('div');
-      countSection.className = 'debug-section';
-      const countLabel = document.createElement('strong');
-      countLabel.textContent = 'Terminal Count: ';
-      countSection.appendChild(countLabel);
-      countSection.appendChild(document.createTextNode(String(debugInfo.terminalCount)));
-      debugPanel.appendChild(countSection);
-
-      // Available Slots
-      const slotsSection = document.createElement('div');
-      slotsSection.className = 'debug-section';
-      const slotsLabel = document.createElement('strong');
-      slotsLabel.textContent = 'Available Slots: ';
-      slotsSection.appendChild(slotsLabel);
-      slotsSection.appendChild(document.createTextNode(String(debugInfo.availableSlots)));
-      debugPanel.appendChild(slotsSection);
-
-      // Uptime
-      const uptimeSection = document.createElement('div');
-      uptimeSection.className = 'debug-section';
-      const uptimeLabel = document.createElement('strong');
-      uptimeLabel.textContent = 'Uptime: ';
-      uptimeSection.appendChild(uptimeLabel);
-      uptimeSection.appendChild(document.createTextNode(debugInfo.uptime));
-      debugPanel.appendChild(uptimeSection);
-
-      // Pending Operations
-      const opsSection = document.createElement('div');
-      opsSection.className = 'debug-section';
-      const opsLabel = document.createElement('strong');
-      opsLabel.textContent = 'Pending Operations: ';
-      opsSection.appendChild(opsLabel);
-      opsSection.appendChild(document.createTextNode(String(debugInfo.pendingOperations.length)));
+      // Pending Operations (special handling for list)
+      const opsSection = this.createDebugSection(
+        'Pending Operations',
+        String(debugInfo.pendingOperations.length)
+      );
 
       if (debugInfo.pendingOperations.length > 0) {
         const ul = document.createElement('ul');
-        debugInfo.pendingOperations.forEach((op) => {
+        for (const op of debugInfo.pendingOperations) {
           const li = document.createElement('li');
           li.textContent = op;
           ul.appendChild(li);
-        });
+        }
         opsSection.appendChild(ul);
       }
       debugPanel.appendChild(opsSection);
     }
+  }
+
+  /**
+   * Creates a debug section element with label and value
+   */
+  private createDebugSection(label: string, value: string): HTMLElement {
+    const section = document.createElement('div');
+    section.className = CssClasses.DEBUG_SECTION;
+
+    const labelElement = document.createElement('strong');
+    labelElement.textContent = `${label}: `;
+    section.appendChild(labelElement);
+    section.appendChild(document.createTextNode(value));
+
+    return section;
   }
 
   public exportSystemDiagnostics(): void {
@@ -370,22 +430,22 @@ export class UIController extends BaseManager implements IUIController {
   public showNotification(options: NotificationOptions): void {
     if (!this.config.enableNotifications) return;
 
-    const container = document.getElementById('notification-container');
+    const container = document.getElementById(ElementIds.NOTIFICATION_CONTAINER);
     if (!container) return;
 
     const notification = document.createElement('div');
-    notification.className = `notification notification-${options.type}`;
+    notification.className = `${CssClasses.NOTIFICATION} ${CssClasses.notificationType(options.type)}`;
 
     // SECURITY: Build DOM structure safely to prevent XSS
     const contentDiv = document.createElement('div');
-    contentDiv.className = 'notification-content';
+    contentDiv.className = CssClasses.NOTIFICATION_CONTENT;
 
     const messageSpan = document.createElement('span');
-    messageSpan.className = 'notification-message';
+    messageSpan.className = CssClasses.NOTIFICATION_MESSAGE;
     messageSpan.textContent = options.message; // Safe: textContent escapes HTML
 
     const closeButton = document.createElement('button');
-    closeButton.className = 'notification-close';
+    closeButton.className = CssClasses.NOTIFICATION_CLOSE;
     closeButton.textContent = '×';
 
     contentDiv.appendChild(messageSpan);
@@ -400,11 +460,11 @@ export class UIController extends BaseManager implements IUIController {
     // Add action buttons if provided
     if (options.actions) {
       const actionsContainer = document.createElement('div');
-      actionsContainer.className = 'notification-actions';
+      actionsContainer.className = CssClasses.NOTIFICATION_ACTIONS;
 
       for (const action of options.actions) {
         const button = document.createElement('button');
-        button.className = 'notification-action';
+        button.className = CssClasses.NOTIFICATION_ACTION;
         button.textContent = action.label;
         button.addEventListener('click', () => {
           action.action();
@@ -445,7 +505,7 @@ export class UIController extends BaseManager implements IUIController {
 
   // Settings UI
   public openSettings(): void {
-    const event = new CustomEvent('settings-open-requested');
+    const event = new CustomEvent(EventNames.SETTINGS_OPEN_REQUESTED);
     document.dispatchEvent(event);
   }
 
@@ -459,8 +519,8 @@ export class UIController extends BaseManager implements IUIController {
 
   public updateFontSettings(fontFamily: string, fontSize: number): void {
     const root = document.documentElement;
-    root.style.setProperty('--terminal-font-family', fontFamily);
-    root.style.setProperty('--terminal-font-size', `${fontSize}px`);
+    root.style.setProperty(CssCustomProperties.TERMINAL_FONT_FAMILY, fontFamily);
+    root.style.setProperty(CssCustomProperties.TERMINAL_FONT_SIZE, `${fontSize}px`);
     this.logger(`Font settings updated: ${fontFamily}, ${fontSize}px`);
   }
 
@@ -468,9 +528,9 @@ export class UIController extends BaseManager implements IUIController {
   public updateCliAgentStatus(isConnected: boolean, agentType?: string): void {
     if (!this.config.enableCliAgentStatus) return;
 
-    const statusElement = document.getElementById('cli-agent-status');
+    const statusElement = document.getElementById(ElementIds.CLI_AGENT_STATUS);
     if (statusElement) {
-      statusElement.className = `cli-agent-status ${isConnected ? 'connected' : 'disconnected'}`;
+      statusElement.className = `${CssClasses.CLI_AGENT_STATUS} ${isConnected ? CssClasses.CONNECTED : CssClasses.DISCONNECTED}`;
       statusElement.textContent = isConnected
         ? `${agentType || 'CLI Agent'} Connected`
         : 'CLI Agent Disconnected';
@@ -478,7 +538,7 @@ export class UIController extends BaseManager implements IUIController {
   }
 
   public showCliAgentIndicator(visible: boolean): void {
-    const indicator = document.getElementById('cli-agent-status');
+    const indicator = document.getElementById(ElementIds.CLI_AGENT_STATUS);
     if (indicator) {
       indicator.style.display = visible ? 'block' : 'none';
     }
@@ -486,14 +546,14 @@ export class UIController extends BaseManager implements IUIController {
 
   // Layout Management
   public updateSplitLayout(layout: 'horizontal' | 'vertical' | 'grid'): void {
-    const terminalArea = document.getElementById('terminal-area');
+    const terminalArea = document.getElementById(ElementIds.TERMINAL_AREA);
     if (terminalArea) {
-      terminalArea.className = `terminal-area layout-${layout}`;
+      terminalArea.className = `${CssClasses.TERMINAL_AREA} ${CssClasses.layoutClass(layout)}`;
     }
   }
 
   public resizeTerminalContainers(cols: number, rows: number): void {
-    const containers = document.querySelectorAll('.terminal-container');
+    const containers = document.querySelectorAll(`.${CssClasses.TERMINAL_CONTAINER}`);
     containers.forEach((container) => {
       const terminal = (
         container as HTMLElement & { _terminal?: { resize: (cols: number, rows: number) => void } }
@@ -509,17 +569,17 @@ export class UIController extends BaseManager implements IUIController {
     this.hideLoadingState(); // Remove any existing loading state
 
     this.loadingElement = document.createElement('div');
-    this.loadingElement.className = 'loading-overlay';
+    this.loadingElement.className = CssClasses.LOADING_OVERLAY;
 
     // SECURITY: Build DOM structure safely to prevent XSS
     const contentDiv = document.createElement('div');
-    contentDiv.className = 'loading-content';
+    contentDiv.className = CssClasses.LOADING_CONTENT;
 
     const spinnerDiv = document.createElement('div');
-    spinnerDiv.className = 'loading-spinner';
+    spinnerDiv.className = CssClasses.LOADING_SPINNER;
 
     const messageDiv = document.createElement('div');
-    messageDiv.className = 'loading-message';
+    messageDiv.className = CssClasses.LOADING_MESSAGE;
     messageDiv.textContent = message; // Safe: textContent escapes HTML
 
     contentDiv.appendChild(spinnerDiv);

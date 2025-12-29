@@ -93,6 +93,22 @@ import { JSDOM } from 'jsdom';
 // Set up chai plugins
 chai.use(sinonChai);
 
+// ============================================================================
+// TEST POLLUTION PREVENTION - Module-level state for cleanup
+// ============================================================================
+
+/**
+ * Store original Module.prototype.require for restoration
+ * CRITICAL: This must be restored in cleanupTestEnvironment to prevent test pollution
+ */
+let originalModuleRequire: NodeRequire | null = null;
+let moduleRequireOverridden = false;
+
+/**
+ * Store original process.env for restoration
+ */
+let originalProcessEnv: NodeJS.ProcessEnv | null = null;
+
 // Async setup for chai-as-promised ES module
 let chaiAsPromisedSetup = false;
 async function setupChaiAsPromised() {
@@ -305,72 +321,52 @@ export async function setupTestEnvironment(): Promise<void> {
     // vscode module not found in require.resolve, will be handled by Module.prototype.require override
   }
 
-  // Override module loading for vscode and node-pty
-  const originalRequire = Module.prototype.require;
+  // Register mocks in require.cache where possible, keeping Module.prototype.require
+  // override minimal to preserve nyc coverage instrumentation
+  const mockNodePty = {
+    spawn: () => ({
+      pid: 1234,
+      onData: () => ({ dispose: () => {} }),
+      onExit: () => ({ dispose: () => {} }),
+      write: () => {},
+      resize: () => {},
+      kill: () => {},
+      dispose: () => {},
+    }),
+  };
 
+  // Register node-pty mocks in cache
+  const ptyModules = ['node-pty', '@homebridge/node-pty-prebuilt-multiarch'];
+  ptyModules.forEach((moduleName) => {
+    try {
+      const modulePath = require.resolve(moduleName, { paths: [process.cwd()] });
+      require.cache[modulePath] = {
+        id: modulePath,
+        filename: modulePath,
+        loaded: true,
+        exports: mockNodePty,
+      } as NodeModule;
+    } catch (e) {
+      // Module not found, skip
+    }
+  });
+
+  // Note: xterm mocks are handled by xterm-mock.js which is loaded first
+
+  // Minimal hook ONLY for 'vscode' module (which has no physical file to cache)
+  // CRITICAL: Store original require for restoration in cleanupTestEnvironment
+  if (!moduleRequireOverridden) {
+    originalModuleRequire = Module.prototype.require;
+    moduleRequireOverridden = true;
+  }
+  const savedOriginalRequire = originalModuleRequire || Module.prototype.require;
   Module.prototype.require = function (id: string) {
     if (id === 'vscode') {
       return mockVscode;
     }
-    if (id === 'node-pty' || id === '@homebridge/node-pty-prebuilt-multiarch') {
-      return {
-        spawn: () => ({
-          pid: 1234,
-          onData: () => ({ dispose: () => {} }),
-          onExit: () => ({ dispose: () => {} }),
-          write: () => {},
-          resize: () => {},
-          kill: () => {},
-          dispose: () => {},
-        }),
-      };
-    }
-    // すべてのxterm関連モジュールをモック
-    if (
-      id === 'xterm' ||
-      id === '@xterm/xterm' ||
-      id.startsWith('xterm') ||
-      id.startsWith('@xterm/')
-    ) {
-      return {
-        Terminal: function () {
-          return {
-            write: () => {},
-            writeln: () => {},
-            clear: () => {},
-            resize: () => {},
-            focus: () => {},
-            blur: () => {},
-            dispose: () => {},
-            open: () => {},
-            onData: () => ({ dispose: () => {} }),
-            onResize: () => ({ dispose: () => {} }),
-            onKey: () => ({ dispose: () => {} }),
-            loadAddon: () => {},
-            options: {},
-            rows: 24,
-            cols: 80,
-            buffer: {
-              active: {
-                length: 100,
-                viewportY: 50,
-                baseY: 0,
-                getLine: () => ({ translateToString: () => '' }),
-              },
-            },
-          };
-        },
-        FitAddon: function () {
-          return {
-            fit: () => {},
-            dispose: () => {},
-          };
-        },
-      };
-    }
-    // Allow actual source code to be loaded for coverage
+    // All other modules pass through to original require (preserves nyc instrumentation)
     // eslint-disable-next-line prefer-rest-params, @typescript-eslint/no-unsafe-return
-    return originalRequire.apply(this, arguments);
+    return savedOriginalRequire.apply(this, arguments);
   };
 
   // Mock Node.js modules
@@ -454,6 +450,10 @@ export async function setupTestEnvironment(): Promise<void> {
   }
 
   // テスト用の環境変数を一時的に設定（復元可能な形で）
+  // CRITICAL: Save original env for restoration
+  if (!originalProcessEnv) {
+    originalProcessEnv = { ...process.env };
+  }
   if (!process.env.NODE_ENV) {
     process.env.NODE_ENV = 'test';
   }
@@ -653,6 +653,78 @@ export function setupJSDOMEnvironment(htmlContent?: string): {
     disconnect() {}
   };
 
+  // requestAnimationFrame モック
+  if (!(global as any).requestAnimationFrame) {
+    (global as any).requestAnimationFrame = (callback: FrameRequestCallback): number => {
+      return setTimeout(() => callback(Date.now()), 16) as unknown as number;
+    };
+    (global as any).cancelAnimationFrame = (id: number): void => {
+      clearTimeout(id);
+    };
+  }
+  if (!window.requestAnimationFrame) {
+    (window as any).requestAnimationFrame = (global as any).requestAnimationFrame;
+    (window as any).cancelAnimationFrame = (global as any).cancelAnimationFrame;
+  }
+
+  // Element.closest ポリフィル (JSDOMで不足する場合)
+  if (window.Element && !window.Element.prototype.closest) {
+    window.Element.prototype.closest = function (selector: string): Element | null {
+      let element: Element | null = this;
+      while (element) {
+        if (element.matches && element.matches(selector)) {
+          return element;
+        }
+        element = element.parentElement;
+      }
+      return null;
+    };
+  }
+
+  // Element.matches ポリフィル
+  if (window.Element && !window.Element.prototype.matches) {
+    window.Element.prototype.matches =
+      (window.Element.prototype as any).msMatchesSelector ||
+      (window.Element.prototype as any).webkitMatchesSelector ||
+      function (this: Element, s: string): boolean {
+        const matches = (this.ownerDocument || document).querySelectorAll(s);
+        let i = matches.length;
+        while (--i >= 0 && matches.item(i) !== this) {}
+        return i > -1;
+      };
+  }
+
+  // Element.contains ポリフィル
+  if (window.Element && !window.Element.prototype.contains) {
+    window.Element.prototype.contains = function (other: Node | null): boolean {
+      if (!other) return false;
+      let node: Node | null = other;
+      while (node) {
+        if (node === this) return true;
+        node = node.parentNode;
+      }
+      return false;
+    };
+  }
+
+  // Element.remove ポリフィル
+  if (window.Element && !window.Element.prototype.remove) {
+    window.Element.prototype.remove = function (): void {
+      if (this.parentNode) {
+        this.parentNode.removeChild(this);
+      }
+    };
+  }
+
+  // ChildNode.remove ポリフィル (for Text nodes etc.)
+  if (window.CharacterData && !window.CharacterData.prototype.remove) {
+    window.CharacterData.prototype.remove = function (): void {
+      if (this.parentNode) {
+        this.parentNode.removeChild(this);
+      }
+    };
+  }
+
   // HTMLCanvasElement.getContext モック (xterm.jsのCanvas依存関係対応)
   if (window.HTMLCanvasElement && !window.HTMLCanvasElement.prototype.getContext) {
     window.HTMLCanvasElement.prototype.getContext = function (contextType: string): any {
@@ -711,8 +783,94 @@ export function setupJSDOMEnvironment(htmlContent?: string): {
 }
 
 /**
+ * Global state snapshot for test isolation
+ * Stores original global values to restore after tests
+ */
+interface GlobalStateSnapshot {
+  document: any;
+  window: any;
+  navigator: any;
+  HTMLElement: any;
+  Element: any;
+  Node: any;
+  Event: any;
+  CustomEvent: any;
+  MouseEvent: any;
+  KeyboardEvent: any;
+  ResizeObserver: any;
+}
+
+/**
+ * Backup current global state for restoration
+ * Call this in beforeEach to capture state before test modifications
+ */
+export function backupGlobalState(): GlobalStateSnapshot {
+  return {
+    document: (global as any).document,
+    window: (global as any).window,
+    navigator: (global as any).navigator,
+    HTMLElement: (global as any).HTMLElement,
+    Element: (global as any).Element,
+    Node: (global as any).Node,
+    Event: (global as any).Event,
+    CustomEvent: (global as any).CustomEvent,
+    MouseEvent: (global as any).MouseEvent,
+    KeyboardEvent: (global as any).KeyboardEvent,
+    ResizeObserver: (global as any).ResizeObserver,
+  };
+}
+
+/**
+ * Restore global state from snapshot
+ * Call this in afterEach to restore original global state
+ */
+export function restoreGlobalState(snapshot: GlobalStateSnapshot): void {
+  (global as any).document = snapshot.document;
+  (global as any).window = snapshot.window;
+  (global as any).navigator = snapshot.navigator;
+  (global as any).HTMLElement = snapshot.HTMLElement;
+  (global as any).Element = snapshot.Element;
+  (global as any).Node = snapshot.Node;
+  (global as any).Event = snapshot.Event;
+  (global as any).CustomEvent = snapshot.CustomEvent;
+  (global as any).MouseEvent = snapshot.MouseEvent;
+  (global as any).KeyboardEvent = snapshot.KeyboardEvent;
+  (global as any).ResizeObserver = snapshot.ResizeObserver;
+}
+
+/**
+ * Helper function to reset all stubs in an object recursively
+ * Resets both call history and behavior
+ */
+function resetStubsRecursively(obj: any, depth: number = 0): void {
+  if (!obj || typeof obj !== 'object' || depth > 3) return;
+
+  Object.keys(obj).forEach(key => {
+    try {
+      const value = obj[key];
+      if (value && typeof value === 'function') {
+        // Reset stub history if it's a sinon stub
+        if (typeof value.resetHistory === 'function') {
+          value.resetHistory();
+        }
+        if (typeof value.reset === 'function') {
+          value.reset();
+        }
+      } else if (value && typeof value === 'object' && !Array.isArray(value)) {
+        // Recurse into nested objects
+        resetStubsRecursively(value, depth + 1);
+      }
+    } catch (e) {
+      // Ignore errors for individual stub resets
+    }
+  });
+}
+
+/**
  * テスト分離とクリーンアップのためのリセット関数
  * テスト間で状態が持ち越されることを防ぐ
+ *
+ * CRITICAL: This function now performs comprehensive cleanup to prevent test pollution
  */
 export function resetTestEnvironment(): void {
   // Clear all Sinon state safely
@@ -730,12 +888,23 @@ export function resetTestEnvironment(): void {
     console.debug('Sinon restore warning:', error);
   }
 
-  // Reset mockVscode stubs
+  // CRITICAL: Reset ALL mockVscode stubs to prevent call history accumulation
   try {
-    if (mockVscode && mockVscode.workspace && mockVscode.workspace.getConfiguration) {
-      if (typeof mockVscode.workspace.getConfiguration.reset === 'function') {
-        mockVscode.workspace.getConfiguration.reset();
-      }
+    if (mockVscode) {
+      // Reset workspace stubs
+      resetStubsRecursively(mockVscode.workspace);
+
+      // Reset window stubs
+      resetStubsRecursively(mockVscode.window);
+
+      // Reset commands stubs
+      resetStubsRecursively(mockVscode.commands);
+
+      // Reset Uri stubs
+      resetStubsRecursively(mockVscode.Uri);
+
+      // Reset env stubs
+      resetStubsRecursively(mockVscode.env);
     }
   } catch (error) {
     console.debug('MockVscode reset warning:', error);
@@ -779,8 +948,15 @@ export function setupCompleteTestEnvironment(htmlContent?: string): {
 /**
  * sinon サンドボックスとテスト環境のクリーンアップ
  * afterEach で呼び出してテスト間の状態リセットを行う
+ *
+ * CRITICAL: This function now restores Module.prototype.require and process.env
+ * to prevent test pollution between test files
  */
-export function cleanupTestEnvironment(sandbox?: sinon.SinonSandbox, dom?: JSDOM): void {
+export function cleanupTestEnvironment(
+  sandbox?: sinon.SinonSandbox,
+  dom?: JSDOM,
+  globalSnapshot?: GlobalStateSnapshot
+): void {
   // sinon スタブをリセット
   if (sandbox) {
     try {
@@ -800,6 +976,18 @@ export function cleanupTestEnvironment(sandbox?: sinon.SinonSandbox, dom?: JSDOM
       console.debug('JSDOM cleanup warning:', error);
     }
   }
+
+  // グローバル状態を復元（スナップショットがある場合）
+  if (globalSnapshot) {
+    try {
+      restoreGlobalState(globalSnapshot);
+    } catch (error) {
+      console.debug('Global state restore warning:', error);
+    }
+  }
+
+  // CRITICAL: Reset mockVscode stubs to prevent call history accumulation
+  resetTestEnvironment();
 
   // グローバル状態をクリア
   try {
@@ -821,15 +1009,145 @@ export function cleanupTestEnvironment(sandbox?: sinon.SinonSandbox, dom?: JSDOM
     console.debug('Config cleanup warning:', error);
   }
 
-  // グローバルオブジェクトの部分的クリーンアップ
-  try {
-    delete (global as any).window;
-    delete (global as any).document;
-    delete (global as any).navigator;
-  } catch (error) {
-    // Global cleanup may fail, this is OK
-    console.debug('Global cleanup warning:', error);
+  // グローバルオブジェクトの部分的クリーンアップ（スナップショットがない場合のみ）
+  if (!globalSnapshot) {
+    try {
+      delete (global as any).window;
+      delete (global as any).document;
+      delete (global as any).navigator;
+    } catch (error) {
+      // Global cleanup may fail, this is OK
+      console.debug('Global cleanup warning:', error);
+    }
   }
+}
+
+/**
+ * Full test environment teardown - restores Module.prototype.require
+ * Call this at the end of a test suite (in after()) to fully restore Node.js state
+ *
+ * CRITICAL: This prevents test pollution between test files
+ */
+export function teardownTestEnvironment(): void {
+  // Restore Module.prototype.require
+  if (originalModuleRequire && moduleRequireOverridden) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const Module = require('module');
+      Module.prototype.require = originalModuleRequire;
+      moduleRequireOverridden = false;
+    } catch (error) {
+      console.debug('Module.prototype.require restore warning:', error);
+    }
+  }
+
+  // Restore process.env
+  if (originalProcessEnv) {
+    try {
+      // Clear current env and restore original
+      Object.keys(process.env).forEach(key => {
+        if (!(key in originalProcessEnv!)) {
+          delete process.env[key];
+        }
+      });
+      Object.assign(process.env, originalProcessEnv);
+    } catch (error) {
+      console.debug('process.env restore warning:', error);
+    }
+  }
+
+  // Clear require.cache entries we added
+  try {
+    const modulesToClear = ['vscode', 'node-pty', '@homebridge/node-pty-prebuilt-multiarch'];
+    modulesToClear.forEach(moduleName => {
+      try {
+        const modulePath = require.resolve(moduleName, { paths: [process.cwd()] });
+        delete require.cache[modulePath];
+      } catch (e) {
+        // Module not found, skip
+      }
+    });
+  } catch (error) {
+    console.debug('require.cache cleanup warning:', error);
+  }
+}
+
+/**
+ * Create an isolated test context with automatic cleanup
+ * Use this for tests that need complete isolation
+ *
+ * @example
+ * describe('MyTest', () => {
+ *   const ctx = createIsolatedTestContext();
+ *
+ *   beforeEach(() => ctx.setup());
+ *   afterEach(() => ctx.cleanup());
+ *
+ *   it('should work', () => {
+ *     // Test code
+ *   });
+ * });
+ */
+export function createIsolatedTestContext(): {
+  setup: () => { dom: JSDOM; document: Document; window: any; sandbox: sinon.SinonSandbox };
+  cleanup: () => void;
+  getSandbox: () => sinon.SinonSandbox;
+} {
+  let dom: JSDOM | null = null;
+  let globalSnapshot: GlobalStateSnapshot | null = null;
+  let sandbox: sinon.SinonSandbox | null = null;
+
+  return {
+    setup: () => {
+      // Create sandbox first
+      sandbox = sinon.createSandbox();
+
+      // Backup global state
+      globalSnapshot = backupGlobalState();
+
+      // Setup JSDOM
+      const result = setupJSDOMEnvironment();
+      dom = result.dom;
+
+      return {
+        dom: result.dom,
+        document: result.document,
+        window: result.window,
+        sandbox,
+      };
+    },
+
+    cleanup: () => {
+      // Use try-finally to ensure all cleanup happens
+      try {
+        if (sandbox) {
+          sandbox.restore();
+        }
+      } finally {
+        try {
+          if (dom) {
+            dom.window.close();
+          }
+        } finally {
+          if (globalSnapshot) {
+            restoreGlobalState(globalSnapshot);
+          }
+        }
+      }
+
+      // Reset references
+      dom = null;
+      globalSnapshot = null;
+      sandbox = null;
+    },
+
+    getSandbox: () => {
+      if (!sandbox) {
+        throw new Error('Test context not set up. Call setup() first.');
+      }
+      return sandbox;
+    },
+  };
 }
 
 // Fix process.removeListener issue for Mocha
@@ -890,29 +1208,47 @@ export function setupTestEnvironmentSync(): void {
     // vscode module not found in require.resolve, will be handled by Module.prototype.require override
   }
 
-  // Override module loading for vscode and node-pty
-  const originalRequire = Module.prototype.require;
+  // Register mocks in require.cache where possible
+  const mockNodePtySync = {
+    spawn: () => ({
+      write: () => {},
+      resize: () => {},
+      kill: () => {},
+      dispose: () => {},
+    }),
+  };
 
+  // Register node-pty mock in cache
+  try {
+    const ptyPath = require.resolve('@homebridge/node-pty-prebuilt-multiarch', { paths: [process.cwd()] });
+    require.cache[ptyPath] = {
+      id: ptyPath,
+      filename: ptyPath,
+      loaded: true,
+      exports: mockNodePtySync,
+    } as NodeModule;
+  } catch (e) {
+    // Module not found, skip
+  }
+
+  // Minimal hook ONLY for 'vscode' module (which has no physical file to cache)
+  // CRITICAL: Store original require for restoration in teardownTestEnvironment
+  if (!moduleRequireOverridden) {
+    originalModuleRequire = Module.prototype.require;
+    moduleRequireOverridden = true;
+  }
+  const savedOriginalRequireSync = originalModuleRequire || Module.prototype.require;
   Module.prototype.require = function (id: string) {
     if (id === 'vscode') {
       return mockVscode;
     }
-    if (id === '@homebridge/node-pty-prebuilt-multiarch') {
-      return {
-        spawn: () => ({
-          write: () => {},
-          resize: () => {},
-          kill: () => {},
-          dispose: () => {},
-        }),
-      };
-    }
-    // Continue with other mocks...
-    return originalRequire.apply(this, arguments);
+    // All other modules pass through to original require (preserves nyc instrumentation)
+    // eslint-disable-next-line prefer-rest-params, @typescript-eslint/no-unsafe-return
+    return savedOriginalRequireSync.apply(this, arguments);
   };
 
   // Set up DOM environment
-  // setupJSDOMEnvironment(); // Temporarily disabled - tests don't need DOM yet
+  setupJSDOMEnvironment(); // Re-enabled - tests need DOM for UIController, WebView, etc.
   setupConsoleMocks(); // Re-enabled with pass-through implementation
 
   // Ensure process.cwd exists and is callable
@@ -930,6 +1266,22 @@ export function setupTestEnvironmentSync(): void {
     } catch (e) {
       (process as any).cwd = fallbackCwd;
     }
+  }
+
+  // Ensure process.memoryUsage exists for memory leak tests
+  if (!process.memoryUsage || typeof process.memoryUsage !== 'function') {
+    (process as any).memoryUsage = () => ({
+      heapUsed: 50 * 1024 * 1024, // 50MB
+      heapTotal: 100 * 1024 * 1024, // 100MB
+      external: 10 * 1024 * 1024, // 10MB
+      rss: 150 * 1024 * 1024, // 150MB
+      arrayBuffers: 5 * 1024 * 1024, // 5MB
+    });
+  }
+
+  // Ensure process.emit exists for EventEmitter compatibility
+  if (!process.emit || typeof process.emit !== 'function') {
+    (process as any).emit = () => false;
   }
 }
 

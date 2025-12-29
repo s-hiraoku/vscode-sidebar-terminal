@@ -17,44 +17,98 @@ declare const vscode: {
   setState(state: unknown): void;
 };
 
+/**
+ * Validation limits for settings
+ */
+const ValidationLimits = {
+  FONT_SIZE: { min: 8, max: 72 },
+  SCROLLBACK: { min: 0, max: 100000 },
+  MAX_TERMINALS: { min: 1, max: 10 },
+} as const;
+
+/**
+ * Allowed values for enumerated settings
+ */
+const AllowedValues = {
+  THEME: ['light', 'dark', 'auto'] as const,
+  MULTI_CURSOR_MODIFIER: ['alt', 'ctrl', 'cmd'] as const,
+  CURSOR_STYLE: ['block', 'underline', 'bar'] as const,
+  ACTIVE_BORDER_MODE: ['none', 'always', 'multipleOnly'] as const,
+  PANEL_LOCATION: ['auto', 'sidebar', 'panel'] as const,
+} as const;
+
+/**
+ * Validation helper functions
+ */
+const Validators = {
+  /**
+   * Validates a number is within a range, returns rounded value or default
+   */
+  numberInRange(
+    value: unknown,
+    limits: { min: number; max: number },
+    defaultValue: number
+  ): number {
+    if (typeof value === 'number' && value >= limits.min && value <= limits.max) {
+      return Math.round(value);
+    }
+    return defaultValue;
+  },
+
+  /**
+   * Validates a non-empty string, returns trimmed value or default
+   */
+  nonEmptyString(value: unknown, defaultValue: string): string {
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return value.trim();
+    }
+    return defaultValue;
+  },
+
+  /**
+   * Validates a string is in an allowed list, returns value or default
+   */
+  stringInList<T extends string>(
+    value: unknown,
+    allowedValues: readonly T[],
+    defaultValue: T
+  ): T {
+    if (typeof value === 'string' && allowedValues.includes(value as T)) {
+      return value as T;
+    }
+    return defaultValue;
+  },
+
+  /**
+   * Validates a boolean, returns value or default
+   */
+  boolean(value: unknown, defaultValue: boolean): boolean {
+    return typeof value === 'boolean' ? value : defaultValue;
+  },
+
+  /**
+   * Validates an optional string (can be empty)
+   */
+  optionalString(value: unknown, defaultValue: string): string {
+    return typeof value === 'string' ? value : defaultValue;
+  },
+
+  /**
+   * Validates a string array
+   */
+  stringArray(value: unknown, defaultValue: string[]): string[] {
+    if (Array.isArray(value)) {
+      return value.filter((item): item is string => typeof item === 'string');
+    }
+    return defaultValue;
+  },
+} as const;
+
 export class ConfigManager implements IConfigManager {
   // Font settings service reference (single source of truth)
   private fontSettingsService: FontSettingsService | null = null;
 
-  // Current settings cache
-  // Default theme to 'auto' to detect VS Code theme instead of hardcoding dark
-  private currentSettings: PartialTerminalSettings = {
-    fontSize: 14,
-    fontFamily: 'Consolas, "Courier New", monospace',
-    theme: 'auto',
-    cursorBlink: true,
-    scrollback: 2000, // Match package.json default
-    bellSound: false,
-    altClickMovesCursor: false,
-    multiCursorModifier: 'alt',
-    activeBorderMode: 'multipleOnly',
-  };
-
-  // Fallback font settings (used only when FontSettingsService is not available)
-  private fallbackFontSettings: WebViewFontSettings = {
-    fontSize: 14,
-    fontFamily: 'Consolas, "Courier New", monospace',
-    fontWeight: 'normal',
-    fontWeightBold: 'bold',
-    lineHeight: 1.0,
-    letterSpacing: 0,
-  };
-
-  /**
-   * Set FontSettingsService reference for delegation
-   * This enables single source of truth for font settings
-   */
-  public setFontSettingsService(service: FontSettingsService): void {
-    this.fontSettingsService = service;
-    log('⚙️ [CONFIG] FontSettingsService connected');
-  }
-
-  // Settings validation schema
+  // Settings validation schema (single source of truth for defaults)
   // Default theme to 'auto' to detect VS Code theme instead of hardcoding dark
   private readonly DEFAULTS: Required<PartialTerminalSettings> = {
     fontSize: 14,
@@ -62,7 +116,6 @@ export class ConfigManager implements IConfigManager {
     theme: 'auto',
     cursorBlink: true,
     enableCliAgentIntegration: true,
-
     // Terminal profiles (will be populated from VS Code settings)
     profilesWindows: {},
     profilesLinux: {},
@@ -95,7 +148,7 @@ export class ConfigManager implements IConfigManager {
     panelLocation: 'auto',
   };
 
-  // Font settings validation
+  // Font settings validation defaults
   private readonly FONT_DEFAULTS: Required<WebViewFontSettings> = {
     fontSize: 14,
     fontFamily: 'Consolas, "Courier New", monospace',
@@ -108,6 +161,27 @@ export class ConfigManager implements IConfigManager {
     drawBoldTextInBrightColors: true,
     minimumContrastRatio: 1,
   };
+
+  // Current settings cache (initialized from DEFAULTS)
+  private currentSettings: PartialTerminalSettings;
+
+  // Fallback font settings (initialized from FONT_DEFAULTS)
+  private fallbackFontSettings: WebViewFontSettings;
+
+  constructor() {
+    // Initialize from defaults to avoid duplication
+    this.currentSettings = { ...this.DEFAULTS };
+    this.fallbackFontSettings = { ...this.FONT_DEFAULTS };
+  }
+
+  /**
+   * Set FontSettingsService reference for delegation
+   * This enables single source of truth for font settings
+   */
+  public setFontSettingsService(service: FontSettingsService): void {
+    this.fontSettingsService = service;
+    log('⚙️ [CONFIG] FontSettingsService connected');
+  }
 
   /**
    * Load settings from VS Code state with fallbacks
@@ -300,157 +374,122 @@ export class ConfigManager implements IConfigManager {
    * Validate and normalize settings with fallbacks
    */
   private validateAndNormalizeSettings(settings: PartialTerminalSettings): PartialTerminalSettings {
-    const normalized: PartialTerminalSettings = {};
+    return {
+      // Numeric settings with range validation
+      fontSize: Validators.numberInRange(
+        settings.fontSize,
+        ValidationLimits.FONT_SIZE,
+        this.DEFAULTS.fontSize
+      ),
+      scrollback: Validators.numberInRange(
+        settings.scrollback,
+        ValidationLimits.SCROLLBACK,
+        this.DEFAULTS.scrollback
+      ),
+      maxTerminals: Validators.numberInRange(
+        settings.maxTerminals,
+        ValidationLimits.MAX_TERMINALS,
+        this.DEFAULTS.maxTerminals
+      ),
 
-    // Font size validation
-    if (
-      typeof settings.fontSize === 'number' &&
-      settings.fontSize >= 8 &&
-      settings.fontSize <= 72
-    ) {
-      normalized.fontSize = Math.round(settings.fontSize);
-    } else {
-      normalized.fontSize = this.DEFAULTS.fontSize;
-    }
+      // String settings requiring non-empty values
+      fontFamily: Validators.nonEmptyString(settings.fontFamily, this.DEFAULTS.fontFamily),
 
-    // Font family validation
-    if (typeof settings.fontFamily === 'string' && settings.fontFamily.trim().length > 0) {
-      normalized.fontFamily = settings.fontFamily.trim();
-    } else {
-      normalized.fontFamily = this.DEFAULTS.fontFamily;
-    }
+      // Enumerated string settings
+      theme: Validators.stringInList(settings.theme, AllowedValues.THEME, this.DEFAULTS.theme),
+      multiCursorModifier: Validators.stringInList(
+        settings.multiCursorModifier,
+        AllowedValues.MULTI_CURSOR_MODIFIER,
+        this.DEFAULTS.multiCursorModifier
+      ),
 
-    // Theme validation
-    if (typeof settings.theme === 'string' && ['light', 'dark', 'auto'].includes(settings.theme)) {
-      normalized.theme = settings.theme;
-    } else {
-      normalized.theme = this.DEFAULTS.theme;
-    }
+      // Boolean settings
+      cursorBlink: Validators.boolean(settings.cursorBlink, this.DEFAULTS.cursorBlink),
+      bellSound: Validators.boolean(settings.bellSound, this.DEFAULTS.bellSound),
+      altClickMovesCursor: Validators.boolean(
+        settings.altClickMovesCursor,
+        this.DEFAULTS.altClickMovesCursor
+      ),
+      enableCliAgentIntegration: Validators.boolean(
+        settings.enableCliAgentIntegration,
+        this.DEFAULTS.enableCliAgentIntegration
+      ),
 
-    // Boolean settings validation
-    normalized.cursorBlink =
-      typeof settings.cursorBlink === 'boolean' ? settings.cursorBlink : this.DEFAULTS.cursorBlink;
-    normalized.bellSound =
-      typeof settings.bellSound === 'boolean' ? settings.bellSound : this.DEFAULTS.bellSound;
-    normalized.altClickMovesCursor =
-      typeof settings.altClickMovesCursor === 'boolean'
-        ? settings.altClickMovesCursor
-        : this.DEFAULTS.altClickMovesCursor;
+      // Enumerated string settings (with restricted values)
+      activeBorderMode: Validators.stringInList(
+        settings.activeBorderMode,
+        AllowedValues.ACTIVE_BORDER_MODE,
+        this.DEFAULTS.activeBorderMode
+      ),
+      panelLocation: Validators.stringInList(
+        settings.panelLocation,
+        AllowedValues.PANEL_LOCATION,
+        this.DEFAULTS.panelLocation
+      ),
 
-    // Scrollback validation
-    if (
-      typeof settings.scrollback === 'number' &&
-      settings.scrollback >= 0 &&
-      settings.scrollback <= 100000
-    ) {
-      normalized.scrollback = Math.round(settings.scrollback);
-    } else {
-      normalized.scrollback = this.DEFAULTS.scrollback;
-    }
+      // Optional string settings (can be empty)
+      shell: Validators.optionalString(settings.shell, this.DEFAULTS.shell),
+      cwd: Validators.optionalString(settings.cwd, this.DEFAULTS.cwd),
+      defaultDirectory: Validators.optionalString(
+        settings.defaultDirectory,
+        this.DEFAULTS.defaultDirectory
+      ),
 
-    // Multi-cursor modifier validation
-    if (
-      typeof settings.multiCursorModifier === 'string' &&
-      ['alt', 'ctrl', 'cmd'].includes(settings.multiCursorModifier)
-    ) {
-      normalized.multiCursorModifier = settings.multiCursorModifier;
-    } else {
-      normalized.multiCursorModifier = this.DEFAULTS.multiCursorModifier;
-    }
+      // Array settings
+      shellArgs: Validators.stringArray(settings.shellArgs, this.DEFAULTS.shellArgs),
+      commandsToSkipShell: Validators.stringArray(
+        settings.commandsToSkipShell,
+        this.DEFAULTS.commandsToSkipShell
+      ),
 
-    // CLI Agent integration validation
-    normalized.enableCliAgentIntegration =
-      typeof settings.enableCliAgentIntegration === 'boolean'
-        ? settings.enableCliAgentIntegration
-        : this.DEFAULTS.enableCliAgentIntegration;
-    normalized.activeBorderMode =
-      typeof settings.activeBorderMode === 'string'
-        ? settings.activeBorderMode
-        : this.DEFAULTS.activeBorderMode;
+      // Additional boolean settings
+      dynamicSplitDirection: Validators.boolean(
+        settings.dynamicSplitDirection,
+        this.DEFAULTS.dynamicSplitDirection
+      ),
+      sendKeybindingsToShell: Validators.boolean(
+        settings.sendKeybindingsToShell,
+        this.DEFAULTS.sendKeybindingsToShell
+      ),
+      allowChords: Validators.boolean(settings.allowChords, this.DEFAULTS.allowChords),
+      allowMnemonics: Validators.boolean(settings.allowMnemonics, this.DEFAULTS.allowMnemonics),
 
-    // Shell validation
-    if (typeof settings.shell === 'string') {
-      normalized.shell = settings.shell;
-    } else {
-      normalized.shell = this.DEFAULTS.shell;
-    }
+      // Cursor object validation
+      cursor: this.validateCursorSettings(settings.cursor),
+    };
+  }
 
-    // Shell args validation
-    if (Array.isArray(settings.shellArgs)) {
-      normalized.shellArgs = settings.shellArgs.filter(
-        (arg): arg is string => typeof arg === 'string'
-      );
-    } else {
-      normalized.shellArgs = this.DEFAULTS.shellArgs;
-    }
-
-    // CWD validation
-    if (typeof settings.cwd === 'string') {
-      normalized.cwd = settings.cwd;
-    } else {
-      normalized.cwd = this.DEFAULTS.cwd;
-    }
-
-    // Default directory validation
-    if (typeof settings.defaultDirectory === 'string') {
-      normalized.defaultDirectory = settings.defaultDirectory;
-    } else {
-      normalized.defaultDirectory = this.DEFAULTS.defaultDirectory;
-    }
-
-    // Max terminals validation
-    if (
-      typeof settings.maxTerminals === 'number' &&
-      settings.maxTerminals >= 1 &&
-      settings.maxTerminals <= 10
-    ) {
-      normalized.maxTerminals = Math.round(settings.maxTerminals);
-    } else {
-      normalized.maxTerminals = this.DEFAULTS.maxTerminals;
-    }
-
-    // Cursor validation
-    if (settings.cursor && typeof settings.cursor === 'object') {
-      normalized.cursor = {
-        style: ['block', 'underline', 'bar'].includes(settings.cursor.style || '')
-          ? (settings.cursor.style as 'block' | 'underline' | 'bar')
-          : this.DEFAULTS.cursor.style,
-        blink:
-          typeof settings.cursor.blink === 'boolean'
-            ? settings.cursor.blink
-            : this.DEFAULTS.cursor.blink,
+  /**
+   * Validate cursor settings object
+   */
+  private validateCursorSettings(
+    cursor: PartialTerminalSettings['cursor']
+  ): { style: 'block' | 'underline' | 'bar'; blink: boolean } {
+    if (cursor && typeof cursor === 'object') {
+      return {
+        style: Validators.stringInList(
+          cursor.style,
+          AllowedValues.CURSOR_STYLE,
+          this.DEFAULTS.cursor.style
+        ),
+        blink: Validators.boolean(cursor.blink, this.DEFAULTS.cursor.blink),
       };
-    } else {
-      normalized.cursor = this.DEFAULTS.cursor;
     }
-
-    return normalized;
+    return this.DEFAULTS.cursor;
   }
 
   /**
    * Validate and normalize font settings
    */
   private validateAndNormalizeFontSettings(fontSettings: WebViewFontSettings): WebViewFontSettings {
-    const normalized: WebViewFontSettings = {
-      fontSize: this.FONT_DEFAULTS.fontSize,
-      fontFamily: this.FONT_DEFAULTS.fontFamily,
+    return {
+      fontSize: Validators.numberInRange(
+        fontSettings.fontSize,
+        ValidationLimits.FONT_SIZE,
+        this.FONT_DEFAULTS.fontSize
+      ),
+      fontFamily: Validators.nonEmptyString(fontSettings.fontFamily, this.FONT_DEFAULTS.fontFamily),
     };
-
-    // Font size validation
-    if (
-      typeof fontSettings.fontSize === 'number' &&
-      fontSettings.fontSize >= 8 &&
-      fontSettings.fontSize <= 72
-    ) {
-      normalized.fontSize = Math.round(fontSettings.fontSize);
-    }
-
-    // Font family validation
-    if (typeof fontSettings.fontFamily === 'string' && fontSettings.fontFamily.trim().length > 0) {
-      normalized.fontFamily = fontSettings.fontFamily.trim();
-    }
-
-    return normalized;
   }
 
   /**

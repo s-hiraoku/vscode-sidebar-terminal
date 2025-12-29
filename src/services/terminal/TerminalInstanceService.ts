@@ -45,13 +45,18 @@ export class TerminalInstanceService {
   private readonly _terminalNumberManager: TerminalNumberManager;
   private readonly _profileService: TerminalProfileService;
   private _shellIntegrationService: ShellIntegrationService | null = null;
+  private readonly _maxTerminals: number;
+
+  // Track terminals created by this service
+  private readonly _terminals = new Map<string, TerminalInstance>();
 
   // Track terminals being created to prevent races
   private readonly _terminalsBeingCreated = new Set<string>();
 
   constructor() {
     const config = getTerminalConfig();
-    this._terminalNumberManager = new TerminalNumberManager(config.maxTerminals);
+    this._maxTerminals = config.maxTerminals || 10;
+    this._terminalNumberManager = new TerminalNumberManager(this._maxTerminals);
     this._profileService = new TerminalProfileService();
 
     log('🔄 [InstanceService] Terminal instance service initialized');
@@ -69,16 +74,16 @@ export class TerminalInstanceService {
         throw new Error(`Terminal ${terminalId} is already being created`);
       }
 
+      // Check if we can create more terminals
+      if (!this._terminalNumberManager.canCreate(this._terminals)) {
+        throw new Error('Maximum number of terminals reached');
+      }
+
       this._terminalsBeingCreated.add(terminalId);
       log(`🚀 [InstanceService] Creating terminal ${terminalId} with options:`, options);
 
       // Get terminal number from manager
-      const terminals = new Map<string, TerminalInstance>(); // Empty for first terminal
-      const terminalNumber = this._terminalNumberManager.findAvailableNumber(terminals);
-      if (terminalNumber > 5) {
-        // Default max terminals
-        throw new Error('Maximum number of terminals reached');
-      }
+      const terminalNumber = this._terminalNumberManager.findAvailableNumber(this._terminals);
 
       // Resolve shell and working directory
       const terminalProfile = await this.resolveTerminalProfile(options.profileName);
@@ -115,14 +120,15 @@ export class TerminalInstanceService {
         shellArgs: shellArgs,
       };
 
+      // Add to tracked terminals
+      this._terminals.set(terminalId, terminal);
+
       // Initialize shell integration if available
       this.initializeShellIntegration(terminal, options.safeMode || false);
 
       log(`✅ [InstanceService] Terminal created successfully: ${terminalId} (${terminalName})`);
       return terminal;
     } catch (error) {
-      // No need to release number as allocation failed
-
       log(`❌ [InstanceService] Failed to create terminal ${terminalId}:`, error);
       throw error;
     } finally {
@@ -139,25 +145,19 @@ export class TerminalInstanceService {
 
       // Kill PTY process
       if (terminal.pty) {
-        terminal.pty.kill();
-
-        // Wait briefly for graceful shutdown
-        await new Promise((resolve) => setTimeout(resolve, 100));
-
-        // Force kill if still alive (IPty doesn't have killed property, so we just attempt force kill)
-        log(`🔨 [InstanceService] Force killing terminal process ${terminal.id}`);
-        terminal.pty.kill('SIGKILL');
+        try {
+          terminal.pty.kill();
+          // Wait briefly for graceful shutdown
+          await new Promise((resolve) => setTimeout(resolve, 50));
+          // Force kill
+          terminal.pty.kill('SIGKILL');
+        } catch (e) {
+          log(`⚠️ [InstanceService] Error killing PTY for ${terminal.id}:`, e);
+        }
       }
 
-      // Terminal number will be released by caller
-      if (terminal.number) {
-        log(`🔢 [InstanceService] Terminal number ${terminal.number} will be released by caller`);
-      }
-
-      // Clean up shell integration (method not available in current implementation)
-      if (this._shellIntegrationService) {
-        log(`🧹 [InstanceService] Shell integration cleanup skipped for terminal ${terminal.id}`);
-      }
+      // Remove from tracked terminals
+      this._terminals.delete(terminal.id);
 
       log(`✅ [InstanceService] Terminal ${terminal.id} disposed successfully`);
     } catch (error) {
@@ -206,7 +206,7 @@ export class TerminalInstanceService {
    * Check if a terminal is alive
    */
   isTerminalAlive(terminal: TerminalInstance): boolean {
-    return !!(terminal.pty && terminal.pty.pid > 0);
+    return this._terminals.has(terminal.id) && !!(terminal.pty && terminal.pty.pid > 0);
   }
 
   /**
@@ -218,11 +218,14 @@ export class TerminalInstanceService {
     usedNumbers: number[];
     terminalsBeingCreated: number;
   } {
-    const terminals = new Map<string, TerminalInstance>(); // Empty map for now
+    const usedNumbers = Array.from(this._terminals.values())
+      .map((t) => t.number)
+      .filter((n): n is number => typeof n === 'number');
+
     return {
-      maxTerminals: 5, // Default max terminals
-      availableNumbers: this._terminalNumberManager.getAvailableSlots(terminals),
-      usedNumbers: [], // Would need to track this externally
+      maxTerminals: this._maxTerminals,
+      availableNumbers: this._terminalNumberManager.getAvailableSlots(this._terminals),
+      usedNumbers,
       terminalsBeingCreated: this._terminalsBeingCreated.size,
     };
   }

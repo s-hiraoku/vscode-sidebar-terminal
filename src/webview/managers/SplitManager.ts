@@ -362,16 +362,74 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
   public redistributeSplitTerminals(newHeight: number): void {
     this.splitManagerLogger.info(`Redistributing split terminals with new height: ${newHeight}px`);
 
-    if (!this.isSplitMode || this.terminals.size <= 1) {
+    const terminalsWrapper = document.getElementById('terminals-wrapper');
+    const terminalBody = document.getElementById('terminal-body');
+
+    const wrapperTargets = terminalsWrapper
+      ? Array.from(
+          terminalsWrapper.querySelectorAll<HTMLElement>('[data-terminal-wrapper-id]')
+        )
+      : [];
+
+    const containerTargets = terminalsWrapper
+      ? Array.from(
+          terminalsWrapper.querySelectorAll<HTMLElement>('[data-terminal-container]')
+        ).filter((container) =>
+          container.style.display !== 'none' && !container.classList.contains('hidden-mode')
+        )
+      : Array.from(
+          (terminalBody ?? document.body).querySelectorAll<HTMLElement>('[data-terminal-container]')
+        ).filter(
+          (container) =>
+            container.style.display !== 'none' && !container.classList.contains('hidden-mode')
+        );
+
+    const targets = wrapperTargets.length > 0 ? wrapperTargets : containerTargets;
+    const targetCount = targets.length;
+
+    if (!this.isSplitMode && targetCount === 0) {
       return;
     }
 
-    // Equal distribution
-    const terminalHeight = Math.floor(newHeight / this.terminals.size);
+    if (targetCount <= 1) {
+      return;
+    }
 
-    this.terminalContainers.forEach((container) => {
-      container.style.height = `${terminalHeight}px`;
+    const baseHeight =
+      newHeight > 0 ? newHeight : terminalsWrapper?.clientHeight ?? terminalBody?.clientHeight ?? 0;
+    if (baseHeight <= 0) {
+      return;
+    }
+
+    const wrapperStyles = terminalsWrapper ? window.getComputedStyle(terminalsWrapper) : null;
+    const paddingTop = wrapperStyles ? parseFloat(wrapperStyles.paddingTop) || 0 : 0;
+    const paddingBottom = wrapperStyles ? parseFloat(wrapperStyles.paddingBottom) || 0 : 0;
+    const rowGapValue = wrapperStyles?.rowGap || wrapperStyles?.gap || '0px';
+    const rowGap = parseFloat(rowGapValue) || 0;
+
+    const availableHeight = Math.max(
+      0,
+      baseHeight - paddingTop - paddingBottom - rowGap * (targetCount - 1)
+    );
+    const terminalHeight = Math.floor(availableHeight / targetCount);
+
+    targets.forEach((target) => {
+      target.style.setProperty('flex', '0 0 auto', 'important');
+      target.style.setProperty('flex-basis', `${terminalHeight}px`, 'important');
+      target.style.setProperty('height', `${terminalHeight}px`, 'important');
+      target.style.minHeight = '0';
     });
+
+    if (wrapperTargets.length > 0) {
+      wrapperTargets.forEach((wrapper) => {
+        const area = wrapper.querySelector<HTMLElement>('[data-terminal-area-id]');
+        if (area) {
+          area.style.flex = '1 1 auto';
+          area.style.minHeight = '0';
+          area.style.height = '100%';
+        }
+      });
+    }
 
     // Refit all terminals
     this.refitAllTerminals();

@@ -178,6 +178,8 @@ export interface IManagerCoordinator {
     agentType: string | null
   ): void;
   ensureTerminalFocus(terminalId: string): void;
+  /** Force a full refit of all terminal instances (layout mode changes, etc.) */
+  refitAllTerminals?(): void;
 
   // Session restore flag management
   isRestoringSession?(): boolean;

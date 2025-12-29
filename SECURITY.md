@@ -118,12 +118,17 @@ element.innerHTML = `<div>${terminalOutput}</div>`; // XSS RISK!
 
 #### Remaining Work
 
-The following files still contain innerHTML for large fixed HTML templates:
-- `src/webview/components/ProfileSelector.ts` (uses _escapeHtml for sanitization)
-- `src/webview/components/TerminalTabList.ts`
-- `src/webview/components/SettingsPanel.ts`
-- `src/webview/managers/LightweightTerminalWebviewManager.ts`
-- `src/webview/managers/handlers/ShellIntegrationMessageHandler.ts`
+The following files still contain innerHTML for fixed HTML templates:
+
+| File | Occurrences | Risk Level |
+|------|-------------|------------|
+| `src/webview/components/ProfileSelector.ts` | 3 | Low (uses _escapeHtml) |
+| `src/webview/components/TerminalTabList.ts` | 3 | Low (fixed templates) |
+| `src/webview/utils/DOMUtils.ts` | 3 | Low (utility with warnings) |
+| `src/webview/components/SettingsPanel.ts` | 1 | Low (fixed template) |
+| `src/webview/managers/handlers/ShellIntegrationMessageHandler.ts` | 1 | Low (system info) |
+| `src/webview/services/terminal/TerminalScrollIndicatorService.ts` | 1 | Low (fixed template) |
+| `src/webview/managers/DebugPanelManager.ts` | 1 | Low (debug only) |
 
 These are lower priority as they use:
 1. Fixed HTML templates (no user input)
@@ -461,6 +466,10 @@ This security policy is reviewed and updated:
 
 ## Changelog
 
+### 2025-12-24
+- Updated innerHTML remaining files list (removed non-existent file, added missing files)
+- Changed "Version" to "Document Version" for clarity
+
 ### 2025-11-12
 - Comprehensive credential handling audit completed (Issue #230)
 - XSS vulnerability remediation completed for high/low risk areas (Issue #229)
@@ -473,5 +482,5 @@ This security policy is reviewed and updated:
 
 ---
 
-**Last Updated**: 2025-11-12
-**Version**: 3.0.0 (Merged Issue #229, #230, and #233 security enhancements)
+**Last Updated**: 2025-12-24
+**Document Version**: 3.1.0 (Updated innerHTML file list)

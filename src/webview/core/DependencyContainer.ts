@@ -6,6 +6,7 @@
  */
 
 import { webview as log } from '../../utils/logger';
+import { DEPENDENCY_CONTAINER_CONSTANTS } from '../constants/webview';
 import {
   IEnhancedBaseManager,
   ManagerDependencies,
@@ -452,11 +453,11 @@ export class DependencyContainer {
    * Estimate memory usage of the container
    */
   private estimateMemoryUsage(): number {
-    // Rough estimation
+    // Rough estimation using named constants
     return (
-      this.services.size * 200 + // Base service overhead
-      this.initializationOrder.length * 50 + // Order tracking
-      this.getResolvedServices().size * 100 // Instance overhead
+      this.services.size * DEPENDENCY_CONTAINER_CONSTANTS.SERVICE_MEMORY_OVERHEAD_BYTES +
+      this.initializationOrder.length * DEPENDENCY_CONTAINER_CONSTANTS.ORDER_TRACKING_OVERHEAD_BYTES +
+      this.getResolvedServices().size * DEPENDENCY_CONTAINER_CONSTANTS.INSTANCE_OVERHEAD_BYTES
     );
   }
 }

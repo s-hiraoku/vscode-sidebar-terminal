@@ -118,23 +118,23 @@ export class SplitLayoutService {
       `🎨 [LAYOUT] ✅ terminals-wrapper flexDirection applied: ${terminalsWrapper.style.flexDirection}`
     );
 
-    // 🔧 FIX: Before creating wrappers, ensure all containers are in terminals-wrapper
+    // 🔧 FIX: Rebuild split layout from scratch to avoid leftover fullscreen sizing.
+    // Collect containers first, then clear wrapper contents, then re-append in wrappers.
+    const containersToWrap: Array<{ id: string; container: HTMLElement }> = [];
     orderedTerminalIds.forEach((terminalId) => {
       const container = getContainer(terminalId);
-      if (container && container.parentElement !== terminalsWrapper) {
-        containerLogger.debug(
-          `🔧 [SPLIT-FIX] Moving ${terminalId} container to terminals-wrapper before split layout`
-        );
-        terminalsWrapper.appendChild(container);
+      if (container) {
+        containersToWrap.push({ id: terminalId, container });
+      } else {
+        containerLogger.error(`Container not found for terminal: ${terminalId}`);
       }
     });
 
-    orderedTerminalIds.forEach((terminalId, index) => {
-      const container = getContainer(terminalId);
-      if (!container) {
-        containerLogger.error(`Container not found for terminal: ${terminalId}`);
-        return;
-      }
+    terminalsWrapper.textContent = '';
+    this.splitWrapperCache.clear();
+    this.splitResizers.clear();
+
+    containersToWrap.forEach(({ id: terminalId, container }, index) => {
 
       containerLogger.debug(
         `🎨 [SPLIT-LAYOUT] Processing terminal ${index + 1}/${terminalCount}: ${terminalId}`

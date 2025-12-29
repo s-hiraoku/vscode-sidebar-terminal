@@ -12,6 +12,18 @@ import { IManagerCoordinator } from '../../interfaces/ManagerInterfaces';
 import { MessageCommand } from '../messageTypes';
 import { ManagerLogger } from '../../utils/ManagerLogger';
 
+// ============================================================================
+// Constants
+// ============================================================================
+
+/**
+ * Configuration constants for serialization operations
+ */
+const SerializationConfig = {
+  /** Default number of scrollback lines to serialize */
+  DEFAULT_SCROLLBACK_LINES: 1000,
+} as const;
+
 /**
  * Handler function type (supports both sync and async)
  */
@@ -345,7 +357,8 @@ export class SerializationMessageHandler implements IMessageHandler {
       const terminalIds = Array.isArray((msg as any).terminalIds)
         ? ((msg as any).terminalIds as string[])
         : [];
-      const scrollbackLines = (msg as any).scrollbackLines || 1000;
+      const scrollbackLines =
+        (msg as any).scrollbackLines || SerializationConfig.DEFAULT_SCROLLBACK_LINES;
       const serializationData: Record<string, string> = {};
       const requestId = (msg as any).requestId;
       const messageId = (msg as any).messageId;

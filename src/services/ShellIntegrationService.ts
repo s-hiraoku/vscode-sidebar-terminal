@@ -103,9 +103,9 @@ export class ShellIntegrationService {
 
       // CWD detection patterns
       this.cwdDetectionPatterns = [
-        /^cd\s+(.+)$/, // cd command
-        /^pushd\s+(.+)$/, // pushd command
-        /^z\s+(.+)$/, // zoxide
+        /^cd\s+(.+)\s*$/, // cd command
+        /^pushd\s+(.+)\s*$/, // pushd command
+        /^z\s+(.+)\s*$/, // zoxide
         /\x1b\]633;P;Cwd=([^\x07]+)\x07/, // VS Code OSC sequence
       ];
     } catch (error) {
@@ -136,11 +136,14 @@ export class ShellIntegrationService {
       this.handleCommandStart(state);
     }
 
-    if (data.includes(this.OSC_SEQUENCES.COMMAND_EXECUTED)) {
+    // Check for sequences that might have arguments (check prefix without terminator)
+    const cmdExecutedPrefix = this.OSC_SEQUENCES.COMMAND_EXECUTED.replace('\x07', '');
+    if (data.includes(cmdExecutedPrefix)) {
       this.handleCommandExecuted(state, data);
     }
 
-    if (data.includes(this.OSC_SEQUENCES.COMMAND_FINISHED)) {
+    const cmdFinishedPrefix = this.OSC_SEQUENCES.COMMAND_FINISHED.replace('\x07', '');
+    if (data.includes(cmdFinishedPrefix)) {
       this.handleCommandFinished(state, data);
     }
 

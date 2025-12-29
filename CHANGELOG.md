@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.185] - 2025-12-23
+
+### Fixed
+
+- **Split Terminal Height Balance**: Automatically rebalance terminal heights when switching display modes
+  - Fixes issue where split terminals had uneven heights after mode changes
+  - Ensures equal distribution of space between stacked terminals
+
+- **Tab Active State Styling**: Update tab inline styles when active state changes
+  - Fixes visual bug where clicking tabs didn't update their appearance
+  - Inline styles now properly reflect active/inactive state with correct theme colors
+
+- **Terminal Fit Dimensions**: Account for scrollbar width in terminal fit calculations
+  - Prevents horizontal overflow and clipping issues
+  - Improves terminal rendering accuracy in split view mode
+
 ## [0.1.184] - 2025-12-23
 
 ### Fixed
