@@ -75,7 +75,9 @@ describe('TerminalLinkResolver', () => {
 
     it('should normalize separators', () => {
       const result = resolver.normalizeLinkPath('a\\b\\c');
-      expect(result).not.toContain('\\');
+      // On Windows, path.sep is '\', on POSIX it's '/'
+      // The implementation converts '\' to path.sep for cross-platform compatibility
+      expect(result).toBe(`a${path.sep}b${path.sep}c`);
     });
   });
 
