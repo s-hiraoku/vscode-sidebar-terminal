@@ -14,6 +14,28 @@ import { TerminalConfig, TerminalState } from '../../types/shared';
 import { SPLIT_CONSTANTS } from '../constants/webview';
 import { TerminalInstance } from '../interfaces/ManagerInterfaces';
 
+// ============================================================================
+// Constants
+// ============================================================================
+
+/**
+ * Timing constants for terminal operations
+ */
+const OperationTimings = {
+  /** Delay before saving session after creation/deletion (ms) */
+  SESSION_SAVE_DELAY_MS: 100,
+  /** Delay before focusing terminal after creation (ms) */
+  FOCUS_DELAY_MS: 25,
+  /** Retry delay when creation is blocked (ms) */
+  CREATION_RETRY_DELAY_MS: 500,
+  /** Timeout for queued creation requests (ms) */
+  QUEUE_TIMEOUT_MS: 10000,
+  /** Timeout for deletion tracking (ms) */
+  DELETION_TRACKING_TIMEOUT_MS: 5000,
+  /** Fallback max terminals when not specified */
+  FALLBACK_MAX_TERMINALS: 5,
+} as const;
+
 /**
  * ターミナル作成リクエスト
  */
@@ -94,7 +116,10 @@ export class TerminalOperationsCoordinator {
    * ターミナル作成が可能か確認
    */
   public canCreateTerminal(): boolean {
-    const maxTerminals = this.currentTerminalState?.maxTerminals ?? SPLIT_CONSTANTS.MAX_TERMINALS ?? 5;
+    const maxTerminals =
+      this.currentTerminalState?.maxTerminals ??
+      SPLIT_CONSTANTS.MAX_TERMINALS ??
+      OperationTimings.FALLBACK_MAX_TERMINALS;
     const localCount = this.deps.getTerminalCount();
     const pending = this.pendingTerminalCreations.size;
 
@@ -153,7 +178,10 @@ export class TerminalOperationsCoordinator {
       // 作成可能チェック
       if (!this.canCreateTerminal() && requestSource !== 'extension') {
         const localCount = this.deps.getTerminalCount();
-        const maxCount = this.currentTerminalState?.maxTerminals ?? SPLIT_CONSTANTS.MAX_TERMINALS ?? 5;
+        const maxCount =
+          this.currentTerminalState?.maxTerminals ??
+          SPLIT_CONSTANTS.MAX_TERMINALS ??
+          OperationTimings.FALLBACK_MAX_TERMINALS;
         log(`❌ Terminal creation blocked (local=${localCount}, max=${maxCount})`);
         this.deps.showWarning(`Terminal limit reached (${localCount}/${maxCount})`);
         return null;
@@ -187,7 +215,7 @@ export class TerminalOperationsCoordinator {
               log(`💾 Session saved after terminal ${terminalId} creation`);
             }
           });
-        }, 100);
+        }, OperationTimings.SESSION_SAVE_DELAY_MS);
 
         // アクティブ設定とボーダー更新
         this.deps.setActiveTerminalId(terminalId);
@@ -196,7 +224,7 @@ export class TerminalOperationsCoordinator {
         // フォーカス
         setTimeout(() => {
           this.deps.focusTerminal(terminalId);
-        }, 25);
+        }, OperationTimings.FOCUS_DELAY_MS);
 
         // Extension にリクエスト送信
         if (requestSource === 'webview') {
@@ -247,11 +275,11 @@ export class TerminalOperationsCoordinator {
       // 削除待機中の場合はリクエストを遅延
       if (this.deletionTracker.size > 0) {
         log('⏳ [SAFE-CREATE] Deletion in progress, waiting before creation request...');
-        // 500ms後に再試行
+        // 作成再試行
         return new Promise((resolve) => {
           setTimeout(() => {
             this.createTerminalSafely(terminalName).then(resolve);
-          }, 500);
+          }, OperationTimings.CREATION_RETRY_DELAY_MS);
         });
       }
 
@@ -296,7 +324,7 @@ export class TerminalOperationsCoordinator {
           this.pendingCreationRequests.splice(index, 1);
           reject(new Error('Terminal creation request timed out'));
         }
-      }, 10000);
+      }, OperationTimings.QUEUE_TIMEOUT_MS);
     });
   }
 
@@ -328,7 +356,10 @@ export class TerminalOperationsCoordinator {
     } else {
       log(`❌ Cannot create terminal yet, re-queueing request`);
       this.pendingCreationRequests.unshift(request);
-      setTimeout(() => this.processPendingCreationRequests(), 500);
+      setTimeout(
+        () => this.processPendingCreationRequests(),
+        OperationTimings.CREATION_RETRY_DELAY_MS
+      );
     }
   }
 
@@ -355,7 +386,7 @@ export class TerminalOperationsCoordinator {
           log(`✅ Session updated after removal`);
         }
       });
-    }, 100);
+    }, OperationTimings.SESSION_SAVE_DELAY_MS);
 
     return removed;
   }
@@ -423,7 +454,7 @@ export class TerminalOperationsCoordinator {
 
     const timeout = setTimeout(() => {
       this.clearTerminalDeletionTracking(terminalId);
-    }, 5000);
+    }, OperationTimings.DELETION_TRACKING_TIMEOUT_MS);
 
     this.deletionTimeouts.set(terminalId, timeout);
     log(`🎯 Started tracking deletion for: ${terminalId}`);
