@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2025-12-29
+
+### Breaking Changes
+
+- **xterm.js v6 Upgrade**: Updated @xterm/xterm to v6 for improved performance and features
+  - New addon system and improved rendering pipeline
+  - Breaking: Custom addons may need updates for v6 compatibility
+  - See [xterm.js v6 migration guide](https://xtermjs.org/docs/migration/) for details
+
+### Added
+
+- **Open VSX Registry Support**: Extension now publishes to Open VSX Registry for wider IDE compatibility
+  - Supports VS Codium, Gitpod, Eclipse Theia, and other VS Code-compatible editors
+  - Automated publishing via GitHub Actions release workflow
+  - Dual publishing to both VS Code Marketplace and Open VSX Registry
+
+### Fixed
+
+- **Webview Crash Resolution**: Fixed webview crash caused by undefined environment variable access
+  - Added DefinePlugin entries for CI, BUILD_ARTIFACTSTAGINGDIRECTORY, SNAP, SNAP_REVISION, VSCODE_NLS_CONFIG
+  - Ensures webview bundle runs correctly in all environments
+
+- **Non-Public API Dependency Removed**: Removed usage of vscode.workspace.onWillSaveState API
+  - Session persistence now relies on deactivate() function and TerminalAutoSaveService
+  - Eliminates console warnings during extension activation
+  - Uses only documented public VS Code APIs
+
 ## [0.1.185] - 2025-12-23
 
 ### Fixed
