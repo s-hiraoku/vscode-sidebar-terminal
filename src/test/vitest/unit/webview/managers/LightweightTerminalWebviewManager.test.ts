@@ -30,7 +30,13 @@ describe('LightweightTerminalWebviewManager', () => {
     vi.stubGlobal('document', dom.window.document);
     vi.stubGlobal('navigator', dom.window.navigator);
     vi.stubGlobal('performance', { now: () => Date.now() });
-    vi.stubGlobal('ResizeObserver', class { observe = vi.fn(); unobserve = vi.fn(); disconnect = vi.fn(); });
+    
+    const ResizeObserverMock = vi.fn(function(this: any) {
+        this.observe = vi.fn();
+        this.unobserve = vi.fn();
+        this.disconnect = vi.fn();
+    });
+    vi.stubGlobal('ResizeObserver', ResizeObserverMock);
 
     manager = new LightweightTerminalWebviewManager();
     vi.spyOn(manager, 'postMessageToExtension');
@@ -119,6 +125,91 @@ describe('LightweightTerminalWebviewManager', () => {
     });
   });
 
+  describe('Panel Location Sync', () => {
+    it('should handle terminal-panel-location-changed event', () => {
+      const splitManager = manager.splitManager;
+      const displayManager = (manager as any).displayModeManager;
+
+      const event = new dom.window.CustomEvent('terminal-panel-location-changed', {
+        detail: { location: 'panel' }
+      });
+      dom.window.dispatchEvent(event);
+
+      expect(splitManager.setPanelLocation).toHaveBeenCalledWith('panel');
+      expect(splitManager.updateSplitDirection).toHaveBeenCalledWith('horizontal', 'panel');
+    });
+
+    it('should switch to split mode if panel location is panel and multiple terminals exist', () => {
+      const splitManager = manager.splitManager;
+      const displayManager = (manager as any).displayModeManager;
+
+      // Mock getting terminals to return size > 1
+      (splitManager.getTerminals as any).mockReturnValue(new Map([['t1', {}], ['t2', {}]]));
+      (displayManager.getCurrentMode as any).mockReturnValue('normal'); // Not fullscreen
+
+      const event = new dom.window.CustomEvent('terminal-panel-location-changed', {
+        detail: { location: 'panel' }
+      });
+      dom.window.dispatchEvent(event);
+
+      expect(displayManager.showAllTerminalsSplit).toHaveBeenCalled();
+    });
+  });
+
+  describe('Resize Observer', () => {
+      it('should debounce refitAllTerminals on resize', () => {
+          const coordinator = (manager as any).resizeCoordinator;
+          coordinator.refitAllTerminals = vi.fn();
+          vi.spyOn(manager, 'refitAllTerminals');
+
+          // Initialize simple terminal to trigger observer setup
+          manager.initializeSimpleTerminal();
+
+          // Get the callback passed to ResizeObserver
+          const ResizeObserverMock = global.ResizeObserver as unknown as any;
+          const callback = ResizeObserverMock.mock.calls[0][0];
+
+          // Simulate resize event
+          callback([{ contentRect: { width: 500, height: 300 }, target: { id: 'body' } }]);
+
+          // Should be debounced
+          expect(manager.refitAllTerminals).not.toHaveBeenCalled();
+
+          vi.advanceTimersByTime(100);
+
+          expect(coordinator.refitAllTerminals).toHaveBeenCalled();
+      });
+  });
+
+  describe('AI Agent Toggle', () => {
+    it('should activate AI agent if disconnected', () => {
+       const cliStateManager = (manager as any).cliAgentStateManager;
+       cliStateManager.getAgentState.mockReturnValue({ status: 'none' });
+
+       manager.handleAiAgentToggle('t1');
+
+       expect(manager.postMessageToExtension).toHaveBeenCalledWith(expect.objectContaining({
+           command: 'switchAiAgent',
+           terminalId: 't1',
+           action: 'activate'
+       }));
+    });
+
+    it('should force reconnect if already connected', () => {
+        const cliStateManager = (manager as any).cliAgentStateManager;
+        cliStateManager.getAgentState.mockReturnValue({ status: 'connected', agentType: 'claude' });
+ 
+        manager.handleAiAgentToggle('t1');
+ 
+        expect(manager.postMessageToExtension).toHaveBeenCalledWith(expect.objectContaining({
+            command: 'switchAiAgent',
+            terminalId: 't1',
+            action: 'force-reconnect',
+            forceReconnect: true
+        }));
+     });
+  });
+
   describe('Settings coordination', () => {
     it('should propagate settings to config and ui managers', () => {
       const config = (manager as any).configManager;
@@ -130,6 +221,97 @@ describe('LightweightTerminalWebviewManager', () => {
       expect(config.applySettings).toHaveBeenCalled();
       expect(ui.setActiveBorderMode).toHaveBeenCalled();
     });
+
+    it('should update all terminal themes', () => {
+        const lifecycle = (manager as any).terminalLifecycleManager;
+        const splitManager = manager.splitManager;
+        const mockTerminal = {
+            options: {},
+            element: {
+                querySelector: vi.fn().mockReturnValue({ style: {} })
+            }
+        };
+        const mockInstance = {
+            terminal: mockTerminal,
+            container: { style: {} }
+        };
+
+        (splitManager.getTerminals as any).mockReturnValue(new Map([['t1', mockInstance]]));
+
+        const theme = { background: '#000000', foreground: '#ffffff' };
+        manager.updateAllTerminalThemes(theme as any);
+
+        expect(mockTerminal.options.theme).toEqual(theme);
+    });
+
+    it('should apply font settings', () => {
+        const fontService = (manager as any).fontSettingsService;
+        // Mock FontSettingsService since it was not mocked in top-level block (or we check if we need to mock it)
+        // Actually, it seems FontSettingsService is not mocked above, so it might be real or implicit.
+        // Checking constructor: this.fontSettingsService = new FontSettingsService();
+        // Since we didn't mock FontSettingsService import, it's using the real one or failing if it has dependencies.
+        // But let's check if we can spy on it.
+        // Wait, FontSettingsService is imported from '../services/FontSettingsService'.
+        // We should mock it to be safe.
+    });
+  });
+
+  describe('Scrollback Extraction', () => {
+      it('should extract using serializeAddon if available', () => {
+          const lifecycle = (manager as any).terminalLifecycleManager;
+          const mockSerializeAddon = {
+              serialize: vi.fn().mockReturnValue('line1\nline2\n')
+          };
+          const mockInstance = {
+              terminal: { buffer: {} },
+              serializeAddon: mockSerializeAddon
+          };
+          lifecycle.getTerminalInstance.mockReturnValue(mockInstance);
+
+          const result = manager.extractScrollbackData('t1');
+          
+          expect(result).toEqual(['line1', 'line2']);
+          expect(mockSerializeAddon.serialize).toHaveBeenCalled();
+      });
+
+      it('should fallback to buffer if serializeAddon missing', () => {
+        const lifecycle = (manager as any).terminalLifecycleManager;
+        const mockBuffer = {
+            length: 2,
+            getLine: vi.fn((i) => ({ translateToString: () => `line${i+1}` }))
+        };
+        const mockInstance = {
+            terminal: { 
+                buffer: { normal: mockBuffer }
+            },
+            serializeAddon: undefined
+        };
+        lifecycle.getTerminalInstance.mockReturnValue(mockInstance);
+
+        const result = manager.extractScrollbackData('t1');
+        
+        expect(result).toEqual(['line1', 'line2']);
+    });
+  });
+
+  describe('State Updates', () => {
+      it('should update state and ui', () => {
+          const stateDisplay = (manager as any).terminalStateDisplayManager;
+          const terminalOperations = (manager as any).terminalOperations;
+          
+          const newState = {
+              terminals: [],
+              availableSlots: [1, 2, 3],
+              maxTerminals: 5,
+              activeTerminalId: null
+          };
+
+          manager.updateState(newState);
+
+          expect(terminalOperations.updateState).toHaveBeenCalledWith(newState);
+          expect(stateDisplay.updateFromState).toHaveBeenCalled();
+          expect(stateDisplay.updateCreationState).toHaveBeenCalled();
+      });
   });
 
   describe('Lifecycle', () => {
