@@ -173,6 +173,11 @@ const webviewConfig = {
   plugins: [
     new webpack.DefinePlugin({
       'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
+      'process.env.CI': JSON.stringify(process.env.CI || ''),
+      'process.env.BUILD_ARTIFACTSTAGINGDIRECTORY': JSON.stringify(process.env.BUILD_ARTIFACTSTAGINGDIRECTORY || ''),
+      'process.env.SNAP': JSON.stringify(''),
+      'process.env.SNAP_REVISION': JSON.stringify(''),
+      'process.env.VSCODE_NLS_CONFIG': JSON.stringify(''),
     }),
     new webpack.ProvidePlugin({
       process: 'process/browser',
