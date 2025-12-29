@@ -2,7 +2,8 @@
  * Feedback utilities Unit Tests
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import * as vscode from 'vscode';
 
 import {
   FeedbackManager,

@@ -2,7 +2,7 @@
  * TerminalOperationsCoordinator Unit Tests
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { TerminalOperationsCoordinator } from '../../../../../webview/coordinators/TerminalOperationsCoordinator';
 
 // Mock logger
@@ -54,7 +54,7 @@ describe('TerminalOperationsCoordinator', () => {
       mockDeps.canCreateTerminal = () => true;
       mockDeps.getTerminalCount.mockReturnValue(0);
       
-      const _result = await coordinator.createTerminal('t-new', 'New Terminal');
+      const result = await coordinator.createTerminal('t-new', 'New Terminal');
       
       expect(result).toBeTruthy();
       expect(mockDeps.createTerminalInstance).toHaveBeenCalled();
@@ -63,7 +63,7 @@ describe('TerminalOperationsCoordinator', () => {
 
     it('should prevent duplicate creations', async () => {
       coordinator.markTerminalCreationPending('t1');
-      const _result = await coordinator.createTerminal('t1', 'Duplicate');
+      await coordinator.createTerminal('t1', 'Duplicate');
       
       expect(mockDeps.createTerminalInstance).not.toHaveBeenCalled();
     });
@@ -71,7 +71,7 @@ describe('TerminalOperationsCoordinator', () => {
     it('should block creation if limit reached', async () => {
       mockDeps.getTerminalCount.mockReturnValue(5);
       
-      const _result = await coordinator.createTerminal('t-limit', 'Limit Test');
+      const result = await coordinator.createTerminal('t-limit', 'Limit Test');
       
       expect(result).toBeNull();
       expect(mockDeps.showWarning).toHaveBeenCalled();
@@ -83,7 +83,7 @@ describe('TerminalOperationsCoordinator', () => {
       mockDeps.getTerminalStats.mockReturnValue({ totalTerminals: 1 });
       mockDeps.getTerminalInstance.mockReturnValue({ terminal: {} });
       
-      const _result = await coordinator.deleteTerminalSafely('t1');
+      const result = await coordinator.deleteTerminalSafely('t1');
       
       expect(result).toBe(false);
       expect(mockDeps.showWarning).toHaveBeenCalled();
@@ -93,7 +93,7 @@ describe('TerminalOperationsCoordinator', () => {
       mockDeps.getTerminalStats.mockReturnValue({ totalTerminals: 2 });
       mockDeps.getTerminalInstance.mockReturnValue({});
       
-      const _result = await coordinator.deleteTerminalSafely('t1');
+      const result = await coordinator.deleteTerminalSafely('t1');
       
       expect(result).toBe(true);
       expect(mockDeps.postMessageToExtension).toHaveBeenCalledWith(expect.objectContaining({
@@ -105,7 +105,7 @@ describe('TerminalOperationsCoordinator', () => {
 
   describe('Queueing', () => {
     it('should queue and process creation requests', async () => {
-      const _promise = coordinator.queueTerminalCreation('Queued');
+      coordinator.queueTerminalCreation('Queued');
       expect(coordinator.getPendingCreationsCount()).toBe(1);
       
       // Assume limit reached, then state update clears it

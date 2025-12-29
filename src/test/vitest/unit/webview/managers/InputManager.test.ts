@@ -257,21 +257,20 @@ describe('InputManager', () => {
       vi.spyOn(event, 'preventDefault');
       vi.spyOn(event, 'stopPropagation');
 
+      const sendInputSpy = mockCoordinator.getMessageManager().sendInput;
+
       const result = manager.handleSpecialKeys(event, 'terminal-1', mockCoordinator);
 
       expect(result).toBe(true);
       expect(event.preventDefault).toHaveBeenCalled();
-      // Should send newline via queueInputData -> flushPendingInput -> postMessageToExtension
+      // Should send newline via queueInputData -> flushPendingInput -> sendInput
       vi.advanceTimersByTime(0);
-      expect(mockCoordinator.postMessageToExtension).toHaveBeenCalledWith(expect.objectContaining({
-        command: 'input',
-        data: '\n'
-      }));
+      expect(sendInputSpy).toHaveBeenCalledWith('\n', 'terminal-1');
     });
 
     it('should block special keys during IME composition', () => {
-      // Simulate IME composition active via internal state
-      (manager as any).stateManager.updateIMEState({ isActive: true });
+      // Mock isIMEComposing to return true for this test
+      (manager as any).imeHandler.isIMEComposing.mockReturnValue(true);
 
       const event = new dom.window.KeyboardEvent('keydown', {
         ctrlKey: true,
@@ -288,6 +287,7 @@ describe('InputManager', () => {
   describe('Input Queuing', () => {
     it('should queue and flush input via xterm handler', () => {
       const container = dom.window.document.createElement('div');
+      const sendInputSpy = mockCoordinator.getMessageManager().sendInput;
 
       manager.addXtermClickHandler(mockTerminal, 'terminal-1', container, mockCoordinator);
 
@@ -296,19 +296,16 @@ describe('InputManager', () => {
       onKeyHandler({ key: 'a', domEvent: { key: 'a' } });
 
       // Should be queued, not sent immediately
-      expect(mockCoordinator.postMessageToExtension).not.toHaveBeenCalled();
+      expect(sendInputSpy).not.toHaveBeenCalled();
 
       vi.advanceTimersByTime(0); // Flush queue
 
-      expect(mockCoordinator.postMessageToExtension).toHaveBeenCalledWith(expect.objectContaining({
-        command: 'input',
-        data: 'a',
-        terminalId: 'terminal-1'
-      }));
+      expect(sendInputSpy).toHaveBeenCalledWith('a', 'terminal-1');
     });
 
     it('should flush immediate keys directly', () => {
       const container = dom.window.document.createElement('div');
+      const sendInputSpy = mockCoordinator.getMessageManager().sendInput;
 
       manager.addXtermClickHandler(mockTerminal, 'terminal-1', container, mockCoordinator);
 
@@ -316,11 +313,7 @@ describe('InputManager', () => {
       // Enter is immediate
       onKeyHandler({ key: '\r', domEvent: { key: 'Enter' } });
 
-      expect(mockCoordinator.postMessageToExtension).toHaveBeenCalledWith(expect.objectContaining({
-        command: 'input',
-        data: '\r',
-        terminalId: 'terminal-1'
-      }));
+      expect(sendInputSpy).toHaveBeenCalledWith('\r', 'terminal-1');
     });
   });
 
