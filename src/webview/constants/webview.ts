@@ -160,3 +160,12 @@ export const HEADER_MANAGER_CONSTANTS = {
   /** Terminal count threshold for warning color (high usage) */
   TERMINAL_COUNT_WARNING_THRESHOLD: 5,
 } as const;
+
+/**
+ * Session Restore Manager 定数
+ * セッション復元に関するタイミング設定
+ */
+export const SESSION_RESTORE_CONSTANTS = {
+  /** Wait delay after terminal creation before proceeding with restoration (ms) */
+  TERMINAL_CREATION_WAIT_MS: 100,
+} as const;
