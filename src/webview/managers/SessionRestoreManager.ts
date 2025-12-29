@@ -13,6 +13,7 @@
 import { webview as log } from '../../utils/logger';
 import { TerminalCreationService } from '../services/TerminalCreationService';
 import { TerminalInstance } from '../interfaces/ManagerInterfaces';
+import { SESSION_RESTORE_CONSTANTS } from '../constants/webview';
 
 export interface SessionData {
   terminalId: string;
@@ -117,7 +118,9 @@ export class SessionRestoreManager {
         }
 
         // Wait for terminal to be fully created
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        await new Promise((resolve) =>
+          setTimeout(resolve, SESSION_RESTORE_CONSTANTS.TERMINAL_CREATION_WAIT_MS)
+        );
         terminalInstance = this.callbacks.getTerminalInstance(terminalId);
       }
 

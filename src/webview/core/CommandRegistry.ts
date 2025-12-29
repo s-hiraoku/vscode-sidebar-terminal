@@ -33,6 +33,7 @@
  */
 
 import { webview as log } from '../../utils/logger';
+import { COMMAND_REGISTRY_CONSTANTS } from '../constants/webview';
 
 /**
  * Message structure that commands receive
@@ -353,7 +354,7 @@ export function createLoggingMiddleware(
  * Create common middleware for performance tracking
  */
 export function createPerformanceMiddleware(
-  threshold: number = 100
+  threshold: number = COMMAND_REGISTRY_CONSTANTS.SLOW_COMMAND_THRESHOLD_MS
 ): CommandMiddleware {
   return async (message, context, next) => {
     const startTime = performance.now();

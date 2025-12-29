@@ -59,7 +59,7 @@ export class InputEventService {
   private readonly eventRegistry = new EventHandlerRegistry();
 
   // Debounce timers management
-  private debounceTimers = new Map<string, number>();
+  private debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
   // Registered events tracking
   private registeredEvents = new Map<string, RegisteredEvent>();
@@ -221,12 +221,13 @@ export class InputEventService {
     const debounceKey = `${id}-debounce`;
 
     // Clear existing timer
-    if (this.debounceTimers.has(debounceKey)) {
-      clearTimeout(this.debounceTimers.get(debounceKey)!);
+    const existingTimer = this.debounceTimers.get(debounceKey);
+    if (existingTimer !== undefined) {
+      clearTimeout(existingTimer);
     }
 
     // Set new timer
-    const timer = window.setTimeout(() => {
+    const timer = setTimeout(() => {
       try {
         handler(event);
         this.metrics.totalDebounced++;

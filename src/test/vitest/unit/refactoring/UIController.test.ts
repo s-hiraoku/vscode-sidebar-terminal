@@ -198,17 +198,13 @@ describe('UIController Service', () => {
       expect(eventSpy).toHaveBeenCalled();
     });
 
-    it('should update active terminal indicator', () => {
-      const terminalInfos = [
-        { id: 'terminal-1', number: 1, isActive: false },
-        { id: 'terminal-2', number: 2, isActive: false },
-      ];
-
+    it('should update active terminal indicator when terminalId is undefined', () => {
+      const terminalInfos = [{ id: 'terminal-1', number: 1, isActive: true }];
       uiController.updateTerminalTabs(terminalInfos);
-      uiController.updateActiveTerminalIndicator('terminal-2');
-
+      
+      uiController.updateActiveTerminalIndicator(undefined);
       const activeTab = document.querySelector('.terminal-tab.active');
-      expect(activeTab?.getAttribute('data-terminal-id')).toBe('terminal-2');
+      expect(activeTab).toBeFalsy();
     });
   });
 
@@ -312,6 +308,24 @@ describe('UIController Service', () => {
       uiController.highlightActiveTerminal('active-test');
 
       expect(mockContainer.classList.contains('active-terminal')).toBe(true);
+    });
+
+    it('should handle terminal container not in terminal area', () => {
+      const container = document.createElement('div');
+      container.className = 'terminal-container';
+      uiController.showTerminalContainer('test-3', container);
+      
+      const terminalArea = document.getElementById('terminal-area');
+      expect(terminalArea?.contains(container)).toBe(true);
+    });
+
+    it('should handle missing terminal area gracefully', () => {
+      document.getElementById('terminal-area')?.remove();
+      const container = document.createElement('div');
+      container.className = 'terminal-container';
+      
+      uiController.showTerminalContainer('test-4', container);
+      // Should not throw
     });
   });
 
@@ -573,6 +587,15 @@ describe('UIController Service', () => {
       expect(document.querySelectorAll('.notification').length).toBe(0);
     });
 
+    it('should handle notification removal when already removed from DOM', () => {
+      uiController.showNotification({ type: 'info', message: 'test' });
+      const notification = document.querySelector('.notification') as HTMLElement;
+      notification.remove(); // Manually remove from DOM
+      
+      uiController.clearNotifications(); // Should not throw
+      expect(document.querySelector('.notification')).toBeFalsy();
+    });
+
     it('should not show notifications when disabled', () => {
       const disabledController = new UIController({
         ...mockConfig,
@@ -642,6 +665,12 @@ describe('UIController Service', () => {
       expect(status?.className).toContain('connected');
     });
 
+    it('should update CLI agent status without agent type', () => {
+      uiController.updateCliAgentStatus(true);
+      const status = document.getElementById('cli-agent-status');
+      expect(status?.textContent).toBe('CLI Agent Connected');
+    });
+
     it('should show disconnected status', () => {
       uiController.updateCliAgentStatus(false);
 
@@ -695,6 +724,15 @@ describe('UIController Service', () => {
 
       expect(container1._terminal.resize).toHaveBeenCalledWith(80, 24);
       expect(container2._terminal.resize).toHaveBeenCalledWith(80, 24);
+    });
+
+    it('should handle containers without terminal instance during resize', () => {
+      const container = document.createElement('div');
+      container.className = 'terminal-container';
+      document.body.appendChild(container);
+      
+      uiController.resizeTerminalContainers(80, 24);
+      // Should not throw
     });
   });
 

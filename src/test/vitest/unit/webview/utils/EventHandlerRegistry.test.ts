@@ -13,17 +13,22 @@ describe('EventHandlerRegistry', () => {
   let element: HTMLElement;
 
   beforeEach(() => {
-    dom = new JSDOM('<!DOCTYPE html><html><body><div id="test"></div></body></html>');
+    dom = new JSDOM('<!DOCTYPE html><html><body><div id="test" class="test-class"></div></body></html>');
     vi.stubGlobal('window', dom.window);
     vi.stubGlobal('document', dom.window.document);
     vi.stubGlobal('HTMLElement', dom.window.HTMLElement);
-    
+    vi.stubGlobal('Element', dom.window.Element);
+
     registry = new EventHandlerRegistry();
     element = dom.window.document.getElementById('test')!;
+
+    vi.spyOn(element, 'addEventListener');
+    vi.spyOn(element, 'removeEventListener');
   });
 
   afterEach(() => {
     registry.dispose();
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
     dom.window.close();
   });
@@ -32,7 +37,7 @@ describe('EventHandlerRegistry', () => {
     it('should register and trigger an event listener', () => {
       const handler = vi.fn();
       registry.register('test-click', element, 'click', handler);
-      
+
       expect(registry.isRegistered('test-click')).toBe(true);
       expect(registry.getRegisteredCount()).toBe(1);
 
@@ -41,10 +46,19 @@ describe('EventHandlerRegistry', () => {
       expect(handler).toHaveBeenCalled();
     });
 
+    it('should add event listener and track it', () => {
+      const listener = vi.fn();
+      registry.register('key1', element, 'click', listener);
+
+      expect(element.addEventListener).toHaveBeenCalledWith('click', listener, undefined);
+      expect(registry.isRegistered('key1')).toBe(true);
+      expect(registry.getRegisteredCount()).toBe(1);
+    });
+
     it('should unregister a listener', () => {
       const handler = vi.fn();
       registry.register('test-click', element, 'click', handler);
-      
+
       const result = registry.unregister('test-click');
       expect(result).toBe(true);
       expect(registry.isRegistered('test-click')).toBe(false);
@@ -54,22 +68,54 @@ describe('EventHandlerRegistry', () => {
       expect(handler).not.toHaveBeenCalled();
     });
 
+    it('should remove event listener and stop tracking', () => {
+      const listener = vi.fn();
+      registry.register('key1', element, 'click', listener);
+
+      const result = registry.unregister('key1');
+
+      expect(result).toBe(true);
+      expect(element.removeEventListener).toHaveBeenCalledWith('click', listener, undefined);
+      expect(registry.isRegistered('key1')).toBe(false);
+    });
+
+    it('should return false if key not found', () => {
+      expect(registry.unregister('non-existent')).toBe(false);
+    });
+
     it('should overwrite existing listener with same key', () => {
       const handler1 = vi.fn();
       const handler2 = vi.fn();
-      
-      const removeSpy = vi.spyOn(element, 'removeEventListener');
-      const addSpy = vi.spyOn(element, 'addEventListener');
 
       registry.register('k1', element, 'click', handler1);
       registry.register('k1', element, 'click', handler2);
 
-      expect(removeSpy).toHaveBeenCalled();
+      expect(element.removeEventListener).toHaveBeenCalled();
       expect(registry.getRegisteredCount()).toBe(1);
-      
+
       element.dispatchEvent(new dom.window.MouseEvent('click'));
       expect(handler1).not.toHaveBeenCalled();
       expect(handler2).toHaveBeenCalled();
+    });
+
+    it('should unregister existing listener with same key before registering new one', () => {
+      const listener1 = vi.fn();
+      const listener2 = vi.fn();
+
+      registry.register('key1', element, 'click', listener1);
+      registry.register('key1', element, 'click', listener2);
+
+      expect(element.removeEventListener).toHaveBeenCalledWith('click', listener1, undefined);
+      expect(element.addEventListener).toHaveBeenCalledWith('click', listener2, undefined);
+      expect(registry.getRegisteredCount()).toBe(1);
+    });
+
+    it('should not register if disposed', () => {
+      registry.dispose();
+      const listener = vi.fn();
+      registry.register('key1', element, 'click', listener);
+
+      expect(registry.isRegistered('key1')).toBe(false);
     });
   });
 
@@ -77,7 +123,7 @@ describe('EventHandlerRegistry', () => {
     it('should register multiple listeners', () => {
       const h1 = vi.fn();
       const h2 = vi.fn();
-      
+
       registry.registerMultiple([
         { key: 'e1', element, type: 'click', listener: h1 },
         { key: 'e2', element, type: 'keydown', listener: h2 }
@@ -98,21 +144,46 @@ describe('EventHandlerRegistry', () => {
       expect(registry.getRegisteredCount()).toBe(1);
       expect(registry.isRegistered('term:data')).toBe(true);
     });
+
+    it('should remove all matching listeners', () => {
+      registry.register('prefix:key1', element, 'click', vi.fn());
+      registry.register('prefix:key2', element, 'click', vi.fn());
+      registry.register('other:key1', element, 'click', vi.fn());
+
+      const removed = registry.unregisterByPattern(/^prefix:/);
+
+      expect(removed).toBe(2);
+      expect(registry.getRegisteredCount()).toBe(1);
+      expect(registry.isRegistered('other:key1')).toBe(true);
+    });
   });
 
   describe('Scoped Registry', () => {
     it('should prefix keys in scope', () => {
       const scope = registry.createScope('my-comp');
       const handler = vi.fn();
-      
+
       scope.register('btn-click', element, 'click', handler);
-      
+
       expect(registry.isRegistered('my-comp:btn-click')).toBe(true);
       expect(scope.isRegistered('btn-click')).toBe(true);
       expect(scope.getRegisteredKeys()).toEqual(['btn-click']);
-      
+
       scope.unregister('btn-click');
       expect(registry.isRegistered('my-comp:btn-click')).toBe(false);
+    });
+
+    it('should create a scoped registry that prefixes keys', () => {
+      const scope = registry.createScope('my-scope');
+      const listener = vi.fn();
+
+      scope.register('key1', element, 'click', listener);
+
+      expect(registry.isRegistered('my-scope:key1')).toBe(true);
+      expect(scope.isRegistered('key1')).toBe(true);
+
+      scope.unregister('key1');
+      expect(registry.isRegistered('my-scope:key1')).toBe(false);
     });
 
     it('should unregister all in scope', () => {
@@ -120,6 +191,17 @@ describe('EventHandlerRegistry', () => {
       scope.register('k1', element, 'click', vi.fn());
       scope.register('k2', element, 'click', vi.fn());
       registry.register('other', element, 'click', vi.fn());
+
+      const removed = scope.unregisterAll();
+      expect(removed).toBe(2);
+      expect(registry.getRegisteredCount()).toBe(1);
+    });
+
+    it('should allow unregistering all scoped listeners', () => {
+      const scope = registry.createScope('my-scope');
+      scope.register('key1', element, 'click', vi.fn());
+      scope.register('key2', element, 'click', vi.fn());
+      registry.register('other:key', element, 'click', vi.fn());
 
       const removed = scope.unregisterAll();
       expect(removed).toBe(2);
@@ -136,8 +218,18 @@ describe('EventHandlerRegistry', () => {
       expect(stats.totalListeners).toBe(2);
       expect(stats.eventTypes).toContain('click');
       expect(stats.eventTypes).toContain('resize');
-      expect(stats.elements).toContain('div#test');
+      expect(stats.elements).toContain('div#test.test-class');
       expect(stats.elements).toContain('window');
+    });
+
+    it('should return correct statistics', () => {
+      registry.register('key1', element, 'click', vi.fn());
+      registry.register('key2', element, 'keydown', vi.fn());
+
+      const stats = registry.getStats();
+      expect(stats.totalListeners).toBe(2);
+      expect(stats.eventTypes).toContain('click');
+      expect(stats.eventTypes).toContain('keydown');
     });
 
     it('should return null for non-existent listener info', () => {
@@ -149,11 +241,21 @@ describe('EventHandlerRegistry', () => {
     it('should remove all listeners on dispose', () => {
       const h1 = vi.fn();
       const removeSpy = vi.spyOn(element, 'removeEventListener');
-      
+
       registry.register('k1', element, 'click', h1);
       registry.dispose();
-      
+
       expect(removeSpy).toHaveBeenCalled();
+      expect(registry.getRegisteredCount()).toBe(0);
+    });
+
+    it('should unregister all listeners', () => {
+      registry.register('key1', element, 'click', vi.fn());
+      registry.register('key2', element, 'click', vi.fn());
+
+      registry.dispose();
+
+      expect(element.removeEventListener).toHaveBeenCalledTimes(2);
       expect(registry.getRegisteredCount()).toBe(0);
     });
 

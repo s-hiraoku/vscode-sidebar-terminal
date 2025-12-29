@@ -1,4 +1,5 @@
 import { SAMPLE_ICONS, UI_CONSTANTS } from '../constants';
+import { HEADER_MANAGER_CONSTANTS } from '../constants/webview';
 import { DOMUtils } from '../utils/DOMUtils';
 import { ErrorHandler } from '../utils/ErrorHandler';
 import type { HeaderConfig, SampleIcon } from '../types/webview.types';
@@ -78,9 +79,9 @@ export class HeaderManager implements IHeaderManager {
       let backgroundColor = 'var(--vscode-badge-background, #007acc)';
       if (terminalCount === 0) {
         backgroundColor = 'var(--vscode-errorBackground, #f14c4c)';
-      } else if (terminalCount >= 5) {
+      } else if (terminalCount >= HEADER_MANAGER_CONSTANTS.TERMINAL_COUNT_WARNING_THRESHOLD) {
         backgroundColor = 'var(--vscode-notificationWarning-background, #ffcc02)';
-      } else if (terminalCount >= 3) {
+      } else if (terminalCount >= HEADER_MANAGER_CONSTANTS.TERMINAL_COUNT_ORANGE_THRESHOLD) {
         backgroundColor = 'var(--vscode-charts-orange, #ff8c00)';
       }
 

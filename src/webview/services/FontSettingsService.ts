@@ -229,8 +229,9 @@ export class FontSettingsService {
    */
   private validateAndNormalize(settings: WebViewFontSettings): WebViewFontSettings {
     const normalized: WebViewFontSettings = {
-      fontSize: DEFAULT_FONT_SETTINGS.fontSize,
-      fontFamily: DEFAULT_FONT_SETTINGS.fontFamily,
+      ...DEFAULT_FONT_SETTINGS,
+      fontSize: settings.fontSize ?? DEFAULT_FONT_SETTINGS.fontSize,
+      fontFamily: settings.fontFamily ?? DEFAULT_FONT_SETTINGS.fontFamily,
     };
 
     // Font size validation

@@ -10,6 +10,20 @@
 import { IManagerCoordinator, IFindInTerminalManager } from '../interfaces/ManagerInterfaces';
 import { webview as log } from '../../utils/logger';
 
+// ============================================================================
+// Constants
+// ============================================================================
+
+/**
+ * Timing constants for Find in Terminal operations
+ */
+const FindTimings = {
+  /** Delay before focusing search input after panel opens (ms) */
+  FOCUS_DELAY_MS: 10,
+  /** Debounce delay for search input changes (ms) */
+  SEARCH_DEBOUNCE_MS: 150,
+} as const;
+
 export interface FindOptions {
   caseSensitive: boolean;
   wholeWord: boolean;
@@ -287,7 +301,7 @@ export class FindInTerminalManager implements IFindInTerminalManager {
     setTimeout(() => {
       this.searchInput?.focus();
       this.searchInput?.select();
-    }, 10);
+    }, FindTimings.FOCUS_DELAY_MS);
 
     log(`🔍 Search panel opened for terminal: ${activeTerminalId}`);
   }
@@ -434,7 +448,7 @@ export class FindInTerminalManager implements IFindInTerminalManager {
     clearTimeout((this as any).searchTimeout);
     (this as any).searchTimeout = setTimeout(() => {
       this.performSearch(searchTerm);
-    }, 150);
+    }, FindTimings.SEARCH_DEBOUNCE_MS);
   }
 
   /**

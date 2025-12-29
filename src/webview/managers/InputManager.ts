@@ -20,6 +20,28 @@ import {
   ScrollDirection,
 } from './input/services/TerminalOperationsService';
 
+// ============================================================================
+// Constants
+// ============================================================================
+
+/**
+ * Keyboard event constants
+ */
+const KeyboardConstants = {
+  /** IME composition keycode (when IME is processing input) */
+  IME_COMPOSITION_KEYCODE: 229,
+  /** Maximum ASCII code for control characters (0-31) */
+  CONTROL_CHAR_THRESHOLD: 32,
+} as const;
+
+/**
+ * Timing constants for input handling
+ */
+const InputTimings = {
+  /** Debounce delay for input events (ms) */
+  INPUT_DEBOUNCE_DELAY_MS: 50,
+} as const;
+
 export class InputManager extends BaseManager implements IInputManager {
   // Event handler registry for centralized event management
   protected readonly eventRegistry = new EventHandlerRegistry();
@@ -191,7 +213,7 @@ export class InputManager extends BaseManager implements IInputManager {
       }
 
       // Check for KEY_IN_COMPOSITION (VS Code standard)
-      if (event.keyCode === 229) {
+      if (event.keyCode === KeyboardConstants.IME_COMPOSITION_KEYCODE) {
         // KeyCode.KEY_IN_COMPOSITION
         this.logger('KEY_IN_COMPOSITION detected - stopping propagation');
         event.stopPropagation();
@@ -972,7 +994,7 @@ export class InputManager extends BaseManager implements IInputManager {
             timestamp: Date.now(),
           });
           this.eventDebounceTimers.delete(key);
-        }, 50); // Reduced from 200ms to 50ms for better responsiveness
+        }, InputTimings.INPUT_DEBOUNCE_DELAY_MS); // Reduced from 200ms to 50ms for better responsiveness
 
         this.eventDebounceTimers.set(key, timer);
       } else {
@@ -1016,7 +1038,7 @@ export class InputManager extends BaseManager implements IInputManager {
     }
 
     // Check for KEY_IN_COMPOSITION (VS Code standard)
-    if (event.keyCode === 229) {
+    if (event.keyCode === KeyboardConstants.IME_COMPOSITION_KEYCODE) {
       // KeyCode.KEY_IN_COMPOSITION
       this.logger('KEY_IN_COMPOSITION in special keys - blocking');
       event.stopPropagation();
@@ -1132,7 +1154,7 @@ export class InputManager extends BaseManager implements IInputManager {
     }
 
     // Control characters (Ctrl+C = \x03, Ctrl+D = \x04, etc.)
-    if (data.length === 1 && data.charCodeAt(0) < 32) {
+    if (data.length === 1 && data.charCodeAt(0) < KeyboardConstants.CONTROL_CHAR_THRESHOLD) {
       return true;
     }
 

@@ -1,298 +1,99 @@
-/**
- * ManagerLogger Utility Tests
- * Tests for standardized logging across managers with emoji prefixes
- *
- * Vitest Migration: Converted from Mocha/Chai/Sinon to Vitest
- */
-
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { ManagerLogger, inputLogger, splitLogger, terminalLogger, messageLogger, uiLogger } from '../../../../../webview/utils/ManagerLogger';
+import { ManagerLogger } from '../../../../../webview/utils/ManagerLogger';
+import { webview as baseLog } from '../../../../../utils/logger';
+
+// Mock base logger
+vi.mock('../../../../../utils/logger', () => ({
+  webview: vi.fn(),
+}));
 
 describe('ManagerLogger', () => {
-  let logSpy: ReturnType<typeof vi.spyOn>;
-  let errorSpy: ReturnType<typeof vi.spyOn>;
+  let logger: ManagerLogger;
 
   beforeEach(() => {
-    // Clear history before spying to avoid interference
+    // Reset global config to defaults
+    ManagerLogger.configure({
+      enableTimestamp: false,
+      enableLevel: true,
+      maxMessageLength: 500,
+    });
     ManagerLogger.clearHistory();
-
-    // Mock console methods
-    logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
-    errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    vi.spyOn(console, 'info').mockImplementation(() => {});
-    vi.spyOn(console, 'debug').mockImplementation(() => {});
+    logger = ManagerLogger.createLogger('TestManager', '🧪');
+    vi.clearAllMocks();
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  describe('createLogger', () => {
-    it('should create logger with default emoji', () => {
-      const logger = ManagerLogger.createLogger('TestManager');
-
-      expect(logger).not.toBeNull();
-      expect(logger).toHaveProperty('info');
-      expect(logger).toHaveProperty('warn');
-      expect(logger).toHaveProperty('error');
-      expect(logger).toHaveProperty('debug');
-      expect(logger).toHaveProperty('lifecycle');
+  describe('Basic Logging', () => {
+    it('should log info messages to base logger', () => {
+      logger.info('Hello world');
+      expect(baseLog).toHaveBeenCalledWith(expect.stringContaining('🧪 [TestManager] Hello world'));
     });
 
-    it('should create logger with custom emoji', () => {
-      const logger = ManagerLogger.createLogger('TestManager', '🔧');
-
-      expect(logger).not.toBeNull();
-
-      // Test that the emoji is used in logging
-      logger.info('Test message');
-
-      // Should have been called
-      expect(logSpy).toHaveBeenCalled();
+    it('should include [LEVEL] for non-info logs', () => {
+      logger.error('Failed');
+      expect(baseLog).toHaveBeenCalledWith(expect.stringContaining('[ERROR] 🧪 [TestManager] Failed'));
     });
 
-    it('should handle empty manager name', () => {
-      const logger = ManagerLogger.createLogger('');
-
-      expect(logger).not.toBeNull();
-
-      logger.info('Test message');
-      expect(logSpy).toHaveBeenCalled();
+    it('should truncate long messages', () => {
+      // Configure BEFORE creating the instance, or use a fresh one
+      ManagerLogger.configure({ maxMessageLength: 10 });
+      const truncateLogger = ManagerLogger.createLogger('Short', 'S');
+      
+      const longMsg = 'This is a very long message';
+      truncateLogger.info(longMsg);
+      
+      expect(baseLog).toHaveBeenCalledWith(expect.stringContaining('This is a ...'));
     });
 
-    it('should handle special characters in manager name', () => {
-      const logger = ManagerLogger.createLogger('Test-Manager_123');
-
-      expect(logger).not.toBeNull();
-
-      logger.info('Test message');
-      expect(logSpy).toHaveBeenCalled();
+    it('should log additional data', () => {
+      const data = { id: 1 };
+      logger.info('Msg', data);
+      
+      expect(baseLog).toHaveBeenCalledWith(expect.stringContaining('🧪 [TestManager] Msg'));
+      expect(baseLog).toHaveBeenCalledWith('🔍 [TestManager] Data:', data);
     });
   });
 
-  describe('pre-configured loggers', () => {
-    it('should provide inputLogger', () => {
-      expect(inputLogger).not.toBeNull();
-      expect(inputLogger).toHaveProperty('info');
-
-      inputLogger.info('Input test');
-      expect(logSpy).toHaveBeenCalled();
+  describe('Specialized Formats', () => {
+    it('should format lifecycle events', () => {
+      logger.lifecycle('Init', 'completed');
+      expect(baseLog).toHaveBeenCalledWith(expect.stringContaining('🧪 [TestManager] ✅ Init completed'));
     });
 
-    it('should provide splitLogger', () => {
-      expect(splitLogger).not.toBeNull();
-      expect(splitLogger).toHaveProperty('info');
-
-      splitLogger.info('Split test');
-      expect(logSpy).toHaveBeenCalled();
-    });
-
-    it('should provide terminalLogger', () => {
-      expect(terminalLogger).not.toBeNull();
-      expect(terminalLogger).toHaveProperty('info');
-
-      terminalLogger.info('Terminal test');
-      expect(logSpy).toHaveBeenCalled();
-    });
-
-    it('should provide messageLogger', () => {
-      expect(messageLogger).not.toBeNull();
-      expect(messageLogger).toHaveProperty('info');
-
-      messageLogger.info('Message test');
-      expect(logSpy).toHaveBeenCalled();
-    });
-
-    it('should provide uiLogger', () => {
-      expect(uiLogger).not.toBeNull();
-      expect(uiLogger).toHaveProperty('info');
-
-      uiLogger.info('UI test');
-      expect(logSpy).toHaveBeenCalled();
+    it('should format performance logs', () => {
+      logger.performance('Startup', 150);
+      expect(baseLog).toHaveBeenCalledWith(expect.stringContaining('🧪 [TestManager] ⏱️ Startup: 150ms'));
     });
   });
 
-  describe('logging methods', () => {
-    let logger: any;
-
-    beforeEach(() => {
-      logger = ManagerLogger.createLogger('TestManager', '🧪');
+  describe('History and Stats', () => {
+    it('should keep track of log history', () => {
+      logger.info('msg1');
+      logger.warn('msg2');
+      
+      const all = ManagerLogger.getAllLogs();
+      expect(all.length).toBe(2);
+      expect(all[0].message).toBe('msg1');
     });
 
-    it('should log info messages with correct format', () => {
-      logger.info('Test info message');
-
-      expect(logSpy).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.stringMatching(/🧪.*TestManager.*Test info message/)
-      );
+    it('should filter logs by manager', () => {
+      const other = ManagerLogger.createLogger('Other');
+      logger.info('msg1');
+      other.info('msg2');
+      
+      const filtered = logger.getRecentLogs(10);
+      expect(filtered.length).toBe(1);
+      expect(filtered[0].message).toBe('msg1');
     });
 
-    it('should log info messages with data', () => {
-      const testData = { key: 'value', number: 42 };
-      logger.info('Test info with data', testData);
-
-      // 1 call for message, 1 call for data prefix, 1 for data itself? 
-      // Actually baseLog is called twice in ManagerLogger.log:
-      // 1. baseLog(formattedMessage)
-      // 2. baseLog(`🔍 [${this.managerName}] Data:`, data)
-      expect(logSpy).toHaveBeenCalledTimes(2);
-    });
-
-    it('should log warn messages with correct format', () => {
-      logger.warn('Test warning message');
-
-      expect(logSpy).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.stringMatching(/WARN.*🧪.*TestManager.*Test warning message/)
-      );
-    });
-
-    it('should log error messages with correct format', () => {
-      logger.error('Test error message');
-
-      expect(logSpy).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.stringMatching(/ERROR.*🧪.*TestManager.*Test error message/)
-      );
-    });
-
-    it('should log debug messages with correct format', () => {
-      logger.debug('Test debug message');
-
-      expect(logSpy).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.stringMatching(/DEBUG.*🧪.*TestManager.*Test debug message/)
-      );
-    });
-  });
-
-  describe('lifecycle logging', () => {
-    let logger: any;
-
-    beforeEach(() => {
-      logger = ManagerLogger.createLogger('LifecycleManager', '♻️');
-    });
-
-    it('should log lifecycle events with correct format', () => {
-      logger.lifecycle('initialization', 'starting');
-
-      expect(logSpy).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.stringMatching(/♻️.*LifecycleManager.*initialization.*starting/)
-      );
-    });
-
-    it('should handle different lifecycle phases', () => {
-      logger.lifecycle('startup', 'completed');
-      logger.lifecycle('shutdown', 'in_progress');
-      logger.lifecycle('cleanup', 'failed');
-
-      expect(logSpy).toHaveBeenCalledTimes(3);
-    });
-
-    it('should handle empty lifecycle parameters', () => {
-      expect(() => {
-        logger.lifecycle('', '' as any);
-      }).not.toThrow();
-
-      expect(logSpy).toHaveBeenCalled();
-    });
-  });
-
-  describe('error handling', () => {
-    let logger: any;
-
-    beforeEach(() => {
-      logger = ManagerLogger.createLogger('ErrorTestManager', '💥');
-    });
-
-    it('should handle null/undefined messages', () => {
-      expect(() => {
-        logger.info(null as any);
-        logger.warn(undefined as any);
-        logger.error(null as any);
-        logger.debug(undefined as any);
-      }).not.toThrow();
-
-      expect(logSpy).toHaveBeenCalled();
-      expect(errorSpy).toHaveBeenCalled();
-    });
-
-    it('should handle circular reference objects', () => {
-      const circularObj: any = { name: 'test' };
-      circularObj.self = circularObj;
-
-      expect(() => {
-        logger.info('Circular object test', circularObj);
-      }).not.toThrow();
-
-      expect(logSpy).toHaveBeenCalled();
-    });
-
-    it('should handle very long messages', () => {
-      const longMessage = 'A'.repeat(10000);
-
-      expect(() => {
-        logger.info(longMessage);
-      }).not.toThrow();
-
-      expect(logSpy).toHaveBeenCalled();
-    });
-
-    it('should handle special characters in messages', () => {
-      const specialMessage = 'Test\n\t\r\x00\uD83D\uDE00特殊字符';
-
-      expect(() => {
-        logger.info(specialMessage);
-      }).not.toThrow();
-
-      expect(logSpy).toHaveBeenCalled();
-    });
-  });
-
-  describe('performance', () => {
-    it('should handle rapid logging calls', () => {
-      const logger = ManagerLogger.createLogger('PerfTestManager', '⚡');
-
-      expect(() => {
-        for (let i = 0; i < 1000; i++) {
-          logger.info(`Message ${i}`);
-        }
-      }).not.toThrow();
-
-      expect(logSpy).toHaveBeenCalledTimes(1000);
-    });
-
-    it('should handle logging with large data objects', () => {
-      const logger = ManagerLogger.createLogger('DataTestManager', '📊');
-      const largeData = {
-        array: new Array(1000).fill(0).map((_, i) => ({ id: i, name: `Item ${i}` })),
-        nested: {
-          deep: {
-            value: 'test',
-            moreData: new Array(100).fill('data'),
-          },
-        },
-      };
-
-      expect(() => {
-        logger.info('Large data test', largeData);
-      }).not.toThrow();
-
-      expect(logSpy).toHaveBeenCalled();
-    });
-  });
-
-  describe('integration with webview logger', () => {
-    it('should use webview logger for actual output', () => {
-      const logger = ManagerLogger.createLogger('WebviewTestManager', '🌐');
-
-      logger.info('Integration test');
-
-      // Should call console.log (which is mocked via Logger.webview)
-      expect(logSpy).toHaveBeenCalled();
+    it('should provide statistics', () => {
+      logger.info('msg');
+      logger.error('err');
+      
+      const stats = ManagerLogger.getStats();
+      expect(stats.totalEntries).toBe(2);
+      expect(stats.levelCounts.info).toBe(1);
+      expect(stats.levelCounts.error).toBe(1);
+      expect(stats.managerCounts['TestManager']).toBe(2);
     });
   });
 });

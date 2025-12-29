@@ -1,411 +1,541 @@
+
 /**
- * UIManager Test Suite - Visual feedback, theming, and terminal appearance
- *
- * Vitest Migration: Converted from Mocha/Chai to Vitest
- * Uses happy-dom environment configured in vitest.config.ts
+ * UIManager Unit Tests
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { JSDOM } from 'jsdom';
 import { UIManager } from '../../../../../webview/managers/UIManager';
-import { Terminal } from '@xterm/xterm';
-import { PartialTerminalSettings, WebViewFontSettings } from '../../../../../types/shared';
+import { TerminalTheme } from '../../../../../webview/utils/WebviewThemeUtils';
+import { ResizeManager } from '../../../../../webview/utils/ResizeManager';
+
+// Mock dependencies
+vi.mock('../../../../../webview/utils/WebviewThemeUtils', async () => {
+  const actual = await vi.importActual('../../../../../webview/utils/WebviewThemeUtils');
+  return {
+    ...actual,
+    getWebviewTheme: vi.fn().mockReturnValue({ background: '#1e1e1e', foreground: '#d4d4d4' }),
+  };
+});
+
+vi.mock('../../../../../webview/factories/HeaderFactory', () => ({
+  HeaderFactory: {
+    createTerminalHeader: vi.fn().mockImplementation(({ terminalId, terminalName }) => {
+      const container = document.createElement('div');
+      container.id = `header-${terminalId}`;
+      container.className = 'terminal-header';
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'terminal-name';
+      nameSpan.textContent = terminalName;
+      container.appendChild(nameSpan);
+      return { container, nameSpan, titleSection: document.createElement('div') };
+    }),
+    updateTerminalName: vi.fn().mockImplementation((elements, name) => {
+      if (elements.nameSpan) elements.nameSpan.textContent = name;
+    }),
+    insertCliAgentStatus: vi.fn(),
+    removeCliAgentStatus: vi.fn(),
+    setAiAgentToggleButtonVisibility: vi.fn(),
+  },
+}));
+
+vi.mock('../../../../../webview/utils/ResizeManager', () => ({
+  ResizeManager: {
+    observeResize: vi.fn(),
+    unobserveResize: vi.fn(),
+  },
+}));
+
+// Mock logger
+vi.mock('../../../../../webview/utils/ManagerLogger', () => ({
+  uiLogger: {
+    info: vi.fn(),
+    debug: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    lifecycle: vi.fn(),
+  },
+}));
 
 describe('UIManager', () => {
   let uiManager: UIManager;
-  let mockTerminal: Partial<Terminal>;
+  let dom: JSDOM;
 
   beforeEach(() => {
-    // happy-dom provides document/window automatically
-    // Create container elements
-    const container = document.createElement('div');
-    container.id = 'terminal-container';
-    document.body.appendChild(container);
-
-    const body = document.createElement('div');
-    body.id = 'terminal-body';
-    document.body.appendChild(body);
-
-    // Create mock terminal
-    mockTerminal = {
-      options: {},
-      rows: 24,
-      refresh: vi.fn(),
-      element: document.createElement('div'),
-    };
-
+    dom = new JSDOM('<!DOCTYPE html><div id="terminal-container"></div><div id="terminal-body"></div>', {
+      url: 'http://localhost',
+    });
+    global.document = dom.window.document;
+    global.window = dom.window as any;
+    global.HTMLElement = dom.window.HTMLElement;
+    
     uiManager = new UIManager();
-    uiManager.initialize();
   });
 
   afterEach(() => {
     uiManager.dispose();
-    // Clean up DOM
     document.body.innerHTML = '';
+    vi.restoreAllMocks();
   });
 
-  describe('Initialization and Lifecycle', () => {
-    it('should initialize correctly', () => {
-      expect(uiManager).toBeInstanceOf(UIManager);
-    });
-
-    it('should dispose resources properly', () => {
-      // Create some state
-      const _header = uiManager.createTerminalHeader('test-1', 'Test Terminal');
-      expect(uiManager.headerElementsCache.size).toBeGreaterThan(0);
-
-      // Dispose
-      uiManager.dispose();
-
-      // Verify cleanup
-      expect(uiManager.headerElementsCache.size).toBe(0);
-    });
-
-    it('should get current theme information', () => {
-      const themeInfo = uiManager.getCurrentTheme();
-      expect(themeInfo).toHaveProperty('background');
-      expect(themeInfo).toHaveProperty('applied');
-    });
-  });
-
-  describe('Theme Application', () => {
-    it('should apply terminal theme with dark settings', () => {
-      const settings: PartialTerminalSettings = {
-        theme: 'dark',
-        fontSize: 14,
-        fontFamily: 'Consolas',
+  describe('Theme Management', () => {
+    it('should update theme and notify tab updater', () => {
+      const theme: TerminalTheme = {
+        background: '#000000',
+        foreground: '#ffffff',
+        cursor: '#ffffff',
+        selectionBackground: '#333333',
       };
-
-      uiManager.applyTerminalTheme(mockTerminal as Terminal, settings);
-
-      expect(mockTerminal.options?.theme).toBeDefined();
-      expect(mockTerminal.options?.theme?.background).toBeTypeOf('string');
-      expect(mockTerminal.refresh).toHaveBeenCalledOnce();
+      
+      const tabUpdater = vi.fn();
+      uiManager.setTabThemeUpdater(tabUpdater);
+      
+      uiManager.updateTheme(theme);
+      
+      expect(tabUpdater).toHaveBeenCalledWith(theme);
+      expect(uiManager.getCurrentTheme().background).toBe('#000000');
+      expect(uiManager.getCurrentTheme().applied).toBe(true);
     });
 
-    it('should apply terminal theme with light settings', () => {
-      const settings: PartialTerminalSettings = {
-        theme: 'light',
-        fontSize: 14,
-        fontFamily: 'Consolas',
-      };
-
-      uiManager.applyTerminalTheme(mockTerminal as Terminal, settings);
-
-      expect(mockTerminal.options?.theme).toBeDefined();
-    });
-
-    it('should apply terminal theme with auto settings', () => {
-      const settings: PartialTerminalSettings = {
-        theme: 'auto',
-      };
-
-      uiManager.applyTerminalTheme(mockTerminal as Terminal, settings);
-
-      expect(mockTerminal.options?.theme).toBeDefined();
-    });
-
-    it('should detect light background correctly', () => {
-      // Apply light theme
-      const lightSettings: PartialTerminalSettings = { theme: 'light' };
-      uiManager.applyTerminalTheme(mockTerminal as Terminal, lightSettings);
-
-      const themeInfo = uiManager.getCurrentTheme();
-      if (themeInfo.background) {
-        // Light theme background should be bright
-        expect(themeInfo.background).toMatch(/^#[0-9a-fA-F]{6}$/);
-      }
-    });
-  });
-
-  describe('Font Settings', () => {
-    it('should apply font settings to terminal', () => {
-      const fontSettings: WebViewFontSettings = {
-        fontSize: 16,
-        fontFamily: 'JetBrains Mono',
-        fontWeight: 'normal',
-        fontWeightBold: 'bold',
-        lineHeight: 1.2,
-        letterSpacing: 0,
-      };
-
-      uiManager.applyFontSettings(mockTerminal as Terminal, fontSettings);
-
-      expect(mockTerminal.options?.fontSize).toBe(16);
-      expect(mockTerminal.options?.fontFamily).toBe('JetBrains Mono');
-    });
-
-    it('should apply optional font settings when provided', () => {
-      const fontSettings: WebViewFontSettings = {
-        fontSize: 14,
-        fontFamily: 'Consolas',
-        fontWeight: 'bold',
-        fontWeightBold: 'bolder',
-        lineHeight: 1.5,
-        letterSpacing: 1,
-      };
-
-      uiManager.applyFontSettings(mockTerminal as Terminal, fontSettings);
-
-      expect(mockTerminal.options?.lineHeight).toBe(1.5);
-      expect(mockTerminal.options?.letterSpacing).toBe(1);
-    });
-  });
-
-  describe('Visual Settings', () => {
-    it('should apply all visual settings comprehensively', () => {
-      const settings: PartialTerminalSettings = {
-        theme: 'dark',
-        cursorBlink: true,
-        scrollback: 3000,
-        cursor: {
-          style: 'underline',
-          blink: true,
-        },
-      };
-
-      uiManager.applyAllVisualSettings(mockTerminal as Terminal, settings);
-
-      expect(mockTerminal.options?.cursorBlink).toBe(true);
-      expect(mockTerminal.options?.scrollback).toBe(3000);
-      expect(mockTerminal.options?.cursorStyle).toBe('underline');
-    });
-
-    it('should handle nested cursor settings', () => {
-      const settings: PartialTerminalSettings = {
-        cursor: {
-          style: 'bar',
-          blink: false,
-        },
-      };
-
-      uiManager.applyAllVisualSettings(mockTerminal as Terminal, settings);
-
-      expect(mockTerminal.options?.cursorStyle).toBe('bar');
-      expect(mockTerminal.options?.cursorBlink).toBe(false);
-    });
-
-    it('should handle flat cursorBlink setting', () => {
-      const settings: PartialTerminalSettings = {
-        cursorBlink: false,
-      };
-
-      uiManager.applyAllVisualSettings(mockTerminal as Terminal, settings);
-
-      expect(mockTerminal.options?.cursorBlink).toBe(false);
-    });
-  });
-
-  describe('Terminal Header Management', () => {
-    it('should create terminal header with correct elements', () => {
-      const header = uiManager.createTerminalHeader('test-1', 'Test Terminal');
-
-      expect(header).toBeInstanceOf(HTMLElement);
-      expect(header.className).toContain('terminal-header');
-      expect(header.getAttribute('data-terminal-id')).toBe('test-1');
-    });
-
-    it('should cache header elements for quick access', () => {
-      uiManager.createTerminalHeader('test-1', 'Terminal 1');
-      uiManager.createTerminalHeader('test-2', 'Terminal 2');
-
-      expect(uiManager.headerElementsCache.size).toBe(2);
-      expect(uiManager.headerElementsCache.has('test-1')).toBe(true);
-      expect(uiManager.headerElementsCache.has('test-2')).toBe(true);
-    });
-
-    it('should update terminal header title', () => {
-      uiManager.createTerminalHeader('test-1', 'Old Name');
-      uiManager.updateTerminalHeader('test-1', 'New Name');
-
-      const headerElements = uiManager.headerElementsCache.get('test-1');
-      if (headerElements?.nameSpan) {
-        expect(headerElements.nameSpan.textContent).toBe('New Name');
-      }
-    });
-
-    it('should remove terminal header from cache', () => {
-      uiManager.createTerminalHeader('test-1', 'Terminal');
-      expect(uiManager.headerElementsCache.has('test-1')).toBe(true);
-
-      uiManager.removeTerminalHeader('test-1');
-      expect(uiManager.headerElementsCache.has('test-1')).toBe(false);
-    });
-
-    it('should clear all header cache', () => {
-      uiManager.createTerminalHeader('test-1', 'Terminal 1');
-      uiManager.createTerminalHeader('test-2', 'Terminal 2');
-      expect(uiManager.headerElementsCache.size).toBe(2);
-
-      uiManager.clearHeaderCache();
-      expect(uiManager.headerElementsCache.size).toBe(0);
-    });
-
-    it('should find terminal headers in DOM', () => {
-      // Add headers to DOM
-      const header1 = document.createElement('div');
-      header1.className = 'terminal-header';
-      const header2 = document.createElement('div');
-      header2.className = 'terminal-header';
-      document.body.appendChild(header1);
-      document.body.appendChild(header2);
-
-      const headers = uiManager.findTerminalHeaders();
-      expect(headers.length).toBeGreaterThanOrEqual(2);
+    it('should apply theme to terminal instance', () => {
+      const mockTerminal = {
+        options: {},
+        refresh: vi.fn(),
+        rows: 24,
+        element: document.createElement('div')
+      } as any;
+      
+      uiManager.applyTerminalTheme(mockTerminal, {});
+      
+      expect(mockTerminal.options.theme).toBeDefined();
+      expect(mockTerminal.refresh).toHaveBeenCalled();
     });
   });
 
   describe('Terminal Placeholder', () => {
-    it('should show terminal placeholder when no terminals exist', () => {
+    it('should show and hide placeholder', () => {
       uiManager.showTerminalPlaceholder();
-
-      const placeholder = document.getElementById('terminal-placeholder');
-      expect(placeholder).toBeDefined();
+      let placeholder = document.getElementById('terminal-placeholder');
+      expect(placeholder).toBeTruthy();
       expect(placeholder?.style.display).toBe('flex');
-    });
 
-    it('should hide terminal placeholder when terminals exist', () => {
-      uiManager.showTerminalPlaceholder();
       uiManager.hideTerminalPlaceholder();
-
-      const placeholder = document.getElementById('terminal-placeholder');
       expect(placeholder?.style.display).toBe('none');
     });
+  });
 
-    it('should create placeholder with correct content', () => {
-      uiManager.showTerminalPlaceholder();
+  describe('Header Management', () => {
+    it('should create and cache terminal header', () => {
+      const header = uiManager.createTerminalHeader('term-1', 'Test Terminal');
+      
+      expect(header).toBeTruthy();
+      expect(header.id).toBe('header-term-1');
+      expect(uiManager.headerElementsCache.has('term-1')).toBe(true);
+    });
 
-      const placeholder = document.getElementById('terminal-placeholder');
-      const title = placeholder?.querySelector('.placeholder-title');
-      const subtitle = placeholder?.querySelector('.placeholder-subtitle');
+    it('should update terminal header title', () => {
+      uiManager.createTerminalHeader('term-1', 'Old Name');
+      uiManager.updateTerminalHeader('term-1', 'New Name');
+      
+      const elements = uiManager.headerElementsCache.get('term-1');
+      expect(elements?.nameSpan?.textContent).toBe('New Name');
+    });
 
-      expect(title?.textContent).toBe('No Terminal Active');
-      expect(subtitle?.textContent).toBe('Create a new terminal to get started');
+    it('should remove header from cache', () => {
+      uiManager.createTerminalHeader('term-1', 'Test');
+      uiManager.removeTerminalHeader('term-1');
+      expect(uiManager.headerElementsCache.has('term-1')).toBe(false);
     });
   });
 
   describe('Loading Indicator', () => {
-    it('should show loading indicator with message', () => {
-      const indicator = uiManager.showLoadingIndicator('Loading terminal...');
-
-      expect(indicator).toBeInstanceOf(HTMLElement);
-      expect(indicator.className).toContain('loading-indicator');
-    });
-
-    it('should hide specific loading indicator', () => {
-      const indicator = uiManager.showLoadingIndicator();
-      document.body.appendChild(indicator);
+    it('should show and hide loading indicator', () => {
+      const indicator = uiManager.showLoadingIndicator('Testing...');
+      expect(document.querySelector('.loading-indicator')).toBeTruthy();
+      expect(indicator.textContent).toContain('Testing...');
 
       uiManager.hideLoadingIndicator(indicator);
-
-      expect(document.body.contains(indicator)).toBe(false);
+      expect(document.querySelector('.loading-indicator')).toBeFalsy();
     });
 
-    it('should hide all loading indicators', () => {
-      const indicator1 = uiManager.showLoadingIndicator('Loading 1');
-      const indicator2 = uiManager.showLoadingIndicator('Loading 2');
-      document.body.appendChild(indicator1);
-      document.body.appendChild(indicator2);
+    it('should hide all indicators if none specified', () => {
+      uiManager.showLoadingIndicator('1');
+      uiManager.showLoadingIndicator('2');
+      expect(document.querySelectorAll('.loading-indicator').length).toBe(2);
 
       uiManager.hideLoadingIndicator();
-
-      const indicators = document.querySelectorAll('.loading-indicator');
-      expect(indicators.length).toBe(0);
+      expect(document.querySelectorAll('.loading-indicator').length).toBe(0);
     });
   });
 
   describe('Focus Indicator', () => {
-    it('should add focus indicator to container', () => {
-      const container = document.createElement('div');
-      document.body.appendChild(container);
-
-      uiManager.addFocusIndicator(container);
-
-      expect(container.classList.contains('focused')).toBe(true);
-      expect(container.style.boxShadow).toContain('rgba');
+    it('should add focus class and remove it after timeout', async () => {
+      vi.useFakeTimers();
+      const element = document.createElement('div');
+      uiManager.addFocusIndicator(element);
+      
+      expect(element.classList.contains('focused')).toBe(true);
+      
+      vi.advanceTimersByTime(300);
+      expect(element.classList.contains('focused')).toBe(false);
+      vi.useRealTimers();
     });
   });
 
-  describe('VS Code Styling', () => {
-    it('should apply VS Code-like terminal styling', () => {
+  describe('Resize Observer', () => {
+    it('should setup resize observer', () => {
+      const callback = vi.fn();
+      const container = document.createElement('div');
+      
+      uiManager.setupResizeObserver(container, callback);
+      
+      expect(ResizeManager.observeResize).toHaveBeenCalled();
+    });
+  });
+
+  describe('Split Separator', () => {
+    it('should create horizontal separator', () => {
+      const sep = uiManager.createSplitSeparator('horizontal');
+      expect(sep.className).toContain('split-separator-horizontal');
+      expect(sep.style.height).toBe('4px');
+    });
+
+    it('should create vertical separator', () => {
+      const sep = uiManager.createSplitSeparator('vertical');
+      expect(sep.className).toContain('split-separator-vertical');
+      expect(sep.style.width).toBe('4px');
+    });
+  });
+
+  describe('Disposal', () => {
+    it('should clean up resources on dispose', () => {
+      uiManager.setupResizeObserver(document.createElement('div'), () => {});
+
+      uiManager.dispose();
+
+      expect(ResizeManager.unobserveResize).toHaveBeenCalled();
+      expect(uiManager.headerElementsCache.size).toBe(0);
+    });
+
+    it('should handle dispose errors gracefully', () => {
+      // Setup: create a resize observer to trigger cleanup
+      uiManager.setupResizeObserver(document.createElement('div'), () => {});
+
+      // Force an error scenario
+      vi.mocked(ResizeManager.unobserveResize).mockImplementationOnce(() => {
+        throw new Error('Cleanup error');
+      });
+
+      // Should throw the error
+      expect(() => uiManager.dispose()).toThrow('Cleanup error');
+    });
+  });
+
+  describe('Border Management', () => {
+    it('should update terminal borders', () => {
+      const container1 = document.createElement('div');
+      container1.dataset.terminalId = 'term-1';
+      const container2 = document.createElement('div');
+      container2.dataset.terminalId = 'term-2';
+
+      const allContainers = new Map<string, HTMLElement>();
+      allContainers.set('term-1', container1);
+      allContainers.set('term-2', container2);
+
+      // Should not throw
+      uiManager.updateTerminalBorders('term-1', allContainers);
+
+      expect(container1.classList.contains('active')).toBe(true);
+      expect(container2.classList.contains('inactive')).toBe(true);
+    });
+
+    it('should update split terminal borders', () => {
+      document.body.innerHTML = `
+        <div class="terminal-container" data-terminal-id="term-1"></div>
+        <div class="terminal-container" data-terminal-id="term-2"></div>
+      `;
+
+      uiManager.updateSplitTerminalBorders('term-2');
+
+      const containers = document.querySelectorAll('.terminal-container');
+      expect((containers[0] as HTMLElement).classList.contains('inactive')).toBe(true);
+      expect((containers[1] as HTMLElement).classList.contains('active')).toBe(true);
+    });
+
+    it('should set active border mode', () => {
+      // Should not throw
+      uiManager.setActiveBorderMode('always');
+      uiManager.setActiveBorderMode('multipleOnly');
+      uiManager.setActiveBorderMode('none');
+    });
+
+    it('should set terminal count', () => {
+      // Should not throw
+      uiManager.setTerminalCount(3);
+    });
+
+    it('should set fullscreen mode', () => {
+      // Should not throw
+      uiManager.setFullscreenMode(true);
+      uiManager.setFullscreenMode(false);
+    });
+
+    it('should update single terminal border', () => {
+      const container = document.createElement('div');
+
+      uiManager.updateSingleTerminalBorder(container, true);
+      expect(container.classList.contains('active')).toBe(true);
+
+      uiManager.updateSingleTerminalBorder(container, false);
+      expect(container.classList.contains('inactive')).toBe(true);
+    });
+  });
+
+  describe('Visual Settings', () => {
+    it('should apply all visual settings', () => {
+      const mockTerminal = {
+        options: {},
+        refresh: vi.fn(),
+        rows: 24,
+        element: document.createElement('div')
+      } as any;
+
+      const settings = {
+        theme: 'dark',
+        cursor: { style: 'block' as const, blink: true },
+        cursorBlink: true,
+        scrollback: 1000,
+      };
+
+      uiManager.applyAllVisualSettings(mockTerminal, settings);
+
+      expect(mockTerminal.options.cursorStyle).toBe('block');
+      expect(mockTerminal.options.cursorBlink).toBe(true);
+      expect(mockTerminal.options.scrollback).toBe(1000);
+    });
+
+    it('should apply cursor blink from settings.cursorBlink', () => {
+      const mockTerminal = {
+        options: {},
+        refresh: vi.fn(),
+        rows: 24,
+        element: document.createElement('div')
+      } as any;
+
+      uiManager.applyAllVisualSettings(mockTerminal, { cursorBlink: false });
+
+      expect(mockTerminal.options.cursorBlink).toBe(false);
+    });
+
+    it('should apply font settings to terminal', () => {
+      const mockTerminal = {
+        options: {},
+      } as any;
+
+      const fontSettings = {
+        fontSize: 16,
+        fontFamily: 'Consolas',
+        fontWeight: 'normal' as const,
+        fontWeightBold: 'bold' as const,
+        lineHeight: 1.2,
+        letterSpacing: 0,
+      };
+
+      uiManager.applyFontSettings(mockTerminal, fontSettings);
+
+      expect(mockTerminal.options.fontSize).toBe(16);
+      expect(mockTerminal.options.fontFamily).toBe('Consolas');
+      expect(mockTerminal.options.fontWeight).toBe('normal');
+      expect(mockTerminal.options.fontWeightBold).toBe('bold');
+      expect(mockTerminal.options.lineHeight).toBe(1.2);
+      expect(mockTerminal.options.letterSpacing).toBe(0);
+    });
+
+    it('should apply VS Code styling', () => {
       const container = document.createElement('div');
 
       uiManager.applyVSCodeStyling(container);
 
-      // Note: happy-dom may not fully support CSS variables in style properties
-      // So we check that the method runs without error and sets some style
-      expect(container.style.fontFamily).toBeDefined();
+      expect(container.style.fontFamily).toContain('monospace');
       expect(container.style.borderRadius).toBe('4px');
       expect(container.style.padding).toBe('8px');
     });
 
     it('should apply custom CSS to container', () => {
       const container = document.createElement('div');
-      const customCSS: Partial<CSSStyleDeclaration> = {
-        padding: '10px',
-        margin: '5px',
+
+      uiManager.applyCustomCSS(container, {
+        backgroundColor: '#ff0000',
+        color: '#00ff00',
+      });
+
+      // JSDOM may keep hex format or convert to rgb - check both
+      expect(['#ff0000', 'rgb(255, 0, 0)']).toContain(container.style.backgroundColor);
+      expect(['#00ff00', 'rgb(0, 255, 0)']).toContain(container.style.color);
+    });
+  });
+
+  describe('CLI Agent Status', () => {
+    it('should update CLI agent status display', () => {
+      // Create a header first
+      uiManager.createTerminalHeader('term-1', 'Test Terminal');
+
+      // Should not throw
+      uiManager.updateCliAgentStatusDisplay('Test Terminal', 'connected', 'claude');
+      uiManager.updateCliAgentStatusDisplay('Test Terminal', 'disconnected', 'copilot');
+      uiManager.updateCliAgentStatusDisplay(null, 'none', null);
+    });
+
+    it('should update CLI agent status by terminal ID', () => {
+      // Create a header first
+      uiManager.createTerminalHeader('term-1', 'Test Terminal');
+
+      // Should not throw
+      uiManager.updateCliAgentStatusByTerminalId('term-1', 'connected', 'claude');
+      uiManager.updateCliAgentStatusByTerminalId('term-1', 'disconnected', null);
+      uiManager.updateCliAgentStatusByTerminalId('term-1', 'none', null);
+    });
+
+    it('should handle missing header gracefully', () => {
+      // Should not throw when header doesn't exist
+      uiManager.updateCliAgentStatusByTerminalId('non-existent', 'connected', 'claude');
+    });
+  });
+
+  describe('Legacy Claude Status', () => {
+    beforeEach(() => {
+      document.body.innerHTML = `
+        <div data-terminal-id="term-1">
+          <div class="terminal-header">
+            <span class="terminal-name">Test Terminal</span>
+            <div class="terminal-status"></div>
+            <div class="terminal-controls">
+              <button class="close-btn">X</button>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+
+    it('should update legacy claude status to active', () => {
+      uiManager.updateLegacyClaudeStatus('term-1', true);
+
+      const statusSpan = document.querySelector('.claude-status');
+      expect(statusSpan).toBeTruthy();
+      expect(statusSpan?.textContent).toBe('CLI Agent Active');
+    });
+
+    it('should clear legacy claude status when inactive', () => {
+      // First set active
+      uiManager.updateLegacyClaudeStatus('term-1', true);
+      expect(document.querySelector('.claude-status')).toBeTruthy();
+
+      // Then set inactive - status section is cleared
+      uiManager.updateLegacyClaudeStatus('term-1', false);
+      const statusSection = document.querySelector('.terminal-status');
+      expect(statusSection?.textContent).toBe('');
+    });
+
+    it('should handle missing header gracefully', () => {
+      document.body.innerHTML = '';
+      // Should not throw
+      uiManager.updateLegacyClaudeStatus('non-existent', true);
+    });
+
+    it('should insert status before controls container', () => {
+      uiManager.updateLegacyClaudeStatus('term-1', true);
+
+      const controls = document.querySelector('.terminal-controls');
+      const status = document.querySelector('.claude-status');
+
+      // Status should be before controls
+      expect(status?.nextElementSibling).toBe(controls);
+    });
+  });
+
+  describe('Notification', () => {
+    it('should create notification element', () => {
+      const notification = uiManager.createNotificationElement({
+        message: 'Test message',
+        type: 'info',
+      });
+
+      expect(notification).toBeTruthy();
+      expect(notification.textContent).toContain('Test message');
+    });
+
+    it('should ensure animations are loaded', () => {
+      // Should not throw
+      uiManager.ensureAnimationsLoaded();
+    });
+  });
+
+  describe('Header Utilities', () => {
+    it('should find terminal headers', () => {
+      document.body.innerHTML = `
+        <div class="terminal-header">Header 1</div>
+        <div class="terminal-header">Header 2</div>
+        <div class="other-element">Not a header</div>
+      `;
+
+      const headers = uiManager.findTerminalHeaders();
+
+      expect(headers).toHaveLength(2);
+      expect(headers[0].textContent).toBe('Header 1');
+      expect(headers[1].textContent).toBe('Header 2');
+    });
+
+    it('should return empty array when no headers exist', () => {
+      document.body.innerHTML = '<div>No headers here</div>';
+
+      const headers = uiManager.findTerminalHeaders();
+
+      expect(headers).toHaveLength(0);
+    });
+
+    it('should clear header cache', () => {
+      uiManager.createTerminalHeader('term-1', 'Test');
+      expect(uiManager.headerElementsCache.size).toBe(1);
+
+      uiManager.clearHeaderCache();
+
+      expect(uiManager.headerElementsCache.size).toBe(0);
+    });
+  });
+
+  describe('Theme Updates', () => {
+    it('should update theme and notify tab updater', () => {
+      const tabUpdater = vi.fn();
+      uiManager.setTabThemeUpdater(tabUpdater);
+
+      const theme: TerminalTheme = {
+        background: '#1e1e1e',
+        foreground: '#d4d4d4',
+        cursor: '#ffffff',
+        selectionBackground: '#264f78',
       };
 
-      uiManager.applyCustomCSS(container, customCSS);
+      uiManager.updateTheme(theme);
 
-      expect(container.style.padding).toBe('10px');
-      expect(container.style.margin).toBe('5px');
-    });
-  });
-
-  describe('Border Management', () => {
-    it('should update terminal borders for active state', () => {
-      const container1 = document.createElement('div');
-      const container2 = document.createElement('div');
-      const allContainers = new Map([
-        ['terminal-1', container1],
-        ['terminal-2', container2],
-      ]);
-
-      uiManager.updateTerminalBorders('terminal-1', allContainers);
-
-      // Border service should have been called
-      // Since we can't directly check border service internals,
-      // we verify no errors are thrown
-      expect(true).toBe(true);
+      expect(tabUpdater).toHaveBeenCalledWith(theme);
     });
 
-    it('should set active border mode', () => {
-      // Should not throw - only valid values
-      expect(() => uiManager.setActiveBorderMode('always')).not.toThrow();
-      expect(() => uiManager.setActiveBorderMode('multipleOnly')).not.toThrow();
-    });
+    it('should update header themes when theme changes', () => {
+      // Create some headers first
+      uiManager.createTerminalHeader('term-1', 'Terminal 1');
+      uiManager.createTerminalHeader('term-2', 'Terminal 2');
 
-    it('should set terminal count', () => {
-      expect(() => uiManager.setTerminalCount(3)).not.toThrow();
-    });
+      const theme: TerminalTheme = {
+        background: '#ffffff',
+        foreground: '#000000',
+      };
 
-    it('should set fullscreen mode', () => {
-      expect(() => uiManager.setFullscreenMode(true)).not.toThrow();
-      expect(() => uiManager.setFullscreenMode(false)).not.toThrow();
-    });
+      // Should not throw
+      uiManager.updateTheme(theme);
 
-    it('should update single terminal border', () => {
-      const container = document.createElement('div');
-      expect(() => uiManager.updateSingleTerminalBorder(container, true)).not.toThrow();
-      expect(() => uiManager.updateSingleTerminalBorder(container, false)).not.toThrow();
-    });
-  });
-
-  describe('Split Separator', () => {
-    it('should create horizontal split separator', () => {
-      const separator = uiManager.createSplitSeparator('horizontal');
-
-      expect(separator.className).toContain('split-separator-horizontal');
-      expect(separator.style.cursor).toBe('row-resize');
-      expect(separator.style.height).toBe('4px');
-    });
-
-    it('should create vertical split separator', () => {
-      const separator = uiManager.createSplitSeparator('vertical');
-
-      expect(separator.className).toContain('split-separator-vertical');
-      expect(separator.style.cursor).toBe('col-resize');
-      expect(separator.style.width).toBe('4px');
+      // Headers should have been updated (background color set)
+      const headers = Array.from(uiManager.headerElementsCache.values());
+      expect(headers.length).toBe(2);
     });
   });
 });

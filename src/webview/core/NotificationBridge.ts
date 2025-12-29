@@ -5,6 +5,7 @@
 
 import { NotificationSystem } from './NotificationSystem';
 import type { NotificationConfig } from '../utils/NotificationUtils';
+import { NOTIFICATION_DURATION_CONSTANTS } from '../constants/webview';
 
 /**
  * 移行用ブリッジクラス
@@ -122,7 +123,7 @@ export class NotificationBridge {
       title: 'CLI Agent Detected',
       message: 'Alt+Click temporarily disabled for optimal performance during AI interaction',
       icon: '🤖',
-      duration: 6000,
+      duration: NOTIFICATION_DURATION_CONSTANTS.CLI_AGENT_DETECTED_MS,
     });
   }
 
@@ -132,7 +133,7 @@ export class NotificationBridge {
       title: 'CLI Agent Session Ended',
       message: 'Alt+Click cursor positioning re-enabled',
       icon: '✅',
-      duration: 3000,
+      duration: NOTIFICATION_DURATION_CONSTANTS.CLI_AGENT_ENDED_MS,
     });
   }
 
@@ -142,7 +143,7 @@ export class NotificationBridge {
       title: 'Alt+Click Disabled',
       message: reason || 'Alt+Click cursor positioning is currently disabled',
       icon: '🚫',
-      duration: 4000,
+      duration: NOTIFICATION_DURATION_CONSTANTS.ALT_CLICK_DISABLED_MS,
     });
   }
 
@@ -153,7 +154,7 @@ export class NotificationBridge {
       message:
         'Check VS Code settings: terminal.integrated.altClickMovesCursor and editor.multiCursorModifier',
       icon: '⚙️',
-      duration: 6000,
+      duration: NOTIFICATION_DURATION_CONSTANTS.ALT_CLICK_SETTING_ERROR_MS,
     });
   }
 
@@ -163,7 +164,7 @@ export class NotificationBridge {
       title: 'Terminal Interaction Issue',
       message: details,
       icon: '⚡',
-      duration: 5000,
+      duration: NOTIFICATION_DURATION_CONSTANTS.TERMINAL_INTERACTION_ISSUE_MS,
     });
   }
 
