@@ -2,8 +2,8 @@
  * SimpleWebViewBridge Unit Tests
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import * as vscode from 'vscode';
+import { describe, it, expect } from 'vitest';
+
 import { SimpleWebViewBridge } from '../../../../../providers/services/SimpleWebViewBridge';
 
 // Mock logger

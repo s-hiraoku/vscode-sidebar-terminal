@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import * as vscode from 'vscode';
+import { describe, it, expect, vi } from 'vitest';
+
 import { IntegratedSecondaryTerminalProvider } from '../../../../integration/IntegratedSecondaryTerminalProvider';
 import { TerminalManager } from '../../../../terminals/TerminalManager';
 
@@ -30,7 +30,7 @@ vi.mock('vscode', () => {
     },
     Disposable: class {
       dispose = vi.fn();
-      static from(...args: any[]) { return { dispose: vi.fn() }; }
+      static from(..._args: any[]) { return { dispose: vi.fn() }; }
     },
   };
 });

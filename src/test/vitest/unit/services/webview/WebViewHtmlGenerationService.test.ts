@@ -2,8 +2,8 @@
  * WebViewHtmlGenerationService Unit Tests
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import * as vscode from 'vscode';
+import { describe, it, expect } from 'vitest';
+
 import { WebViewHtmlGenerationService } from '../../../../../services/webview/WebViewHtmlGenerationService';
 
 // Mock VS Code API

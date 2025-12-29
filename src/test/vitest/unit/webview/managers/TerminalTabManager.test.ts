@@ -2,7 +2,7 @@
  * TerminalTabManager Unit Tests
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { JSDOM } from 'jsdom';
 import { TerminalTabManager } from '../../../../../webview/managers/TerminalTabManager';
 import { IManagerCoordinator } from '../../../../../webview/interfaces/ManagerInterfaces';
@@ -10,7 +10,7 @@ import { IManagerCoordinator } from '../../../../../webview/interfaces/ManagerIn
 // Mock dependencies
 vi.mock('../../../../../webview/components/TerminalTabList', () => ({
   TerminalTabList: class {
-    constructor(container: any, events: any) {}
+    constructor(_container: any, _events: any) {}
     setModeIndicator = vi.fn();
     updateTab = vi.fn();
     addTab = vi.fn();

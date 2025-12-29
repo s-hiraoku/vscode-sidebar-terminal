@@ -2,7 +2,7 @@
  * DOMUtils Unit Tests
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { DOMUtils } from '../../../../../webview/utils/DOMUtils';
 
 describe('DOMUtils', () => {

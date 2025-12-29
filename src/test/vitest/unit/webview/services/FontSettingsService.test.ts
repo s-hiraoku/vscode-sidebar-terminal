@@ -2,7 +2,7 @@
  * FontSettingsService Unit Tests
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { FontSettingsService, IFontSettingsApplicator } from '../../../../../webview/services/FontSettingsService';
 import { Terminal } from '@xterm/xterm';
 import { TerminalInstance } from '../../../../../webview/interfaces/ManagerInterfaces';
@@ -49,7 +49,7 @@ describe('FontSettingsService', () => {
     });
 
     it('should warn when applying without applicator', () => {
-      const logSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const _logSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const mockTerminal = {} as Terminal;
       service.applyToTerminal(mockTerminal, 'test-1');
       expect(mockApplicator.applyFontSettings).not.toHaveBeenCalled();

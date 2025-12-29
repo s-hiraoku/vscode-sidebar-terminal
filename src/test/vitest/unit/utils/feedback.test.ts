@@ -2,11 +2,11 @@
  * Feedback utilities Unit Tests
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import * as vscode from 'vscode';
+import { describe, it, expect } from 'vitest';
+
 import {
   FeedbackManager,
-  FeedbackType,
+  _FeedbackType,
   showSuccess,
   showError,
   showWarning,
@@ -58,10 +58,10 @@ describe('Feedback Utilities', () => {
   });
 
   describe('FeedbackManager', () => {
-    let manager: FeedbackManager;
+    let _manager: FeedbackManager;
 
     beforeEach(() => {
-      manager = FeedbackManager.getInstance();
+      _manager = FeedbackManager.getInstance();
     });
 
     describe('showFeedback', () => {

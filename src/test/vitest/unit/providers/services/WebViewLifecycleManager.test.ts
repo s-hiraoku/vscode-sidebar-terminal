@@ -2,8 +2,8 @@
  * WebViewLifecycleManager Unit Tests
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import * as vscode from 'vscode';
+import { describe, it, expect } from 'vitest';
+
 import { WebViewLifecycleManager } from '../../../../../providers/services/WebViewLifecycleManager';
 
 // Mock logger

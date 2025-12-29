@@ -7,7 +7,7 @@
  * Target: 70%+ coverage for safe refactoring
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import '../../../shared/TestSetup';
 
 // Mock vscode before importing the provider

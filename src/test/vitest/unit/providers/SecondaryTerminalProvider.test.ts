@@ -1,6 +1,6 @@
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import * as vscode from 'vscode';
+import { describe, it, expect } from 'vitest';
+
 import { SecondaryTerminalProvider } from '../../../../providers/SecondaryTerminalProvider';
 
 // Mock VS Code API
@@ -36,7 +36,7 @@ vi.mock('vscode', () => ({
   },
   Disposable: class {
     dispose = vi.fn();
-    static from(...args: any[]) { return { dispose: vi.fn() }; }
+    static from(..._args: any[]) { return { dispose: vi.fn() }; }
   },
   ColorThemeKind: { Light: 1, Dark: 2, HighContrast: 3, HighContrastLight: 4 },
   Uri: { 

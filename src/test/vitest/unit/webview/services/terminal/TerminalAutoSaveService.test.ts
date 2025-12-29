@@ -2,7 +2,7 @@
  * TerminalAutoSaveService Unit Tests
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { TerminalAutoSaveService } from '../../../../../../webview/services/terminal/TerminalAutoSaveService';
 
 // Mock dependencies
@@ -144,7 +144,7 @@ describe('TerminalAutoSaveService', () => {
   describe('Cleanup', () => {
     it('should clear periodic timer on terminal removal', () => {
       service.setupScrollbackAutoSave(mockTerminal, 't1', mockSerializeAddon);
-      const timer = (TerminalAutoSaveService as any).periodicSaveTimers.get('t1');
+      const _timer = (TerminalAutoSaveService as any).periodicSaveTimers.get('t1');
       
       TerminalAutoSaveService.clearPeriodicSaveTimer('t1');
       

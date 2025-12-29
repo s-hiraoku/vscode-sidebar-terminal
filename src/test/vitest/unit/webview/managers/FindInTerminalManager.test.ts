@@ -4,8 +4,8 @@
  * Tests for VS Code-style search functionality in terminal
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { FindInTerminalManager, FindOptions, FindResult } from '../../../../../webview/managers/FindInTerminalManager';
+import { describe, it, expect } from 'vitest';
+import { FindInTerminalManager } from '../../../../../webview/managers/FindInTerminalManager';
 import { IManagerCoordinator } from '../../../../../webview/interfaces/ManagerInterfaces';
 
 // Mock the logger

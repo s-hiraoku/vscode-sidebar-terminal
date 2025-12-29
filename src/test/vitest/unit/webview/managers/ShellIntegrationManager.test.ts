@@ -2,7 +2,7 @@
  * ShellIntegrationManager Unit Tests
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { JSDOM } from 'jsdom';
 import { ShellIntegrationManager } from '../../../../../webview/managers/ShellIntegrationManager';
 import { IManagerCoordinator } from '../../../../../webview/interfaces/ManagerInterfaces';
@@ -34,7 +34,7 @@ vi.mock('../../../../../webview/addons/ShellIntegrationAddon', () => ({
       this.manager = manager;
     }
     
-    activate(term: any) {
+    activate(_term: any) {
       // no-op
     }
     

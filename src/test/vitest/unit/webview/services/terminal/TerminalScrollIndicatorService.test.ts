@@ -2,7 +2,7 @@
  * TerminalScrollIndicatorService Unit Tests
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { TerminalScrollIndicatorService } from '../../../../../../webview/services/terminal/TerminalScrollIndicatorService';
 
 // Mock logger
