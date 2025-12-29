@@ -13,6 +13,24 @@ import { Terminal } from '@xterm/xterm';
 import { TerminalCreationService } from '../../services/TerminalCreationService';
 import { StateTracker } from '../../utils/StateTracker';
 
+// ============================================================================
+// Constants
+// ============================================================================
+
+/**
+ * Scrollback configuration constants
+ */
+const ScrollbackConfig = {
+  /** Default maximum number of lines to extract/restore */
+  DEFAULT_MAX_LINES: 1000,
+  /** Maximum retry attempts when waiting for terminal to be available */
+  MAX_RESTORE_RETRIES: 10,
+  /** Delay between retry attempts (ms) */
+  RESTORE_RETRY_DELAY_MS: 200,
+  /** Timeout for flushing terminal writes (ms) */
+  FLUSH_TIMEOUT_MS: 200,
+} as const;
+
 /**
  * Scrollback line format
  */
@@ -98,7 +116,7 @@ export class ScrollbackMessageHandler implements IMessageHandler {
     this.logger.info('Handling get scrollback message');
 
     const terminalId = msg.terminalId as string;
-    const maxLines = (msg.maxLines as number) || 1000;
+    const maxLines = (msg.maxLines as number) || ScrollbackConfig.DEFAULT_MAX_LINES;
 
     if (!terminalId) {
       this.logger.error('No terminal ID provided for scrollback extraction');
@@ -332,7 +350,7 @@ export class ScrollbackMessageHandler implements IMessageHandler {
       await this.flushTerminalWrites(terminalInstance.terminal);
 
       // Extract scrollback data
-      const scrollbackData = this.extractScrollbackFromTerminal(terminalInstance, maxLines || 1000);
+      const scrollbackData = this.extractScrollbackFromTerminal(terminalInstance, maxLines || ScrollbackConfig.DEFAULT_MAX_LINES);
 
       this.logger.info(
         `📦 [SAVE-DEBUG] Extracted ${scrollbackData.length} lines for terminal ${terminalId}`
@@ -690,8 +708,8 @@ export class ScrollbackMessageHandler implements IMessageHandler {
       }
 
       // Retry mechanism: wait for terminal to be available
-      const maxRetries = 10;
-      const retryDelay = 200; // ms
+      const maxRetries = ScrollbackConfig.MAX_RESTORE_RETRIES;
+      const retryDelay = ScrollbackConfig.RESTORE_RETRY_DELAY_MS;
       let restored = false;
 
       for (let retryCount = 0; retryCount < maxRetries; retryCount++) {
@@ -810,7 +828,7 @@ export class ScrollbackMessageHandler implements IMessageHandler {
         if (settled) return;
         settled = true;
         resolve();
-      }, 200);
+      }, ScrollbackConfig.FLUSH_TIMEOUT_MS);
 
       try {
         terminal.write('', () => {
