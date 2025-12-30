@@ -274,6 +274,7 @@ export class SessionHandler extends BaseMessageHandler {
     try {
       // Extract scrollback from xterm.js
       const scrollbackContent = this.extractScrollbackFromXterm(
+        context,
         terminalInstance.terminal,
         maxLines
       );
@@ -332,7 +333,7 @@ export class SessionHandler extends BaseMessageHandler {
       }
 
       // Restore scrollback to the terminal
-      this.restoreScrollbackToXterm(terminalInstance.terminal, scrollbackContent);
+      this.restoreScrollbackToXterm(context, terminalInstance.terminal, scrollbackContent);
 
       // Send confirmation back to extension
       await context.postMessage({
@@ -391,11 +392,12 @@ export class SessionHandler extends BaseMessageHandler {
    * Extract scrollback content from xterm terminal (improved version)
    */
   private extractScrollbackFromXterm(
+    context: IMessageHandlerContext,
     terminal: any,
     maxLines: number
   ): Array<{ content: string; type?: 'output' | 'input' | 'error'; timestamp?: number }> {
     this.logActivity(
-      undefined as any,
+      context,
       `Extracting scrollback from xterm terminal (max ${maxLines} lines)`
     );
 
@@ -417,7 +419,7 @@ export class SessionHandler extends BaseMessageHandler {
       const baseY = buffer.baseY;
 
       this.logActivity(
-        undefined as any,
+        context,
         `Buffer info: length=${bufferLength}, viewportY=${viewportY}, baseY=${baseY}`
       );
 
@@ -426,7 +428,7 @@ export class SessionHandler extends BaseMessageHandler {
       const endLine = bufferLength;
 
       this.logActivity(
-        undefined as any,
+        context,
         `Extracting lines ${startLine} to ${endLine} (${endLine - startLine} lines)`
       );
 
@@ -446,7 +448,7 @@ export class SessionHandler extends BaseMessageHandler {
             }
           }
         } catch (lineError) {
-          this.logActivity(undefined as any, `Error extracting line ${i}: ${String(lineError)}`);
+          this.logActivity(context, `Error extracting line ${i}: ${String(lineError)}`);
           continue;
         }
       }
@@ -462,11 +464,11 @@ export class SessionHandler extends BaseMessageHandler {
       }
 
       this.logActivity(
-        undefined as any,
+        context,
         `Successfully extracted ${scrollbackLines.length} lines from terminal buffer`
       );
     } catch (error) {
-      this.logActivity(undefined as any, `Error accessing terminal buffer: ${String(error)}`);
+      this.logActivity(context, `Error accessing terminal buffer: ${String(error)}`);
       throw error;
     }
 
@@ -477,6 +479,7 @@ export class SessionHandler extends BaseMessageHandler {
    * Restore scrollback content to xterm terminal
    */
   private restoreScrollbackToXterm(
+    context: IMessageHandlerContext,
     terminal: any,
     scrollbackContent: Array<{
       content: string;
@@ -484,7 +487,7 @@ export class SessionHandler extends BaseMessageHandler {
       timestamp?: number;
     }>
   ): void {
-    this.logActivity(undefined as any, `Restoring ${scrollbackContent.length} lines to terminal`);
+    this.logActivity(context, `Restoring ${scrollbackContent.length} lines to terminal`);
 
     if (!terminal) {
       throw new Error('Terminal instance not provided');
@@ -495,6 +498,6 @@ export class SessionHandler extends BaseMessageHandler {
       terminal.writeln(line.content);
     }
 
-    this.logActivity(undefined as any, `Restored ${scrollbackContent.length} lines to terminal`);
+    this.logActivity(context, `Restored ${scrollbackContent.length} lines to terminal`);
   }
 }
