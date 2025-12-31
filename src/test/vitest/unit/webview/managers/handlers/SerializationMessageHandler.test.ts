@@ -7,10 +7,17 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { SerializationMessageHandler } from '../../../../../../webview/managers/handlers/SerializationMessageHandler';
 import { IManagerCoordinator } from '../../../../../../webview/interfaces/ManagerInterfaces';
+import { MessageQueue } from '../../../../../../webview/utils/MessageQueue';
 import { ManagerLogger } from '../../../../../../webview/utils/ManagerLogger';
+
+// Mock vscode for ErrorHandler
+vi.mock('vscode', () => ({
+  default: {},
+}));
 
 describe('SerializationMessageHandler', () => {
   let handler: SerializationMessageHandler;
+  let mockMessageQueue: MessageQueue;
   let mockLogger: ManagerLogger;
   let mockCoordinator: IManagerCoordinator;
 
@@ -45,6 +52,15 @@ describe('SerializationMessageHandler', () => {
   });
 
   beforeEach(() => {
+    // Create mock message queue
+    mockMessageQueue = {
+      enqueue: vi.fn(),
+      dequeue: vi.fn(),
+      clear: vi.fn(),
+      size: 0,
+      isEmpty: true,
+    } as unknown as MessageQueue;
+
     // Create mock logger
     mockLogger = {
       debug: vi.fn(),
@@ -68,7 +84,7 @@ describe('SerializationMessageHandler', () => {
     } as unknown as IManagerCoordinator;
 
     // Create handler
-    handler = new SerializationMessageHandler(mockLogger);
+    handler = new SerializationMessageHandler(mockMessageQueue, mockLogger);
   });
 
   afterEach(() => {
@@ -100,7 +116,7 @@ describe('SerializationMessageHandler', () => {
     it('should warn for unknown commands', async () => {
       await handler.handleMessage({ command: 'unknownCommand' } as any, mockCoordinator);
 
-      expect(mockLogger.warn).toHaveBeenCalledWith('Unknown serialization command: unknownCommand');
+      expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Unknown command'));
     });
 
     it('should dispatch to correct handler for known commands', async () => {
@@ -415,9 +431,7 @@ describe('SerializationMessageHandler', () => {
 
       const msg = {
         command: 'restoreTerminalSerialization',
-        terminalData: [
-          { id: 'terminal-1', serializedContent: 'content', isActive: true },
-        ],
+        terminalData: [{ id: 'terminal-1', serializedContent: 'content', isActive: true }],
       };
 
       await handler.handleMessage(msg as any, mockCoordinator);
@@ -455,9 +469,7 @@ describe('SerializationMessageHandler', () => {
 
       const msg = {
         command: 'restoreTerminalSerialization',
-        terminalData: [
-          { id: 'terminal-1', serializedContent: 'content', isActive: false },
-        ],
+        terminalData: [{ id: 'terminal-1', serializedContent: 'content', isActive: false }],
       };
 
       await handler.handleMessage(msg as any, mockCoordinator);
@@ -480,9 +492,7 @@ describe('SerializationMessageHandler', () => {
 
       const msg = {
         command: 'restoreTerminalSerialization',
-        terminalData: [
-          { id: 'terminal-1', serializedContent: 'content', isActive: false },
-        ],
+        terminalData: [{ id: 'terminal-1', serializedContent: 'content', isActive: false }],
       };
 
       await handler.handleMessage(msg as any, mockCoordinator);

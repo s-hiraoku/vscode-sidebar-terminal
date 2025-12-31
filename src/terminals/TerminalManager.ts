@@ -25,8 +25,7 @@ import { CircularBufferManager } from '../utils/CircularBufferManager';
 
 // Import new modules (Issue #237 Phase 1)
 import { TerminalDataBufferManager } from './TerminalDataBufferManager';
-import { TerminalStateCoordinator } from './TerminalStateCoordinator';
-import { TerminalIOCoordinator } from './TerminalIOCoordinator';
+import { TerminalCommandCoordinator } from './TerminalCommandCoordinator';
 import { TerminalProcessCoordinator } from './TerminalProcessCoordinator';
 import { TerminalLifecycleManager } from './TerminalLifecycleManager';
 
@@ -74,8 +73,7 @@ export class TerminalManager {
 
   // Issue #237 Phase 1 - Module coordinators
   private readonly _dataBufferManager: TerminalDataBufferManager;
-  private readonly _stateCoordinator: TerminalStateCoordinator;
-  private readonly _ioCoordinator: TerminalIOCoordinator;
+  private readonly _commandCoordinator: TerminalCommandCoordinator;
   private readonly _processCoordinator: TerminalProcessCoordinator;
   private readonly _lifecycleManager: TerminalLifecycleManager;
 
@@ -150,17 +148,13 @@ export class TerminalManager {
       this._cliAgentService
     );
 
-    this._stateCoordinator = new TerminalStateCoordinator(
+    // Consolidated TerminalCommandCoordinator (combines State + IO)
+    this._commandCoordinator = new TerminalCommandCoordinator(
       this._terminals,
       this._activeTerminalManager,
       this._stateUpdateEmitter,
       this._terminalFocusEmitter,
-      this._terminalNumberManager
-    );
-
-    this._ioCoordinator = new TerminalIOCoordinator(
-      this._terminals,
-      this._activeTerminalManager,
+      this._terminalNumberManager,
       this._cliAgentService
     );
 
@@ -181,7 +175,7 @@ export class TerminalManager {
       this._terminalRemovedEmitter,
       this._exitEmitter,
       (terminal: TerminalInstance) => this._setupTerminalEvents(terminal),
-      () => this._stateCoordinator.notifyStateUpdate(),
+      () => this._commandCoordinator.notifyStateUpdate(),
       (terminalId: string) => this._cleanupTerminalData(terminalId)
     );
   }
@@ -271,85 +265,85 @@ export class TerminalManager {
     this._processCoordinator.startPtyOutput(terminalId);
   }
 
-  // =================== STATE MANAGEMENT (delegated) ===================
+  // =================== STATE MANAGEMENT (delegated to CommandCoordinator) ===================
 
   /**
    * Get current terminal state
    */
   public getCurrentState(): TerminalState {
-    return this._stateCoordinator.getCurrentState();
+    return this._commandCoordinator.getCurrentState();
   }
 
   /**
    * Check if there is an active terminal
    */
   public hasActiveTerminal(): boolean {
-    return this._stateCoordinator.hasActiveTerminal();
+    return this._commandCoordinator.hasActiveTerminal();
   }
 
   /**
    * Get active terminal ID
    */
   public getActiveTerminalId(): string | undefined {
-    return this._stateCoordinator.getActiveTerminalId();
+    return this._commandCoordinator.getActiveTerminalId();
   }
 
   /**
    * Set active terminal
    */
   public setActiveTerminal(terminalId: string): void {
-    this._stateCoordinator.setActiveTerminal(terminalId);
+    this._commandCoordinator.setActiveTerminal(terminalId);
   }
 
   /**
    * Focus a terminal
    */
   public focusTerminal(terminalId: string): void {
-    this._stateCoordinator.focusTerminal(terminalId);
+    this._commandCoordinator.focusTerminal(terminalId);
   }
 
   /**
    * Reorder terminals
    */
   public reorderTerminals(order: string[]): void {
-    this._stateCoordinator.reorderTerminals(order);
+    this._commandCoordinator.reorderTerminals(order);
   }
 
   /**
    * Update terminal CWD
    */
   public updateTerminalCwd(terminalId: string, cwd: string): void {
-    this._stateCoordinator.updateTerminalCwd(terminalId, cwd);
+    this._commandCoordinator.updateTerminalCwd(terminalId, cwd);
   }
 
-  // =================== I/O OPERATIONS (delegated) ===================
+  // =================== I/O OPERATIONS (delegated to CommandCoordinator) ===================
 
   /**
    * Send input to a terminal
    */
   public sendInput(data: string, terminalId?: string): void {
-    this._ioCoordinator.sendInput(data, terminalId);
+    this._commandCoordinator.sendInput(data, terminalId);
   }
 
   /**
    * Resize a terminal
    */
   public resize(cols: number, rows: number, terminalId?: string): void {
-    this._ioCoordinator.resize(cols, rows, terminalId);
+    this._commandCoordinator.resize(cols, rows, terminalId);
   }
 
   /**
    * Write to terminal (public API)
    */
   public writeToTerminal(terminalId: string, data: string): boolean {
-    return this._ioCoordinator.writeToTerminal(terminalId, data);
+    return this._commandCoordinator.writeToTerminal(terminalId, data);
   }
 
   /**
    * Resize terminal (public API)
    */
   public resizeTerminal(terminalId: string, cols: number, rows: number): boolean {
-    return this._ioCoordinator.resizeTerminal(terminalId, cols, rows);
+    return this._commandCoordinator.resizeTerminal(terminalId, cols, rows);
   }
 
   // =================== LEGACY METHODS (backward compatibility) ===================
@@ -610,7 +604,7 @@ export class TerminalManager {
         // Clean up terminal and notify listeners
         this._terminals.delete(terminalId);
         this._terminalRemovedEmitter.fire(terminalId);
-        this._stateCoordinator.notifyStateUpdate();
+        this._commandCoordinator.notifyStateUpdate();
 
         log(`🗑️ [TERMINAL] Terminal ${terminalId} cleaned up after exit`);
       }
@@ -674,11 +668,11 @@ export class TerminalManager {
     }
 
     // Update active terminal after removal
-    this._stateCoordinator.updateActiveTerminalAfterRemoval(terminalId);
+    this._commandCoordinator.updateActiveTerminalAfterRemoval(terminalId);
 
     // Force state notification update
     log('🧹 [TERMINAL] Notifying state update after cleanup...');
-    this._stateCoordinator.notifyStateUpdate();
+    this._commandCoordinator.notifyStateUpdate();
     log('🧹 [TERMINAL] === CLEANUP TERMINAL DATA END ===');
   }
 

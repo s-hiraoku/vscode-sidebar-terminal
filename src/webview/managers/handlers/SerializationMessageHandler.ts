@@ -3,13 +3,13 @@
  *
  * Handles terminal state serialization and restoration
  *
- * Uses registry-based dispatch pattern instead of switch-case
- * for better maintainability and extensibility.
+ * Refactored to extend RegistryBasedMessageHandler for consistent patterns.
  */
 
-import { IMessageHandler } from './IMessageHandler';
+import { RegistryBasedMessageHandler } from './BaseMessageHandler';
 import { IManagerCoordinator } from '../../interfaces/ManagerInterfaces';
 import { MessageCommand } from '../messageTypes';
+import { MessageQueue } from '../../utils/MessageQueue';
 import { ManagerLogger } from '../../utils/ManagerLogger';
 
 // ============================================================================
@@ -25,14 +25,6 @@ const SerializationConfig = {
 } as const;
 
 /**
- * Handler function type (supports both sync and async)
- */
-type CommandHandler = (
-  msg: MessageCommand,
-  coordinator: IManagerCoordinator
-) => void | Promise<void>;
-
-/**
  * Serialization Message Handler
  *
  * Responsibilities:
@@ -41,8 +33,7 @@ type CommandHandler = (
  * - Handle terminal restore information
  * - Save all terminal sessions
  */
-export class SerializationMessageHandler implements IMessageHandler {
-  private readonly handlers: Map<string, CommandHandler>;
+export class SerializationMessageHandler extends RegistryBasedMessageHandler {
   private cachedTerminalRestoreInfo: {
     terminals: Array<Record<string, unknown>>;
     activeTerminalId: string | null;
@@ -50,60 +41,22 @@ export class SerializationMessageHandler implements IMessageHandler {
     timestamp: number;
   } | null = null;
 
-  constructor(private readonly logger: ManagerLogger) {
-    this.handlers = this.buildHandlerRegistry();
+  constructor(messageQueue: MessageQueue, logger: ManagerLogger) {
+    super(messageQueue, logger);
   }
 
   /**
-   * Build handler registry - replaces switch-case pattern
+   * Register all handlers using the base class pattern
    */
-  private buildHandlerRegistry(): Map<string, CommandHandler> {
-    const registry = new Map<string, CommandHandler>();
-
-    registry.set('serializeTerminal', (msg, coord) => this.handleSerializeTerminal(msg, coord));
-    registry.set('restoreSerializedContent', (msg, coord) =>
-      this.handleRestoreSerializedContent(msg, coord)
-    );
-    registry.set('requestTerminalSerialization', (msg, coord) =>
-      this.handleRequestTerminalSerialization(msg, coord)
-    );
-    registry.set('restoreTerminalSerialization', (msg, coord) =>
-      this.handleRestoreTerminalSerialization(msg, coord)
-    );
-    registry.set('terminalRestoreInfo', (msg, coord) =>
-      this.handleTerminalRestoreInfo(msg, coord)
-    );
-    registry.set('saveAllTerminalSessions', (msg, coord) =>
-      this.handleSaveAllTerminalSessions(msg, coord)
-    );
-
-    return registry;
-  }
-
-  /**
-   * Handle serialization related messages using registry dispatch
-   */
-  public async handleMessage(msg: MessageCommand, coordinator: IManagerCoordinator): Promise<void> {
-    const command = (msg as { command?: string }).command;
-
-    if (!command) {
-      this.logger.warn('Message received without command property');
-      return;
-    }
-
-    const handler = this.handlers.get(command);
-    if (handler) {
-      await handler(msg, coordinator);
-    } else {
-      this.logger.warn(`Unknown serialization command: ${command}`);
-    }
-  }
-
-  /**
-   * Get supported command types
-   */
-  public getSupportedCommands(): string[] {
-    return Array.from(this.handlers.keys());
+  protected registerHandlers(): void {
+    this.registerCommands({
+      serializeTerminal: (msg, coord) => this.handleSerializeTerminal(msg, coord),
+      restoreSerializedContent: (msg, coord) => this.handleRestoreSerializedContent(msg, coord),
+      requestTerminalSerialization: (msg, coord) => this.handleRequestTerminalSerialization(msg, coord),
+      restoreTerminalSerialization: (msg, coord) => this.handleRestoreTerminalSerialization(msg, coord),
+      terminalRestoreInfo: (msg, coord) => this.handleTerminalRestoreInfo(msg, coord),
+      saveAllTerminalSessions: (msg, coord) => this.handleSaveAllTerminalSessions(msg, coord),
+    }, { category: 'serialization' });
   }
 
   /**
@@ -564,10 +517,10 @@ export class SerializationMessageHandler implements IMessageHandler {
   }
 
   /**
-   * Clean up resources
+   * Clean up resources - override to add custom cleanup
    */
-  public dispose(): void {
+  public override dispose(): void {
     this.cachedTerminalRestoreInfo = null;
-    this.handlers.clear();
+    super.dispose();
   }
 }

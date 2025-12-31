@@ -91,9 +91,16 @@ describe('CommandRegistrar', () => {
     it('should register all commands', () => {
       registrar.registerCommands(mockContext);
 
-      // Check registration count (approximate)
-      expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(19);
-      expect(mockContext.subscriptions.length).toBe(19);
+      // Check registration count (21 commands total):
+      // - Main: 2 (split, splitHorizontal)
+      // - FileReference: 2 (sendAtMention, sendAllOpenFiles)
+      // - Copilot: 1 (activateCopilot)
+      // - SessionManagement: 6 (clearCorruptedHistory, saveSession, restoreSession, clearSession, testScrollback, diagnoseSession)
+      // - TerminalOperation: 2 (sendToTerminal, killTerminal)
+      // - ShellIntegration: 3 (updateShellStatus, updateCwd, getCommandHistory)
+      // - Misc: 5 (find, selectProfile, openSettings, debugInput, showVersion)
+      expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(21);
+      expect(mockContext.subscriptions.length).toBe(21);
     });
 
     it('should register specific commands', () => {

@@ -1,19 +1,36 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SettingsAndConfigMessageHandler } from '../../../../../../webview/managers/handlers/SettingsAndConfigMessageHandler';
+import { MessageQueue } from '../../../../../../webview/utils/MessageQueue';
+import { ManagerLogger } from '../../../../../../webview/utils/ManagerLogger';
+
+// Mock vscode for ErrorHandler
+vi.mock('vscode', () => ({
+  default: {},
+}));
 
 describe('SettingsAndConfigMessageHandler', () => {
   let handler: SettingsAndConfigMessageHandler;
-  let mockLogger: any;
+  let mockMessageQueue: MessageQueue;
+  let mockLogger: ManagerLogger;
   let mockCoordinator: any;
 
   beforeEach(() => {
     vi.resetAllMocks();
-    
+
+    mockMessageQueue = {
+      enqueue: vi.fn(),
+      dequeue: vi.fn(),
+      clear: vi.fn(),
+      size: 0,
+      isEmpty: true,
+    } as unknown as MessageQueue;
+
     mockLogger = {
       info: vi.fn(),
       warn: vi.fn(),
       error: vi.fn(),
-    };
+      debug: vi.fn(),
+    } as unknown as ManagerLogger;
 
     mockCoordinator = {
       applyFontSettings: vi.fn(),
@@ -26,7 +43,11 @@ describe('SettingsAndConfigMessageHandler', () => {
       getManagers: vi.fn().mockReturnValue({ ui: { updateTheme: vi.fn() } }),
     };
 
-    handler = new SettingsAndConfigMessageHandler(mockLogger);
+    handler = new SettingsAndConfigMessageHandler(mockMessageQueue, mockLogger);
+  });
+
+  afterEach(() => {
+    handler.dispose();
   });
 
   it('should return supported commands', () => {
@@ -38,55 +59,73 @@ describe('SettingsAndConfigMessageHandler', () => {
   });
 
   describe('handleMessage', () => {
-    it('should handle fontSettingsUpdate', () => {
+    it('should handle fontSettingsUpdate', async () => {
       const fontSettings = { fontFamily: 'Arial' };
-      handler.handleMessage({ command: 'fontSettingsUpdate', fontSettings }, mockCoordinator);
-      
+      await handler.handleMessage(
+        { command: 'fontSettingsUpdate', fontSettings },
+        mockCoordinator
+      );
+
       expect(mockCoordinator.applyFontSettings).toHaveBeenCalledWith(fontSettings);
       expect(mockCoordinator.emitTerminalInteractionEvent).toHaveBeenCalledWith(
-        'font-settings-update', '', fontSettings
+        'font-settings-update',
+        '',
+        fontSettings
       );
     });
 
-    it('should handle settingsResponse', () => {
+    it('should handle settingsResponse', async () => {
       const settings = { theme: 'dark' };
-      handler.handleMessage({ command: 'settingsResponse', settings }, mockCoordinator);
-      
+      await handler.handleMessage({ command: 'settingsResponse', settings }, mockCoordinator);
+
       expect(mockCoordinator.applySettings).toHaveBeenCalledWith(settings);
       expect(mockCoordinator.emitTerminalInteractionEvent).toHaveBeenCalledWith(
-        'settings-update', '', settings
+        'settings-update',
+        '',
+        settings
       );
     });
 
-    it('should handle openSettings', () => {
-      handler.handleMessage({ command: 'openSettings' }, mockCoordinator);
+    it('should handle openSettings', async () => {
+      await handler.handleMessage({ command: 'openSettings' }, mockCoordinator);
       expect(mockCoordinator.openSettings).toHaveBeenCalled();
     });
 
-    it('should handle versionInfo', () => {
-      handler.handleMessage({ command: 'versionInfo', version: '1.0.0' }, mockCoordinator);
+    it('should handle versionInfo', async () => {
+      await handler.handleMessage({ command: 'versionInfo', version: '1.0.0' }, mockCoordinator);
       expect(mockCoordinator.setVersionInfo).toHaveBeenCalledWith('1.0.0');
     });
 
-    it('should handle stateUpdate', () => {
+    it('should handle stateUpdate', async () => {
       const state = { some: 'state' };
-      handler.handleMessage({ command: 'stateUpdate', state }, mockCoordinator);
+      await handler.handleMessage({ command: 'stateUpdate', state }, mockCoordinator);
       expect(mockCoordinator.updateState).toHaveBeenCalledWith(state);
     });
 
-    it('should handle themeChanged', () => {
+    it('should handle themeChanged', async () => {
       // Mock getComputedStyle for theme colors
       const originalGetComputedStyle = window.getComputedStyle;
       window.getComputedStyle = vi.fn().mockReturnValue({
-        getPropertyValue: vi.fn().mockReturnValue('#ffffff')
-      });
+        getPropertyValue: vi.fn().mockReturnValue('#ffffff'),
+      }) as unknown as typeof window.getComputedStyle;
 
-      handler.handleMessage({ command: 'themeChanged', theme: 'dark' }, mockCoordinator);
-      
+      await handler.handleMessage({ command: 'themeChanged', theme: 'dark' }, mockCoordinator);
+
       expect(mockCoordinator.updateAllTerminalThemes).toHaveBeenCalled();
       expect(mockCoordinator.getManagers().ui.updateTheme).toHaveBeenCalled();
-      
+
       window.getComputedStyle = originalGetComputedStyle;
+    });
+
+    it('should warn for unknown command', async () => {
+      await handler.handleMessage({ command: 'unknownCommand' as any }, mockCoordinator);
+      expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Unknown command'));
+    });
+  });
+
+  describe('dispose', () => {
+    it('should dispose cleanly', () => {
+      expect(() => handler.dispose()).not.toThrow();
     });
   });
 });

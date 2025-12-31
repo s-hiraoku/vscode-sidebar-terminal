@@ -3,21 +3,16 @@
  *
  * Handles settings, configuration, and state updates
  *
- * Uses registry-based dispatch pattern instead of switch-case
- * for better maintainability and extensibility.
+ * Refactored to extend RegistryBasedMessageHandler for consistent patterns.
  */
 
-import { IMessageHandler } from './IMessageHandler';
+import { RegistryBasedMessageHandler } from './BaseMessageHandler';
 import { IManagerCoordinator } from '../../interfaces/ManagerInterfaces';
 import { MessageCommand } from '../messageTypes';
+import { MessageQueue } from '../../utils/MessageQueue';
 import { ManagerLogger } from '../../utils/ManagerLogger';
 import { WebViewFontSettings } from '../../../types/shared';
 import { DARK_THEME, LIGHT_THEME } from '../../types/theme.types';
-
-/**
- * Handler function type
- */
-type CommandHandler = (msg: MessageCommand, coordinator: IManagerCoordinator) => void;
 
 /**
  * Settings and Config Message Handler
@@ -28,53 +23,25 @@ type CommandHandler = (msg: MessageCommand, coordinator: IManagerCoordinator) =>
  * - Version information management
  * - State updates from extension
  */
-export class SettingsAndConfigMessageHandler implements IMessageHandler {
-  private readonly handlers: Map<string, CommandHandler>;
-
-  constructor(private readonly logger: ManagerLogger) {
-    this.handlers = this.buildHandlerRegistry();
+export class SettingsAndConfigMessageHandler extends RegistryBasedMessageHandler {
+  constructor(messageQueue: MessageQueue, logger: ManagerLogger) {
+    // RegistryBasedMessageHandler only takes messageQueue and logger
+    // We need to pass a dummy messageQueue or adapt
+    super(messageQueue, logger);
   }
 
   /**
-   * Build handler registry - replaces switch-case pattern
+   * Register all handlers using the base class pattern
    */
-  private buildHandlerRegistry(): Map<string, CommandHandler> {
-    const registry = new Map<string, CommandHandler>();
-
-    registry.set('fontSettingsUpdate', (msg, coord) => this.handleFontSettingsUpdate(msg, coord));
-    registry.set('settingsResponse', (msg, coord) => this.handleSettingsResponse(msg, coord));
-    registry.set('openSettings', (_msg, coord) => coord.openSettings());
-    registry.set('versionInfo', (msg, coord) => this.handleVersionInfo(msg, coord));
-    registry.set('stateUpdate', (msg, coord) => this.handleStateUpdate(msg, coord));
-    registry.set('themeChanged', (msg, coord) => this.handleThemeChanged(msg, coord));
-
-    return registry;
-  }
-
-  /**
-   * Handle settings and config related messages using registry dispatch
-   */
-  public handleMessage(msg: MessageCommand, coordinator: IManagerCoordinator): void {
-    const command = (msg as { command?: string }).command;
-
-    if (!command) {
-      this.logger.warn('Message received without command property');
-      return;
-    }
-
-    const handler = this.handlers.get(command);
-    if (handler) {
-      handler(msg, coordinator);
-    } else {
-      this.logger.warn(`Unknown settings/config command: ${command}`);
-    }
-  }
-
-  /**
-   * Get supported command types
-   */
-  public getSupportedCommands(): string[] {
-    return Array.from(this.handlers.keys());
+  protected registerHandlers(): void {
+    this.registerCommands({
+      fontSettingsUpdate: (msg, coord) => this.handleFontSettingsUpdate(msg, coord),
+      settingsResponse: (msg, coord) => this.handleSettingsResponse(msg, coord),
+      openSettings: (_msg, coord) => coord.openSettings(),
+      versionInfo: (msg, coord) => this.handleVersionInfo(msg, coord),
+      stateUpdate: (msg, coord) => this.handleStateUpdate(msg, coord),
+      themeChanged: (msg, coord) => this.handleThemeChanged(msg, coord),
+    }, { category: 'settings' });
   }
 
   /**
@@ -228,12 +195,5 @@ export class SettingsAndConfigMessageHandler implements IMessageHandler {
     ) {
       coordinator.emitTerminalInteractionEvent(eventType, terminalId, data);
     }
-  }
-
-  /**
-   * Clean up resources
-   */
-  public dispose(): void {
-    this.handlers.clear();
   }
 }
