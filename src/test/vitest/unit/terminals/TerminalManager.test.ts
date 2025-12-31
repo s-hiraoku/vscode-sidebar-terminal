@@ -3,24 +3,26 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { TerminalManager } from '../../../../terminals/TerminalManager';
 
 // Mock dependencies
-vi.mock('vscode', () => ({
-  default: {},
-  EventEmitter: vi.fn().mockImplementation(() => ({
-    fire: vi.fn(),
-    event: vi.fn(),
-    dispose: vi.fn(),
-  })),
-  workspace: {
-    workspaceFolders: []
+vi.mock('vscode', () => {
+  class MockEventEmitter {
+    fire = vi.fn();
+    event = vi.fn();
+    dispose = vi.fn();
   }
-}));
+  return {
+    default: {},
+    EventEmitter: MockEventEmitter,
+    workspace: {
+      workspaceFolders: []
+    }
+  };
+});
 
 vi.mock('../../../../utils/logger', () => ({
   terminal: vi.fn(),
 }));
 
 vi.mock('../../../../utils/common', () => {
-  const { vi } = require('vitest');
   class MockActiveTerminalManager {
     getActive = vi.fn();
     setActive = vi.fn();
@@ -35,50 +37,66 @@ vi.mock('../../../../utils/common', () => {
   };
 });
 
-vi.mock('../../../../services/TerminalProfileService', () => ({
-  TerminalProfileService: vi.fn(() => ({})),
-}));
+vi.mock('../../../../services/TerminalProfileService', () => {
+  class MockTerminalProfileService {
+    resolveProfile = vi.fn();
+    getAvailableProfiles = vi.fn();
+    getDefaultProfile = vi.fn();
+  }
+  return { TerminalProfileService: MockTerminalProfileService };
+});
 
-vi.mock('../../../../services/CliAgentDetectionService', () => ({
-  CliAgentDetectionService: vi.fn(() => ({
-    startHeartbeat: vi.fn(),
-    dispose: vi.fn(),
-    onCliAgentStatusChange: vi.fn(),
-    getAgentState: vi.fn().mockReturnValue({ status: 'none', agentType: null }),
-    getConnectedAgent: vi.fn().mockReturnValue(null),
-    getDisconnectedAgents: vi.fn().mockReturnValue(new Map()),
-    refreshAgentState: vi.fn(),
-    detectFromOutput: vi.fn(),
-    switchAgentConnection: vi.fn(),
-    forceReconnectAgent: vi.fn(),
-    clearDetectionError: vi.fn(),
-    handleTerminalRemoved: vi.fn(),
-  })),
-}));
+vi.mock('../../../../services/CliAgentDetectionService', () => {
+  class MockCliAgentDetectionService {
+    startHeartbeat = vi.fn();
+    dispose = vi.fn();
+    onCliAgentStatusChange = vi.fn();
+    getAgentState = vi.fn().mockReturnValue({ status: 'none', agentType: null });
+    getConnectedAgent = vi.fn().mockReturnValue(null);
+    getDisconnectedAgents = vi.fn().mockReturnValue(new Map());
+    refreshAgentState = vi.fn();
+    detectFromOutput = vi.fn();
+    detectFromInput = vi.fn();
+    switchAgentConnection = vi.fn();
+    forceReconnectAgent = vi.fn();
+    clearDetectionError = vi.fn();
+    handleTerminalRemoved = vi.fn();
+  }
+  return { CliAgentDetectionService: MockCliAgentDetectionService };
+});
 
-vi.mock('../../../../services/TerminalProcessManager', () => ({
-  TerminalProcessManager: vi.fn(() => ({})),
-}));
+vi.mock('../../../../services/TerminalProcessManager', () => {
+  class MockTerminalProcessManager {}
+  return { TerminalProcessManager: MockTerminalProcessManager };
+});
 
-vi.mock('../../../../services/TerminalValidationService', () => ({
-  TerminalValidationService: vi.fn(() => ({})),
-}));
+vi.mock('../../../../services/TerminalValidationService', () => {
+  class MockTerminalValidationService {}
+  return { TerminalValidationService: MockTerminalValidationService };
+});
 
-vi.mock('../../../../utils/CircularBufferManager', () => ({
-  CircularBufferManager: vi.fn(() => ({})),
-}));
+vi.mock('../../../../utils/CircularBufferManager', () => {
+  class MockCircularBufferManager {
+    bufferData = vi.fn();
+  }
+  return { CircularBufferManager: MockCircularBufferManager };
+});
 
-vi.mock('../../../../utils/TerminalNumberManager', () => ({
-  TerminalNumberManager: vi.fn(() => ({
-    canCreate: vi.fn().mockReturnValue(true),
-    findAvailableNumber: vi.fn().mockReturnValue(1),
-    getAvailableSlots: vi.fn().mockReturnValue([]),
-  })),
-}));
+vi.mock('../../../../utils/TerminalNumberManager', () => {
+  class MockTerminalNumberManager {
+    canCreate = vi.fn().mockReturnValue(true);
+    findAvailableNumber = vi.fn().mockReturnValue(1);
+    getAvailableSlots = vi.fn().mockReturnValue([]);
+  }
+  return { TerminalNumberManager: MockTerminalNumberManager };
+});
 
-vi.mock('../../../../terminals/TerminalSpawner', () => ({
-  TerminalSpawner: vi.fn(() => ({})),
-}));
+vi.mock('../../../../terminals/TerminalSpawner', () => {
+  class MockTerminalSpawner {
+    spawnTerminal = vi.fn();
+  }
+  return { TerminalSpawner: MockTerminalSpawner };
+});
 
 
 // Mock Coordinators
@@ -126,21 +144,33 @@ const mockDataBufferManager = {
   dispose: vi.fn(),
 };
 
-vi.mock('../../../../terminals/TerminalLifecycleManager', () => ({
-  TerminalLifecycleManager: vi.fn().mockImplementation(() => mockLifecycleManager)
-}));
+vi.mock('../../../../terminals/TerminalLifecycleManager', () => {
+  class MockTerminalLifecycleManager {
+    constructor() { return mockLifecycleManager; }
+  }
+  return { TerminalLifecycleManager: MockTerminalLifecycleManager };
+});
 
-vi.mock('../../../../terminals/TerminalCommandCoordinator', () => ({
-  TerminalCommandCoordinator: vi.fn().mockImplementation(() => mockCommandCoordinator)
-}));
+vi.mock('../../../../terminals/TerminalCommandCoordinator', () => {
+  class MockTerminalCommandCoordinator {
+    constructor() { return mockCommandCoordinator; }
+  }
+  return { TerminalCommandCoordinator: MockTerminalCommandCoordinator };
+});
 
-vi.mock('../../../../terminals/TerminalProcessCoordinator', () => ({
-  TerminalProcessCoordinator: vi.fn().mockImplementation(() => mockProcessCoordinator)
-}));
+vi.mock('../../../../terminals/TerminalProcessCoordinator', () => {
+  class MockTerminalProcessCoordinator {
+    constructor() { return mockProcessCoordinator; }
+  }
+  return { TerminalProcessCoordinator: MockTerminalProcessCoordinator };
+});
 
-vi.mock('../../../../terminals/TerminalDataBufferManager', () => ({
-  TerminalDataBufferManager: vi.fn().mockImplementation(() => mockDataBufferManager)
-}));
+vi.mock('../../../../terminals/TerminalDataBufferManager', () => {
+  class MockTerminalDataBufferManager {
+    constructor() { return mockDataBufferManager; }
+  }
+  return { TerminalDataBufferManager: MockTerminalDataBufferManager };
+});
 
 
 describe('TerminalManager', () => {
