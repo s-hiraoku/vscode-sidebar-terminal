@@ -38,8 +38,8 @@ const ENABLE_TERMINAL_DEBUG_LOGS = process.env.SECONDARY_TERMINAL_DEBUG_LOGS ===
  * - Delegate to TerminalLifecycleManager for creation/deletion
  * - Delegate to TerminalProcessCoordinator for PTY management
  * - Delegate to TerminalDataBufferManager for output buffering
- * - Delegate to TerminalStateCoordinator for state management
- * - Delegate to TerminalIOCoordinator for input/output operations
+ * - Delegate to TerminalCommandCoordinator for state management
+ * - Delegate to TerminalCommandCoordinator for input/output operations
  *
  * Integration with Issue #213 services:
  * - Uses TerminalProcessManager (PTY operations)
