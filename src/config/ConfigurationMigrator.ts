@@ -223,10 +223,13 @@ export class ConfigurationMigrator {
     try {
       // Check each expected configuration key
       for (const [key, defaultValue] of Object.entries(MIGRATION_KEYS)) {
-        const [section, configKey] = key.split('.', 2);
-        if (!section || !configKey) {
+        const lastDotIndex = key.lastIndexOf('.');
+        if (lastDotIndex === -1) {
           continue; // Skip malformed keys
         }
+        const section = key.substring(0, lastDotIndex);
+        const configKey = key.substring(lastDotIndex + 1);
+        
         const actualValue = this._unifiedService.get(section, configKey, defaultValue);
 
         // For this validation, we mainly check that values are accessible
@@ -296,10 +299,13 @@ export class ConfigurationMigrator {
       // Restore configurations from backup
       for (const [key, value] of Object.entries(backup.configurations)) {
         try {
-          const [section, configKey] = key.split('.', 2);
-          if (!section || !configKey) {
+          const lastDotIndex = key.lastIndexOf('.');
+          if (lastDotIndex === -1) {
             continue; // Skip malformed keys
           }
+          const section = key.substring(0, lastDotIndex);
+          const configKey = key.substring(lastDotIndex + 1);
+          
           await vscode.workspace
             .getConfiguration(section)
             .update(configKey, value, vscode.ConfigurationTarget.Global);
@@ -329,10 +335,13 @@ export class ConfigurationMigrator {
       // Backup current configuration values
       for (const key of Object.keys(MIGRATION_KEYS)) {
         try {
-          const [section, configKey] = key.split('.', 2);
-          if (!section || !configKey) {
+          const lastDotIndex = key.lastIndexOf('.');
+          if (lastDotIndex === -1) {
             continue; // Skip malformed keys
           }
+          const section = key.substring(0, lastDotIndex);
+          const configKey = key.substring(lastDotIndex + 1);
+          
           const config = vscode.workspace.getConfiguration(section);
           const value = config.get(configKey);
           if (value !== undefined) {
@@ -387,10 +396,13 @@ export class ConfigurationMigrator {
       ];
 
       for (const key of keySettings) {
-        const [section, configKey] = key.split('.', 2);
-        if (!section || !configKey) {
+        const lastDotIndex = key.lastIndexOf('.');
+        if (lastDotIndex === -1) {
           continue; // Skip malformed keys
         }
+        const section = key.substring(0, lastDotIndex);
+        const configKey = key.substring(lastDotIndex + 1);
+        
         const value = this._unifiedService.get(
           section,
           configKey,

@@ -18,7 +18,7 @@ import { WebLinksAddon } from '@xterm/addon-web-links';
 import { SearchAddon } from '@xterm/addon-search';
 import { SerializeAddon } from '@xterm/addon-serialize';
 import { Unicode11Addon } from '@xterm/addon-unicode11';
-import { WebglAddon } from '@xterm/addon-webgl';
+import type { WebglAddon } from '@xterm/addon-webgl';
 import { terminalLogger } from '../utils/ManagerLogger';
 import { AddonLoader } from '../utils/AddonLoader';
 import { ErrorHandler } from '../utils/ErrorHandler';

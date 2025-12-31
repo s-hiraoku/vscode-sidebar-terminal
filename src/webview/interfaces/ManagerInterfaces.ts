@@ -4,9 +4,9 @@
 
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
-import { SearchAddon } from '@xterm/addon-search';
-import { WebglAddon } from '@xterm/addon-webgl';
-import { Unicode11Addon } from '@xterm/addon-unicode11';
+import type { SearchAddon } from '@xterm/addon-search';
+import type { WebglAddon } from '@xterm/addon-webgl';
+import type { Unicode11Addon } from '@xterm/addon-unicode11';
 import { SerializeAddon } from '@xterm/addon-serialize';
 import { PartialTerminalSettings, WebViewFontSettings, ActiveBorderMode } from '../../types/shared';
 import { AltClickState, TerminalInteractionEvent } from '../../types/common';
