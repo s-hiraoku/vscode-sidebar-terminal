@@ -1165,5 +1165,8 @@
   ],
   "bundleDependencies": [
     "@homebridge/node-pty-prebuilt-multiarch"
-  ]
+  ],
+  "volta": {
+    "node": "24.12.0"
+  }
 }
