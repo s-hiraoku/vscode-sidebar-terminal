@@ -25,10 +25,12 @@ export class VersionUtils {
 
       // フォールバック: 拡張機能が見つからない場合
       console.warn('[VersionUtils] Extension not found, returning fallback version');
-      return 'Unknown';
+      this.cachedVersion = 'Unknown';
+      return this.cachedVersion;
     } catch (error) {
       console.error('[VersionUtils] Error getting extension version:', error);
-      return 'Unknown';
+      this.cachedVersion = 'Unknown';
+      return this.cachedVersion;
     }
   }
 
