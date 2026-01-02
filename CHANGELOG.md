@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-01-02
+
+### Fixed
+
+- **Terminal Paste Behavior**: Fixed paste functionality to match VS Code's standard terminal behavior
+  - Removed unnecessary shell escaping that was expanding escape characters incorrectly
+  - Added bracketed paste mode support (`\x1b[200~...\x1b[201~`) to prevent multi-line commands from executing line-by-line
+  - Normalized line endings to carriage return for cross-platform consistency
+  - Pasted content now behaves identically to VS Code's built-in terminal
+
 ## [0.2.0] - 2025-12-29
 
 ### Breaking Changes
