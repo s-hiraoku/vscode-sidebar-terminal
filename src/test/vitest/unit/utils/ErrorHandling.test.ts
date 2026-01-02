@@ -1,8 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   ErrorSeverity,
   ErrorCategory,
-  BaseError,
   TerminalError,
   SessionError,
   ConfigurationError,
@@ -13,7 +12,6 @@ import {
   getStackTrace,
   isRecoverableError,
   withErrorHandling,
-  ErrorReport,
 } from '../../../../utils/ErrorHandling';
 
 // Mock vscode module

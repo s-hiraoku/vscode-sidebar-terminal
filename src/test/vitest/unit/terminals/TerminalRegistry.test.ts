@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { TerminalRegistry } from '../../../../terminals/core/TerminalRegistry';
 import { TerminalInstance } from '../../../../types/shared';
 import { ActiveTerminalManager } from '../../../../utils/common';

@@ -125,7 +125,11 @@ describe('TerminalCommandHandlers', () => {
     it('should handle clipboard request (paste)', async () => {
       await handlers.handleClipboardRequest({ command: 'paste', terminalId: 't1' });
       expect(vscode.env.clipboard.readText).toHaveBeenCalled();
-      expect(mockTerminalManager.sendInput).toHaveBeenCalledWith('clipboard content', 't1');
+      // Text is wrapped with bracketed paste mode escape sequences
+      expect(mockTerminalManager.sendInput).toHaveBeenCalledWith(
+        '\x1b[200~clipboard content\x1b[201~',
+        't1'
+      );
     });
 
     it('should handle copy to clipboard', async () => {
