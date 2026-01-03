@@ -1,14 +1,24 @@
+## Development Flow (Mandatory)
+
+1. When receiving a feature request or modification, write tests first
+2. Present the tests to confirm the specification
+3. Proceed to implementation only after confirmation
+4. Adjust implementation until all tests pass
+
 <!-- OPENSPEC:START -->
+
 # OpenSpec Instructions
 
 These instructions are for AI assistants working in this project.
 
 Always open `@/openspec/AGENTS.md` when the request:
+
 - Mentions planning or proposals (words like proposal, spec, change, plan)
 - Introduces new capabilities, breaking changes, architecture shifts, or big performance/security work
 - Sounds ambiguous and you need the authoritative spec before coding
 
 Use `@/openspec/AGENTS.md` to learn:
+
 - How to create and apply change proposals
 - Spec format and conventions
 - Project structure and guidelines
@@ -26,12 +36,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **NEVER delete or discard uncommitted local changes without explicit user permission.**
 
 When you need to investigate build issues or test changes:
+
 1. **ALWAYS use `git stash` first** to save uncommitted changes
 2. After investigation, restore with `git stash pop`
 3. **NEVER use `git checkout -- .`** or `git restore .` to discard changes
 4. **NEVER use `git clean`** without explicit user confirmation
 
 Example workflow:
+
 ```bash
 # Save current changes before investigation
 git stash push -m "WIP: saving before investigation"
@@ -48,14 +60,15 @@ If build issues occur, ask the user before discarding any changes.
 
 This project has domain-specific CLAUDE.md files with detailed implementation guidance:
 
-| File | Purpose |
-|------|---------|
+| File                    | Purpose                                           |
+| ----------------------- | ------------------------------------------------- |
 | `src/webview/CLAUDE.md` | WebView architecture, Manager patterns, debugging |
-| `src/test/CLAUDE.md` | TDD workflow, test patterns, quality gates |
+| `src/test/CLAUDE.md`    | TDD workflow, test patterns, quality gates        |
 
 ## Essential Development Commands
 
 ### Core Development
+
 ```bash
 # Compile TypeScript
 npm run compile              # Production build
@@ -76,6 +89,7 @@ npm run pre-release:check   # Comprehensive pre-release validation
 ### Release Management
 
 #### Automated GitHub Actions Release (RECOMMENDED - New Safe Procedure)
+
 ```bash
 # Step 1: Update version and commit changes (WITHOUT tag)
 npm version patch --no-git-tag-version  # or minor/major
@@ -106,6 +120,7 @@ git push origin v{version}   # Triggers automated release workflow
 ```
 
 #### Legacy Release Procedure (Deprecated)
+
 ```bash
 # Old method: Tag immediately (NOT RECOMMENDED)
 # This was problematic because CI failures required tag deletion
@@ -116,6 +131,7 @@ git tag v{version} && git push origin v{version} && git push
 ```
 
 #### Manual Release (Fallback)
+
 ```bash
 # Safe releases (with automatic backup and quality checks)
 npm run release:patch:safe   # 0.0.x version bump
@@ -128,6 +144,7 @@ npm run rollback:to 0.1.95         # Rollback to specific version
 ```
 
 ### Platform-specific packaging
+
 ```bash
 # Package for specific platforms
 npm run vsce:package:darwin-arm64  # macOS Apple Silicon
@@ -145,6 +162,7 @@ npm run ovsx:publish:vsix         # Publish existing VSIX files
 ## Architecture Overview
 
 ### Terminal Management Architecture
+
 The extension uses a **singleton TerminalManager** pattern with atomic operations to prevent race conditions:
 
 - **ID Recycling System**: Terminal IDs 1-5 are recycled to maintain consistent user experience
@@ -153,6 +171,7 @@ The extension uses a **singleton TerminalManager** pattern with atomic operation
 - **Session Persistence**: Terminal states are saved every 5 minutes and can be restored
 
 ### WebView Architecture
+
 The WebView uses a **Manager-Coordinator pattern**:
 
 ```
@@ -173,26 +192,31 @@ LightweightTerminalWebviewManager (Coordinator)
 > **Note**: For detailed WebView implementation guidance, see `src/webview/CLAUDE.md`
 
 ### Terminal Rendering Optimization (Phase 1-3)
+
 **OpenSpec Implementation**: `optimize-terminal-rendering` (Completed)
 
 The extension implements three-phase optimization for improved performance:
 
 #### Phase 1: Rendering Optimization
+
 - **RenderingOptimizer**: Debounced resize handling (100ms) with ResizeObserver
 - **WebGL Auto-Fallback**: GPU acceleration with automatic DOM renderer fallback
 - **Device-Specific Scrolling**: Trackpad (0ms) vs Mouse wheel (125ms) smooth scrolling
 - **Performance**: 30%+ reduction in draw calls during terminal creation
 
 #### Phase 2: Scrollback Functionality (ScrollbackManager)
+
 Located in `src/webview/managers/ScrollbackManager.ts`
 
 **Core Features**:
+
 - **ANSI Color Preservation**: Uses SerializeAddon to maintain escape sequences
 - **Wrapped Line Processing**: Detects and reconstructs `line.isWrapped` content
 - **Empty Line Trimming**: 10-20% size reduction while preserving meaningful content
 - **Auto-Save Optimization**: 3-second debounce for high-frequency output
 
 **Usage Pattern**:
+
 ```typescript
 import { ScrollbackManager } from './managers/ScrollbackManager';
 
@@ -205,7 +229,7 @@ scrollbackManager.registerTerminal(terminalId, terminal, serializeAddon);
 const scrollbackData = scrollbackManager.saveScrollback(terminalId, {
   scrollback: 1000,
   trimEmptyLines: true,
-  preserveWrappedLines: true
+  preserveWrappedLines: true,
 });
 
 // Restore
@@ -213,9 +237,11 @@ scrollbackManager.restoreScrollback(terminalId, scrollbackData.content);
 ```
 
 #### Phase 3: Lifecycle Management (LifecycleController)
+
 Located in `src/webview/controllers/LifecycleController.ts`
 
 **Core Features**:
+
 - **DisposableStore Pattern**: Unified resource management from VS Code patterns
 - **LIFO Disposal**: Last-In-First-Out cleanup for dependency safety
 - **Lazy Addon Loading**: Load addons only when needed (30% memory reduction)
@@ -223,6 +249,7 @@ Located in `src/webview/controllers/LifecycleController.ts`
 - **Dispose Performance**: <100ms disposal time with complete reference clearing
 
 **Usage Pattern**:
+
 ```typescript
 import { LifecycleController } from './controllers/LifecycleController';
 import { FitAddon } from '@xterm/addon-fit';
@@ -233,18 +260,17 @@ const lifecycleController = new LifecycleController();
 lifecycleController.attachTerminal(terminalId, terminal);
 
 // Lazy load addon with caching
-const fitAddon = lifecycleController.loadAddonLazy(
-  terminalId,
-  'FitAddon',
-  FitAddon,
-  { lazy: true, cache: true }
-);
+const fitAddon = lifecycleController.loadAddonLazy(terminalId, 'FitAddon', FitAddon, {
+  lazy: true,
+  cache: true,
+});
 
 // Dispose terminal and all resources
 lifecycleController.disposeTerminal(terminalId);
 ```
 
 **Performance Metrics** (All Phases):
+
 - Draw calls: 30%+ reduction
 - Memory usage: 20%+ reduction
 - Scrollback restore: <1s for 1000 lines
@@ -252,6 +278,7 @@ lifecycleController.disposeTerminal(terminalId);
 - GPU utilization: 40-60% when WebGL enabled
 
 ### AI Agent Detection System
+
 Real-time detection of CLI agents with visual status indicators:
 
 - **Supported Agents**: Claude Code, GitHub Copilot, Gemini CLI, CodeRabbit CLI, Codex CLI
@@ -273,6 +300,7 @@ The VS Code repository contains the canonical implementation of terminal functio
 4. **Follow their patterns**: Maintain consistency with VS Code's architecture and UX
 
 This ensures:
+
 - Consistency with user expectations from the native terminal
 - Adherence to best practices used by the VS Code team
 - Compatibility with VS Code's extension API patterns
@@ -294,11 +322,13 @@ Agents are specialized AI assistants designed for specific tasks. Using them imp
 #### Skills vs Agents Pattern (Updated)
 
 **Skills** provide domain knowledge (what to do):
+
 - `terminal-expert` - Unified xterm.js + VS Code terminal knowledge
 - `vscode-extension-expert` - VS Code extension development
 - `mcp-*` Skills - MCP tool usage guidance
 
 **Agents** execute tasks (how to do it) and **invoke Skills for knowledge**:
+
 - `terminal-implementer` invokes `terminal-expert` Skill before implementing
 
 #### Agent Workflow Example
@@ -332,13 +362,13 @@ MCP tools consume significant context tokens when loaded directly. Using Skills 
 
 #### Available MCP Skills
 
-| Skill | MCP Server | Use When |
-|-------|------------|----------|
-| `mcp-deepwiki` | deepwiki | Researching GitHub repositories, understanding library APIs, asking questions about open-source projects |
-| `mcp-brave-search` | brave-search | Searching the web for current information, news, documentation, or local businesses |
-| `mcp-playwright` | playwright | Browser automation, taking screenshots, filling forms, testing web applications |
-| `mcp-firecrawl` | firecrawl | Web scraping, crawling websites, extracting structured data from web pages |
-| `mcp-chrome-devtools` | chrome-devtools | Browser debugging, analyzing performance, inspecting network requests and console |
+| Skill                 | MCP Server      | Use When                                                                                                 |
+| --------------------- | --------------- | -------------------------------------------------------------------------------------------------------- |
+| `mcp-deepwiki`        | deepwiki        | Researching GitHub repositories, understanding library APIs, asking questions about open-source projects |
+| `mcp-brave-search`    | brave-search    | Searching the web for current information, news, documentation, or local businesses                      |
+| `mcp-playwright`      | playwright      | Browser automation, taking screenshots, filling forms, testing web applications                          |
+| `mcp-firecrawl`       | firecrawl       | Web scraping, crawling websites, extracting structured data from web pages                               |
+| `mcp-chrome-devtools` | chrome-devtools | Browser debugging, analyzing performance, inspecting network requests and console                        |
 
 #### How to Use
 
@@ -385,11 +415,13 @@ mcp__chrome-devtools__take_snapshot({})
 ## Known Issues & Workarounds
 
 ### CI/CD Issues
+
 - **Ubuntu tests timeout (30min)**: Known issue with test runner. Tests pass on Windows/macOS
 - **CodeQL false positives**: May report substring sanitization issues - use regex patterns with word boundaries
 - **ES Module errors**: chai-as-promised requires dynamic imports in test setup
 
 ### Terminal Issues
+
 - **Prompt restoration**: Use `TerminalManager.initializeShellForTerminal()` if prompt disappears
 - **Memory leaks**: Sessions auto-save every 5 minutes, dispose handlers required for all managers
 - **IME composition**: Special handling for Japanese/Chinese input in InputManager
@@ -397,15 +429,19 @@ mcp__chrome-devtools__take_snapshot({})
 ## Critical Security Patterns
 
 ### URL Validation (IMPORTANT)
+
 ```typescript
 // ❌ VULNERABLE - Don't use includes()
-if (text.includes('github copilot')) { }
+if (text.includes('github copilot')) {
+}
 
 // ✅ SECURE - Use regex with boundaries
-if (/(^|\s)github copilot(\s|$)/i.test(text)) { }
+if (/(^|\s)github copilot(\s|$)/i.test(text)) {
+}
 ```
 
 ### Session Storage
+
 - Terminal scrollback limited to 1000 lines for persistent sessions
 - Sensitive data should not be stored in session state
 - Use VSCode SecretStorage for credentials
@@ -413,6 +449,7 @@ if (/(^|\s)github copilot(\s|$)/i.test(text)) { }
 ## Performance Optimization Settings
 
 ### Current Optimized Values
+
 ```typescript
 BUFFER_FLUSH_INTERVAL = 16;  // 60fps for normal output
 CLI_AGENT_FLUSH_INTERVAL = 4; // 250fps for AI agents
@@ -427,12 +464,14 @@ MAX_STORAGE_SIZE = 20MB; // Maximum storage for scrollback
 > **Note**: For detailed TDD implementation guidance, see `src/test/CLAUDE.md`
 
 ### Test Execution Priority
+
 1. **Unit tests first**: Fastest, most reliable
 2. **Integration tests**: Component interaction
 3. **Performance tests**: Memory and CPU usage
 4. **E2E tests**: Full WebView testing (may timeout)
 
 ### TDD Workflow
+
 ```bash
 npm run tdd:red      # Write failing test
 npm run tdd:green    # Minimal implementation
@@ -444,11 +483,11 @@ npm run tdd:quality-gate # Verify TDD compliance
 
 ### Test Coverage Overview
 
-| Priority | Scenarios | Release Requirement |
-|----------|-----------|---------------------|
-| P0 (Critical) | 18 | 100% pass rate |
-| P1 (Important) | 38 | ≥95% pass rate |
-| P2 (Nice-to-have) | 13 | ≥80% pass rate |
+| Priority          | Scenarios | Release Requirement |
+| ----------------- | --------- | ------------------- |
+| P0 (Critical)     | 18        | 100% pass rate      |
+| P1 (Important)    | 38        | ≥95% pass rate      |
+| P2 (Nice-to-have) | 13        | ≥80% pass rate      |
 
 **Implementation Status**: 87% complete (60+ scenarios)
 **Test Files Location**: `src/test/e2e/tests/`
@@ -476,13 +515,13 @@ Terminal deletion: <100ms
 
 For comprehensive E2E testing guides, see `src/test/e2e/`:
 
-| Document | Purpose |
-|----------|---------|
-| [QUICK_START.md](src/test/e2e/QUICK_START.md) | Get started in 5 minutes |
-| [DEBUGGING.md](src/test/e2e/DEBUGGING.md) | Debug failing/flaky tests |
-| [MAINTENANCE.md](src/test/e2e/MAINTENANCE.md) | Test suite maintenance |
-| [TEST_PLAN.md](src/test/e2e/TEST_PLAN.md) | Full test scenarios |
-| [TEST_IMPLEMENTATION_STATUS.md](src/test/e2e/TEST_IMPLEMENTATION_STATUS.md) | Current status |
+| Document                                                                    | Purpose                   |
+| --------------------------------------------------------------------------- | ------------------------- |
+| [QUICK_START.md](src/test/e2e/QUICK_START.md)                               | Get started in 5 minutes  |
+| [DEBUGGING.md](src/test/e2e/DEBUGGING.md)                                   | Debug failing/flaky tests |
+| [MAINTENANCE.md](src/test/e2e/MAINTENANCE.md)                               | Test suite maintenance    |
+| [TEST_PLAN.md](src/test/e2e/TEST_PLAN.md)                                   | Full test scenarios       |
+| [TEST_IMPLEMENTATION_STATUS.md](src/test/e2e/TEST_IMPLEMENTATION_STATUS.md) | Current status            |
 
 ### Playwright Agents (Claude Code)
 
@@ -493,6 +532,7 @@ For comprehensive E2E testing guides, see `src/test/e2e/`:
 ## Emergency Response Procedures
 
 ### When Marketplace version breaks:
+
 1. **Immediate**: `npm run rollback:emergency:publish`
 2. **Investigate**: Check user reports and error logs
 3. **Fix**: Create hotfix branch
@@ -500,6 +540,7 @@ For comprehensive E2E testing guides, see `src/test/e2e/`:
 5. **Deploy**: `npm run release:patch:safe`
 
 ### When tests fail in CI:
+
 1. Check if Ubuntu timeout (ignore if other platforms pass)
 2. Check for ES Module import issues
 3. Verify GitHub Actions permissions in workflow files
@@ -508,18 +549,21 @@ For comprehensive E2E testing guides, see `src/test/e2e/`:
 ## Component-Specific Guidelines
 
 ### When modifying TerminalManager:
+
 - Maintain atomic operation patterns
 - Preserve ID recycling logic (1-5)
 - Update dispose() methods for cleanup
 - Test concurrent operation scenarios
 
 ### When modifying WebView:
+
 - Follow Manager-Coordinator pattern
 - Update both TypeScript and bundled JavaScript
 - Test IME input and Alt+Click functionality
 - Verify theme changes work correctly
 
 ### When modifying ScrollbackManager:
+
 - Always use SerializeAddon for ANSI color preservation
 - Test wrapped line reconstruction with various terminal widths
 - Verify empty line trimming doesn't remove meaningful content
@@ -527,6 +571,7 @@ For comprehensive E2E testing guides, see `src/test/e2e/`:
 - Test with high-frequency output scenarios
 
 ### When modifying LifecycleController:
+
 - Maintain DisposableStore LIFO disposal order
 - Ensure all ITerminalAddon implementations have activate() method
 - Test addon caching works correctly across terminals
@@ -535,6 +580,7 @@ For comprehensive E2E testing guides, see `src/test/e2e/`:
 - Always extend ITerminalAddon (not just IDisposable) for addon types
 
 ### When modifying RenderingOptimizer:
+
 - Maintain 100ms debounce for resize events
 - Test WebGL fallback to DOM renderer
 - Verify device detection for trackpad vs mouse wheel
@@ -542,6 +588,7 @@ For comprehensive E2E testing guides, see `src/test/e2e/`:
 - Test with invalid dimensions (< 50px)
 
 ### When modifying AI Agent Detection:
+
 - Use regex patterns, not includes()
 - Test with actual CLI agent output
 - Verify status indicators update correctly
@@ -550,7 +597,9 @@ For comprehensive E2E testing guides, see `src/test/e2e/`:
 ## GitHub Workflows
 
 ### Required Permissions
+
 Workflows need specific permissions for PR comments and security scanning:
+
 ```yaml
 permissions:
   contents: read
@@ -559,19 +608,23 @@ permissions:
 ```
 
 ### Workflow Dependencies
+
 - **CI**: Main test pipeline (may timeout on Ubuntu)
 - **TDD Quality Check**: Validates TDD compliance
 - **Build Platform-Specific**: Creates platform packages and automated releases
 - **CodeQL**: Security scanning (check regex patterns)
 
 ### GitHub Actions Release Workflow
+
 The automated release system (`build-platform-packages.yml`) provides:
 
 #### Triggered by Git Tags
+
 - **Trigger**: Push git tag `v*` (e.g., `v0.1.103`)
 - **Branches**: Runs on `main` and `for-publish` branches
 
 #### Release Pipeline
+
 1. **Pre-Release Quality Gate**:
    - TDD compliance check with comprehensive test suite
    - Blocks release if quality standards not met
@@ -600,6 +653,7 @@ The automated release system (`build-platform-packages.yml`) provides:
    - Skipped if `OVSX_PAT` is not configured
 
 #### Required Secrets
+
 - `VSCE_PAT`: Personal Access Token for VS Code Marketplace publishing
 - `OVSX_PAT`: (Optional) Personal Access Token for Open VSX Registry
   - Create account at [open-vsx.org](https://open-vsx.org/)
@@ -607,12 +661,14 @@ The automated release system (`build-platform-packages.yml`) provides:
   - Add to GitHub repository secrets
 
 #### Monitoring
+
 - View workflow status: https://github.com/s-hiraoku/vscode-sidebar-terminal/actions
 - Release dashboard: https://github.com/s-hiraoku/vscode-sidebar-terminal/releases
 
 ## Debugging Tips
 
 ### Terminal not responding:
+
 ```typescript
 // Check terminal state
 console.log(terminalManager.getTerminalInfo(id));
@@ -622,6 +678,7 @@ terminalManager.initializeShellForTerminal(id);
 ```
 
 ### WebView not updating:
+
 ```typescript
 // Check message queue
 messageManager.getQueueSize();
@@ -631,6 +688,7 @@ performanceManager.flush();
 ```
 
 ### Session not restoring:
+
 ```typescript
 // Check saved sessions
 const sessions = await sessionManager.getSavedSessions();
