@@ -20,7 +20,9 @@ export class TerminalScrollIndicatorService {
    */
   public attach(terminal: Terminal, container: HTMLElement, terminalId: string): DisposableFn {
     try {
-      const content = (container.querySelector('.terminal-content') as HTMLElement) ?? container;
+      // Append to container directly to avoid overflow clipping
+      // .terminal-content has overflow: hidden which clips absolutely positioned children
+      const content = container;
       const viewport = container.querySelector('.xterm-viewport') as HTMLElement | null;
 
       if (!viewport) {
@@ -115,7 +117,7 @@ export class TerminalScrollIndicatorService {
         pointer-events: none;
         transform: translateY(4px);
         transition: opacity 120ms ease, transform 120ms ease, background-color 120ms ease, border-color 120ms ease;
-        z-index: 5;
+        z-index: 999;
       }
 
       .terminal-scroll-indicator.visible {
