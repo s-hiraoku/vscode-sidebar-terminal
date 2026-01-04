@@ -276,7 +276,7 @@ export class TerminalAddonManager {
 
       const availableHeight = height - paddingVertical;
       const availableWidth = width - paddingHorizontal - scrollbarWidth;
-      const safetyPaddingPx = 4;
+      const safetyPaddingPx = 0;  // Remove safety padding to maximize visible area
 
       return {
         cols: Math.max(2, Math.floor((availableWidth - safetyPaddingPx) / cellWidth)),
