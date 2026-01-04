@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-01-04
+
+### Added
+
+- **Comprehensive Unit Tests**: Added 16 comprehensive unit tests for FitAddon's proposeDimensions() behavior
+  - Validates terminal dimension calculations with safety padding removal
+  - Tests multiple viewport widths (narrow 200px, standard 800px, wide 1920px)
+  - Tests varied cell widths simulating different font sizes (7px, 10px, 12px compact/normal/large)
+  - Tests scrollbar visibility edge cases with and without scrollbar width
+  - Tests CSS padding impact on dimension calculations
+  - Validates minimum column (2) and row (1) enforcement
+  - Ensures safety padding removal maximizes visible area without regressions
+  - Provides 100% confidence that terminal width expansion works correctly
+
 ## [0.2.2] - 2026-01-04
 
 ### Fixed
