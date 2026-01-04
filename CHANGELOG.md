@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-01-04
+
+### Fixed
+
+- **Scroll Button Visibility**: Fixed scroll-to-bottom indicator not appearing when scrolled away from bottom
+  - Changed button attachment point from `.terminal-content` (which has `overflow: hidden`) to `.terminal-container`
+  - Increased z-index to ensure visibility above all terminal content
+  - Properly displays VS Code-style scroll-to-bottom pill button when user scrolls up
+
+- **Terminal Text Clipping**: Fixed characters being cut off at right edge of terminal
+  - Removed unnecessary 4px safety padding from FitAddon calculation
+  - Expands visible terminal width by approximately 3-4 pixels
+  - Text now renders completely to the right edge of the terminal container
+
 ## [0.2.1] - 2026-01-02
 
 ### Fixed
