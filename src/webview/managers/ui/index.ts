@@ -7,3 +7,5 @@
 export { NotificationService, NotificationConfig } from './NotificationService';
 export { TerminalBorderService } from './TerminalBorderService';
 export { CliAgentStatusService } from './CliAgentStatusService';
+export { HeaderService } from './HeaderService';
+export { LoadingIndicatorService } from './LoadingIndicatorService';

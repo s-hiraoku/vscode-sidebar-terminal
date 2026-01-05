@@ -374,17 +374,15 @@ export class TerminalCommandHandlers {
 
       log(`📋 [HANDLER] Clipboard content length: ${clipboardText.length} characters`);
 
-      // Escape special characters based on shell type
-      const terminal = this.deps.terminalManager.getTerminal(message.terminalId);
-      if (!terminal) {
-        log('❌ [HANDLER] Terminal not found for paste operation');
-        return;
-      }
+      // Normalize line endings to carriage return (VS Code standard terminal behavior)
+      let processedText = clipboardText.replace(/\r?\n/g, '\r');
 
-      const shellPath = (terminal as any).shellPath || '';
-      const processedText = this.escapeTextForShell(clipboardText, shellPath);
+      // Wrap with bracketed paste mode escape sequences (VS Code standard terminal behavior)
+      processedText = `\x1b[200~${processedText}\x1b[201~`;
 
       // Send to terminal using sendInput
+      // Note: VS Code standard terminal does NOT escape special characters on paste.
+      // Text is written directly to PTY, matching VS Code's behavior.
       log(`📋 [HANDLER] Pasting to terminal ${message.terminalId}`);
       this.deps.terminalManager.sendInput(processedText, message.terminalId);
 
@@ -596,38 +594,25 @@ export class TerminalCommandHandlers {
       log(`📋 [HANDLER] Processing text paste for terminal ${message.terminalId}`);
       log(`📋 [HANDLER] Text length: ${text.length} characters`);
 
-      const terminal = this.deps.terminalManager.getTerminal(message.terminalId);
-      if (!terminal) {
-        log('❌ [HANDLER] Terminal not found for paste operation');
-        return;
-      }
+      // Normalize line endings to carriage return (VS Code standard terminal behavior)
+      // This ensures consistent behavior across platforms
+      let processedText = text.replace(/\r?\n/g, '\r');
 
-      const shellPath = (terminal as any).shellPath || '';
-      const processedText = this.escapeTextForShell(text, shellPath);
+      // Wrap with bracketed paste mode escape sequences (VS Code standard terminal behavior)
+      // This tells the shell that this is pasted content, preventing each line from being
+      // executed as a separate command. Most modern shells support this mode.
+      // \x1b[200~ = start bracketed paste, \x1b[201~ = end bracketed paste
+      processedText = `\x1b[200~${processedText}\x1b[201~`;
 
       // Send to terminal using sendInput
+      // Note: VS Code standard terminal does NOT escape special characters on paste.
+      // Text is written directly to PTY, matching VS Code's behavior.
       this.deps.terminalManager.sendInput(processedText, message.terminalId);
 
       log('✅ [HANDLER] Text pasted successfully');
     } catch (error) {
       log('❌ [HANDLER] Failed to paste text:', error);
     }
-  }
-
-  /**
-   * Escape special characters for shell (VS Code standard pattern)
-   * Supports bash/zsh (backslash) and PowerShell (backtick)
-   */
-  private escapeTextForShell(text: string, shellPath: string): string {
-    const shellName = shellPath.toLowerCase();
-
-    // PowerShell: Use backtick for escaping
-    if (shellName.includes('powershell') || shellName.includes('pwsh')) {
-      return text.replace(/([`$"\\])/g, '`$1');
-    }
-
-    // Bash/Zsh: Use backslash for escaping (default)
-    return text.replace(/([\\$`])/g, '\\$1');
   }
 
   /**

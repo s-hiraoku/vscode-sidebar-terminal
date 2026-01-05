@@ -50,6 +50,8 @@ export interface ITerminalTabManager {
   hasPendingDeletion(terminalId: string): boolean;
   /** Get all terminal IDs currently pending deletion */
   getPendingDeletions(): Set<string>;
+  /** Update tab list theme to match terminal theme */
+  updateTheme?(theme: { background: string; foreground: string }): void;
   dispose(): void;
 }
 
@@ -157,6 +159,12 @@ export interface IManagerCoordinator {
   writeToTerminal?(data: string, terminalId?: string): boolean;
   switchToTerminal?(terminalId: string): Promise<boolean>;
   applySettings?(settings: unknown): void;
+  // テーマ一括更新（auto テーマ連動機能）
+  updateAllTerminalThemes?(theme: {
+    background: string;
+    foreground: string;
+    cursor: string;
+  }): void;
   // Claude状態管理（レガシー）
   updateClaudeStatus(
     activeTerminalName: string | null,
@@ -170,6 +178,8 @@ export interface IManagerCoordinator {
     agentType: string | null
   ): void;
   ensureTerminalFocus(terminalId: string): void;
+  /** Force a full refit of all terminal instances (layout mode changes, etc.) */
+  refitAllTerminals?(): void;
 
   // Session restore flag management
   isRestoringSession?(): boolean;

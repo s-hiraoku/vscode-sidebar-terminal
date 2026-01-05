@@ -159,27 +159,31 @@ export class WebViewStateManager implements IWebViewStateManager {
       }
 
       // Send a message to WebView to analyze its dimensions and report back
-      void this.sendMessage({
+      this.sendMessage({
         command: 'requestPanelLocationDetection',
         location: undefined,
+      }).catch((error) => {
+        log('⚠️ [STATE-MANAGER] Error requesting panel location detection:', error);
+
+        // Fallback to sidebar assumption
+        if (this.sendMessage) {
+          void this.sendMessage({
+            command: 'panelLocationUpdate',
+            location: 'sidebar',
+          }).catch(() => {
+            // Ignore secondary failure to avoid unhandled rejection during fallback.
+          });
+        }
+
+        // Set fallback context key
+        void vscode.commands.executeCommand(
+          'setContext',
+          'secondaryTerminal.panelLocation',
+          'sidebar'
+        );
       });
     } catch (error) {
-      log('⚠️ [STATE-MANAGER] Error requesting panel location detection:', error);
-
-      // Fallback to sidebar assumption
-      if (this.sendMessage) {
-        void this.sendMessage({
-          command: 'panelLocationUpdate',
-          location: 'sidebar',
-        });
-      }
-
-      // Set fallback context key
-      void vscode.commands.executeCommand(
-        'setContext',
-        'secondaryTerminal.panelLocation',
-        'sidebar'
-      );
+      log('⚠️ [STATE-MANAGER] Error requesting panel location detection (sync):', error);
     }
   }
 

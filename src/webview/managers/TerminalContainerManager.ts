@@ -28,6 +28,7 @@ import {
   TerminalDisplaySnapshot,
 } from '../interfaces/ManagerInterfaces';
 import { SplitLayoutService, ContainerVisibilityService } from './container';
+import { DOMUtils } from '../utils/DOMUtils';
 
 /**
  * TerminalContainerManager
@@ -176,6 +177,19 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
     const orderedIds = this.resolveOrderedIds(state.orderedTerminalIds);
 
     if (state.mode === 'split') {
+      // 🔧 FIX: Clear fullscreen inline heights before building split layout
+      // This prevents the previously fullscreen container from occupying full height.
+      this.containerCache.forEach((container) => {
+        container.style.removeProperty('height');
+        container.style.removeProperty('maxHeight');
+        container.style.removeProperty('minHeight');
+        DOMUtils.resetXtermInlineStyles(container, false);
+      });
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+      document.body.offsetWidth;
+    }
+
+    if (state.mode === 'split') {
       this.clearSplitArtifacts();
       this.splitLayoutService.activateSplitLayout(
         terminalBody,
@@ -246,6 +260,9 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
             container.style.display = 'flex';
             container.style.flex = '1 1 auto';
             container.style.width = '100%';
+            // 🔧 FIX: Clear fullscreen inline height so split layout can shrink containers
+            container.style.removeProperty('height');
+            container.style.removeProperty('maxHeight');
           }
           break;
         }

@@ -90,8 +90,7 @@ export class ExtensionPersistenceService implements vscode.Disposable {
     }
   >();
 
-  // Disposables
-  private onWillSaveStateDisposable?: vscode.Disposable;
+  // State
   private isRestoring = false;
 
   // Sidebar provider for WebView communication (can be set after construction)
@@ -606,7 +605,6 @@ export class ExtensionPersistenceService implements vscode.Disposable {
       clearTimeout(this.autoSaveDebounceTimer);
       this.autoSaveDebounceTimer = undefined;
     }
-    this.onWillSaveStateDisposable?.dispose();
     this.pushedScrollbackCache.clear();
     this.pendingTerminalReadyCallbacks.clear();
     this.pendingScrollbackRequests.clear();
@@ -618,34 +616,23 @@ export class ExtensionPersistenceService implements vscode.Disposable {
   // ==========================================================================
 
   /**
-   * Setup auto-save on window close/reload
+   * Setup auto-save configuration.
+   *
+   * Note: Session saving is primarily handled by deactivate() in ExtensionLifecycle.
+   * The VS Code extension API does not provide a public onWillSaveState event,
+   * so we rely on the deactivate() function which is called when the extension
+   * is being deactivated or when VS Code is shutting down.
+   *
+   * For additional reliability, TerminalAutoSaveService provides periodic
+   * scrollback caching which is used as a fallback during deactivation.
    */
   private setupAutoSave(): void {
-    // Setup onWillSaveState for window close
-    const workspaceWithSaveState = vscode.workspace as any;
-    log('🔧 [AUTO-SAVE-SETUP] Checking onWillSaveState API...');
-
-    if (typeof workspaceWithSaveState.onWillSaveState === 'function') {
-      this.onWillSaveStateDisposable = workspaceWithSaveState.onWillSaveState(
-        async (event: any) => {
-          log('🔴 [EXT-PERSISTENCE] Window closing - saving session...');
-          log(`🔴 [EXT-PERSISTENCE] Event reason: ${event?.reason}`);
-          event.waitUntil(
-            (async () => {
-              log('🔴 [EXT-PERSISTENCE] Starting prefetch...');
-              await this.prefetchScrollbackForSave();
-              log('🔴 [EXT-PERSISTENCE] Prefetch done, calling saveCurrentSession...');
-              return this.saveCurrentSession({ preferCache: true });
-            })()
-          );
-        }
-      );
-      log('✅ [EXT-PERSISTENCE] Auto-save on window close configured (onWillSaveState registered)');
-    } else {
-      log('⚠️ [EXT-PERSISTENCE] onWillSaveState API not available - auto-save DISABLED');
-    }
-
-    // Periodic save disabled: save only on window close via onWillSaveState.
+    // Note: vscode.workspace.onWillSaveState is not a public API.
+    // Session persistence relies on:
+    // 1. deactivate() function called by VS Code on shutdown/reload
+    // 2. TerminalAutoSaveService for periodic scrollback caching (every 30s)
+    // 3. Immediate save when scrollback data is pushed from WebView
+    log('✅ [EXT-PERSISTENCE] Session persistence configured (via deactivate + periodic caching)');
   }
 
   /**

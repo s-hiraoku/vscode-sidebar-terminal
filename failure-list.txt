@@ -1,2 +1,0 @@
-    [32m  [32m✔[39m[0m[90m should implement circuit breaker pattern for failing async operations[0m
-[31m  394 failing[0m

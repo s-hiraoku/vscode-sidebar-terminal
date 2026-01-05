@@ -48,6 +48,9 @@ import { TerminalSettingsManager } from './TerminalSettingsManager';
 // Services
 import { FontSettingsService } from '../services/FontSettingsService';
 
+// Types
+import { TerminalTheme } from '../types/theme.types';
+
 interface SystemStatusSnapshot {
   ready: boolean;
   state: TerminalState | null;
@@ -386,6 +389,11 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     this.terminalTabManager = new TerminalTabManager();
     this.terminalTabManager.setCoordinator(this);
 
+    // Connect UIManager with TerminalTabManager for theme synchronization
+    this.uiManager.setTabThemeUpdater((theme) => {
+      this.terminalTabManager?.updateTheme(theme);
+    });
+
     // Input Manager - 重要：入力機能のために必須 (Issue #216: constructor injection)
     this.inputManager = new InputManager(this);
     this.inputManager.initialize(); // 🔧 Initialize InputManager to register keyboard listeners
@@ -513,7 +521,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
    * Refit all terminals to their container dimensions
    * 委譲: ResizeCoordinator
    */
-  private refitAllTerminals(): void {
+  public refitAllTerminals(): void {
     this.resizeCoordinator.refitAllTerminals();
   }
 
@@ -1220,6 +1228,67 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       log('⚙️ Settings applied:', settings);
     } catch (error) {
       log('❌ Error applying settings:', error);
+    }
+  }
+
+  /**
+   * Update theme for all terminal instances
+   * Called when VS Code theme changes and settings.theme is 'auto'
+   */
+  public updateAllTerminalThemes(theme: TerminalTheme): void {
+    try {
+      log(`🎨 [THEME] Updating all terminal themes`);
+
+      const terminals = this.splitManager.getTerminals();
+      let updatedCount = 0;
+
+      for (const [id, instance] of terminals) {
+        if (instance.terminal) {
+          // Update xterm.js theme options
+          instance.terminal.options.theme = theme;
+
+          // Update container background color
+          if (instance.container) {
+            instance.container.style.backgroundColor = theme.background;
+          }
+
+          // Update xterm.js internal elements for immediate visual update
+          const terminalElement = instance.container?.querySelector('.xterm') as HTMLElement;
+          if (terminalElement) {
+            terminalElement.style.backgroundColor = theme.background;
+
+            // Update viewport background
+            const viewport = terminalElement.querySelector('.xterm-viewport') as HTMLElement;
+            if (viewport) {
+              viewport.style.backgroundColor = theme.background;
+            }
+
+            // Update screen background
+            const screen = terminalElement.querySelector('.xterm-screen') as HTMLElement;
+            if (screen) {
+              screen.style.backgroundColor = theme.background;
+            }
+          }
+
+          updatedCount++;
+          log(`🎨 [THEME] Updated theme for terminal: ${id}`);
+        }
+      }
+
+      // Also update terminal-body and terminals-wrapper backgrounds
+      const terminalBody = document.getElementById('terminal-body');
+      if (terminalBody) {
+        terminalBody.style.backgroundColor = theme.background;
+      }
+
+      const terminalsWrapper = document.getElementById('terminals-wrapper');
+      if (terminalsWrapper) {
+        terminalsWrapper.style.backgroundColor = theme.background;
+      }
+
+      log(`🎨 [THEME] Theme updated for ${updatedCount} terminals`);
+    } catch (error) {
+      log('❌ Error updating terminal themes:', error);
     }
   }
 

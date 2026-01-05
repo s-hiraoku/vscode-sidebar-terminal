@@ -29,6 +29,9 @@ export interface HeaderConfig {
   onCloseClick?: (terminalId: string) => void;
   onSplitClick?: (terminalId: string) => void;
   onAiAgentToggleClick?: (terminalId: string) => void;
+  // Theme colors (optional - defaults to VS Code CSS variables)
+  backgroundColor?: string;
+  foregroundColor?: string;
 }
 
 /**
@@ -53,6 +56,10 @@ export class HeaderFactory {
   public static createTerminalHeader(config: HeaderConfig): TerminalHeaderElements {
     const { terminalId, terminalName, customClasses = [] } = config;
 
+    // Use provided colors or fall back to VS Code CSS variables
+    const bgColor = config.backgroundColor || 'var(--vscode-tab-activeBackground)';
+    const fgColor = config.foregroundColor || 'var(--vscode-tab-activeForeground)';
+
     // メインコンテナ
     const container = DOMUtils.createElement(
       'div',
@@ -61,11 +68,11 @@ export class HeaderFactory {
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '6px 12px',
-        backgroundColor: 'var(--vscode-tab-activeBackground)',
+        backgroundColor: bgColor,
         borderBottom: '1px solid var(--vscode-tab-border)',
         fontSize: '11px',
         fontWeight: 'bold',
-        color: 'var(--vscode-tab-activeForeground)',
+        color: fgColor,
         cursor: 'pointer',
         userSelect: 'none',
         minHeight: '32px',
@@ -102,6 +109,7 @@ export class HeaderFactory {
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',
+        color: fgColor,
       },
       {
         textContent: terminalName,
@@ -155,7 +163,7 @@ export class HeaderFactory {
       {
         background: 'none',
         border: 'none',
-        color: 'var(--vscode-tab-activeForeground)',
+        color: fgColor,
         cursor: 'pointer',
         fontSize: '13px',
         padding: '4px',
@@ -185,7 +193,7 @@ export class HeaderFactory {
       {
         background: 'none',
         border: 'none',
-        color: 'var(--vscode-tab-activeForeground)',
+        color: fgColor,
         cursor: 'pointer',
         fontSize: '14px',
         padding: '4px',
@@ -217,7 +225,7 @@ export class HeaderFactory {
         {
           background: 'none',
           border: 'none',
-          color: 'var(--vscode-tab-activeForeground)',
+          color: fgColor,
           cursor: 'pointer',
           fontSize: '14px',
           padding: '4px',

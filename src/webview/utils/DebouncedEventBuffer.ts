@@ -29,6 +29,22 @@
 
 import { webview as log } from '../../utils/logger';
 
+// ============================================================================
+// Constants
+// ============================================================================
+
+/**
+ * Default timing constants for debouncing and buffering
+ */
+const BufferDefaults = {
+  /** Default delay for resize debouncer (ms) */
+  RESIZE_DEBOUNCE_DELAY_MS: 100,
+  /** Default flush interval for output buffer (~60fps) */
+  OUTPUT_BUFFER_FLUSH_INTERVAL_MS: 16,
+  /** Default maximum buffer size for output buffer */
+  OUTPUT_BUFFER_MAX_SIZE: 100,
+} as const;
+
 /**
  * Debouncer - Simple debounce utility
  */
@@ -554,7 +570,10 @@ export function createDebouncer(callback: () => void, delay: number, options?: P
 /**
  * Create a resize debouncer (common pattern)
  */
-export function createResizeDebouncer(callback: () => void, delay = 100): Debouncer {
+export function createResizeDebouncer(
+  callback: () => void,
+  delay = BufferDefaults.RESIZE_DEBOUNCE_DELAY_MS
+): Debouncer {
   return new Debouncer(callback, { delay, trailing: true, name: 'resize' });
 }
 
@@ -566,8 +585,8 @@ export function createOutputBuffer<T>(
   options?: Partial<EventBufferOptions<T>>
 ): EventBuffer<T> {
   return new EventBuffer<T>({
-    flushInterval: 16, // ~60fps
-    maxBufferSize: 100,
+    flushInterval: BufferDefaults.OUTPUT_BUFFER_FLUSH_INTERVAL_MS,
+    maxBufferSize: BufferDefaults.OUTPUT_BUFFER_MAX_SIZE,
     onFlush,
     ...options,
   });

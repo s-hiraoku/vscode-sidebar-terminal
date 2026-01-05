@@ -11,6 +11,7 @@ import { IManagerCoordinator } from '../interfaces/ManagerInterfaces';
 import { TerminalTabList, TerminalTab, TerminalTabEvents } from '../components/TerminalTabList';
 import { webview as log } from '../../utils/logger';
 import { arraysEqual } from '../../utils/arrayUtils';
+import { TerminalTheme } from '../types/theme.types';
 
 interface TabSyncInfo {
   id: string;
@@ -827,6 +828,17 @@ export class TerminalTabManager implements TerminalTabEvents {
     }
 
     this.updateTabVisibility();
+  }
+
+  /**
+   * Update tab list theme to match terminal theme
+   * Ensures tabs are consistent with secondaryTerminal.theme setting
+   */
+  public updateTheme(theme: TerminalTheme): void {
+    if (this.tabList) {
+      this.tabList.updateTheme(theme);
+      log(`🎨 [TAB-MANAGER] Theme updated`);
+    }
   }
 
   /**

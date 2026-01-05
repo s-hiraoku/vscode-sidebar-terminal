@@ -7,6 +7,131 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-01-04
+
+### Added
+
+- **Comprehensive Unit Tests**: Added 16 comprehensive unit tests for FitAddon's proposeDimensions() behavior
+  - Validates terminal dimension calculations with safety padding removal
+  - Tests multiple viewport widths (narrow 200px, standard 800px, wide 1920px)
+  - Tests varied cell widths simulating different font sizes (7px, 10px, 12px compact/normal/large)
+  - Tests scrollbar visibility edge cases with and without scrollbar width
+  - Tests CSS padding impact on dimension calculations
+  - Validates minimum column (2) and row (1) enforcement
+  - Ensures safety padding removal maximizes visible area without regressions
+  - Provides 100% confidence that terminal width expansion works correctly
+
+## [0.2.2] - 2026-01-04
+
+### Fixed
+
+- **Scroll Button Visibility**: Fixed scroll-to-bottom indicator not appearing when scrolled away from bottom
+  - Changed button attachment point from `.terminal-content` (which has `overflow: hidden`) to `.terminal-container`
+  - Increased z-index to ensure visibility above all terminal content
+  - Properly displays VS Code-style scroll-to-bottom pill button when user scrolls up
+
+- **Terminal Text Clipping**: Fixed characters being cut off at right edge of terminal
+  - Removed unnecessary 4px safety padding from FitAddon calculation
+  - Expands visible terminal width by approximately 3-4 pixels
+  - Text now renders completely to the right edge of the terminal container
+
+## [0.2.1] - 2026-01-02
+
+### Fixed
+
+- **Terminal Paste Behavior**: Fixed paste functionality to match VS Code's standard terminal behavior
+  - Removed unnecessary shell escaping that was expanding escape characters incorrectly
+  - Added bracketed paste mode support (`\x1b[200~...\x1b[201~`) to prevent multi-line commands from executing line-by-line
+  - Normalized line endings to carriage return for cross-platform consistency
+  - Pasted content now behaves identically to VS Code's built-in terminal
+
+## [0.2.0] - 2025-12-29
+
+### Breaking Changes
+
+- **xterm.js v6 Upgrade**: Updated @xterm/xterm to v6 for improved performance and features
+  - New addon system and improved rendering pipeline
+  - Breaking: Custom addons may need updates for v6 compatibility
+  - See [xterm.js v6 migration guide](https://xtermjs.org/docs/migration/) for details
+
+### Added
+
+- **Open VSX Registry Support**: Extension now publishes to Open VSX Registry for wider IDE compatibility
+  - Supports VS Codium, Gitpod, Eclipse Theia, and other VS Code-compatible editors
+  - Automated publishing via GitHub Actions release workflow
+  - Dual publishing to both VS Code Marketplace and Open VSX Registry
+
+### Fixed
+
+- **Webview Crash Resolution**: Fixed webview crash caused by undefined environment variable access
+  - Added DefinePlugin entries for CI, BUILD_ARTIFACTSTAGINGDIRECTORY, SNAP, SNAP_REVISION, VSCODE_NLS_CONFIG
+  - Ensures webview bundle runs correctly in all environments
+
+- **Non-Public API Dependency Removed**: Removed usage of vscode.workspace.onWillSaveState API
+  - Session persistence now relies on deactivate() function and TerminalAutoSaveService
+  - Eliminates console warnings during extension activation
+  - Uses only documented public VS Code APIs
+
+## [0.1.185] - 2025-12-23
+
+### Fixed
+
+- **Split Terminal Height Balance**: Automatically rebalance terminal heights when switching display modes
+  - Fixes issue where split terminals had uneven heights after mode changes
+  - Ensures equal distribution of space between stacked terminals
+
+- **Tab Active State Styling**: Update tab inline styles when active state changes
+  - Fixes visual bug where clicking tabs didn't update their appearance
+  - Inline styles now properly reflect active/inactive state with correct theme colors
+
+- **Terminal Fit Dimensions**: Account for scrollbar width in terminal fit calculations
+  - Prevents horizontal overflow and clipping issues
+  - Improves terminal rendering accuracy in split view mode
+
+## [0.1.184] - 2025-12-23
+
+### Fixed
+
+- **TypeScript Type Safety**: Fix strict null check warnings in TerminalBorderService
+  - Add proper undefined guards for string/array index access in color parsing
+  - Resolves CI annotation warnings for `Object is possibly 'undefined'`
+
+## [0.1.183] - 2025-12-23
+
+### Added
+
+- **Auto Theme Synchronization**: Terminal automatically syncs with VS Code theme changes
+  - When `secondaryTerminal.theme` is set to `auto` (default), theme changes are instantly applied
+  - Listens to `onDidChangeActiveColorTheme` for real-time VS Code theme detection
+  - Updates terminal background, foreground, and all 16 ANSI colors from VS Code CSS variables
+  - Headers, borders, and tab list also sync with VS Code theme colors
+  - Works with any VS Code color theme (not just built-in light/dark)
+
+## [0.1.182] - 2025-12-22
+
+### Fixed
+
+- **Theme Synchronization**: Sync theme across all UI components when terminal theme changes
+  - Headers, tabs, and terminal body now update together with terminal background
+  - Foreground color automatically adjusts for better contrast on light backgrounds
+  - Prevents visual inconsistency between terminal and surrounding UI elements
+
+- **Light Theme Border Visibility**: Fix inactive terminal borders not visible in light theme
+  - Inactive terminals now show gray (#999) borders in light theme
+  - Dark theme maintains transparent borders for inactive terminals
+  - Active terminal border (blue) remains unchanged
+
+- **Initial Theme Flash**: Prevent flash of wrong theme color on WebView load
+  - Light theme setting now injects initial CSS to show correct background immediately
+  - Eliminates brief dark flash when loading with light theme configured
+
+- **Split Layout Overlap**: Prevent stacked terminals from clipping by letting split wrappers flex naturally
+  and ensuring containers are tagged for wrapper relocation during layout rebuilds.
+
+### Changed
+
+- **Tab List UI**: Remove duplicate add button from tab list (already available in header)
+
 ## [0.1.181] - 2025-12-22
 
 ### Fixed

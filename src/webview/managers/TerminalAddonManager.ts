@@ -71,9 +71,14 @@ export class TerminalAddonManager {
 
     try {
       // Load essential addons (required - throws on error)
-      addons.fitAddon = await AddonLoader.loadAddon(terminal, terminalId, FitAddon, {
+      const fitAddon = await AddonLoader.loadAddon(terminal, terminalId, FitAddon, {
         required: true,
       });
+      if (!fitAddon) {
+        throw new Error(`FitAddon failed to load for terminal: ${terminalId}`);
+      }
+      addons.fitAddon = fitAddon;
+      this.patchFitAddonForScrollbar(terminal, fitAddon);
 
       if (config.linkHandler) {
         // Use custom handler so links are opened by the extension (vscode.env.openExternal)
@@ -234,5 +239,63 @@ export class TerminalAddonManager {
    */
   public dispose(): void {
     terminalLogger.info('TerminalAddonManager disposed');
+  }
+
+  private patchFitAddonForScrollbar(terminal: Terminal, fitAddon: FitAddon): void {
+    const originalPropose = fitAddon.proposeDimensions.bind(fitAddon);
+
+    fitAddon.proposeDimensions = () => {
+      const element = terminal.element as HTMLElement | null;
+      const parent = element?.parentElement as HTMLElement | null;
+      const core = (terminal as unknown as {
+        _core?: {
+          _renderService?: { dimensions?: { css: { cell: { width: number; height: number } } } };
+          viewport?: { scrollBarWidth: number };
+        };
+      })._core;
+      const dimensions = core?._renderService?.dimensions;
+
+      if (!element || !parent || !dimensions) {
+        return originalPropose();
+      }
+
+      const cellWidth = dimensions.css.cell.width;
+      const cellHeight = dimensions.css.cell.height;
+      if (cellWidth === 0 || cellHeight === 0) {
+        return originalPropose();
+      }
+
+      const parentStyle = window.getComputedStyle(parent);
+      const elementStyle = window.getComputedStyle(element);
+      const height = parseInt(parentStyle.getPropertyValue('height'), 10);
+      const width = Math.max(0, parseInt(parentStyle.getPropertyValue('width'), 10));
+
+      if (Number.isNaN(height) || Number.isNaN(width)) {
+        return originalPropose();
+      }
+
+      const paddingVertical =
+        (parseInt(elementStyle.getPropertyValue('padding-top'), 10) || 0) +
+        (parseInt(elementStyle.getPropertyValue('padding-bottom'), 10) || 0);
+      const paddingHorizontal =
+        (parseInt(elementStyle.getPropertyValue('padding-left'), 10) || 0) +
+        (parseInt(elementStyle.getPropertyValue('padding-right'), 10) || 0);
+
+      const viewport = element.querySelector('.xterm-viewport') as HTMLElement | null;
+      const actualScrollbarWidth = viewport
+        ? Math.max(0, viewport.offsetWidth - viewport.clientWidth)
+        : 0;
+      const scrollbarWidth =
+        actualScrollbarWidth || core?.viewport?.scrollBarWidth || 0;
+
+      const availableHeight = height - paddingVertical;
+      const availableWidth = width - paddingHorizontal - scrollbarWidth;
+      const safetyPaddingPx = 0;  // Remove safety padding to maximize visible area
+
+      return {
+        cols: Math.max(2, Math.floor((availableWidth - safetyPaddingPx) / cellWidth)),
+        rows: Math.max(1, Math.floor(availableHeight / cellHeight)),
+      };
+    };
   }
 }

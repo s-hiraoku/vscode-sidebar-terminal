@@ -82,7 +82,15 @@ export class PerformanceManager extends BaseManager {
       this.flushEntry(targetTerminal, entry);
 
       // xterm.js automatically preserves scroll position if user has scrolled up
-      targetTerminal.write(normalizedData);
+      try {
+        targetTerminal.write(normalizedData);
+      } catch (error) {
+        if (this.debugLoggingEnabled) {
+          this.logger(`Error during immediate write: ${error}`);
+        } else {
+          console.error('[PerformanceManager] Error during immediate write:', error);
+        }
+      }
 
       if (this.debugLoggingEnabled) {
         const reason = isSmallInput

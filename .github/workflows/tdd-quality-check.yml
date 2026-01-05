@@ -47,10 +47,10 @@ jobs:
         run: npm run compile-tests
         continue-on-error: true
 
-      - name: Run Tests in Parallel
+      - name: Run Vitest Tests
         run: |
-          echo "Running unit tests in parallel (4 workers)..."
-          xvfb-run -a npm run test:unit:parallel || echo "Some tests failed"
+          echo "Running Vitest unit tests..."
+          npm run test || echo "Some tests failed"
         continue-on-error: true
 
       - name: Run TDD Quality Checks

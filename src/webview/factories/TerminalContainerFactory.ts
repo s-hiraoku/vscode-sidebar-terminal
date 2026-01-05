@@ -56,8 +56,8 @@ export class TerminalContainerFactory {
       margin: '0',
       padding: '0',
       position: 'relative' as const,
-      // 🔧 FIX: Remove default border, let UIManager handle it
-      // border: '2px solid transparent',  // REMOVED - UIManager will handle borders
+      // Default transparent border - TerminalBorderService handles theme-aware styling
+      border: '2px solid transparent',
       borderRadius: '4px',
       boxSizing: 'border-box' as const,
       flex: '1 1 auto',
@@ -80,11 +80,13 @@ export class TerminalContainerFactory {
     split: {
       height: 'auto',
       minHeight: '150px',
-      border: '1px solid #444',
+      border: '1px solid transparent',
     },
     active: {
-      borderColor: '#007ACC',
-      boxShadow: '0 0 8px rgba(0, 122, 204, 0.3)',
+      borderColor: 'var(--vscode-focusBorder, #007acc)',
+      borderWidth: '2px',
+      borderStyle: 'solid',
+      boxShadow: 'none',
     },
   };
 
@@ -184,6 +186,7 @@ export class TerminalContainerFactory {
     container.className = config.className || 'terminal-container';
     container.setAttribute('data-terminal-id', config.id);
     container.setAttribute('data-terminal-name', config.name);
+    container.setAttribute('data-terminal-container', 'true');
 
     // Apply base styles
     this.applyStyles(container, this.DEFAULT_STYLES.container);
@@ -235,6 +238,8 @@ export class TerminalContainerFactory {
       this.applyStyles(container, this.DEFAULT_STYLES.active);
       container.setAttribute('data-active', 'true');
     } else {
+      // Use theme-aware gray border for inactive terminals
+      // TerminalBorderService handles theme-aware border colors
       container.style.borderColor = 'transparent';
       container.style.boxShadow = 'none';
       container.removeAttribute('data-active');

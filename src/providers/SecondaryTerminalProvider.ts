@@ -185,6 +185,48 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     log('✅ [PROVIDER] SecondaryTerminalProvider constructed with all services');
 
     this._registerInitializationWatchdogs();
+
+    // 🎨 Auto theme synchronization: Listen for VS Code theme changes
+    this._registerThemeChangeListener();
+  }
+
+  /**
+   * Register listener for VS Code theme changes
+   * When theme setting is 'auto', automatically sync terminal theme with VS Code
+   */
+  private _registerThemeChangeListener(): void {
+    const disposable = vscode.window.onDidChangeActiveColorTheme((colorTheme) => {
+      const currentSettings = this._settingsService.getCurrentSettings();
+      const themeMode = currentSettings.theme as 'light' | 'dark' | 'auto' | undefined;
+
+      // Only react when theme is set to 'auto'
+      if (themeMode !== 'auto') {
+        log(`🎨 [THEME] Theme change detected but mode is '${themeMode}', ignoring`);
+        return;
+      }
+
+      const isDark =
+        colorTheme.kind === vscode.ColorThemeKind.Dark ||
+        colorTheme.kind === vscode.ColorThemeKind.HighContrast;
+
+      const newTheme = isDark ? 'dark' : 'light';
+      log(`🎨 [THEME] VS Code theme changed to ${newTheme}, syncing to WebView`);
+
+      // Send theme change message to WebView
+      const view = this._lifecycleManager.getView();
+      if (view) {
+        void view.webview.postMessage({
+          command: 'themeChanged',
+          theme: newTheme,
+        });
+        log(`🎨 [THEME] Sent themeChanged message to WebView: ${newTheme}`);
+      } else {
+        log('⚠️ [THEME] WebView not available, theme change will be applied on next initialization');
+      }
+    });
+
+    this._cleanupService.addDisposable(disposable);
+    log('🎨 [PROVIDER] Theme change listener registered');
   }
 
   public resolveWebviewView(
@@ -359,15 +401,6 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       log('📍 [VISIBILITY] Requesting panel location detection after visibility change');
       this._requestPanelLocationDetection();
     }, 200);
-
-    // Restore terminal focus when WebView becomes visible again
-    // This fixes focus loss when switching between applications
-    setTimeout(() => {
-      log('🎯 [VISIBILITY] Restoring terminal focus after visibility change');
-      void this._sendMessage({
-        command: 'restoreFocus',
-      });
-    }, 100);
   }
 
   private _handleWebviewHidden(): void {
@@ -378,18 +411,58 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private _initializeWebviewContent(webviewView: vscode.WebviewView): void {
     log('🔧 [PROVIDER] Step 4: Setting webview HTML...');
 
-    // Generate HTML content
+    // Get initial theme from settings to prevent flash of wrong theme
+    const settings = this._settingsService.getCurrentSettings();
+    const settingsTheme = settings.theme as 'light' | 'dark' | 'auto' | undefined;
+    const initialTheme = this._resolveInitialTheme(settingsTheme);
+    log(`🎨 [PROVIDER] Initial theme for HTML: ${initialTheme} (settings: ${settingsTheme})`);
+
+    // Generate HTML content with initial theme
     const htmlContent = this._htmlGenerationService.generateMainHtml({
       webview: webviewView.webview,
       extensionUri: this._extensionContext.extensionUri,
       includeSplitStyles: true,
       includeCliAgentStyles: true,
+      initialTheme,
     });
 
     // Set HTML using lifecycle manager
     this._lifecycleManager.setWebviewHtml(webviewView, htmlContent, false);
 
     log('🤝 [HANDSHAKE] HTML set, waiting for webviewReady from WebView');
+  }
+
+  private _resolveInitialTheme(
+    settingsTheme: 'light' | 'dark' | 'auto' | undefined
+  ): 'light' | 'dark' | 'auto' | undefined {
+    const normalizedTheme = settingsTheme ?? 'auto';
+    if (normalizedTheme !== 'auto') {
+      return normalizedTheme;
+    }
+
+    const activeThemeKind = vscode.window?.activeColorTheme?.kind;
+    const hasThemeKind =
+      typeof vscode.ColorThemeKind !== 'undefined' && typeof activeThemeKind === 'number';
+
+    if (!hasThemeKind) {
+      return normalizedTheme;
+    }
+
+    if (
+      activeThemeKind === vscode.ColorThemeKind.Light ||
+      activeThemeKind === vscode.ColorThemeKind.HighContrastLight
+    ) {
+      return 'light';
+    }
+
+    if (
+      activeThemeKind === vscode.ColorThemeKind.Dark ||
+      activeThemeKind === vscode.ColorThemeKind.HighContrast
+    ) {
+      return 'dark';
+    }
+
+    return normalizedTheme;
   }
 
   private _initializeMessageHandlers(): void {
@@ -537,15 +610,15 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         category: 'terminal' as const,
       },
       {
-        command: 'pasteText',
-        handler: async (msg: WebviewMessage) =>
-          await this._terminalCommandHandlers.handlePasteText(msg),
-        category: 'terminal' as const,
-      },
-      {
         command: 'pasteImage',
         handler: async (msg: WebviewMessage) =>
           await this._terminalCommandHandlers.handlePasteImage(msg),
+        category: 'terminal' as const,
+      },
+      {
+        command: 'pasteText',
+        handler: async (msg: WebviewMessage) =>
+          await this._terminalCommandHandlers.handlePasteText(msg),
         category: 'terminal' as const,
       },
       {
@@ -788,9 +861,28 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       return;
     }
 
-    // 🔧 CRITICAL FIX: Send settings (including theme) BEFORE creating terminals
+    // 🔧 CRITICAL FIX: Send settings BEFORE creating terminals
     // This ensures WebView has correct theme before first terminal is created
-    void this._initializeWithFontSettings();
+    // Previously, terminals were created with default dark theme before settings arrived
+    const settings = this._settingsService.getCurrentSettings();
+    const fontSettings = this._settingsService.getCurrentFontSettings();
+
+    log(`📤 [TERMINAL-INIT] Sending settings to WebView FIRST (theme: ${settings.theme})`);
+    await this._sendMessage({
+      command: 'settingsResponse',
+      settings,
+    });
+
+    await this._sendMessage({
+      command: 'fontSettingsUpdate',
+      fontSettings,
+    });
+    log('✅ [TERMINAL-INIT] Settings sent to WebView before terminal creation');
+
+    // 🔤 FIX: Send init message and font settings BEFORE creating terminals
+    // This ensures fonts are applied during terminal creation, not after
+    // ⚠️ IMPORTANT: Must await to ensure settings are processed before terminal creation
+    await this._initializeWithFontSettings();
   }
 
   private async _reinitializeWebviewAfterPanelMove(): Promise<void> {
@@ -823,11 +915,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   /**
-   * Initialize WebView with settings and font settings before creating terminals
-   * This ensures theme and font settings are available when terminals are created
-   *
-   * 🔧 CRITICAL FIX: Send settings (including theme) BEFORE creating terminals
-   * Previously, terminals were created with default dark theme before settings arrived
+   * Initialize WebView with font settings before creating terminals
+   * This ensures font settings are available when terminals are created
    */
   private async _initializeWithFontSettings(): Promise<void> {
     try {
@@ -839,32 +928,22 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       });
       log('✅ [TERMINAL-INIT] init message sent');
 
-      // Step 2: Send settings (including theme) BEFORE terminal creation
-      // 🔧 CRITICAL: This ensures correct theme is applied from the start
-      const settings = this._settingsService.getCurrentSettings();
-      log(`📤 [TERMINAL-INIT] Step 2: Sending settings BEFORE terminal creation (theme: ${settings.theme})`);
-      await this._sendMessage({
-        command: 'settingsResponse',
-        settings,
-      });
-      log('✅ [TERMINAL-INIT] Settings sent');
-
-      // Step 3: Send font settings BEFORE terminal creation
+      // Step 2: Send font settings BEFORE terminal creation
       const fontSettings = this._settingsService.getCurrentFontSettings();
-      log('📤 [TERMINAL-INIT] Step 3: Sending font settings BEFORE terminal creation');
+      log('📤 [TERMINAL-INIT] Step 2: Sending font settings BEFORE terminal creation');
       await this._sendMessage({
         command: 'fontSettingsUpdate',
         fontSettings,
       });
       log('✅ [TERMINAL-INIT] Font settings sent');
 
-      // Step 4: Now create terminals - they will use the settings we just sent
-      log('📤 [TERMINAL-INIT] Step 4: Starting terminal initialization with settings ready');
+      // Step 3: Now create terminals - they will use the font settings we just sent
+      log('📤 [TERMINAL-INIT] Step 3: Starting terminal initialization with font settings ready');
       await this._orchestrator.initialize();
       log('✅ [TERMINAL-INIT] Terminal initialization complete');
     } catch (error) {
       log('❌ [TERMINAL-INIT] Error during initialization:', error);
-      // Still try to initialize terminals even if settings failed
+      // Still try to initialize terminals even if font settings failed
       void this._orchestrator.initialize();
     }
   }

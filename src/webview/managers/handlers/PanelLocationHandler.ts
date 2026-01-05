@@ -163,7 +163,6 @@ export class PanelLocationHandler implements IMessageHandler {
   }
 
   private scheduleTerminalsWrapperClassSync(location: 'sidebar' | 'panel'): void {
-    const maxAttempts = 20;
     let attempt = 0;
 
     const timer = setInterval(() => {
@@ -180,10 +179,10 @@ export class PanelLocationHandler implements IMessageHandler {
         return;
       }
 
-      if (attempt >= maxAttempts) {
+      if (attempt >= PANEL_LOCATION_CONSTANTS.CLASS_SYNC_MAX_ATTEMPTS) {
         clearInterval(timer);
       }
-    }, 50);
+    }, PANEL_LOCATION_CONSTANTS.CLASS_SYNC_RETRY_INTERVAL_MS);
   }
 
   /**
@@ -396,12 +395,12 @@ export class PanelLocationHandler implements IMessageHandler {
           if (
             hasProperty(
               configManager,
-              'loadSettings',
+              'getCurrentSettings',
               (value): value is () => { dynamicSplitDirection?: boolean; [key: string]: unknown } =>
                 typeof value === 'function'
             )
           ) {
-            const settings = configManager.loadSettings();
+            const settings = configManager.getCurrentSettings();
             isDynamicSplitEnabled = settings.dynamicSplitDirection !== false;
           }
         } catch {

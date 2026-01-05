@@ -3,6 +3,8 @@
  * 既存NotificationUtilsとの互換性を保持しつつ段階的移行を可能にする
  */
 
+import { NOTIFICATION_DURATION_CONSTANTS } from '../constants/webview';
+
 export type NotificationType = 'error' | 'warning' | 'info' | 'success';
 
 export interface NotificationData {
@@ -104,7 +106,7 @@ export class NotificationSystem {
       type: config.type,
       title: config.title,
       message: config.message,
-      duration: config.duration || 4000,
+      duration: config.duration || NOTIFICATION_DURATION_CONSTANTS.DEFAULT_DURATION_MS,
       icon: config.icon,
       timestamp: Date.now(),
       source: config.source || 'unknown',

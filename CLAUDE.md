@@ -1,14 +1,24 @@
+## Development Flow (Mandatory)
+
+1. When receiving a feature request or modification, write tests first
+2. Present the tests to confirm the specification
+3. Proceed to implementation only after confirmation
+4. Adjust implementation until all tests pass
+
 <!-- OPENSPEC:START -->
+
 # OpenSpec Instructions
 
 These instructions are for AI assistants working in this project.
 
 Always open `@/openspec/AGENTS.md` when the request:
+
 - Mentions planning or proposals (words like proposal, spec, change, plan)
 - Introduces new capabilities, breaking changes, architecture shifts, or big performance/security work
 - Sounds ambiguous and you need the authoritative spec before coding
 
 Use `@/openspec/AGENTS.md` to learn:
+
 - How to create and apply change proposals
 - Spec format and conventions
 - Project structure and guidelines
@@ -26,12 +36,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **NEVER delete or discard uncommitted local changes without explicit user permission.**
 
 When you need to investigate build issues or test changes:
+
 1. **ALWAYS use `git stash` first** to save uncommitted changes
 2. After investigation, restore with `git stash pop`
 3. **NEVER use `git checkout -- .`** or `git restore .` to discard changes
 4. **NEVER use `git clean`** without explicit user confirmation
 
 Example workflow:
+
 ```bash
 # Save current changes before investigation
 git stash push -m "WIP: saving before investigation"
@@ -44,9 +56,19 @@ git stash pop
 
 If build issues occur, ask the user before discarding any changes.
 
+## Related Documentation
+
+This project has domain-specific CLAUDE.md files with detailed implementation guidance:
+
+| File                    | Purpose                                           |
+| ----------------------- | ------------------------------------------------- |
+| `src/webview/CLAUDE.md` | WebView architecture, Manager patterns, debugging |
+| `src/test/CLAUDE.md`    | TDD workflow, test patterns, quality gates        |
+
 ## Essential Development Commands
 
 ### Core Development
+
 ```bash
 # Compile TypeScript
 npm run compile              # Production build
@@ -67,6 +89,7 @@ npm run pre-release:check   # Comprehensive pre-release validation
 ### Release Management
 
 #### Automated GitHub Actions Release (RECOMMENDED - New Safe Procedure)
+
 ```bash
 # Step 1: Update version and commit changes (WITHOUT tag)
 npm version patch --no-git-tag-version  # or minor/major
@@ -87,6 +110,7 @@ git push origin v{version}   # Triggers automated release workflow
 # - Builds packages for 9 platforms (Windows/macOS/Linux variants)
 # - Creates GitHub Release with auto-generated notes
 # - Publishes to VS Code Marketplace with all platform variants
+# - Publishes to Open VSX Registry (if OVSX_PAT secret is configured)
 
 # Benefits of this approach:
 # ✅ Prevents wasting version numbers on failed builds
@@ -96,6 +120,7 @@ git push origin v{version}   # Triggers automated release workflow
 ```
 
 #### Legacy Release Procedure (Deprecated)
+
 ```bash
 # Old method: Tag immediately (NOT RECOMMENDED)
 # This was problematic because CI failures required tag deletion
@@ -106,6 +131,7 @@ git tag v{version} && git push origin v{version} && git push
 ```
 
 #### Manual Release (Fallback)
+
 ```bash
 # Safe releases (with automatic backup and quality checks)
 npm run release:patch:safe   # 0.0.x version bump
@@ -118,6 +144,7 @@ npm run rollback:to 0.1.95         # Rollback to specific version
 ```
 
 ### Platform-specific packaging
+
 ```bash
 # Package for specific platforms
 npm run vsce:package:darwin-arm64  # macOS Apple Silicon
@@ -126,11 +153,16 @@ npm run vsce:package:linux-x64     # Linux x64
 
 # Publish to VS Code Marketplace
 npm run vsce:publish
+
+# Publish to Open VSX Registry (for VS Codium, Gitpod, Eclipse Theia)
+npm run ovsx:publish              # Build and publish
+npm run ovsx:publish:vsix         # Publish existing VSIX files
 ```
 
 ## Architecture Overview
 
 ### Terminal Management Architecture
+
 The extension uses a **singleton TerminalManager** pattern with atomic operations to prevent race conditions:
 
 - **ID Recycling System**: Terminal IDs 1-5 are recycled to maintain consistent user experience
@@ -139,39 +171,52 @@ The extension uses a **singleton TerminalManager** pattern with atomic operation
 - **Session Persistence**: Terminal states are saved every 5 minutes and can be restored
 
 ### WebView Architecture
+
 The WebView uses a **Manager-Coordinator pattern**:
 
 ```
-TerminalWebviewManager (Coordinator)
-├── MessageManager     # Handles Extension ↔ WebView communication
-├── UIManager         # Theme management and visual feedback
-├── InputManager      # Keyboard/IME handling, Alt+Click support
-├── PerformanceManager # Output buffering (16ms flush interval)
-├── NotificationManager # User notifications
-└── TerminalLifecycleManager # Terminal creation/deletion
+LightweightTerminalWebviewManager (Coordinator)
+├── ConsolidatedMessageManager  # Extension ↔ WebView communication
+├── UIManager                   # Theme management and visual feedback
+├── InputManager                # Keyboard/IME handling, Alt+Click support
+├── PerformanceManager          # Output buffering (16ms flush interval)
+├── NotificationManager         # User notifications
+├── TerminalLifecycleCoordinator # Terminal creation/deletion
+├── SplitManager                # Terminal split layout
+├── ConfigManager               # Settings persistence
+├── TerminalTabManager          # Tab management
+├── DisplayModeManager          # Display mode control
+└── HeaderManager               # Terminal header UI
 ```
 
+> **Note**: For detailed WebView implementation guidance, see `src/webview/CLAUDE.md`
+
 ### Terminal Rendering Optimization (Phase 1-3)
+
 **OpenSpec Implementation**: `optimize-terminal-rendering` (Completed)
 
 The extension implements three-phase optimization for improved performance:
 
 #### Phase 1: Rendering Optimization
+
 - **RenderingOptimizer**: Debounced resize handling (100ms) with ResizeObserver
 - **WebGL Auto-Fallback**: GPU acceleration with automatic DOM renderer fallback
 - **Device-Specific Scrolling**: Trackpad (0ms) vs Mouse wheel (125ms) smooth scrolling
 - **Performance**: 30%+ reduction in draw calls during terminal creation
 
 #### Phase 2: Scrollback Functionality (ScrollbackManager)
+
 Located in `src/webview/managers/ScrollbackManager.ts`
 
 **Core Features**:
+
 - **ANSI Color Preservation**: Uses SerializeAddon to maintain escape sequences
 - **Wrapped Line Processing**: Detects and reconstructs `line.isWrapped` content
 - **Empty Line Trimming**: 10-20% size reduction while preserving meaningful content
 - **Auto-Save Optimization**: 3-second debounce for high-frequency output
 
 **Usage Pattern**:
+
 ```typescript
 import { ScrollbackManager } from './managers/ScrollbackManager';
 
@@ -184,7 +229,7 @@ scrollbackManager.registerTerminal(terminalId, terminal, serializeAddon);
 const scrollbackData = scrollbackManager.saveScrollback(terminalId, {
   scrollback: 1000,
   trimEmptyLines: true,
-  preserveWrappedLines: true
+  preserveWrappedLines: true,
 });
 
 // Restore
@@ -192,9 +237,11 @@ scrollbackManager.restoreScrollback(terminalId, scrollbackData.content);
 ```
 
 #### Phase 3: Lifecycle Management (LifecycleController)
+
 Located in `src/webview/controllers/LifecycleController.ts`
 
 **Core Features**:
+
 - **DisposableStore Pattern**: Unified resource management from VS Code patterns
 - **LIFO Disposal**: Last-In-First-Out cleanup for dependency safety
 - **Lazy Addon Loading**: Load addons only when needed (30% memory reduction)
@@ -202,6 +249,7 @@ Located in `src/webview/controllers/LifecycleController.ts`
 - **Dispose Performance**: <100ms disposal time with complete reference clearing
 
 **Usage Pattern**:
+
 ```typescript
 import { LifecycleController } from './controllers/LifecycleController';
 import { FitAddon } from '@xterm/addon-fit';
@@ -212,18 +260,17 @@ const lifecycleController = new LifecycleController();
 lifecycleController.attachTerminal(terminalId, terminal);
 
 // Lazy load addon with caching
-const fitAddon = lifecycleController.loadAddonLazy(
-  terminalId,
-  'FitAddon',
-  FitAddon,
-  { lazy: true, cache: true }
-);
+const fitAddon = lifecycleController.loadAddonLazy(terminalId, 'FitAddon', FitAddon, {
+  lazy: true,
+  cache: true,
+});
 
 // Dispose terminal and all resources
 lifecycleController.disposeTerminal(terminalId);
 ```
 
 **Performance Metrics** (All Phases):
+
 - Draw calls: 30%+ reduction
 - Memory usage: 20%+ reduction
 - Scrollback restore: <1s for 1000 lines
@@ -231,6 +278,7 @@ lifecycleController.disposeTerminal(terminalId);
 - GPU utilization: 40-60% when WebGL enabled
 
 ### AI Agent Detection System
+
 Real-time detection of CLI agents with visual status indicators:
 
 - **Supported Agents**: Claude Code, GitHub Copilot, Gemini CLI, CodeRabbit CLI, Codex CLI
@@ -252,6 +300,7 @@ The VS Code repository contains the canonical implementation of terminal functio
 4. **Follow their patterns**: Maintain consistency with VS Code's architecture and UX
 
 This ensures:
+
 - Consistency with user expectations from the native terminal
 - Adherence to best practices used by the VS Code team
 - Compatibility with VS Code's extension API patterns
@@ -273,11 +322,13 @@ Agents are specialized AI assistants designed for specific tasks. Using them imp
 #### Skills vs Agents Pattern (Updated)
 
 **Skills** provide domain knowledge (what to do):
+
 - `terminal-expert` - Unified xterm.js + VS Code terminal knowledge
 - `vscode-extension-expert` - VS Code extension development
 - `mcp-*` Skills - MCP tool usage guidance
 
 **Agents** execute tasks (how to do it) and **invoke Skills for knowledge**:
+
 - `terminal-implementer` invokes `terminal-expert` Skill before implementing
 
 #### Agent Workflow Example
@@ -311,13 +362,13 @@ MCP tools consume significant context tokens when loaded directly. Using Skills 
 
 #### Available MCP Skills
 
-| Skill | MCP Server | Use When |
-|-------|------------|----------|
-| `mcp-deepwiki` | deepwiki | Researching GitHub repositories, understanding library APIs, asking questions about open-source projects |
-| `mcp-brave-search` | brave-search | Searching the web for current information, news, documentation, or local businesses |
-| `mcp-playwright` | playwright | Browser automation, taking screenshots, filling forms, testing web applications |
-| `mcp-firecrawl` | firecrawl | Web scraping, crawling websites, extracting structured data from web pages |
-| `mcp-chrome-devtools` | chrome-devtools | Browser debugging, analyzing performance, inspecting network requests and console |
+| Skill                 | MCP Server      | Use When                                                                                                 |
+| --------------------- | --------------- | -------------------------------------------------------------------------------------------------------- |
+| `mcp-deepwiki`        | deepwiki        | Researching GitHub repositories, understanding library APIs, asking questions about open-source projects |
+| `mcp-brave-search`    | brave-search    | Searching the web for current information, news, documentation, or local businesses                      |
+| `mcp-playwright`      | playwright      | Browser automation, taking screenshots, filling forms, testing web applications                          |
+| `mcp-firecrawl`       | firecrawl       | Web scraping, crawling websites, extracting structured data from web pages                               |
+| `mcp-chrome-devtools` | chrome-devtools | Browser debugging, analyzing performance, inspecting network requests and console                        |
 
 #### How to Use
 
@@ -364,11 +415,13 @@ mcp__chrome-devtools__take_snapshot({})
 ## Known Issues & Workarounds
 
 ### CI/CD Issues
+
 - **Ubuntu tests timeout (30min)**: Known issue with test runner. Tests pass on Windows/macOS
 - **CodeQL false positives**: May report substring sanitization issues - use regex patterns with word boundaries
 - **ES Module errors**: chai-as-promised requires dynamic imports in test setup
 
 ### Terminal Issues
+
 - **Prompt restoration**: Use `TerminalManager.initializeShellForTerminal()` if prompt disappears
 - **Memory leaks**: Sessions auto-save every 5 minutes, dispose handlers required for all managers
 - **IME composition**: Special handling for Japanese/Chinese input in InputManager
@@ -376,15 +429,19 @@ mcp__chrome-devtools__take_snapshot({})
 ## Critical Security Patterns
 
 ### URL Validation (IMPORTANT)
+
 ```typescript
 // ❌ VULNERABLE - Don't use includes()
-if (text.includes('github copilot')) { }
+if (text.includes('github copilot')) {
+}
 
 // ✅ SECURE - Use regex with boundaries
-if (/(^|\s)github copilot(\s|$)/i.test(text)) { }
+if (/(^|\s)github copilot(\s|$)/i.test(text)) {
+}
 ```
 
 ### Session Storage
+
 - Terminal scrollback limited to 1000 lines for persistent sessions
 - Sensitive data should not be stored in session state
 - Use VSCode SecretStorage for credentials
@@ -392,6 +449,7 @@ if (/(^|\s)github copilot(\s|$)/i.test(text)) { }
 ## Performance Optimization Settings
 
 ### Current Optimized Values
+
 ```typescript
 BUFFER_FLUSH_INTERVAL = 16;  // 60fps for normal output
 CLI_AGENT_FLUSH_INTERVAL = 4; // 250fps for AI agents
@@ -403,13 +461,17 @@ MAX_STORAGE_SIZE = 20MB; // Maximum storage for scrollback
 
 ## Testing Strategy
 
+> **Note**: For detailed TDD implementation guidance, see `src/test/CLAUDE.md`
+
 ### Test Execution Priority
+
 1. **Unit tests first**: Fastest, most reliable
 2. **Integration tests**: Component interaction
 3. **Performance tests**: Memory and CPU usage
 4. **E2E tests**: Full WebView testing (may timeout)
 
 ### TDD Workflow
+
 ```bash
 npm run tdd:red      # Write failing test
 npm run tdd:green    # Minimal implementation
@@ -421,301 +483,56 @@ npm run tdd:quality-gate # Verify TDD compliance
 
 ### Test Coverage Overview
 
-**Total Scenarios**: 69 comprehensive end-to-end tests
-**Critical (P0)**: 18 scenarios - Must pass 100% for release
-**Important (P1)**: 38 scenarios - Must pass ≥95% for release
-**Nice-to-have (P2)**: 13 scenarios - Must pass ≥80% for release
+| Priority          | Scenarios | Release Requirement |
+| ----------------- | --------- | ------------------- |
+| P0 (Critical)     | 18        | 100% pass rate      |
+| P1 (Important)    | 38        | ≥95% pass rate      |
+| P2 (Nice-to-have) | 13        | ≥80% pass rate      |
 
-**Test Implementation Status**: 74% complete (84/113 tasks done)
+**Implementation Status**: 87% complete (60+ scenarios)
 **Test Files Location**: `src/test/e2e/tests/`
 
-### Test Execution Commands
+### Quick Commands
 
 ```bash
-# Run E2E tests (when npx playwright command is configured)
 npx playwright test                    # Run all E2E tests
-npx playwright test --headed           # Run with visible browser (debugging)
-npx playwright test --debug            # Run in debug mode with Playwright Inspector
-npx playwright test --ui               # Run with Playwright UI mode
-
-# Run specific test files
-npx playwright test tests/terminal/    # Run all terminal tests
-npx playwright test tests/agents/      # Run AI agent detection tests
-
-# Generate test report
-npx playwright show-report             # View HTML test report
-
-# Update test snapshots
-npx playwright test --update-snapshots # Update visual regression baselines
+npx playwright test --headed           # With visible browser
+npx playwright test --debug            # Debug mode
+npx playwright show-report             # View test report
 ```
-
-### Test Areas by Priority
-
-#### 1. Terminal Lifecycle Management (6 scenarios)
-**Priority**: P0: 4 | P1: 2
-
-**Critical Tests (P0)**:
-- Single terminal creation (<500ms)
-- Multiple terminal creation (up to 5 terminals)
-- Terminal deletion with cleanup verification
-- Terminal ID recycling (IDs 1-5)
-
-**Important Tests (P1)**:
-- Rapid terminal creation (race condition testing)
-- Last terminal protection (prevent deleting final terminal)
-
-**Test Files**: `tests/terminal/creation.spec.ts`, `tests/terminal/deletion.spec.ts`
-
-#### 2. Session Persistence (5 scenarios)
-**Priority**: P0: 3 | P1: 2
-
-**Critical Tests (P0)**:
-- Basic session save/restore functionality
-- Scrollback restoration with 1000 lines
-- Multi-terminal session restoration
-
-**Important Tests (P1)**:
-- Session expiry cleanup (7-day retention)
-- AI agent session handling
-
-**Performance Target**: Session restore <3s for typical workloads
-
-#### 3. AI Agent Detection (6 scenarios)
-**Priority**: P0: 2 | P1: 3 | P2: 1
-
-**Critical Tests (P0)**:
-- Claude Code detection with visual status indicator
-- Security: False positive prevention (substring attack protection)
-
-**Important Tests (P1)**:
-- GitHub Copilot detection
-- Gemini CLI detection
-- Multi-agent concurrent detection
-
-**Test Files**: `tests/agents/detection.spec.ts`
-**Detection Time**: <500ms for agent pattern matching
-
-#### 4. WebView Interactions (8 scenarios)
-**Priority**: P0: 4 | P1: 3 | P2: 1
-
-**Critical Tests (P0)**:
-- Keyboard input handling
-- Alt+Click cursor positioning
-- Scrolling behavior (smooth scrolling, wheel events)
-- ANSI color rendering validation
-
-**Important Tests (P1)**:
-- IME composition (Japanese/Chinese input)
-- Copy/Paste functionality
-- Theme changes (dark/light mode)
-
-**Test Files**: `tests/webview/keyboard-input.spec.ts`, `tests/visual/ansi-colors.spec.ts`
-
-#### 5. Configuration Management (4 scenarios)
-**Priority**: P0: 2 | P1: 2
-
-**Critical Tests (P0)**:
-- Font settings application
-- Max terminals limit enforcement
-
-**Important Tests (P1)**:
-- Shell selection (bash/zsh/fish)
-- Feature toggles (enable/disable features)
-
-**Test Files**: `tests/config/settings.spec.ts`
-
-#### 6. Error Handling (5 scenarios)
-**Priority**: P0: 2 | P1: 3
-
-**Critical Tests (P0)**:
-- Invalid shell path handling
-- Rapid terminal operations (concurrent operation safety)
-
-**Important Tests (P1)**:
-- Non-existent working directory recovery
-- Memory leak prevention validation
-- Large output handling (>10MB)
-
-**Test Files**: `tests/errors/error-scenarios.spec.ts`, `tests/errors/concurrent-operations.spec.ts`
 
 ### Performance Benchmarks
 
-All E2E tests must meet these performance targets:
-
-```typescript
+```
 Terminal creation: <500ms
-Session restore: <3s (1000 lines of scrollback)
-AI agent detection: <500ms (pattern matching + UI update)
-WebView load: <3s (initial render + terminal ready)
-Theme switching: <200ms (visual update)
-Terminal deletion: <100ms (cleanup + dispose)
+Session restore: <3s (1000 lines)
+AI agent detection: <500ms
+WebView load: <3s
+Terminal deletion: <100ms
 ```
 
-### Debugging E2E Tests
+### Detailed Documentation
 
-#### Visual Debugging
-```bash
-# Run tests with visible browser window
-npx playwright test --headed
+For comprehensive E2E testing guides, see `src/test/e2e/`:
 
-# Run specific test in debug mode
-npx playwright test tests/terminal/creation.spec.ts --debug
+| Document                                                                    | Purpose                   |
+| --------------------------------------------------------------------------- | ------------------------- |
+| [QUICK_START.md](src/test/e2e/QUICK_START.md)                               | Get started in 5 minutes  |
+| [DEBUGGING.md](src/test/e2e/DEBUGGING.md)                                   | Debug failing/flaky tests |
+| [MAINTENANCE.md](src/test/e2e/MAINTENANCE.md)                               | Test suite maintenance    |
+| [TEST_PLAN.md](src/test/e2e/TEST_PLAN.md)                                   | Full test scenarios       |
+| [TEST_IMPLEMENTATION_STATUS.md](src/test/e2e/TEST_IMPLEMENTATION_STATUS.md) | Current status            |
 
-# Use Playwright Inspector for step-by-step debugging
-npx playwright test --debug
-```
+### Playwright Agents (Claude Code)
 
-#### Trace Analysis
-```bash
-# Collect traces on failure (configured by default)
-npx playwright test
-
-# View trace for failed test
-npx playwright show-trace test-results/trace.zip
-```
-
-#### Screenshot and Video Debugging
-- **Screenshots**: Automatically captured on failure → `test-results/`
-- **Videos**: Recorded on failure → `test-results/`
-- **Traces**: Available on first retry → `test-results/`
-
-### CI/CD Integration
-
-#### GitHub Actions Configuration
-```yaml
-- name: Run E2E Tests
-  run: npx playwright test
-  env:
-    CI: true
-
-- name: Upload Test Results
-  if: always()
-  uses: actions/upload-artifact@v3
-  with:
-    name: playwright-report
-    path: playwright-report/
-```
-
-#### Required Environment
-- **Workers**: 1 worker in CI (sequential execution)
-- **Retries**: 2 retries on failure in CI
-- **Timeout**: 30s per test
-- **Browsers**: Chromium (VS Code Electron base)
-
-### Release Quality Gates
-
-**Required for Release**:
-- ✅ P0 Tests: 100% pass rate (18/18 scenarios)
-- ✅ P1 Tests: ≥95% pass rate (36+/38 scenarios)
-- ✅ P2 Tests: ≥80% pass rate (10+/13 scenarios)
-- ✅ Performance benchmarks: All targets met
-- ✅ No memory leaks detected
-- ✅ Cross-platform validation (Windows/macOS/Linux)
-
-**Test Execution Time**:
-- **Local**: ~5-10 minutes (parallel execution)
-- **CI**: ~10-15 minutes (sequential with retries)
-
-### Test Development Guidelines
-
-#### Adding New E2E Tests
-
-1. **Identify test area**: Classify as Terminal/Session/Agent/WebView/Config/Error
-2. **Assign priority**: P0 (critical) / P1 (important) / P2 (nice-to-have)
-3. **Create test file**: Use existing structure in `src/test/e2e/tests/`
-4. **Follow naming convention**: `feature-name.spec.ts`
-5. **Add to TEST_PLAN.md**: Document test scenario and expected behavior
-
-#### Test Structure Pattern
-```typescript
-import { test, expect } from '@playwright/test';
-import { VSCodeTestHelper } from '../helpers/vscode-helper';
-
-test.describe('Feature Area', () => {
-  let helper: VSCodeTestHelper;
-
-  test.beforeEach(async ({ page }) => {
-    helper = new VSCodeTestHelper(page);
-    await helper.initialize();
-  });
-
-  test('P0: Critical functionality', async () => {
-    // Arrange
-    await helper.openTerminal();
-
-    // Act
-    const result = await helper.performAction();
-
-    // Assert
-    expect(result).toBeTruthy();
-  });
-});
-```
-
-#### Best Practices
-- **Use page object pattern**: Create helper classes for reusable actions
-- **Set explicit waits**: Use `waitForSelector` instead of `setTimeout`
-- **Clean up resources**: Ensure terminals are disposed in `afterEach`
-- **Test isolation**: Each test should be independent
-- **Meaningful assertions**: Use descriptive expect messages
-- **Performance tracking**: Log execution times for benchmarking
-
-### Common E2E Test Issues
-
-#### Issue: Tests timeout in CI
-**Solution**:
-- Increase timeout in `playwright.config.ts`
-- Use sequential workers in CI (`workers: 1`)
-- Add explicit waits for async operations
-
-#### Issue: Flaky tests
-**Solution**:
-- Add retry logic (`retries: 2` in CI)
-- Use `waitForSelector` with proper conditions
-- Verify element visibility before interaction
-- Add debouncing for rapid UI updates
-
-#### Issue: Screenshots not captured
-**Solution**:
-- Verify `screenshot: 'only-on-failure'` in config
-- Check `test-results/` directory permissions
-- Ensure test failure is properly thrown
-
-### Additional E2E Testing Resources
-
-For comprehensive guides on E2E testing, refer to these detailed documents in `src/test/e2e/`:
-
-- **[QUICK_START.md](src/test/e2e/QUICK_START.md)**: Get started with E2E testing in 5 minutes
-  - Installation and setup
-  - Running your first test
-  - Writing basic tests
-  - Common patterns and examples
-  - FAQ and troubleshooting
-
-- **[DEBUGGING.md](src/test/e2e/DEBUGGING.md)**: Debug failing or flaky tests
-  - Visual debugging strategies
-  - Playwright Inspector usage
-  - Trace viewer analysis
-  - Common issues and solutions
-  - Performance debugging
-
-- **[MAINTENANCE.md](src/test/e2e/MAINTENANCE.md)**: Maintain test suite health
-  - Test review process
-  - Naming conventions
-  - Page object patterns
-  - Test data management
-  - Failure triage procedures
-  - CI/CD integration
-
-**Playwright Agent Usage** (Claude Code):
-- Use `playwright-test-planner` agent to generate test scenarios
-- Use `playwright-test-generator` agent to implement tests
-- Use `playwright-test-healer` agent to debug and fix failing tests
-- All agents accessible via Task tool in Claude Code
+- `playwright-test-planner` - Generate test scenarios
+- `playwright-test-generator` - Implement tests
+- `playwright-test-healer` - Debug and fix failing tests
 
 ## Emergency Response Procedures
 
 ### When Marketplace version breaks:
+
 1. **Immediate**: `npm run rollback:emergency:publish`
 2. **Investigate**: Check user reports and error logs
 3. **Fix**: Create hotfix branch
@@ -723,6 +540,7 @@ For comprehensive guides on E2E testing, refer to these detailed documents in `s
 5. **Deploy**: `npm run release:patch:safe`
 
 ### When tests fail in CI:
+
 1. Check if Ubuntu timeout (ignore if other platforms pass)
 2. Check for ES Module import issues
 3. Verify GitHub Actions permissions in workflow files
@@ -731,18 +549,21 @@ For comprehensive guides on E2E testing, refer to these detailed documents in `s
 ## Component-Specific Guidelines
 
 ### When modifying TerminalManager:
+
 - Maintain atomic operation patterns
 - Preserve ID recycling logic (1-5)
 - Update dispose() methods for cleanup
 - Test concurrent operation scenarios
 
 ### When modifying WebView:
+
 - Follow Manager-Coordinator pattern
 - Update both TypeScript and bundled JavaScript
 - Test IME input and Alt+Click functionality
 - Verify theme changes work correctly
 
 ### When modifying ScrollbackManager:
+
 - Always use SerializeAddon for ANSI color preservation
 - Test wrapped line reconstruction with various terminal widths
 - Verify empty line trimming doesn't remove meaningful content
@@ -750,6 +571,7 @@ For comprehensive guides on E2E testing, refer to these detailed documents in `s
 - Test with high-frequency output scenarios
 
 ### When modifying LifecycleController:
+
 - Maintain DisposableStore LIFO disposal order
 - Ensure all ITerminalAddon implementations have activate() method
 - Test addon caching works correctly across terminals
@@ -758,6 +580,7 @@ For comprehensive guides on E2E testing, refer to these detailed documents in `s
 - Always extend ITerminalAddon (not just IDisposable) for addon types
 
 ### When modifying RenderingOptimizer:
+
 - Maintain 100ms debounce for resize events
 - Test WebGL fallback to DOM renderer
 - Verify device detection for trackpad vs mouse wheel
@@ -765,6 +588,7 @@ For comprehensive guides on E2E testing, refer to these detailed documents in `s
 - Test with invalid dimensions (< 50px)
 
 ### When modifying AI Agent Detection:
+
 - Use regex patterns, not includes()
 - Test with actual CLI agent output
 - Verify status indicators update correctly
@@ -773,7 +597,9 @@ For comprehensive guides on E2E testing, refer to these detailed documents in `s
 ## GitHub Workflows
 
 ### Required Permissions
+
 Workflows need specific permissions for PR comments and security scanning:
+
 ```yaml
 permissions:
   contents: read
@@ -782,19 +608,23 @@ permissions:
 ```
 
 ### Workflow Dependencies
+
 - **CI**: Main test pipeline (may timeout on Ubuntu)
 - **TDD Quality Check**: Validates TDD compliance
 - **Build Platform-Specific**: Creates platform packages and automated releases
 - **CodeQL**: Security scanning (check regex patterns)
 
 ### GitHub Actions Release Workflow
+
 The automated release system (`build-platform-packages.yml`) provides:
 
 #### Triggered by Git Tags
+
 - **Trigger**: Push git tag `v*` (e.g., `v0.1.103`)
 - **Branches**: Runs on `main` and `for-publish` branches
 
 #### Release Pipeline
+
 1. **Pre-Release Quality Gate**:
    - TDD compliance check with comprehensive test suite
    - Blocks release if quality standards not met
@@ -816,16 +646,29 @@ The automated release system (`build-platform-packages.yml`) provides:
    - Uses `VSCE_PAT` secret for authentication
    - Ensures users get optimized binaries for their platform
 
+5. **Open VSX Registry Publishing** (Optional):
+   - Publishes to Open VSX for VS Codium, Gitpod, Eclipse Theia users
+   - Runs in parallel with VS Code Marketplace publish
+   - Uses `OVSX_PAT` secret for authentication
+   - Skipped if `OVSX_PAT` is not configured
+
 #### Required Secrets
+
 - `VSCE_PAT`: Personal Access Token for VS Code Marketplace publishing
+- `OVSX_PAT`: (Optional) Personal Access Token for Open VSX Registry
+  - Create account at [open-vsx.org](https://open-vsx.org/)
+  - Generate token from account settings
+  - Add to GitHub repository secrets
 
 #### Monitoring
+
 - View workflow status: https://github.com/s-hiraoku/vscode-sidebar-terminal/actions
 - Release dashboard: https://github.com/s-hiraoku/vscode-sidebar-terminal/releases
 
 ## Debugging Tips
 
 ### Terminal not responding:
+
 ```typescript
 // Check terminal state
 console.log(terminalManager.getTerminalInfo(id));
@@ -835,6 +678,7 @@ terminalManager.initializeShellForTerminal(id);
 ```
 
 ### WebView not updating:
+
 ```typescript
 // Check message queue
 messageManager.getQueueSize();
@@ -844,6 +688,7 @@ performanceManager.flush();
 ```
 
 ### Session not restoring:
+
 ```typescript
 // Check saved sessions
 const sessions = await sessionManager.getSavedSessions();
