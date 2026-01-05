@@ -91,6 +91,8 @@ const Timings = {
   RESIZE_RETRY_DELAYS: [0, 50, 100, 200, 500] as readonly number[],
   /** Delay for post-resize CSS transition handling */
   POST_RESIZE_DELAY_MS: 300,
+  /** Delay between mouse tracking viewport query retries */
+  MOUSE_TRACKING_RETRY_DELAY_MS: 50,
 } as const;
 
 /**
@@ -105,6 +107,8 @@ const Limits = {
   MIN_CONTAINER_DIMENSION: 50,
   /** Maximum terminal number for ID recycling */
   MAX_TERMINAL_NUMBER: 5,
+  /** Maximum attempts to find xterm viewport for mouse tracking */
+  MAX_MOUSE_TRACKING_SETUP_ATTEMPTS: 10,
 } as const;
 
 /**
@@ -1033,8 +1037,8 @@ export class TerminalCreationService implements Disposable {
     terminalId: string,
     container: HTMLElement
   ): void {
-    const maxAttempts = 10;
-    const delayMs = 50;
+    const maxAttempts = Limits.MAX_MOUSE_TRACKING_SETUP_ATTEMPTS;
+    const delayMs = Timings.MOUSE_TRACKING_RETRY_DELAY_MS;
     let attempts = 0;
 
     // Create callback to send input data to Extension/PTY
