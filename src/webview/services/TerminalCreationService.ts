@@ -44,6 +44,7 @@ import {
   TerminalFocusService,
   TerminalScrollbarService,
   TerminalAutoSaveService,
+  MouseTrackingService,
 } from './terminal';
 import { TerminalScrollIndicatorService } from './terminal/TerminalScrollIndicatorService';
 
@@ -180,6 +181,7 @@ export class TerminalCreationService implements Disposable {
   private readonly scrollbarService: TerminalScrollbarService;
   private readonly autoSaveService: TerminalAutoSaveService;
   private readonly scrollIndicatorService: TerminalScrollIndicatorService;
+  private readonly mouseTrackingService: MouseTrackingService;
   private readonly scrollIndicatorDisposables: Map<string, () => void> = new Map();
 
   constructor(
@@ -200,6 +202,7 @@ export class TerminalCreationService implements Disposable {
     this.scrollbarService = new TerminalScrollbarService();
     this.autoSaveService = new TerminalAutoSaveService(coordinator);
     this.scrollIndicatorService = new TerminalScrollIndicatorService();
+    this.mouseTrackingService = new MouseTrackingService();
   }
 
   /**
@@ -571,6 +574,11 @@ export class TerminalCreationService implements Disposable {
         const xtermElement = terminalContent.querySelector(`.${CssClasses.XTERM}`);
         this.scrollbarService.enableScrollbarDisplay(xtermElement, terminalId);
 
+        // Setup mouse tracking detection for apps like zellij, vim, tmux
+        // This toggles native scroll based on whether app has mouse mode enabled
+        // Note: Use delayed setup because xterm.js creates viewport asynchronously
+        this.setupMouseTrackingDelayed(terminal, terminalId, container);
+
         // Enable VS Code-style scroll-to-bottom indicator when scrolled away
         const scrollIndicatorDispose = this.scrollIndicatorService.attach(
           terminal,
@@ -758,6 +766,9 @@ export class TerminalCreationService implements Disposable {
         disposeScrollIndicator();
         this.scrollIndicatorDisposables.delete(terminalId);
       }
+
+      // Cleanup mouse tracking service
+      this.mouseTrackingService.cleanup(terminalId);
 
       // Phase 3: Dispose terminal via LifecycleController for proper resource cleanup
       this.lifecycleController.disposeTerminal(terminalId);
@@ -1009,6 +1020,49 @@ export class TerminalCreationService implements Disposable {
     };
 
     attemptResize();
+  }
+
+  /**
+   * Setup mouse tracking with delayed viewport query
+   *
+   * xterm.js creates the viewport element asynchronously, so we need to
+   * wait for it to be available before setting up mouse tracking handlers.
+   */
+  private setupMouseTrackingDelayed(
+    terminal: Terminal,
+    terminalId: string,
+    container: HTMLElement
+  ): void {
+    const maxAttempts = 10;
+    const delayMs = 50;
+    let attempts = 0;
+
+    // Create callback to send input data to Extension/PTY
+    const sendInput = (tid: string, data: string): void => {
+      this.coordinator.postMessageToExtension({
+        command: 'input',
+        terminalId: tid,
+        data,
+      });
+    };
+
+    const trySetup = (): void => {
+      attempts++;
+      const viewport = container.querySelector(`.${CssClasses.XTERM_VIEWPORT}`) as HTMLElement;
+
+      if (viewport) {
+        this.mouseTrackingService.setup(terminal, terminalId, viewport, sendInput);
+        terminalLogger.info(`[MouseTracking] Setup complete after ${attempts} attempt(s) for: ${terminalId}`);
+      } else if (attempts < maxAttempts) {
+        terminalLogger.debug(`[MouseTracking] Viewport not found, retry ${attempts}/${maxAttempts} for: ${terminalId}`);
+        setTimeout(trySetup, delayMs);
+      } else {
+        terminalLogger.warn(`[MouseTracking] Could not find viewport after ${maxAttempts} attempts for: ${terminalId}`);
+      }
+    };
+
+    // Start with requestAnimationFrame for first attempt (waits for DOM update)
+    requestAnimationFrame(trySetup);
   }
 
   /**
@@ -1270,6 +1324,9 @@ export class TerminalCreationService implements Disposable {
 
       // Dispose link manager
       this.linkManager.dispose();
+
+      // Dispose mouse tracking service
+      this.mouseTrackingService.dispose();
 
       terminalLogger.info('TerminalCreationService disposed');
     } catch (error) {
