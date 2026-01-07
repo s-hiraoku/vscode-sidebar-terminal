@@ -266,6 +266,12 @@ export class TerminalAddonManager {
       const paddingHorizontal =
         (parseInt(elementStyle.getPropertyValue('padding-left'), 10) || 0) +
         (parseInt(elementStyle.getPropertyValue('padding-right'), 10) || 0);
+      const parentPaddingVertical =
+        (parseInt(parentStyle.getPropertyValue('padding-top'), 10) || 0) +
+        (parseInt(parentStyle.getPropertyValue('padding-bottom'), 10) || 0);
+      const parentPaddingHorizontal =
+        (parseInt(parentStyle.getPropertyValue('padding-left'), 10) || 0) +
+        (parseInt(parentStyle.getPropertyValue('padding-right'), 10) || 0);
 
       const viewport = element.querySelector('.xterm-viewport') as HTMLElement | null;
       const actualScrollbarWidth = viewport
@@ -274,8 +280,8 @@ export class TerminalAddonManager {
       const scrollbarWidth =
         actualScrollbarWidth || core?.viewport?.scrollBarWidth || 0;
 
-      const availableHeight = height - paddingVertical;
-      const availableWidth = width - paddingHorizontal - scrollbarWidth;
+      const availableHeight = height - paddingVertical - parentPaddingVertical;
+      const availableWidth = width - paddingHorizontal - parentPaddingHorizontal - scrollbarWidth;
       const safetyPaddingPx = 0;  // Remove safety padding to maximize visible area
 
       return {

@@ -243,7 +243,11 @@ describe('TerminalAddonManager', () => {
         paddingLeft: number = 0,
         paddingRight: number = 0,
         paddingTop: number = 0,
-        paddingBottom: number = 0
+        paddingBottom: number = 0,
+        parentPaddingLeft: number = 0,
+        parentPaddingRight: number = 0,
+        parentPaddingTop: number = 0,
+        parentPaddingBottom: number = 0
       ) => {
         const parent = document.createElement('div');
         const element = document.createElement('div');
@@ -256,6 +260,10 @@ describe('TerminalAddonManager', () => {
                 switch (prop) {
                   case 'width': return `${parentWidth}px`;
                   case 'height': return `${parentHeight}px`;
+                  case 'padding-left': return `${parentPaddingLeft}px`;
+                  case 'padding-right': return `${parentPaddingRight}px`;
+                  case 'padding-top': return `${parentPaddingTop}px`;
+                  case 'padding-bottom': return `${parentPaddingBottom}px`;
                   default: return '0px';
                 }
               }
@@ -419,6 +427,16 @@ describe('TerminalAddonManager', () => {
 
         // Expected: (800 - 4 - 4 - 14) / 10 = 77.8 → 77 cols
         expect(dims.cols).toBe(77);
+      });
+
+      it('should include parent padding in width calculation', async () => {
+        const { terminalMock } = setupProposeDimensionsTest(800, 600, 10, 20, 0, 0, 0, 0, 0, 4, 4, 0, 0);
+
+        const addons = await manager.loadAllAddons(terminalMock as any, 't1', {});
+        const dims = addons.fitAddon.proposeDimensions();
+
+        // Expected: (800 - 4 - 4) / 10 = 79.2 → 79 cols
+        expect(dims.cols).toBe(79);
       });
 
       it('should enforce minimum cols of 2', async () => {
