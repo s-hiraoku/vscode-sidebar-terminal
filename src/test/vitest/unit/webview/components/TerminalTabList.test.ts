@@ -102,6 +102,55 @@ describe('TerminalTabList', () => {
     });
   });
 
+  describe('Drag and Drop', () => {
+    it('should compute reorder based on current DOM order after previous reorders', () => {
+      tabList.addTab({ id: 't1', name: 'T1', isActive: false, isClosable: true });
+      tabList.addTab({ id: 't2', name: 'T2', isActive: false, isClosable: true });
+      tabList.addTab({ id: 't3', name: 'T3', isActive: false, isClosable: true });
+
+      // Simulate a prior reorder so DOM order differs from insertion order
+      tabList.reorderTabs(['t2', 't3', 't1']);
+
+      const tabsWrapper = container.querySelector('.terminal-tabs-wrapper') as HTMLElement;
+      const tab2 = container.querySelector('[data-tab-id="t2"]') as HTMLElement;
+      const tab3 = container.querySelector('[data-tab-id="t3"]') as HTMLElement;
+
+      const rect = {
+        left: 0,
+        right: 100,
+        width: 100,
+        top: 0,
+        bottom: 0,
+        height: 0,
+        x: 0,
+        y: 0,
+        toJSON: () => ({})
+      };
+
+      tab3.getBoundingClientRect = () => rect;
+      tabsWrapper.getBoundingClientRect = () => rect;
+
+      const dataTransfer = { effectAllowed: '', setData: vi.fn(), getData: vi.fn() };
+      const dragStart = new dom.window.Event('dragstart', { bubbles: true, cancelable: true }) as any;
+      dragStart.dataTransfer = dataTransfer;
+      tab2.dispatchEvent(dragStart);
+
+      const dragOver = new dom.window.MouseEvent('dragover', { bubbles: true, clientX: 80 }) as any;
+      dragOver.dataTransfer = dataTransfer;
+      tab3.dispatchEvent(dragOver);
+
+      const drop = new dom.window.Event('drop', { bubbles: true, cancelable: true }) as any;
+      drop.dataTransfer = dataTransfer;
+      tab3.dispatchEvent(drop);
+
+      expect(mockEvents.onTabReorder).toHaveBeenCalledWith(
+        0,
+        1,
+        ['t3', 't2', 't1']
+      );
+    });
+  });
+
   describe('Visual State', () => {
     it('should update mode indicator', () => {
       tabList.setModeIndicator('fullscreen');

@@ -592,7 +592,7 @@ export class TerminalTabList {
     tabElement.addEventListener('drop', (e) => {
       e.preventDefault();
       if (this.draggedTab && this.draggedTab !== tab.id) {
-        const currentOrder = Array.from(this.tabs.keys());
+        const currentOrder = this.getCurrentTabOrder();
         const fromIndex = currentOrder.indexOf(this.draggedTab);
 
         if (fromIndex !== -1) {
@@ -620,6 +620,18 @@ export class TerminalTabList {
       this.dropTargetInfo = null;
       this.hideDropIndicator();
     });
+  }
+
+  private getCurrentTabOrder(): string[] {
+    const orderedIds = Array.from(this.tabsContainer.querySelectorAll('.terminal-tab'))
+      .map((el) => el.getAttribute('data-tab-id'))
+      .filter((id): id is string => Boolean(id));
+
+    if (orderedIds.length > 0) {
+      return orderedIds;
+    }
+
+    return Array.from(this.tabs.keys());
   }
 
   private createDropIndicator(): HTMLElement {
