@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-01-07
+
+### Added
+
+- **Mouse Tracking Support for TUI Applications**: Added mouse scroll support for zellij and other terminal apps that use mouse tracking modes (#363)
+  - Detects mouse tracking CSI sequences (DECSET/DECRST modes 1000, 1002, 1003, 1006)
+  - Toggles native scroll when mouse tracking enabled/disabled
+  - Sends SGR wheel escape sequences to PTY for proper mouse wheel handling
+  - Enables mouse wheel scrolling in zellij with `mouse_mode true` and similar TUI applications
+  - Includes 16 comprehensive unit tests for the new functionality
+
 ## [0.2.3] - 2026-01-04
 
 ### Added
