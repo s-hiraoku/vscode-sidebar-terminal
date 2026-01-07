@@ -9,3 +9,4 @@ export { TerminalFocusService } from './TerminalFocusService';
 export { TerminalScrollbarService } from './TerminalScrollbarService';
 export { TerminalAutoSaveService } from './TerminalAutoSaveService';
 export { TerminalScrollIndicatorService } from './TerminalScrollIndicatorService';
+export { MouseTrackingService, type SendInputCallback } from './MouseTrackingService';
