@@ -27,6 +27,8 @@ export class SplitHandler implements IMessageHandler {
 
     if (command === 'split') {
       this.handleSplit(msg, coordinator);
+    } else if (command === 'setDisplayMode') {
+      this.handleSetDisplayMode(msg, coordinator);
     } else if (command === 'relayoutTerminals') {
       this.handleRelayoutTerminals(msg, coordinator);
     } else {
@@ -38,7 +40,7 @@ export class SplitHandler implements IMessageHandler {
    * Get supported command types
    */
   public getSupportedCommands(): string[] {
-    return ['split', 'relayoutTerminals'];
+    return ['split', 'setDisplayMode', 'relayoutTerminals'];
   }
 
   /**
@@ -80,6 +82,49 @@ export class SplitHandler implements IMessageHandler {
     } catch (error) {
       this.logger.error('Error handling split message', error);
     }
+  }
+
+  /**
+   * Handle display mode change request from Extension
+   */
+  private handleSetDisplayMode(msg: MessageCommand, coordinator: IManagerCoordinator): void {
+    const mode = (msg as { mode?: 'normal' | 'fullscreen' | 'split' }).mode;
+    const forceNextCreate = (msg as { forceNextCreate?: boolean }).forceNextCreate === true;
+    if (!mode) {
+      this.logger.warn('⚠️ [WEBVIEW] setDisplayMode missing mode');
+      return;
+    }
+
+    const displayModeManager = coordinator.getDisplayModeManager?.();
+    if (!displayModeManager) {
+      this.logger.warn('⚠️ [WEBVIEW] DisplayModeManager not available on coordinator');
+      return;
+    }
+
+    if (forceNextCreate) {
+      if (mode === 'normal' && 'setForceNormalModeForNextCreate' in coordinator) {
+        try {
+          (
+            coordinator as unknown as { setForceNormalModeForNextCreate: (enabled: boolean) => void }
+          ).setForceNormalModeForNextCreate(true);
+        } catch (error) {
+          this.logger.warn('⚠️ [WEBVIEW] Failed to set force normal mode flag', error);
+        }
+      } else if (mode === 'fullscreen' && 'setForceFullscreenModeForNextCreate' in coordinator) {
+        try {
+          (
+            coordinator as unknown as {
+              setForceFullscreenModeForNextCreate: (enabled: boolean) => void;
+            }
+          ).setForceFullscreenModeForNextCreate(true);
+        } catch (error) {
+          this.logger.warn('⚠️ [WEBVIEW] Failed to set force fullscreen mode flag', error);
+        }
+      }
+    }
+
+    this.logger.info(`🧭 [WEBVIEW] Setting display mode: ${mode}`);
+    displayModeManager.setDisplayMode(mode);
   }
 
   /**

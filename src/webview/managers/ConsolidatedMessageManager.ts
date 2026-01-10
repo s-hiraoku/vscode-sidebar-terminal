@@ -246,7 +246,7 @@ export class ConsolidatedMessageManager implements IMessageManager {
     );
 
     // Split and Layout Messages
-    const splitCommands = ['split', 'relayoutTerminals'];
+    const splitCommands = ['split', 'setDisplayMode', 'relayoutTerminals'];
     splitCommands.forEach((cmd) =>
       registry.set(cmd, (msg, coord) => {
         this.logger.info(`🔄 [MESSAGE-MANAGER] Routing ${msg.command} to SplitHandler`);

@@ -666,17 +666,11 @@ export class TerminalTabManager implements TerminalTabEvents {
       return;
     }
 
-    if (remainingCount === 1) {
-      // Keep fullscreen with remaining terminal
-      const remainingTerminalId = Array.from(this.tabs.keys()).find((id) => id !== closedTabId);
-      if (remainingTerminalId) {
-        this.scheduleTimeout(() => displayManager.showTerminalFullscreen(remainingTerminalId), 50);
-      } else {
-        displayManager.setDisplayMode('normal');
-      }
+    const remainingTerminalId = this.tabOrder.find((id) => id !== closedTabId);
+    if (remainingTerminalId) {
+      this.scheduleTimeout(() => displayManager.showTerminalFullscreen(remainingTerminalId), 50);
     } else {
-      // Multiple terminals remain, switch to split
-      displayManager.setDisplayMode('split');
+      displayManager.setDisplayMode('normal');
     }
   }
 

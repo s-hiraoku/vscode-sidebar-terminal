@@ -643,11 +643,24 @@ export class TerminalCreationService implements Disposable {
           );
         }
 
+        const displayModeOverride = (config as { displayModeOverride?: string } | undefined)
+          ?.displayModeOverride;
+
         // Ensure split layouts are refreshed when new terminals are created during split mode
-        if (this.splitManager.getIsSplitMode()) {
+        if (
+          this.splitManager.getIsSplitMode() &&
+          displayModeOverride !== 'normal' &&
+          displayModeOverride !== 'fullscreen'
+        ) {
           this.splitManager.addNewTerminalToSplit(terminalId, terminalName);
           const displayManager = this.coordinator.getDisplayModeManager?.();
           displayManager?.showAllTerminalsSplit();
+        } else if (
+          (displayModeOverride === 'normal' || displayModeOverride === 'fullscreen') &&
+          this.splitManager.getIsSplitMode()
+        ) {
+          // Defensive: force exit split mode for normal overrides
+          this.splitManager.exitSplitMode();
         }
 
         // AI Agent Support: Register header elements with UIManager for status updates
