@@ -1393,6 +1393,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
     const terminals = this._terminalManager.getTerminals();
     for (const terminal of terminals) {
+      const displayModeOverride = this._terminalManager.consumeCreationDisplayModeOverride(
+        terminal.id
+      );
       await this._sendMessage({
         command: 'terminalCreated',
         terminal: {
@@ -1404,6 +1407,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         // 🔧 Include font settings directly in the message
         config: {
           fontSettings,
+          ...(displayModeOverride ? { displayModeOverride } : {}),
         },
       });
     }

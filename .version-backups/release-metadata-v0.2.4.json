@@ -1,0 +1,14 @@
+{
+  "version": "0.2.4",
+  "releaseDate": "2026-01-10T04:39:40.928Z",
+  "preReleaseChecks": {
+    "backupCreated": true,
+    "rollbackPlanGenerated": true,
+    "gitTagged": true
+  },
+  "rollbackInstructions": {
+    "emergency": "npm run rollback:emergency",
+    "specific": "npm run rollback:to 0.2.4",
+    "listVersions": "npm run rollback:list"
+  }
+}

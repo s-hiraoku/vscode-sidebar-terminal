@@ -93,6 +93,11 @@
     },
     "commands": [
       {
+        "command": "secondaryTerminal.createTerminal",
+        "title": "New Terminal",
+        "icon": "$(add)"
+      },
+      {
         "command": "secondaryTerminal.killTerminal",
         "title": "Kill Terminal",
         "icon": "$(trash)"

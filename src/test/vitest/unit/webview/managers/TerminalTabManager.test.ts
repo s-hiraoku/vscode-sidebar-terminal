@@ -168,6 +168,27 @@ describe('TerminalTabManager', () => {
       manager.onNewTab();
       expect(mockCoordinator.createTerminal).toHaveBeenCalled();
     });
+
+    it('should keep fullscreen mode after closing when multiple terminals remain', () => {
+      const displayManager = {
+        getCurrentMode: vi.fn().mockReturnValue('fullscreen'),
+        setDisplayMode: vi.fn(),
+        showTerminalFullscreen: vi.fn(),
+        showAllTerminalsSplit: vi.fn(),
+        toggleSplitMode: vi.fn(),
+      };
+      mockCoordinator.getDisplayModeManager = vi.fn().mockReturnValue(displayManager);
+
+      manager.addTab('t1', 'Term 1');
+      manager.addTab('t2', 'Term 2');
+      manager.addTab('t3', 'Term 3');
+
+      manager.onTabClose('t1');
+      vi.advanceTimersByTime(60);
+
+      expect(displayManager.showTerminalFullscreen).toHaveBeenCalled();
+      expect(displayManager.setDisplayMode).not.toHaveBeenCalledWith('split');
+    });
   });
 
   describe('Sync Tabs', () => {

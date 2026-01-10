@@ -24,6 +24,7 @@ suite('Functional Test Suite', () => {
   test('All required commands should be registered', async () => {
     const commands = await vscode.commands.getCommands(true);
     const requiredCommands = [
+      'secondaryTerminal.createTerminal',
       'secondaryTerminal.killTerminal',
       'secondaryTerminal.splitTerminal',
       'secondaryTerminal.openSettings',
