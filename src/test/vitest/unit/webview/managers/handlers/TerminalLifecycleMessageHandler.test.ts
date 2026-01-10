@@ -76,6 +76,7 @@ describe('TerminalLifecycleMessageHandler', () => {
   afterEach(() => {
     handler.dispose();
     vi.restoreAllMocks();
+    vi.useRealTimers(); // Ensure fake timers are always restored
   });
 
   describe('Initialization', () => {
