@@ -132,16 +132,26 @@ export class KeyboardShortcutService {
    */
   private async createTerminal(): Promise<void> {
     try {
+      const creationOverrides = { displayModeOverride: 'fullscreen' as const };
+      this.sendWebviewMessage({
+        command: 'setDisplayMode',
+        mode: 'fullscreen',
+        forceNextCreate: true,
+      });
+
       // Check if we can use profile-based creation
       const defaultProfile = this._terminalManager.getDefaultProfile();
 
       let terminalId: string;
       if (defaultProfile && 'createTerminalWithProfile' in this._terminalManager) {
         // Use profile-based creation if available
-        terminalId = await this._terminalManager.createTerminalWithProfile(defaultProfile);
+        terminalId = await this._terminalManager.createTerminalWithProfile(
+          defaultProfile,
+          creationOverrides
+        );
       } else {
         // Fallback to standard creation
-        terminalId = this._terminalManager.createTerminal();
+        terminalId = this._terminalManager.createTerminal(creationOverrides);
       }
 
       if (terminalId) {
@@ -375,16 +385,34 @@ export class KeyboardShortcutService {
    * Send command to webview
    */
   private sendWebviewCommand(command: string, data: Record<string, unknown>): void {
+    this.sendWebviewMessage({ command, ...data });
+  }
+
+  /**
+   * Send message to webview with backward compatibility.
+   */
+  private sendWebviewMessage(message: Record<string, unknown>): void {
+    if (
+      this._webviewProvider &&
+      'sendMessageToWebview' in this._webviewProvider &&
+      typeof (this._webviewProvider as any).sendMessageToWebview === 'function'
+    ) {
+      (this._webviewProvider as any).sendMessageToWebview(message);
+      log(`📨 [KEYBOARD] Sent to webview: ${String(message.command)}`, message);
+      return;
+    }
+
     if (
       this._webviewProvider &&
       'sendMessage' in this._webviewProvider &&
-      typeof this._webviewProvider.sendMessage === 'function'
+      typeof (this._webviewProvider as any).sendMessage === 'function'
     ) {
-      this._webviewProvider.sendMessage({ command, ...data });
-      log(`📨 [KEYBOARD] Sent to webview: ${command}`, data);
-    } else {
-      log(`⚠️ [KEYBOARD] No webview provider available for command: ${command}`, data);
+      (this._webviewProvider as any).sendMessage(message);
+      log(`📨 [KEYBOARD] Sent to webview: ${String(message.command)}`, message);
+      return;
     }
+
+    log(`⚠️ [KEYBOARD] No webview provider available for command: ${String(message.command)}`, message);
   }
 
   /**
