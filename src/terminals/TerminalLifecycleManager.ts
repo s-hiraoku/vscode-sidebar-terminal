@@ -16,6 +16,7 @@ import {
 } from '../utils/common';
 import { TerminalNumberManager } from '../utils/TerminalNumberManager';
 import { TerminalProfileService } from '../services/TerminalProfileService';
+import { TerminalCreationOverrides } from './types';
 import { TerminalSpawner } from './TerminalSpawner';
 import { ICliAgentDetectionService } from '../interfaces/CliAgentService';
 
@@ -86,7 +87,10 @@ export class TerminalLifecycleManager {
   /**
    * Create terminal with profile support (async version)
    */
-  public async createTerminalWithProfile(profileName?: string): Promise<string> {
+  public async createTerminalWithProfile(
+    profileName?: string,
+    overrides?: TerminalCreationOverrides
+  ): Promise<string> {
     log('🔍 [TERMINAL] === CREATE TERMINAL WITH PROFILE CALLED ===');
 
     const config = getTerminalConfig();
@@ -151,6 +155,7 @@ export class TerminalLifecycleManager {
         cwd,
         isActive: false,
         createdAt: new Date(),
+        creationDisplayModeOverride: overrides?.displayModeOverride,
       };
 
       // Store terminal
@@ -174,7 +179,7 @@ export class TerminalLifecycleManager {
   /**
    * Create terminal (synchronous version without profile)
    */
-  public createTerminal(): string {
+  public createTerminal(overrides?: TerminalCreationOverrides): string {
     log('🔍 [TERMINAL] === CREATE TERMINAL CALLED ===');
 
     const config = getTerminalConfig();
@@ -300,6 +305,7 @@ export class TerminalLifecycleManager {
         cwd: cwd,
         isActive: true,
         createdAt: new Date(),
+        creationDisplayModeOverride: overrides?.displayModeOverride,
       };
 
       // Store terminal

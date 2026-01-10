@@ -29,6 +29,7 @@ import { TerminalStateCoordinator } from './TerminalStateCoordinator';
 import { TerminalIOCoordinator } from './TerminalIOCoordinator';
 import { TerminalProcessCoordinator } from './TerminalProcessCoordinator';
 import { TerminalLifecycleManager } from './TerminalLifecycleManager';
+import { TerminalCreationOverrides, TerminalDisplayMode } from './types';
 
 const ENABLE_TERMINAL_DEBUG_LOGS = process.env.SECONDARY_TERMINAL_DEBUG_LOGS === 'true';
 
@@ -92,6 +93,7 @@ export class TerminalManager {
   private readonly _ptyOutputStarted = new Set<string>();
   private readonly _ptyDataDisposables = new Map<string, vscode.Disposable>();
 
+
   // Performance optimization: Circular Buffer Manager for efficient data buffering
   private readonly _bufferManager: CircularBufferManager;
   private readonly _initialPromptGuards = new Map<string, { dispose: () => void }>();
@@ -108,6 +110,18 @@ export class TerminalManager {
     if (this._debugLoggingEnabled) {
       log(...args);
     }
+  }
+
+  public consumeCreationDisplayModeOverride(terminalId: string): TerminalDisplayMode | null {
+    const terminal = this._terminals.get(terminalId);
+    if (!terminal) {
+      return null;
+    }
+    const override = terminal.creationDisplayModeOverride ?? null;
+    if (override) {
+      terminal.creationDisplayModeOverride = undefined;
+    }
+    return override;
   }
 
   constructor(cliAgentService?: ICliAgentDetectionService) {
@@ -203,15 +217,18 @@ export class TerminalManager {
   /**
    * Create terminal with profile support (async version)
    */
-  public async createTerminalWithProfile(profileName?: string): Promise<string> {
-    return await this._lifecycleManager.createTerminalWithProfile(profileName);
+  public async createTerminalWithProfile(
+    profileName?: string,
+    overrides?: TerminalCreationOverrides
+  ): Promise<string> {
+    return await this._lifecycleManager.createTerminalWithProfile(profileName, overrides);
   }
 
   /**
    * Create terminal (synchronous version without profile)
    */
-  public createTerminal(): string {
-    return this._lifecycleManager.createTerminal();
+  public createTerminal(overrides?: TerminalCreationOverrides): string {
+    return this._lifecycleManager.createTerminal(overrides);
   }
 
   /**

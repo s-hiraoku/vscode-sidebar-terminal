@@ -470,6 +470,7 @@ export interface TerminalInstance {
   pid?: number; // Process ID
   isActive: boolean;
   createdAt?: Date; // 作成日時
+  creationDisplayModeOverride?: 'normal' | 'fullscreen' | 'split';
 
   // プロセス状態管理（VS Code準拠）
   processState?: ProcessState; // プロセスの現在の状態
