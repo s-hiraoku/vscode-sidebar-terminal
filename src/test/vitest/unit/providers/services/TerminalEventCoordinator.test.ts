@@ -24,6 +24,7 @@ vi.mock('../../../../../utils/logger', () => ({
 // Mock UnifiedConfigurationService
 const { mockUnifiedConfig } = vi.hoisted(() => ({
   mockUnifiedConfig: {
+    getExtensionTerminalConfig: vi.fn().mockReturnValue({ cursorBlink: true, theme: 'auto' }),
     getCompleteTerminalSettings: vi.fn().mockReturnValue({ cursorBlink: true, theme: 'auto' }),
     getAltClickSettings: vi.fn().mockReturnValue({ altClickMovesCursor: true, multiCursorModifier: 'alt' }),
     getWebViewFontSettings: vi.fn().mockReturnValue({ fontSize: 14, fontFamily: 'monospace' }),
@@ -116,6 +117,25 @@ describe('TerminalEventCoordinator', () => {
         terminalId: 't1',
         data: 'buffered'
       });
+    });
+
+    it('should include displayModeOverride when provided on terminal instance', () => {
+      const onCreatedHandler = mockTerminalManager.onTerminalCreated.mock.calls[0][0];
+
+      onCreatedHandler({
+        id: 't1',
+        name: 'Terminal 1',
+        number: 1,
+        creationDisplayModeOverride: 'normal',
+      });
+
+      expect(mockSendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          command: 'terminalCreated',
+          terminalId: 't1',
+          config: expect.objectContaining({ displayModeOverride: 'normal' }),
+        })
+      );
     });
 
     it('should forward exit event', () => {
