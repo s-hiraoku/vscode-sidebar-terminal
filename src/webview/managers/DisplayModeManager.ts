@@ -141,6 +141,7 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
    * ターミナルをフルスクリーン表示
    */
   public showTerminalFullscreen(terminalId: string): void {
+    this.log(`🔍 [FULLSCREEN-DEBUG] showTerminalFullscreen called for: ${terminalId}`);
     this.log(`Showing terminal fullscreen: ${terminalId}`);
 
     const containerManager = this.coordinator?.getTerminalContainerManager?.();
@@ -156,6 +157,11 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
       this.log('Ensuring split mode is exited before entering fullscreen');
       splitManager.exitSplitMode();
     }
+
+    // 🔧 CRITICAL: Clear split artifacts BEFORE applying fullscreen state
+    // This ensures no split wrappers/resizers remain in the DOM
+    containerManager.clearSplitArtifacts();
+    this.log('Cleared split artifacts before fullscreen');
 
     const displayState = {
       mode: 'fullscreen' as const,

@@ -138,6 +138,17 @@ describe('DisplayModeManager - Fullscreen Display (Issue #198)', () => {
       expect((mockSplitManager as any).isSplitMode).toBe(false);
     });
 
+    it('should clear split artifacts when entering fullscreen', () => {
+      // Arrange - simulate split mode
+      (mockSplitManager as any).isSplitMode = true;
+
+      // Act
+      displayManager.showTerminalFullscreen('1');
+
+      // Assert
+      expect(mockContainerManager.clearSplitArtifacts).toHaveBeenCalled();
+    });
+
     it('should update visibility from container manager snapshot', () => {
       // Arrange
       mockContainerManager.getDisplaySnapshot.mockReturnValue({

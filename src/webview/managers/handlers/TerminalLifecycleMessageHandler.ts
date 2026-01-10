@@ -165,6 +165,26 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
         `🔍 Current terminal count before creation: ${coordinator.getAllTerminalInstances().size}`
       );
 
+      const displayModeOverride = (config as { displayModeOverride?: string } | undefined)
+        ?.displayModeOverride;
+
+      if (displayModeOverride === 'normal') {
+        if ('setForceNormalModeForNextCreate' in coordinator) {
+          (
+            coordinator as unknown as { setForceNormalModeForNextCreate: (enabled: boolean) => void }
+          ).setForceNormalModeForNextCreate(true);
+        }
+        coordinator.getDisplayModeManager?.()?.setDisplayMode('normal');
+      } else if (displayModeOverride === 'fullscreen') {
+        if ('setForceFullscreenModeForNextCreate' in coordinator) {
+          (
+            coordinator as unknown as {
+              setForceFullscreenModeForNextCreate: (enabled: boolean) => void;
+            }
+          ).setForceFullscreenModeForNextCreate(true);
+        }
+      }
+
       // 🔧 FIX: Include isActive in config so container is created with correct initial styling
       const configWithActive = config ? { ...config, isActive } : { isActive };
 
@@ -199,6 +219,19 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
         if (isActive) {
           this.logger.info(`🎯 Activating terminal as requested by Extension: ${terminalId}`);
           coordinator.setActiveTerminalId(terminalId);
+        }
+
+        if (displayModeOverride === 'fullscreen') {
+          // Ensure the new terminal is active before switching to fullscreen
+          coordinator.setActiveTerminalId(terminalId);
+          const displayModeManager = coordinator.getDisplayModeManager?.();
+          // 🔧 CRITICAL FIX: Increase delay to ensure DOM operations complete
+          // The createTerminal() has internal setTimeout(150) that was overriding fullscreen
+          // Use 200ms to ensure fullscreen is applied AFTER all createTerminal() side effects
+          setTimeout(() => {
+            this.logger.info(`🔍 [FULLSCREEN-DEBUG] Applying fullscreen for ${terminalId} after delay`);
+            displayModeManager?.showTerminalFullscreen?.(terminalId);
+          }, 200);
         }
       } else {
         this.logger.warn(

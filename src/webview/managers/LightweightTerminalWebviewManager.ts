@@ -157,6 +157,8 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   // ========================================
   private versionInfo: string = 'v0.1.0';
   private pendingSplitTransition: Promise<void> | null = null;
+  private forceNormalModeForNextCreate = false;
+  private forceFullscreenModeForNextCreate = false;
   private isInitialized = false;
   private currentTerminalState: TerminalState | null = null;
   private currentSettings: PartialTerminalSettings = {};
@@ -699,6 +701,16 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     return this.messageManager.getCurrentFlexDirection();
   }
 
+  public setForceNormalModeForNextCreate(enabled: boolean): void {
+    this.forceNormalModeForNextCreate = enabled;
+    log(`🧭 [MODE] Force normal mode for next create: ${enabled}`);
+  }
+
+  public setForceFullscreenModeForNextCreate(enabled: boolean): void {
+    this.forceFullscreenModeForNextCreate = enabled;
+    log(`🧭 [MODE] Force fullscreen mode for next create: ${enabled}`);
+  }
+
   // Terminal management delegation
 
   public async createTerminal(
@@ -733,7 +745,32 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
         return existingInstance.terminal ?? null;
       }
 
-      await this.ensureSplitModeBeforeTerminalCreation();
+      const displayModeOverride = (config as { displayModeOverride?: string } | undefined)
+        ?.displayModeOverride;
+      const shouldForceNormal =
+        this.forceNormalModeForNextCreate || displayModeOverride === 'normal';
+      const shouldForceFullscreen =
+        this.forceFullscreenModeForNextCreate || displayModeOverride === 'fullscreen';
+
+      log(`🔍 [MODE-DEBUG] createTerminal mode check:`, {
+        terminalId,
+        displayModeOverride,
+        forceFullscreenModeForNextCreate: this.forceFullscreenModeForNextCreate,
+        shouldForceFullscreen,
+        shouldForceNormal,
+        currentMode: this.displayModeManager?.getCurrentMode?.() ?? 'unknown',
+      });
+
+      if (shouldForceNormal) {
+        this.forceNormalModeForNextCreate = false;
+        this.displayModeManager?.setDisplayMode('normal');
+        log(`🧭 [MODE] Forced normal mode before creating ${terminalId}`);
+      } else if (shouldForceFullscreen) {
+        this.forceFullscreenModeForNextCreate = false;
+        log(`🧭 [MODE] Forced fullscreen mode before creating ${terminalId}`);
+      } else {
+        await this.ensureSplitModeBeforeTerminalCreation();
+      }
 
       const canCreate = this.canCreateTerminal();
       if (!canCreate && requestSource !== 'extension') {
@@ -849,7 +886,10 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       const splitManager = this.splitManager;
       const splitManagerActive =
         typeof splitManager?.getIsSplitMode === 'function' && splitManager.getIsSplitMode();
-      const shouldMaintainSplitLayout = currentMode === 'split' || splitManagerActive;
+      const shouldMaintainSplitLayout =
+        !shouldForceNormal &&
+        !shouldForceFullscreen &&
+        (currentMode === 'split' || splitManagerActive);
 
       log(
         `🔍 [SPLIT-DEBUG] Current mode: ${currentMode}, displayModeSplit: ${currentMode === 'split'}, splitManagerActive: ${splitManagerActive}, shouldMaintainSplitLayout: ${shouldMaintainSplitLayout}`
@@ -881,13 +921,19 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
         }
 
         // 🔧 FIX: Refresh split layout again after resize (保険)
-        if (shouldMaintainSplitLayout) {
+        // 🔧 CRITICAL: Re-check current mode to avoid overriding fullscreen mode
+        // The mode may have changed to fullscreen after terminal creation
+        const currentModeNow = this.displayModeManager?.getCurrentMode?.() ?? 'normal';
+        const stillNeedsSplit = shouldMaintainSplitLayout && currentModeNow === 'split';
+        if (stillNeedsSplit) {
           try {
             this.displayModeManager?.showAllTerminalsSplit();
             log(`🔄 [SPLIT] Refreshed split layout after resize`);
           } catch (layoutError) {
             log(`⚠️ [SPLIT] Failed to refresh split layout after resize: ${layoutError}`);
           }
+        } else if (shouldMaintainSplitLayout && currentModeNow !== 'split') {
+          log(`🔄 [SPLIT] Skipping split refresh - mode changed to ${currentModeNow}`);
         }
       }, 150);
 
