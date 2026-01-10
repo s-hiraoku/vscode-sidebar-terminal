@@ -41,6 +41,7 @@ describe('SplitHandler', () => {
     const commands = handler.getSupportedCommands();
     expect(commands).toContain('split');
     expect(commands).toContain('relayoutTerminals');
+    expect(commands).toContain('setDisplayMode');
   });
 
   describe('handleMessage', () => {
@@ -75,6 +76,30 @@ describe('SplitHandler', () => {
       mockCoordinator.getSplitManager.mockReturnValue(null);
       handler.handleMessage({ command: 'split' }, mockCoordinator);
       expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('SplitManager not available'));
+    });
+
+    it('should set display mode when requested', () => {
+      const displayModeManager = { setDisplayMode: vi.fn() };
+      mockCoordinator.getDisplayModeManager = vi.fn().mockReturnValue(displayModeManager);
+
+      handler.handleMessage({ command: 'setDisplayMode', mode: 'normal' }, mockCoordinator);
+
+      expect(displayModeManager.setDisplayMode).toHaveBeenCalledWith('normal');
+    });
+
+    it('should request forcing normal mode for next create when flagged', () => {
+      const displayModeManager = { setDisplayMode: vi.fn() };
+      const setForce = vi.fn();
+      mockCoordinator.getDisplayModeManager = vi.fn().mockReturnValue(displayModeManager);
+      mockCoordinator.setForceNormalModeForNextCreate = setForce;
+
+      handler.handleMessage(
+        { command: 'setDisplayMode', mode: 'normal', forceNextCreate: true },
+        mockCoordinator
+      );
+
+      expect(displayModeManager.setDisplayMode).toHaveBeenCalledWith('normal');
+      expect(setForce).toHaveBeenCalledWith(true);
     });
   });
 });

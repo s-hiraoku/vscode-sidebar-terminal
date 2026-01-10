@@ -31,6 +31,7 @@ describe('TerminalLifecycleMessageHandler', () => {
     mockCoordinator = {
       getActiveTerminalId: () => 'terminal-1',
       setActiveTerminalId: vi.fn(),
+      setForceNormalModeForNextCreate: vi.fn(),
       getTerminalInstance: () => undefined,
       getAllTerminalInstances: () => new Map(),
       getAllTerminalContainers: () => new Map(),
@@ -58,6 +59,10 @@ describe('TerminalLifecycleMessageHandler', () => {
         notification: {} as any,
       }),
       getMessageManager: () => ({}) as any,
+      getDisplayModeManager: vi.fn().mockReturnValue({
+        setDisplayMode: vi.fn(),
+        showTerminalFullscreen: vi.fn(),
+      }),
     } as IManagerCoordinator;
 
     // Create mock message queue
@@ -158,6 +163,44 @@ describe('TerminalLifecycleMessageHandler', () => {
 
       handler.handleMessage(message, mockCoordinator);
       // Should not throw error
+    });
+
+    it('should force normal mode when displayModeOverride is normal', () => {
+      const message: MessageCommand = {
+        command: 'terminalCreated',
+        terminalId: 'terminal-2',
+        terminalName: 'New Terminal',
+        config: {
+          displayModeOverride: 'normal',
+        },
+      };
+
+      handler.handleMessage(message, mockCoordinator);
+
+      expect(mockCoordinator.setForceNormalModeForNextCreate).toHaveBeenCalledWith(true);
+      const displayModeManager = (mockCoordinator as any).getDisplayModeManager();
+      expect(displayModeManager.setDisplayMode).toHaveBeenCalledWith('normal');
+    });
+
+    it('should show terminal fullscreen when displayModeOverride is fullscreen', async () => {
+      (mockCoordinator.createTerminal as any).mockResolvedValue({});
+      const message: MessageCommand = {
+        command: 'terminalCreated',
+        terminalId: 'terminal-9',
+        terminalName: 'Fullscreen Terminal',
+        config: {
+          displayModeOverride: 'fullscreen',
+        },
+      };
+
+      vi.useFakeTimers();
+      await handler.handleMessage(message, mockCoordinator);
+      vi.runAllTimers();
+
+      const displayModeManager = (mockCoordinator as any).getDisplayModeManager();
+      expect(mockCoordinator.setActiveTerminalId).toHaveBeenCalledWith('terminal-9');
+      expect(displayModeManager.showTerminalFullscreen).toHaveBeenCalledWith('terminal-9');
+      vi.useRealTimers();
     });
 
     it('should handle newTerminal message', () => {

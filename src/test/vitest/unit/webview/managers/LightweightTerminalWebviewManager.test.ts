@@ -123,6 +123,24 @@ describe('LightweightTerminalWebviewManager', () => {
       expect(tabs.removeTab).toHaveBeenCalledWith('t1');
       expect(lifecycle.removeTerminal).toHaveBeenCalledWith('t1');
     });
+
+    it('should not maintain split layout when forced to normal for next create', async () => {
+      const lifecycle = (manager as any).terminalLifecycleManager;
+      const displayMode = (manager as any).displayModeManager;
+      const splitManager = manager.splitManager;
+
+      lifecycle.createTerminal.mockResolvedValue({ textarea: { hasAttribute: () => false }, focus: vi.fn() });
+      displayMode.getCurrentMode.mockReturnValue('split');
+      splitManager.getIsSplitMode.mockReturnValue(true);
+
+      (manager as any).setForceNormalModeForNextCreate(true);
+
+      const createPromise = manager.createTerminal('new-skip', 'New Term', undefined, undefined, 'extension');
+      await vi.advanceTimersByTimeAsync(500);
+      await createPromise;
+
+      expect(displayMode.showAllTerminalsSplit).not.toHaveBeenCalled();
+    });
   });
 
   describe('Panel Location Sync', () => {
