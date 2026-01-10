@@ -588,6 +588,11 @@ export class TerminalCommandHandlers {
 
     const terminals = this.deps.terminalManager.getTerminals();
     for (const terminal of terminals) {
+      const displayModeOverride =
+        'consumeCreationDisplayModeOverride' in this.deps.terminalManager &&
+        typeof (this.deps.terminalManager as any).consumeCreationDisplayModeOverride === 'function'
+          ? (this.deps.terminalManager as any).consumeCreationDisplayModeOverride(terminal.id)
+          : null;
       await this.deps.communicationService.sendMessage({
         command: 'terminalCreated',
         terminal: {
@@ -599,6 +604,7 @@ export class TerminalCommandHandlers {
         // 🔧 Include font settings directly in the message
         config: {
           fontSettings,
+          ...(displayModeOverride ? { displayModeOverride } : {}),
         },
       });
     }
