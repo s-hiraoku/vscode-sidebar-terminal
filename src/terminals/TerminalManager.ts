@@ -59,7 +59,6 @@ export class TerminalManager {
   private readonly _processCoordinator: TerminalProcessCoordinator;
   private readonly _lifecycleManager: TerminalLifecycleManager;
   private operationQueue: Promise<void> = Promise.resolve();
-  private readonly _terminalBeingKilled = new Set<string>();
   private readonly _shellInitialized = new Set<string>();
   private readonly _ptyOutputStarted = new Set<string>();
   private readonly _ptyDataDisposables = new Map<string, vscode.Disposable>();
@@ -329,9 +328,13 @@ export class TerminalManager {
     return this._cliAgentService.getConnectedAgent()?.terminalId ?? null;
   }
 
-  public getConnectedAgentType(): 'claude' | 'gemini' | 'codex' | null {
+  public getConnectedAgentType(): 'claude' | 'gemini' | 'codex' | 'copilot' | null {
     const agent = this._cliAgentService.getConnectedAgent();
-    return agent ? (agent.type as 'claude' | 'gemini' | 'codex') : null;
+    if (!agent) return null;
+    const validTypes = ['claude', 'gemini', 'codex', 'copilot'] as const;
+    return validTypes.includes(agent.type as (typeof validTypes)[number])
+      ? (agent.type as 'claude' | 'gemini' | 'codex' | 'copilot')
+      : null;
   }
 
   public switchAiAgentConnection(terminalId: string): {
@@ -417,6 +420,7 @@ export class TerminalManager {
 
   public dispose(): void {
     this._dataBufferManager.dispose();
+    this._bufferManager.dispose();
     this._processCoordinator.dispose();
     this._lifecycleManager.dispose();
     this._cliAgentService.dispose();
