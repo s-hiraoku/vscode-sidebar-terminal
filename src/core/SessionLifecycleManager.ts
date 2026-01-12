@@ -332,8 +332,8 @@ export class SessionLifecycleManager {
         });
 
         await new Promise((resolve) => setTimeout(resolve, 100));
-      } catch {
-        // Scrollback extraction failed for terminal
+      } catch (error) {
+        logger.debug(`Scrollback extraction failed for terminal ${terminal.id}`, error);
       }
     }
   }

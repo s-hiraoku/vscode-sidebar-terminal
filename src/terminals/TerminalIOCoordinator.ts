@@ -163,14 +163,14 @@ export class TerminalIOCoordinator {
   }
 
   private attemptPtyRecovery(terminal: TerminalInstance, data: string): boolean {
-    const alternatives = [terminal.ptyProcess, terminal.pty].filter(Boolean);
+    const primaryPty = terminal.ptyProcess || terminal.pty;
+    const alternatives = [terminal.ptyProcess, terminal.pty].filter(
+      (p) => p && p !== primaryPty
+    );
 
     for (const ptyInstance of alternatives) {
       if (ptyInstance && typeof ptyInstance.write === 'function') {
         try {
-          if (ptyInstance === (terminal.ptyProcess || terminal.pty)) {
-            continue;
-          }
           ptyInstance.write(data);
           if (ptyInstance === terminal.pty) {
             terminal.ptyProcess = undefined;
