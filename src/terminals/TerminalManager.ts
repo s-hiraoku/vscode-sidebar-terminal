@@ -257,16 +257,17 @@ export class TerminalManager {
   // === Legacy Methods ===
 
   /** @deprecated Use deleteTerminal() with active terminal ID */
-  public async safeKillTerminal(_terminalId?: string): Promise<boolean> {
-    const activeId = this._activeTerminalManager.getActive();
-    if (!activeId) {
-      log('No active terminal to kill');
+  public async safeKillTerminal(terminalId?: string): Promise<boolean> {
+    const targetId = terminalId || this._activeTerminalManager.getActive();
+    if (!targetId) {
+      log('No terminal to kill');
       return false;
     }
     try {
-      const result = await this.deleteTerminal(activeId, { source: 'command' });
+      const result = await this.deleteTerminal(targetId, { source: 'command' });
       return result.success;
-    } catch {
+    } catch (err) {
+      log(`Failed to kill terminal ${targetId}: ${err}`);
       return false;
     }
   }
