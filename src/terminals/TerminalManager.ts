@@ -33,24 +33,7 @@ import { TerminalCreationOverrides, TerminalDisplayMode } from './types';
 
 const ENABLE_TERMINAL_DEBUG_LOGS = process.env.SECONDARY_TERMINAL_DEBUG_LOGS === 'true';
 
-/**
- * TerminalManager - Refactored with Module Coordination Pattern
- *
- * Responsibility: Coordinate between specialized terminal management modules
- * - Delegate to TerminalLifecycleManager for creation/deletion
- * - Delegate to TerminalProcessCoordinator for PTY management
- * - Delegate to TerminalDataBufferManager for output buffering
- * - Delegate to TerminalStateCoordinator for state management
- * - Delegate to TerminalIOCoordinator for input/output operations
- *
- * Integration with Issue #213 services:
- * - Uses TerminalProcessManager (PTY operations)
- * - Uses TerminalValidationService (validation and recovery)
- * - Uses CircularBufferManager (efficient data buffering)
- *
- * Design Pattern: Facade + Coordinator
- * Benefits: Single Responsibility, Testability, Maintainability
- */
+/** Coordinates between specialized terminal management modules (Facade + Coordinator pattern) */
 export class TerminalManager {
   private readonly _terminals = new Map<string, TerminalInstance>();
   private readonly _activeTerminalManager = new ActiveTerminalManager();
@@ -67,34 +50,19 @@ export class TerminalManager {
   private readonly _profileService: TerminalProfileService;
   private readonly _cliAgentService: ICliAgentDetectionService;
   private readonly _terminalSpawner: TerminalSpawner;
-
-  // Issue #213 services - PTY operations and validation
   private readonly _processManager: ITerminalProcessManager;
   private readonly _validationService: ITerminalValidationService;
   private readonly _debugLoggingEnabled = ENABLE_TERMINAL_DEBUG_LOGS;
-
-  // Issue #237 Phase 1 - Module coordinators
   private readonly _dataBufferManager: TerminalDataBufferManager;
   private readonly _stateCoordinator: TerminalStateCoordinator;
   private readonly _ioCoordinator: TerminalIOCoordinator;
   private readonly _processCoordinator: TerminalProcessCoordinator;
   private readonly _lifecycleManager: TerminalLifecycleManager;
-
-  // Operation queue for atomic operations
   private operationQueue: Promise<void> = Promise.resolve();
-
-  // Track terminals being killed to prevent infinite loops
   private readonly _terminalBeingKilled = new Set<string>();
-
-  // 🎯 HANDSHAKE PROTOCOL: Track shell integration initialization to prevent duplicates
   private readonly _shellInitialized = new Set<string>();
-
-  // 🎯 HANDSHAKE PROTOCOL: Track PTY output handlers to prevent duplicates and enable deferred start
   private readonly _ptyOutputStarted = new Set<string>();
   private readonly _ptyDataDisposables = new Map<string, vscode.Disposable>();
-
-
-  // Performance optimization: Circular Buffer Manager for efficient data buffering
   private readonly _bufferManager: CircularBufferManager;
   private readonly _initialPromptGuards = new Map<string, { dispose: () => void }>();
 
@@ -125,39 +93,23 @@ export class TerminalManager {
   }
 
   constructor(cliAgentService?: ICliAgentDetectionService) {
-    // Initialize terminal number manager with max terminals config
     const config = getTerminalConfig();
     this._terminalNumberManager = new TerminalNumberManager(config.maxTerminals);
-
-    // Initialize Terminal Profile Service
     this._profileService = new TerminalProfileService();
-
-    // Initialize CLI Agent detection service
     this._cliAgentService = cliAgentService || new CliAgentDetectionService();
-
-    // 🚨 FIX: Start heartbeat mechanism for state validation
     this._cliAgentService.startHeartbeat();
-
     this._terminalSpawner = new TerminalSpawner();
-
-    // Initialize refactored services for issue #213
     this._processManager = new TerminalProcessManager();
-    this._validationService = new TerminalValidationService({
-      maxTerminals: config.maxTerminals,
-    });
+    this._validationService = new TerminalValidationService({ maxTerminals: config.maxTerminals });
 
-    // Initialize Circular Buffer Manager with optimized settings
     this._bufferManager = new CircularBufferManager(
-      (terminalId: string, data: string) => {
-        this._dataEmitter.fire({ terminalId, data });
-      },
+      (terminalId: string, data: string) => this._dataEmitter.fire({ terminalId, data }),
       {
         flushInterval: PERFORMANCE_CONSTANTS.OUTPUT_BUFFER_FLUSH_INTERVAL_MS,
         maxDataSize: PERFORMANCE_CONSTANTS.MAX_BUFFER_SIZE_BYTES,
       }
     );
 
-    // Initialize Issue #237 Phase 1 module coordinators
     this._dataBufferManager = new TerminalDataBufferManager(
       this._terminals,
       this._dataEmitter,
@@ -200,9 +152,6 @@ export class TerminalManager {
     );
   }
 
-  /**
-   * Get CLI Agent status change event
-   */
   public get onCliAgentStatusChange(): vscode.Event<{
     terminalId: string;
     status: 'connected' | 'disconnected' | 'none';
@@ -212,11 +161,8 @@ export class TerminalManager {
     return this._cliAgentService.onCliAgentStatusChange;
   }
 
-  // =================== LIFECYCLE MANAGEMENT (delegated) ===================
+  // === Lifecycle Management ===
 
-  /**
-   * Create terminal with profile support (async version)
-   */
   public async createTerminalWithProfile(
     profileName?: string,
     overrides?: TerminalCreationOverrides
@@ -224,279 +170,150 @@ export class TerminalManager {
     return await this._lifecycleManager.createTerminalWithProfile(profileName, overrides);
   }
 
-  /**
-   * Create terminal (synchronous version without profile)
-   */
   public createTerminal(overrides?: TerminalCreationOverrides): string {
     return this._lifecycleManager.createTerminal(overrides);
   }
 
-  /**
-   * Delete terminal with atomic operation
-   */
   public async deleteTerminal(
     terminalId: string,
-    options: {
-      force?: boolean;
-      source?: 'header' | 'panel' | 'command';
-    } = {}
+    options: { force?: boolean; source?: 'header' | 'panel' | 'command' } = {}
   ): Promise<DeleteResult> {
     return await this._lifecycleManager.deleteTerminal(terminalId, options);
   }
 
-  /**
-   * Check if terminal can be removed
-   */
   public canRemoveTerminal(terminalId: string): { canRemove: boolean; reason?: string } {
     return this._lifecycleManager.canRemoveTerminal(terminalId);
   }
 
-  /**
-   * Remove terminal immediately
-   */
   public removeTerminal(terminalId: string): void {
     this._lifecycleManager.removeTerminal(terminalId);
   }
 
-  /**
-   * Get a specific terminal by ID
-   */
   public getTerminal(terminalId: string): TerminalInstance | undefined {
     return this._lifecycleManager.getTerminal(terminalId);
   }
 
-  /**
-   * Get all terminals
-   */
   public getTerminals(): TerminalInstance[] {
     return this._lifecycleManager.getTerminals();
   }
 
-  // =================== PROCESS COORDINATION (delegated) ===================
+  // === Process Coordination ===
 
-  /**
-   * Initialize shell for a terminal after PTY creation
-   */
   public initializeShellForTerminal(terminalId: string, ptyProcess: any, safeMode: boolean): void {
     this._processCoordinator.initializeShellForTerminal(terminalId, ptyProcess, safeMode);
   }
 
-  /**
-   * Start PTY output after WebView handshake complete
-   */
   public startPtyOutput(terminalId: string): void {
     this._processCoordinator.startPtyOutput(terminalId);
   }
 
-  // =================== STATE MANAGEMENT (delegated) ===================
+  // === State Management ===
 
-  /**
-   * Get current terminal state
-   */
   public getCurrentState(): TerminalState {
     return this._stateCoordinator.getCurrentState();
   }
 
-  /**
-   * Check if there is an active terminal
-   */
   public hasActiveTerminal(): boolean {
     return this._stateCoordinator.hasActiveTerminal();
   }
 
-  /**
-   * Get active terminal ID
-   */
   public getActiveTerminalId(): string | undefined {
     return this._stateCoordinator.getActiveTerminalId();
   }
 
-  /**
-   * Set active terminal
-   */
   public setActiveTerminal(terminalId: string): void {
     this._stateCoordinator.setActiveTerminal(terminalId);
   }
 
-  /**
-   * Focus a terminal
-   */
   public focusTerminal(terminalId: string): void {
     this._stateCoordinator.focusTerminal(terminalId);
   }
 
-  /**
-   * Reorder terminals
-   */
   public reorderTerminals(order: string[]): void {
     this._stateCoordinator.reorderTerminals(order);
   }
 
-  /**
-   * Update terminal CWD
-   */
   public updateTerminalCwd(terminalId: string, cwd: string): void {
     this._stateCoordinator.updateTerminalCwd(terminalId, cwd);
   }
 
-  // =================== I/O OPERATIONS (delegated) ===================
+  // === I/O Operations ===
 
-  /**
-   * Send input to a terminal
-   */
   public sendInput(data: string, terminalId?: string): void {
     this._ioCoordinator.sendInput(data, terminalId);
   }
 
-  /**
-   * Resize a terminal
-   */
   public resize(cols: number, rows: number, terminalId?: string): void {
     this._ioCoordinator.resize(cols, rows, terminalId);
   }
 
-  /**
-   * Write to terminal (public API)
-   */
   public writeToTerminal(terminalId: string, data: string): boolean {
     return this._ioCoordinator.writeToTerminal(terminalId, data);
   }
 
-  /**
-   * Resize terminal (public API)
-   */
   public resizeTerminal(terminalId: string, cols: number, rows: number): boolean {
     return this._ioCoordinator.resizeTerminal(terminalId, cols, rows);
   }
 
-  // =================== LEGACY METHODS (backward compatibility) ===================
+  // === Legacy Methods ===
 
-  /**
-   * @deprecated Use deleteTerminal() with active terminal ID
-   */
-  public safeKillTerminal(terminalId?: string): boolean {
+  /** @deprecated Use deleteTerminal() with active terminal ID */
+  public safeKillTerminal(_terminalId?: string): boolean {
     const activeId = this._activeTerminalManager.getActive();
     if (!activeId) {
-      const message = 'No active terminal to kill';
-      log('⚠️ [WARN]', message);
+      log('No active terminal to kill');
       return false;
     }
-
-    if (terminalId && terminalId !== activeId) {
-      log(
-        '🔄 [TERMINAL] Requested to safely kill:',
-        terminalId,
-        'but will kill active terminal:',
-        activeId
-      );
-    }
-
     const result = this.deleteTerminal(activeId, { source: 'command' });
     return result.then((r) => r.success).catch(() => false) as unknown as boolean;
   }
 
-  /**
-   * Kill active terminal
-   * @returns Promise that resolves when terminal is deleted
-   */
   public async killTerminal(terminalId?: string): Promise<void> {
-    // 🔧 FIX: Use specified terminalId if provided, otherwise fall back to active
     const targetId = terminalId || this._activeTerminalManager.getActive();
     if (!targetId) {
-      log('⚠️ [WARN] No terminal to kill');
       return;
     }
-
-    if (terminalId && terminalId !== this._activeTerminalManager.getActive()) {
-      log(
-        '🔄 [TERMINAL] Killing specific terminal:',
-        terminalId,
-        '(active:',
-        this._activeTerminalManager.getActive(),
-        ')'
-      );
-    }
-
-    // 🔧 FIX: await the deletion to ensure it completes before returning
     const result = await this.deleteTerminal(targetId, { force: true, source: 'command' });
     if (!result.success) {
-      log('❌ [TERMINAL] Error killing terminal:', result.reason);
       throw new Error(result.reason || 'Failed to kill terminal');
     }
   }
 
-  // =================== CLI AGENT INTEGRATION ===================
+  // === CLI Agent Integration ===
 
-  /**
-   * Check if CLI Agent is connected in a terminal
-   */
   public isCliAgentConnected(terminalId: string): boolean {
-    const agentState = this._cliAgentService.getAgentState(terminalId);
-    return agentState.status === 'connected';
+    return this._cliAgentService.getAgentState(terminalId).status === 'connected';
   }
 
-  /**
-   * Check if CLI Agent is running in a terminal
-   */
   public isCliAgentRunning(terminalId: string): boolean {
-    const agentState = this._cliAgentService.getAgentState(terminalId);
-    return agentState.status !== 'none';
+    return this._cliAgentService.getAgentState(terminalId).status !== 'none';
   }
 
-  /**
-   * Get currently globally active CLI Agent
-   */
   public getCurrentGloballyActiveAgent(): { terminalId: string; type: string } | null {
     return this._cliAgentService.getConnectedAgent();
   }
 
-  /**
-   * Refresh CLI Agent state
-   */
   public refreshCliAgentState(): boolean {
     return this._cliAgentService.refreshAgentState();
   }
 
-  /**
-   * Get the last executed command for a terminal
-   */
   public getLastCommand(_terminalId: string): string | undefined {
-    return undefined; // Simplified - command history disabled
+    return undefined;
   }
 
-  /**
-   * Handle terminal output for CLI Agent detection
-   */
   public handleTerminalOutputForCliAgent(terminalId: string, data: string): void {
     this._cliAgentService.detectFromOutput(terminalId, data);
   }
 
-  /**
-   * Get the active CLI Agent type for a terminal
-   */
   public getAgentType(terminalId: string): string | null {
-    const agentState = this._cliAgentService.getAgentState(terminalId);
-    return agentState.agentType;
+    return this._cliAgentService.getAgentState(terminalId).agentType;
   }
 
-  /**
-   * Get all active CLI Agents
-   */
   public getConnectedAgents(): Array<{ terminalId: string; agentInfo: { type: string } }> {
-    const connectedAgent = this._cliAgentService.getConnectedAgent();
-    return connectedAgent
-      ? [
-          {
-            terminalId: connectedAgent.terminalId,
-            agentInfo: { type: connectedAgent.type },
-          },
-        ]
-      : [];
+    const agent = this._cliAgentService.getConnectedAgent();
+    return agent ? [{ terminalId: agent.terminalId, agentInfo: { type: agent.type } }] : [];
   }
 
-  /**
-   * Get the map of disconnected agents
-   */
   public getDisconnectedAgents(): Map<
     string,
     { type: 'claude' | 'gemini' | 'codex' | 'copilot'; startTime: Date; terminalName?: string }
@@ -504,98 +321,57 @@ export class TerminalManager {
     return this._cliAgentService.getDisconnectedAgents();
   }
 
-  /**
-   * Get the connected agent terminal ID
-   */
   public getConnectedAgentTerminalId(): string | null {
-    const connectedAgent = this._cliAgentService.getConnectedAgent();
-    return connectedAgent ? connectedAgent.terminalId : null;
+    return this._cliAgentService.getConnectedAgent()?.terminalId ?? null;
   }
 
-  /**
-   * Get the connected agent type
-   */
   public getConnectedAgentType(): 'claude' | 'gemini' | 'codex' | null {
-    const connectedAgent = this._cliAgentService.getConnectedAgent();
-    return connectedAgent ? (connectedAgent.type as 'claude' | 'gemini' | 'codex') : null;
+    const agent = this._cliAgentService.getConnectedAgent();
+    return agent ? (agent.type as 'claude' | 'gemini' | 'codex') : null;
   }
 
-  /**
-   * Switch AI Agent connection
-   */
   public switchAiAgentConnection(terminalId: string): {
     success: boolean;
     reason?: string;
     newStatus: 'connected' | 'disconnected' | 'none';
     agentType: string | null;
   } {
-    const terminal = this._terminals.get(terminalId);
-    if (!terminal) {
-      return {
-        success: false,
-        reason: 'Terminal not found',
-        newStatus: 'none',
-        agentType: null,
-      };
+    if (!this._terminals.has(terminalId)) {
+      return { success: false, reason: 'Terminal not found', newStatus: 'none', agentType: null };
     }
-
     return this._cliAgentService.switchAgentConnection(terminalId);
   }
 
-  /**
-   * Force reconnect AI Agent
-   */
   public forceReconnectAiAgent(
     terminalId: string,
     agentType: 'claude' | 'gemini' | 'codex' = 'claude'
   ): boolean {
-    const terminal = this._terminals.get(terminalId);
-    const terminalName = terminal ? terminal.name : undefined;
-
-    log(
-      `🔄 [TERMINAL-MANAGER] Force reconnecting AI Agent for terminal ${terminalId} as ${agentType}`
-    );
+    const terminalName = this._terminals.get(terminalId)?.name;
     return this._cliAgentService.forceReconnectAgent(terminalId, agentType, terminalName);
   }
 
-  /**
-   * Clear AI Agent detection errors
-   */
   public clearAiAgentDetectionError(terminalId: string): boolean {
-    log(`🧹 [TERMINAL-MANAGER] Clearing AI Agent detection errors for terminal ${terminalId}`);
     return this._cliAgentService.clearDetectionError(terminalId);
   }
 
-  // =================== PROFILE MANAGEMENT ===================
+  // === Profile Management ===
 
-  /**
-   * Get available terminal profiles
-   */
   public async getAvailableProfiles(): Promise<
     Record<string, import('../types/shared').TerminalProfile>
   > {
     return await this._lifecycleManager.getAvailableProfiles();
   }
 
-  /**
-   * Get default profile name
-   */
   public getDefaultProfile(): string | null {
     return this._lifecycleManager.getDefaultProfile();
   }
 
-  // =================== SERVICE MANAGEMENT ===================
+  // === Service Management ===
 
-  /**
-   * Set shell integration service after construction
-   */
   public setShellIntegrationService(service: any): void {
     this._shellIntegrationService = service;
   }
 
-  /**
-   * Output event emitter for backward compatibility
-   */
   public get onTerminalOutput(): vscode.Event<{ terminalId: string; data: string }> {
     if (!this._outputEmitter) {
       this._outputEmitter = new vscode.EventEmitter<{ terminalId: string; data: string }>();
@@ -609,121 +385,44 @@ export class TerminalManager {
     return this._outputEmitter.event;
   }
 
-  // =================== INTERNAL METHODS ===================
+  // === Internal Methods ===
 
-  /**
-   * Setup terminal event handlers
-   */
   private _setupTerminalEvents(terminal: TerminalInstance): void {
     this._processCoordinator.setupTerminalEvents(
       terminal,
       (terminalId: string, exitCode: number) => {
-        // Handle CLI agent termination on process exit
         this._cliAgentService.handleTerminalRemoved(terminalId);
-
-        // 🔧 FIX: Fire events BEFORE deleting from map so listeners can still access the instance
         this._exitEmitter.fire({ terminalId, exitCode });
-
-        // Clean up terminal and notify listeners
         this._terminals.delete(terminalId);
         this._terminalRemovedEmitter.fire(terminalId);
         this._stateCoordinator.notifyStateUpdate();
-
-        log(`🗑️ [TERMINAL] Terminal ${terminalId} cleaned up after exit`);
       }
     );
   }
 
-  /**
-   * Cleanup terminal data
-   */
   private _cleanupTerminalData(terminalId: string): void {
-    log('🧹 [TERMINAL] === CLEANUP TERMINAL DATA START ===');
-    log('🧹 [TERMINAL] Cleaning up terminal data:', terminalId);
-
-    // Log terminal info before deletion
-    const terminal = this._terminals.get(terminalId);
-    if (terminal) {
-      log('🧹 [TERMINAL] Deleting terminal:', {
-        id: terminalId,
-        name: terminal.name,
-        number: terminal.number,
-        exists: this._terminals.has(terminalId),
-      });
-    } else {
-      log('⚠️ [TERMINAL] Terminal not found in map for cleanup:', terminalId);
-    }
-
-    log('🧹 [TERMINAL] Before deletion - terminals count:', this._terminals.size);
-    log('🧹 [TERMINAL] Before deletion - terminal IDs:', Array.from(this._terminals.keys()));
-
-    // Stop any pending prompt readiness guard for this terminal
     this._processCoordinator.cleanupInitialPromptGuard(terminalId);
-
-    // Clean up process coordinator resources
     this._processCoordinator.cleanupPtyOutput(terminalId);
-
-    // Clean up data buffers for this terminal
     this._dataBufferManager.cleanupBuffer(terminalId);
-
-    // CLI Agent cleanup handled by service
     this._cliAgentService.handleTerminalRemoved(terminalId);
-
-    // Remove from terminals map
-    const deletionResult = this._terminals.delete(terminalId);
-    log('🧹 [TERMINAL] Terminal deletion from map:', deletionResult ? 'SUCCESS' : 'FAILED');
-
-    log('🧹 [TERMINAL] After deletion - terminals count:', this._terminals.size);
-    log('🧹 [TERMINAL] After deletion - terminal IDs:', Array.from(this._terminals.keys()));
-
+    this._terminals.delete(terminalId);
     this._terminalRemovedEmitter.fire(terminalId);
-
-    log('🧹 [TERMINAL] Terminal data cleaned up:', terminalId);
-    log('🧹 [TERMINAL] Remaining terminals:', Array.from(this._terminals.keys()));
-    log(
-      '🧹 [TERMINAL] Remaining terminal numbers:',
-      Array.from(this._terminals.values()).map((t) => ({ id: t.id, number: t.number }))
-    );
-
-    // Force check if terminals map is actually empty and can create should return true
-    if (this._terminals.size === 0) {
-      log('✅ [TERMINAL] All terminals deleted - canCreate should return TRUE');
-    }
-
-    // Update active terminal after removal
     this._stateCoordinator.updateActiveTerminalAfterRemoval(terminalId);
-
-    // Force state notification update
-    log('🧹 [TERMINAL] Notifying state update after cleanup...');
     this._stateCoordinator.notifyStateUpdate();
-    log('🧹 [TERMINAL] === CLEANUP TERMINAL DATA END ===');
   }
 
-  /**
-   * Dispose all resources
-   */
   public dispose(): void {
-    // Dispose module coordinators
     this._dataBufferManager.dispose();
     this._processCoordinator.dispose();
     this._lifecycleManager.dispose();
-
-    // Dispose CLI Agent detection service
     this._cliAgentService.dispose();
-
-    // Clear terminals map
     this._terminals.clear();
-
-    // Dispose event emitters
     this._dataEmitter.dispose();
     this._exitEmitter.dispose();
     this._terminalCreatedEmitter.dispose();
     this._terminalRemovedEmitter.dispose();
     this._stateUpdateEmitter.dispose();
     this._terminalFocusEmitter.dispose();
-
-    if (this._outputEmitter) {
-      this._outputEmitter.dispose();
-    }
+    this._outputEmitter?.dispose();
   }
 }

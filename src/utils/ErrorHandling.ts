@@ -1,14 +1,7 @@
-/**
- * 統一エラーハンドリングシステム
- * 全コンポーネントで一貫したエラー処理を提供
- */
+/** Unified error handling system for consistent error processing. */
 
 import * as vscode from 'vscode';
 import { log } from './logger';
-
-// =============================================================================
-// エラー分類と型定義
-// =============================================================================
 
 export enum ErrorSeverity {
   INFO = 'info',
@@ -44,10 +37,6 @@ export interface ErrorReport {
   recoverable: boolean;
 }
 
-// =============================================================================
-// カスタムエラークラス
-// =============================================================================
-
 export abstract class BaseError extends Error {
   public readonly context: ErrorContext;
   public readonly recoverable: boolean;
@@ -63,8 +52,6 @@ export abstract class BaseError extends Error {
       ...context,
     };
     this.recoverable = recoverable;
-
-    // TypeScript のプロトタイプチェーン修正
     Object.setPrototypeOf(this, new.target.prototype);
   }
 
@@ -154,10 +141,6 @@ export class ResourceError extends BaseError {
   }
 }
 
-// =============================================================================
-// エラーハンドリングマネージャー
-// =============================================================================
-
 export class ErrorHandlingManager {
   private static instance: ErrorHandlingManager;
   private errorLog: ErrorReport[] = [];
@@ -174,9 +157,6 @@ export class ErrorHandlingManager {
     return ErrorHandlingManager.instance;
   }
 
-  /**
-   * エラーを処理し、適切なアクションを実行
-   */
   public handleError(error: unknown, context?: Partial<ErrorContext>): ErrorReport {
     const report = this.createErrorReport(error, context);
     this.logError(report);
@@ -186,9 +166,6 @@ export class ErrorHandlingManager {
     return report;
   }
 
-  /**
-   * 非同期エラーハンドリング付き実行
-   */
   public async executeWithErrorHandling<T>(
     operation: () => Promise<T>,
     context: Partial<ErrorContext>,
@@ -208,9 +185,6 @@ export class ErrorHandlingManager {
     }
   }
 
-  /**
-   * エラーレポート作成
-   */
   private createErrorReport(error: unknown, context?: Partial<ErrorContext>): ErrorReport {
     if (error instanceof BaseError) {
       return error.toReport();
@@ -235,22 +209,14 @@ export class ErrorHandlingManager {
     };
   }
 
-  /**
-   * エラーログ記録
-   */
   private logError(report: ErrorReport): void {
     this.errorLog.push(report);
-
-    // ログサイズ管理
     if (this.errorLog.length > this.maxLogSize) {
       this.errorLog = this.errorLog.slice(-this.maxLogSize);
     }
 
-    // コンソール出力
     const prefix = `[${report.context.category.toUpperCase()}]`;
-    const severity = report.context.severity;
-
-    switch (severity) {
+    switch (report.context.severity) {
       case ErrorSeverity.INFO:
         console.info(prefix, report.message);
         break;
@@ -264,23 +230,12 @@ export class ErrorHandlingManager {
     }
   }
 
-  /**
-   * エラーハンドラー通知
-   */
   private notifyHandlers(report: ErrorReport): void {
-    // カテゴリ別ハンドラー
     const categoryHandlers = this.errorHandlers.get(report.context.category);
-    if (categoryHandlers) {
-      categoryHandlers.forEach((handler) => handler(report));
-    }
-
-    // グローバルハンドラー
+    categoryHandlers?.forEach((handler) => handler(report));
     this.globalHandlers.forEach((handler) => handler(report));
   }
 
-  /**
-   * ユーザー通知表示
-   */
   private showUserNotification(report: ErrorReport): void {
     const { message, context } = report;
 
@@ -298,9 +253,6 @@ export class ErrorHandlingManager {
     }
   }
 
-  /**
-   * エラーハンドラー登録
-   */
   public registerErrorHandler(handler: ErrorHandler, category?: ErrorCategory): void {
     if (category) {
       if (!this.errorHandlers.has(category)) {
@@ -312,9 +264,6 @@ export class ErrorHandlingManager {
     }
   }
 
-  /**
-   * エラーハンドラー削除
-   */
   public unregisterErrorHandler(handler: ErrorHandler, category?: ErrorCategory): void {
     if (category) {
       this.errorHandlers.get(category)?.delete(handler);
@@ -323,9 +272,6 @@ export class ErrorHandlingManager {
     }
   }
 
-  /**
-   * エラーログ取得
-   */
   public getErrorLog(category?: ErrorCategory, limit = 100): ErrorReport[] {
     let log = this.errorLog;
 
@@ -336,9 +282,6 @@ export class ErrorHandlingManager {
     return log.slice(-limit);
   }
 
-  /**
-   * エラー統計取得
-   */
   public getErrorStatistics(): ErrorStatistics {
     const stats: ErrorStatistics = {
       total: this.errorLog.length,
@@ -349,36 +292,18 @@ export class ErrorHandlingManager {
     };
 
     this.errorLog.forEach((report) => {
-      // カテゴリ別集計
-      const category = report.context.category;
-      stats.byCategory[category] = (stats.byCategory[category] || 0) + 1;
-
-      // 重要度別集計
-      const severity = report.context.severity;
-      stats.bySeverity[severity] = (stats.bySeverity[severity] || 0) + 1;
-
-      // 復旧可能性集計
-      if (report.recoverable) {
-        stats.recoverable++;
-      } else {
-        stats.unrecoverable++;
-      }
+      stats.byCategory[report.context.category] = (stats.byCategory[report.context.category] || 0) + 1;
+      stats.bySeverity[report.context.severity] = (stats.bySeverity[report.context.severity] || 0) + 1;
+      report.recoverable ? stats.recoverable++ : stats.unrecoverable++;
     });
 
     return stats;
   }
 
-  /**
-   * エラーログクリア
-   */
   public clearErrorLog(): void {
     this.errorLog = [];
   }
 }
-
-// =============================================================================
-// 型定義
-// =============================================================================
 
 export type ErrorHandler = (report: ErrorReport) => void;
 
@@ -390,43 +315,18 @@ export interface ErrorStatistics {
   unrecoverable: number;
 }
 
-// =============================================================================
-// ユーティリティ関数
-// =============================================================================
-
-/**
- * エラーを安全に文字列化
- */
 export function errorToString(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return String(error);
+  return error instanceof Error ? error.message : String(error);
 }
 
-/**
- * スタックトレース取得
- */
 export function getStackTrace(error: unknown): string | undefined {
-  if (error instanceof Error) {
-    return error.stack;
-  }
-  return undefined;
+  return error instanceof Error ? error.stack : undefined;
 }
 
-/**
- * エラー型判定
- */
 export function isRecoverableError(error: unknown): boolean {
-  if (error instanceof BaseError) {
-    return error.recoverable;
-  }
-  return false;
+  return error instanceof BaseError ? error.recoverable : false;
 }
 
-/**
- * デコレーター: エラーハンドリング付きメソッド
- */
 export function withErrorHandling(category: ErrorCategory, component: string, recoverable = true) {
   return function (
     target: any,
@@ -448,9 +348,5 @@ export function withErrorHandling(category: ErrorCategory, component: string, re
     return descriptor;
   };
 }
-
-// =============================================================================
-// エクスポート
-// =============================================================================
 
 export const errorManager = ErrorHandlingManager.getInstance();

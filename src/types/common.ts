@@ -1,22 +1,22 @@
 /**
- * 共通の型定義とインターフェース
+ * Common type definitions and interfaces
  *
- * NOTE: このファイルは後方互換性のために維持されています。
- * 新しい型は shared.ts に統合され、ここから再エクスポートされます。
+ * NOTE: This file is maintained for backward compatibility.
+ * New types are consolidated in shared.ts and re-exported from here.
  */
 
-// ===== 統合された型システムからの再エクスポート =====
+// ===== Re-exports from unified type system =====
 
-// shared.ts から使用されている型のみ再エクスポート
+// Re-export only types that are actively used from shared.ts
 export {
-  // ターミナル管理型（使用中）
+  // Terminal management types (in use)
   TerminalInfo,
   TerminalInstance,
   AltClickState,
   TerminalInteractionEvent,
   PartialTerminalSettings,
 
-  // メッセージ通信型（使用中）
+  // Message communication types (in use)
   WebviewMessage,
   VsCodeMessage,
 } from './shared';

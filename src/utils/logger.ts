@@ -1,7 +1,4 @@
-/**
- * Logging utility for VS Code extension
- * Provides environment-aware logging with configurable levels
- */
+/** Environment-aware logging utility for VS Code extension. */
 
 interface Disposable {
   dispose(): void;
@@ -25,118 +22,60 @@ class Logger implements Disposable {
   private flushTimer?: NodeJS.Timeout;
 
   constructor() {
-    // Check environment and set appropriate log level
     const isWebViewEnvironment = typeof window !== 'undefined' && typeof process === 'undefined';
 
     if (isWebViewEnvironment) {
-      // WebView environment - use conservative logging in production
       this.isDevelopment = this.detectWebViewDevMode();
-      this.level = this.isDevelopment ? LogLevel.DEBUG : LogLevel.ERROR;
     } else {
-      // Extension environment
-      // Default to development mode unless explicitly in production
-      // Production is only when NODE_ENV is explicitly set to 'production'
       this.isDevelopment = process.env.NODE_ENV !== 'production';
-      this.level = this.isDevelopment ? LogLevel.DEBUG : LogLevel.ERROR;
     }
 
+    this.level = this.isDevelopment ? LogLevel.DEBUG : LogLevel.ERROR;
     this.isProduction = !this.isDevelopment;
 
-    // Set up automatic buffer flushing for production performance
     if (this.isProduction) {
       this.setupProductionLogging();
     }
   }
 
   private detectWebViewDevMode(): boolean {
-    // Check for development indicators in WebView environment
-    if (typeof window !== 'undefined') {
-      // VS Code development host detection
-      const isDevHost =
-        window.location?.hostname === 'localhost' ||
-        window.location?.protocol === 'vscode-webview:';
+    if (typeof window === 'undefined') return false;
 
-      // Check for debug flags in URL or global variables
-      const hasDebugFlag =
-        window.location?.search?.includes('debug=true') ||
-        (window as Window & { VSCODE_DEBUG?: boolean }).VSCODE_DEBUG === true;
+    const isDevHost =
+      window.location?.hostname === 'localhost' ||
+      window.location?.protocol === 'vscode-webview:';
 
-      return isDevHost || hasDebugFlag;
-    }
-    return false;
+    const hasDebugFlag =
+      window.location?.search?.includes('debug=true') ||
+      (window as Window & { VSCODE_DEBUG?: boolean }).VSCODE_DEBUG === true;
+
+    return isDevHost || hasDebugFlag;
   }
 
   setLevel(level: LogLevel): void {
     this.level = level;
   }
 
-  // Public query helpers
   isDebugEnabled(): boolean {
     return this.level <= LogLevel.DEBUG;
   }
+
   isInfoEnabled(): boolean {
     return this.level <= LogLevel.INFO;
   }
 
   private setupProductionLogging(): void {
-    // In production, use buffered logging for performance
-    this.flushTimer = setInterval(() => {
-      this.flushBuffer();
-    }, this.bufferFlushInterval);
+    this.flushTimer = setInterval(() => this.flushBuffer(), this.bufferFlushInterval);
   }
 
   private addToBuffer(level: string, args: unknown[]): void {
-    this.logBuffer.push({
-      level,
-      args,
-      timestamp: Date.now(),
-    });
-
-    // Force flush if buffer is too large
-    if (this.logBuffer.length >= this.maxBufferSize) {
-      this.flushBuffer();
-    }
+    this.logBuffer.push({ level, args, timestamp: Date.now() });
+    if (this.logBuffer.length >= this.maxBufferSize) this.flushBuffer();
   }
 
   private flushBuffer(): void {
     if (this.logBuffer.length === 0) return;
-
-    // Group logs by level for efficient output
-    const logsByLevel = this.logBuffer.reduce(
-      (acc, log) => {
-        if (!acc[log.level]) acc[log.level] = [];
-        acc[log.level]!.push(log);
-        return acc;
-      },
-      {} as Record<string, typeof this.logBuffer>
-    );
-
-    // Output grouped logs
-    // In production, logs are suppressed based on log level
-    // eslint-disable-next-line no-constant-condition
-    if (false) {
-      // This code path is only for type checking - replaced by build-time stripping
-      Object.entries(logsByLevel).forEach(([level, logs]) => {
-        if (level === 'error') {
-          logs.forEach((log) => {
-            // eslint-disable-next-line no-console
-            console.error(...log.args);
-          });
-        } else if (level === 'warn') {
-          logs.forEach((log) => {
-            // eslint-disable-next-line no-console
-            console.warn(...log.args);
-          });
-        } else {
-          logs.forEach((log) => {
-            // eslint-disable-next-line no-console
-            console.log(...log.args);
-          });
-        }
-      });
-    }
-
-    // Clear buffer
+    // Production logs are suppressed - buffer is only cleared
     this.logBuffer = [];
   }
 
@@ -145,7 +84,7 @@ class Logger implements Disposable {
       clearInterval(this.flushTimer);
       this.flushTimer = undefined;
     }
-    this.flushBuffer(); // Final flush
+    this.flushBuffer();
   }
 
   private safeStringify(obj: unknown): string {
@@ -219,91 +158,43 @@ class Logger implements Disposable {
     }
   }
 
-  // Enhanced categorized logging methods with consistent formatting and emojis
-  terminal(...args: unknown[]): void {
+  // Categorized logging - DEBUG level
+  private logDebug(category: string, emoji: string, ...args: unknown[]): void {
     if (this.level <= LogLevel.DEBUG) {
       // eslint-disable-next-line no-console
-      console.log(...this.formatMessage('DEBUG', 'TERMINAL', '✨', ...args));
+      console.log(...this.formatMessage('DEBUG', category, emoji, ...args));
     }
   }
 
-  webview(...args: unknown[]): void {
-    if (this.level <= LogLevel.DEBUG) {
-      // eslint-disable-next-line no-console
-      console.log(...this.formatMessage('DEBUG', 'WEBVIEW', '🌐', ...args));
-    }
-  }
-
-  provider(...args: unknown[]): void {
-    if (this.level <= LogLevel.DEBUG) {
-      // eslint-disable-next-line no-console
-      console.log(...this.formatMessage('DEBUG', 'PROVIDER', '📡', ...args));
-    }
-  }
-
-  extension(...args: unknown[]): void {
-    if (this.level <= LogLevel.DEBUG) {
-      // eslint-disable-next-line no-console
-      console.log(...this.formatMessage('DEBUG', 'EXTENSION', '🔧', ...args));
-    }
-  }
-
-  performance(...args: unknown[]): void {
-    if (this.level <= LogLevel.DEBUG) {
-      // eslint-disable-next-line no-console
-      console.log(...this.formatMessage('DEBUG', 'PERF', '⚡', ...args));
-    }
-  }
-
-  // New categorized logging methods for better organization
-  message(...args: unknown[]): void {
-    if (this.level <= LogLevel.DEBUG) {
-      // eslint-disable-next-line no-console
-      console.log(...this.formatMessage('DEBUG', 'MESSAGE', '📨', ...args));
-    }
-  }
-
-  ui(...args: unknown[]): void {
-    if (this.level <= LogLevel.DEBUG) {
-      // eslint-disable-next-line no-console
-      console.log(...this.formatMessage('DEBUG', 'UI', '🎨', ...args));
-    }
-  }
-
-  config(...args: unknown[]): void {
-    if (this.level <= LogLevel.DEBUG) {
-      // eslint-disable-next-line no-console
-      console.log(...this.formatMessage('DEBUG', 'CONFIG', '⚙️', ...args));
-    }
-  }
-
-  session(...args: unknown[]): void {
+  // Categorized logging - INFO level
+  private logInfo(category: string, emoji: string, ...args: unknown[]): void {
     if (this.level <= LogLevel.INFO) {
       // eslint-disable-next-line no-console
-      console.log(...this.formatMessage('INFO', 'SESSION', '💾', ...args));
+      console.log(...this.formatMessage('INFO', category, emoji, ...args));
     }
   }
 
-  input(...args: unknown[]): void {
-    if (this.level <= LogLevel.DEBUG) {
-      // eslint-disable-next-line no-console
-      console.log(...this.formatMessage('DEBUG', 'INPUT', '⌨️', ...args));
-    }
-  }
+  terminal(...args: unknown[]): void { this.logDebug('TERMINAL', '✨', ...args); }
+  webview(...args: unknown[]): void { this.logDebug('WEBVIEW', '🌐', ...args); }
+  provider(...args: unknown[]): void { this.logDebug('PROVIDER', '📡', ...args); }
+  extension(...args: unknown[]): void { this.logDebug('EXTENSION', '🔧', ...args); }
+  performance(...args: unknown[]): void { this.logDebug('PERF', '⚡', ...args); }
+  message(...args: unknown[]): void { this.logDebug('MESSAGE', '📨', ...args); }
+  ui(...args: unknown[]): void { this.logDebug('UI', '🎨', ...args); }
+  config(...args: unknown[]): void { this.logDebug('CONFIG', '⚙️', ...args); }
+  input(...args: unknown[]): void { this.logDebug('INPUT', '⌨️', ...args); }
+  output(...args: unknown[]): void { this.logDebug('OUTPUT', '📤', ...args); }
+  debug_category(...args: unknown[]): void { this.logDebug('DEBUG', '🔍', ...args); }
+  file(...args: unknown[]): void { this.logDebug('FILE', '📁', ...args); }
+  network(...args: unknown[]): void { this.logDebug('NETWORK', '🌐', ...args); }
+  state(...args: unknown[]): void { this.logDebug('STATE', '🔄', ...args); }
+  scrollback(...args: unknown[]): void { this.logDebug('SCROLLBACK', '📜', ...args); }
 
-  output(...args: unknown[]): void {
-    if (this.level <= LogLevel.DEBUG) {
-      // eslint-disable-next-line no-console
-      console.log(...this.formatMessage('DEBUG', 'OUTPUT', '📤', ...args));
-    }
-  }
-
-  lifecycle(...args: unknown[]): void {
-    if (this.level <= LogLevel.INFO) {
-      // eslint-disable-next-line no-console
-      console.log(...this.formatMessage('INFO', 'LIFECYCLE', '🔄', ...args));
-    }
-  }
+  session(...args: unknown[]): void { this.logInfo('SESSION', '💾', ...args); }
+  lifecycle(...args: unknown[]): void { this.logInfo('LIFECYCLE', '🔄', ...args); }
+  success(...args: unknown[]): void { this.logInfo('SUCCESS', '✅', ...args); }
+  startup(...args: unknown[]): void { this.logInfo('STARTUP', '🚀', ...args); }
+  agent(...args: unknown[]): void { this.logInfo('AGENT', '🤖', ...args); }
 
   error_category(...args: unknown[]): void {
     if (this.level <= LogLevel.ERROR) {
@@ -318,105 +209,45 @@ class Logger implements Disposable {
       console.warn(...this.formatMessage('WARN', 'WARNING', '⚠️', ...args));
     }
   }
-
-  success(...args: unknown[]): void {
-    if (this.level <= LogLevel.INFO) {
-      // eslint-disable-next-line no-console
-      console.log(...this.formatMessage('INFO', 'SUCCESS', '✅', ...args));
-    }
-  }
-
-  startup(...args: unknown[]): void {
-    if (this.level <= LogLevel.INFO) {
-      // eslint-disable-next-line no-console
-      console.log(...this.formatMessage('INFO', 'STARTUP', '🚀', ...args));
-    }
-  }
-
-  debug_category(...args: unknown[]): void {
-    if (this.level <= LogLevel.DEBUG) {
-      // eslint-disable-next-line no-console
-      console.log(...this.formatMessage('DEBUG', 'DEBUG', '🔍', ...args));
-    }
-  }
-
-  // Agent-related logging
-  agent(...args: unknown[]): void {
-    if (this.level <= LogLevel.INFO) {
-      // eslint-disable-next-line no-console
-      console.log(...this.formatMessage('INFO', 'AGENT', '🤖', ...args));
-    }
-  }
-
-  // File operations
-  file(...args: unknown[]): void {
-    if (this.level <= LogLevel.DEBUG) {
-      // eslint-disable-next-line no-console
-      console.log(...this.formatMessage('DEBUG', 'FILE', '📁', ...args));
-    }
-  }
-
-  // Network/communication
-  network(...args: unknown[]): void {
-    if (this.level <= LogLevel.DEBUG) {
-      // eslint-disable-next-line no-console
-      console.log(...this.formatMessage('DEBUG', 'NETWORK', '🌐', ...args));
-    }
-  }
-
-  // State management
-  state(...args: unknown[]): void {
-    if (this.level <= LogLevel.DEBUG) {
-      // eslint-disable-next-line no-console
-      console.log(...this.formatMessage('DEBUG', 'STATE', '🔄', ...args));
-    }
-  }
-
-  // Scrollback logging
-  scrollback(...args: unknown[]): void {
-    if (this.level <= LogLevel.DEBUG) {
-      // eslint-disable-next-line no-console
-      console.log(...this.formatMessage('DEBUG', 'SCROLLBACK', '📜', ...args));
-    }
-  }
 }
 
-// Export singleton instance
 export const logger = new Logger();
 
-// Export convenience functions
+// Basic logging
 export const debug = (...args: unknown[]): void => logger.debug(...args);
 export const info = (...args: unknown[]): void => logger.info(...args);
 export const warn = (...args: unknown[]): void => logger.warn(...args);
 export const error = (...args: unknown[]): void => logger.error(...args);
+export const log = (...args: unknown[]): void => logger.info(...args);
+
+// Categorized logging - DEBUG level
 export const terminal = (...args: unknown[]): void => logger.terminal(...args);
 export const webview = (...args: unknown[]): void => logger.webview(...args);
 export const provider = (...args: unknown[]): void => logger.provider(...args);
 export const extension = (...args: unknown[]): void => logger.extension(...args);
 export const performance = (...args: unknown[]): void => logger.performance(...args);
-
-// New categorized convenience functions
 export const message = (...args: unknown[]): void => logger.message(...args);
 export const ui = (...args: unknown[]): void => logger.ui(...args);
 export const config = (...args: unknown[]): void => logger.config(...args);
-export const session = (...args: unknown[]): void => logger.session(...args);
 export const input = (...args: unknown[]): void => logger.input(...args);
 export const output = (...args: unknown[]): void => logger.output(...args);
-export const lifecycle = (...args: unknown[]): void => logger.lifecycle(...args);
-export const error_category = (...args: unknown[]): void => logger.error_category(...args);
-export const warning_category = (...args: unknown[]): void => logger.warning_category(...args);
-export const success = (...args: unknown[]): void => logger.success(...args);
-export const startup = (...args: unknown[]): void => logger.startup(...args);
 export const debug_category = (...args: unknown[]): void => logger.debug_category(...args);
-export const agent = (...args: unknown[]): void => logger.agent(...args);
 export const file = (...args: unknown[]): void => logger.file(...args);
 export const network = (...args: unknown[]): void => logger.network(...args);
 export const state = (...args: unknown[]): void => logger.state(...args);
 export const scrollback = (...args: unknown[]): void => logger.scrollback(...args);
 
+// Categorized logging - INFO level
+export const session = (...args: unknown[]): void => logger.session(...args);
+export const lifecycle = (...args: unknown[]): void => logger.lifecycle(...args);
+export const success = (...args: unknown[]): void => logger.success(...args);
+export const startup = (...args: unknown[]): void => logger.startup(...args);
+export const agent = (...args: unknown[]): void => logger.agent(...args);
+
+// Categorized logging - WARN/ERROR level
+export const error_category = (...args: unknown[]): void => logger.error_category(...args);
+export const warning_category = (...args: unknown[]): void => logger.warning_category(...args);
+
 // Query helpers
 export const isDebugEnabled = (): boolean => logger.isDebugEnabled();
 export const isInfoEnabled = (): boolean => logger.isInfoEnabled();
-
-// General log function (alias for info)
-export const log = (...args: unknown[]): void => logger.info(...args);

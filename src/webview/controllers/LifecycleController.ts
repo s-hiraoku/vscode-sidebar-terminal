@@ -1,30 +1,12 @@
 /**
- * Lifecycle Controller
- *
  * Manages terminal lifecycle with proper resource management and lazy addon loading.
- *
- * Features:
- * - DisposableStore pattern for unified resource management
- * - Lazy addon loading (load only when needed)
- * - Proper dispose pattern (prevent memory leaks)
- * - Event listener cleanup
- * - Addon caching and reuse
- *
- * VS Code Pattern:
- * - DisposableStore from `vs/base/common/lifecycle.ts`
- * - Lazy loading from `vs/workbench/contrib/terminal/browser/terminal.ts`
- *
- * @see openspec/changes/optimize-terminal-rendering/specs/lifecycle-improvement/spec.md
+ * Uses DisposableStore pattern for unified resource management and LIFO disposal.
  */
 
 import { Terminal, IDisposable, ITerminalAddon } from '@xterm/xterm';
 import { terminalLogger } from '../utils/ManagerLogger';
 
-/**
- * DisposableStore - Unified resource management
- *
- * VS Code Pattern: Collects disposables and disposes them all at once
- */
+/** Collects disposables and disposes them all at once in LIFO order. */
 class DisposableStore {
   private disposables: IDisposable[] = [];
   private disposed = false;
@@ -47,7 +29,6 @@ class DisposableStore {
 
     this.disposed = true;
 
-    // Dispose in reverse order (LIFO)
     while (this.disposables.length > 0) {
       const disposable = this.disposables.pop();
       if (disposable) {
@@ -71,9 +52,6 @@ class DisposableStore {
   }
 }
 
-/**
- * Terminal resource container
- */
 interface TerminalResources {
   terminal: Terminal;
   disposables: DisposableStore;
@@ -81,18 +59,12 @@ interface TerminalResources {
   eventListeners: Map<string, (...args: any[]) => void>;
 }
 
-/**
- * Addon loading options
- */
 export interface AddonLoadOptions {
   lazy?: boolean;
   cache?: boolean;
   required?: boolean;
 }
 
-/**
- * Lifecycle Controller Interface
- */
 export interface ILifecycleController {
   attachTerminal(terminalId: string, terminal: Terminal): void;
   detachTerminal(terminalId: string): void;
@@ -110,17 +82,11 @@ interface Disposable {
   dispose(): void;
 }
 
-/**
- * Lifecycle Controller Implementation
- */
 export class LifecycleController implements ILifecycleController, Disposable {
   private terminals: Map<string, TerminalResources> = new Map();
-  private addonCache: Map<string, any> = new Map(); // Global addon cache for reuse
+  private addonCache: Map<string, any> = new Map();
   private disposed = false;
 
-  /**
-   * Attach terminal and initialize resource tracking
-   */
   public attachTerminal(terminalId: string, terminal: Terminal): void {
     if (this.disposed) {
       terminalLogger.warn(`⚠️ LifecycleController disposed, cannot attach terminal: ${terminalId}`);
@@ -143,9 +109,6 @@ export class LifecycleController implements ILifecycleController, Disposable {
     terminalLogger.info(`✅ LifecycleController: Attached terminal ${terminalId}`);
   }
 
-  /**
-   * Detach terminal without disposing (for temporary detachment)
-   */
   public detachTerminal(terminalId: string): void {
     const resources = this.terminals.get(terminalId);
     if (!resources) {
@@ -153,22 +116,14 @@ export class LifecycleController implements ILifecycleController, Disposable {
       return;
     }
 
-    // Dispose all resources
     resources.disposables.dispose();
-
-    // Clear addon references
     resources.addons.clear();
     resources.eventListeners.clear();
-
     this.terminals.delete(terminalId);
     terminalLogger.info(`✅ LifecycleController: Detached terminal ${terminalId}`);
   }
 
-  /**
-   * Load addon lazily (only when needed)
-   *
-   * Phase 3 Feature: Lazy loading reduces initial memory usage by 30%
-   */
+  /** Load addon lazily (only when needed), reducing initial memory usage. */
   public loadAddonLazy<T extends ITerminalAddon>(
     terminalId: string,
     addonName: string,
@@ -234,9 +189,6 @@ export class LifecycleController implements ILifecycleController, Disposable {
     }
   }
 
-  /**
-   * Add event listener with automatic cleanup
-   */
   public addEventListener(
     terminalId: string,
     eventName: string,
@@ -254,9 +206,6 @@ export class LifecycleController implements ILifecycleController, Disposable {
     terminalLogger.debug(`✅ Added event listener for ${terminalId}: ${eventName}`);
   }
 
-  /**
-   * Remove event listener
-   */
   public removeEventListener(terminalId: string, eventName: string): void {
     const resources = this.terminals.get(terminalId);
     if (!resources) {
@@ -267,11 +216,6 @@ export class LifecycleController implements ILifecycleController, Disposable {
     terminalLogger.debug(`🧹 Removed event listener for ${terminalId}: ${eventName}`);
   }
 
-  /**
-   * Dispose terminal and all its resources
-   *
-   * Phase 3: Proper dispose pattern to prevent memory leaks
-   */
   public disposeTerminal(terminalId: string): void {
     const resources = this.terminals.get(terminalId);
     if (!resources) {
@@ -282,16 +226,9 @@ export class LifecycleController implements ILifecycleController, Disposable {
     const startTime = performance.now();
 
     try {
-      // 1. Dispose all addons (via DisposableStore)
       resources.disposables.dispose();
-
-      // 2. Clear addon references
       resources.addons.clear();
-
-      // 3. Clear event listener references
       resources.eventListeners.clear();
-
-      // 4. Remove from terminals map
       this.terminals.delete(terminalId);
 
       const elapsed = performance.now() - startTime;
@@ -303,9 +240,6 @@ export class LifecycleController implements ILifecycleController, Disposable {
     }
   }
 
-  /**
-   * Get addon from terminal
-   */
   public getAddon<T>(terminalId: string, addonName: string): T | null {
     const resources = this.terminals.get(terminalId);
     if (!resources) {
@@ -315,16 +249,10 @@ export class LifecycleController implements ILifecycleController, Disposable {
     return resources.addons.get(addonName) || null;
   }
 
-  /**
-   * Check if terminal is attached
-   */
   public hasTerminal(terminalId: string): boolean {
     return this.terminals.has(terminalId);
   }
 
-  /**
-   * Get statistics for debugging
-   */
   public getStats(): {
     attachedTerminals: number;
     cachedAddons: number;
@@ -337,24 +265,18 @@ export class LifecycleController implements ILifecycleController, Disposable {
     };
   }
 
-  /**
-   * Dispose all terminals and resources
-   */
   public dispose(): void {
     if (this.disposed) {
       return;
     }
 
     this.disposed = true;
-
     terminalLogger.info(`🧹 LifecycleController: Disposing ${this.terminals.size} terminals`);
 
-    // Dispose all terminals
     for (const [terminalId] of this.terminals) {
       this.disposeTerminal(terminalId);
     }
 
-    // Clear addon cache
     this.addonCache.clear();
 
     terminalLogger.info('✅ LifecycleController: Disposed');

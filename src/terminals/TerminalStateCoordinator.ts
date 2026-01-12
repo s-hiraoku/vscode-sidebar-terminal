@@ -1,21 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import * as vscode from 'vscode';
 import { TerminalInstance, TerminalState, TerminalInfo } from '../types/shared';
-import { terminal as log } from '../utils/logger';
 import { getTerminalConfig, ActiveTerminalManager, getFirstValue } from '../utils/common';
 import { TerminalNumberManager } from '../utils/TerminalNumberManager';
 
-/**
- * TerminalStateCoordinator
- *
- * Responsibility: Manage terminal state and synchronization
- * - Track active terminal state
- * - Manage state update notifications
- * - Calculate available slots
- * - Handle terminal activation/deactivation
- *
- * Single Responsibility Principle: Focused on state management only
- */
+/** Manages terminal state and synchronization */
 export class TerminalStateCoordinator {
   constructor(
     private readonly _terminals: Map<string, TerminalInstance>,
@@ -25,9 +14,6 @@ export class TerminalStateCoordinator {
     private readonly _terminalNumberManager: TerminalNumberManager
   ) {}
 
-  /**
-   * Get current terminal state
-   */
   public getCurrentState(): TerminalState {
     const terminals: TerminalInfo[] = Array.from(this._terminals.values()).map((terminal) => ({
       id: terminal.id,
@@ -43,39 +29,22 @@ export class TerminalStateCoordinator {
     };
   }
 
-  /**
-   * Get available terminal slots
-   */
   public getAvailableSlots(): number[] {
     return this._terminalNumberManager.getAvailableSlots(this._terminals);
   }
 
-  /**
-   * Notify WebView of state update
-   */
   public notifyStateUpdate(): void {
-    const state = this.getCurrentState();
-    this._stateUpdateEmitter.fire(state);
-    log(`📡 [STATE] State update notification sent:`, state);
+    this._stateUpdateEmitter.fire(this.getCurrentState());
   }
 
-  /**
-   * Check if there is an active terminal
-   */
   public hasActiveTerminal(): boolean {
     return this._activeTerminalManager.hasActive();
   }
 
-  /**
-   * Get active terminal ID
-   */
   public getActiveTerminalId(): string | undefined {
     return this._activeTerminalManager.getActive();
   }
 
-  /**
-   * Set active terminal
-   */
   public setActiveTerminal(terminalId: string): void {
     const terminal = this._terminals.get(terminalId);
     if (terminal) {
@@ -85,52 +54,31 @@ export class TerminalStateCoordinator {
     }
   }
 
-  /**
-   * Focus a terminal (fires focus event without changing CLI Agent status)
-   * 🚨 IMPORTANT: Focus should NOT change CLI Agent status (spec compliance)
-   */
+  /** Focus a terminal without changing CLI Agent status */
   public focusTerminal(terminalId: string): void {
-    const terminal = this._terminals.get(terminalId);
-    if (!terminal) {
-      log('⚠️ [WARN] Terminal not found for focus:', terminalId);
-      return;
+    if (this._terminals.has(terminalId)) {
+      this._terminalFocusEmitter.fire(terminalId);
     }
-
-    // 🚨 CRITICAL: フォーカス変更はCLI Agent状態に影響しない（仕様書準拠）
-    // Only fire focus event, do not change CLI Agent status
-    this._terminalFocusEmitter.fire(terminalId);
-    log(`🎯 [TERMINAL] Focused: ${terminal.name} (NO status change - spec compliant)`);
   }
 
-  /**
-   * Deactivate all terminals
-   */
   public deactivateAllTerminals(): void {
     for (const term of this._terminals.values()) {
       term.isActive = false;
     }
   }
 
-  /**
-   * Update active terminal after removal
-   */
   public updateActiveTerminalAfterRemoval(terminalId: string): void {
     if (this._activeTerminalManager.isActive(terminalId)) {
       const remaining = getFirstValue(this._terminals);
       if (remaining) {
         this._activeTerminalManager.setActive(remaining.id);
         remaining.isActive = true;
-        log('🔄 [TERMINAL] Set new active terminal:', remaining.id);
       } else {
         this._activeTerminalManager.clearActive();
-        log('🔄 [TERMINAL] No remaining terminals, cleared active');
       }
     }
   }
 
-  /**
-   * Reorder terminals according to the provided order
-   */
   public reorderTerminals(order: string[]): void {
     if (!Array.isArray(order) || order.length === 0) {
       return;
@@ -150,7 +98,6 @@ export class TerminalStateCoordinator {
     }
 
     this._terminals.clear();
-
     for (const id of finalOrder) {
       const terminal = existingMap.get(id);
       if (terminal) {
@@ -161,15 +108,10 @@ export class TerminalStateCoordinator {
     this.notifyStateUpdate();
   }
 
-  /**
-   * Update terminal CWD
-   */
   public updateTerminalCwd(terminalId: string, cwd: string): void {
     const terminal = this._terminals.get(terminalId);
-    if (!terminal) {
-      return;
+    if (terminal) {
+      terminal.cwd = cwd;
     }
-
-    terminal.cwd = cwd;
   }
 }

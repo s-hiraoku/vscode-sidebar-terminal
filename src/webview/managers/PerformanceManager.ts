@@ -1,8 +1,5 @@
 /**
- * Performance Manager - Handles output buffering, debouncing, and performance optimizations
- *
- * @see https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/226
- * マジックナンバーをSystemConstantsから参照するように変更しました。
+ * Handles output buffering, debouncing, and performance optimizations.
  */
 
 import { Terminal } from '@xterm/xterm';
@@ -33,14 +30,11 @@ export class PerformanceManager extends BaseManager {
       customLogger: ENABLE_WEBVIEW_DEBUG_LOGS ? undefined : () => {},
     });
 
-    // Logger is automatically provided by BaseManager
-
     if (this.debugLoggingEnabled) {
       this.logger('initialization', 'starting');
     }
   }
 
-  // Performance optimization: Buffer output and batch writes per terminal
   private readonly bufferEntries = new Map<
     Terminal,
     {
@@ -55,13 +49,9 @@ export class PerformanceManager extends BaseManager {
   // CLI Agent mode for performance optimization
   private isCliAgentMode = false;
 
-  // DSR (Device Status Report) sequence pattern
-  // \x1b[6n queries cursor position, terminal should respond with \x1b[row;colR
+  /** DSR (Device Status Report) sequence pattern - \x1b[6n queries cursor position */
   private static readonly DSR_PATTERN = /\x1b\[6n/;
 
-  /**
-   * Schedule output to be written to terminal with intelligent buffering
-   */
   public scheduleOutputBuffer(data: string, targetTerminal: Terminal): void {
     const entry = this.getOrCreateBufferEntry(targetTerminal);
 
@@ -93,13 +83,16 @@ export class PerformanceManager extends BaseManager {
       }
 
       if (this.debugLoggingEnabled) {
-        const reason = isSmallInput
-          ? 'small input (typing)'
-          : this.isCliAgentMode
-            ? 'CLI Agent mode'
-            : isLargeOutput
-              ? 'large output'
-              : 'buffer full';
+        let reason: string;
+        if (isSmallInput) {
+          reason = 'small input (typing)';
+        } else if (this.isCliAgentMode) {
+          reason = 'CLI Agent mode';
+        } else if (isLargeOutput) {
+          reason = 'large output';
+        } else {
+          reason = 'buffer full';
+        }
         this.logger(`Immediate write: ${normalizedData.length} chars (${reason})`);
       }
     } else {
@@ -195,23 +188,13 @@ export class PerformanceManager extends BaseManager {
     }
   }
 
-  /**
-   * Flush all buffered output to the current terminal
-   */
   public flushOutputBuffer(): void {
     this.bufferEntries.forEach((entry, terminal) => {
       this.flushEntry(terminal, entry);
     });
   }
 
-  /**
-   * Buffered write with scroll preservation (main API method)
-   */
   public bufferedWrite(data: string, targetTerminal: Terminal, terminalId: string): void {
-    // Check for DSR (Device Status Report) query and respond BEFORE writing
-    // This ensures we capture the cursor position before new output moves it
-    // DSR query \x1b[6n requests cursor position, we respond with \x1b[row;colR
-    // Wrapped in try-catch to ensure DSR handling errors don't break output
     try {
       this.handleDSRQuery(data, targetTerminal, terminalId);
     } catch (error) {
@@ -224,14 +207,7 @@ export class PerformanceManager extends BaseManager {
     this.scheduleOutputBuffer(data, targetTerminal);
   }
 
-  /**
-   * Handle DSR (Device Status Report) escape sequence
-   *
-   * When CLI tools like codex send \x1b[6n to query cursor position,
-   * we respond with \x1b[row;colR format.
-   *
-   * @see https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/341
-   */
+  /** Handle DSR (Device Status Report) - respond with cursor position when \x1b[6n is received. */
   private handleDSRQuery(data: string, terminal: Terminal, terminalId: string): void {
     if (!PerformanceManager.DSR_PATTERN.test(data)) {
       return;
@@ -244,7 +220,6 @@ export class PerformanceManager extends BaseManager {
       return;
     }
 
-    // Defensive check: ensure terminal buffer is available
     if (!terminal?.buffer?.active) {
       if (this.debugLoggingEnabled) {
         this.logger('DSR query detected but terminal buffer not available');
@@ -252,14 +227,9 @@ export class PerformanceManager extends BaseManager {
       return;
     }
 
-    // Get cursor position from xterm.js buffer
-    // Note: cursorY is 0-based but DSR response expects 1-based row number
     const buffer = terminal.buffer.active;
-    const row = (buffer.cursorY ?? 0) + 1; // Convert to 1-based
-    const col = (buffer.cursorX ?? 0) + 1; // Convert to 1-based
-
-    // Send DSR response back to PTY via input channel
-    // Format: \x1b[row;colR (e.g., \x1b[1;1R for row 1, column 1)
+    const row = (buffer.cursorY ?? 0) + 1;
+    const col = (buffer.cursorX ?? 0) + 1;
     const response = `\x1b[${row};${col}R`;
 
     if (this.debugLoggingEnabled) {
@@ -274,27 +244,19 @@ export class PerformanceManager extends BaseManager {
     });
   }
 
-  // Internal coordinator reference
   private coordinator: IManagerCoordinator | null = null;
 
-  /**
-   * Initialize the PerformanceManager (BaseManager abstract method implementation)
-   */
   protected doInitialize(): void {
     if (this.debugLoggingEnabled) {
       this.logger('initialization', 'completed');
     }
   }
 
-  /**
-   * Dispose PerformanceManager resources (BaseManager abstract method implementation)
-   */
   protected doDispose(): void {
     if (this.debugLoggingEnabled) {
       this.logger('disposal', 'starting');
     }
 
-    // Clear any pending buffer flush timers and buffers
     this.bufferEntries.forEach((entry) => {
       if (entry.timer) {
         clearTimeout(entry.timer);
@@ -310,9 +272,6 @@ export class PerformanceManager extends BaseManager {
     }
   }
 
-  /**
-   * Initialize the performance manager (IPerformanceManager interface)
-   */
   public initializePerformance(coordinator: IManagerCoordinator): void {
     this.coordinator = coordinator;
     if (this.debugLoggingEnabled) {
@@ -320,9 +279,6 @@ export class PerformanceManager extends BaseManager {
     }
   }
 
-  /**
-   * Debounced resize operation for performance optimization using ResizeManager
-   */
   public debouncedResize(cols: number, rows: number, terminal: Terminal, fitAddon: FitAddon): void {
     const resizeKey = `terminal-resize-${cols}x${rows}`;
 
@@ -335,8 +291,6 @@ export class PerformanceManager extends BaseManager {
       async () => {
         try {
           terminal.resize(cols, rows);
-          // Reset xterm.js inline styles before fit to allow terminal expansion
-          // terminal.element is the container element where terminal is opened
           const container = terminal.element?.parentElement;
           if (container) {
             DOMUtils.resetXtermInlineStyles(container);
@@ -370,9 +324,6 @@ export class PerformanceManager extends BaseManager {
     );
   }
 
-  /**
-   * Set CLI Agent mode for performance optimization
-   */
   public setCliAgentMode(isActive: boolean): void {
     if (this.isCliAgentMode !== isActive) {
       this.isCliAgentMode = isActive;
@@ -380,7 +331,6 @@ export class PerformanceManager extends BaseManager {
         this.logger(`CLI Agent mode: ${isActive ? 'ACTIVE' : 'INACTIVE'}`);
       }
 
-      // Flush immediately when mode changes
       if (!isActive) {
         this.flushOutputBuffer();
       }
@@ -391,9 +341,6 @@ export class PerformanceManager extends BaseManager {
     return this.isCliAgentMode;
   }
 
-  /**
-   * Get current buffer statistics for monitoring
-   */
   public getBufferStats(): {
     bufferSize: number;
     isFlushScheduled: boolean;
@@ -417,9 +364,6 @@ export class PerformanceManager extends BaseManager {
     };
   }
 
-  /**
-   * Force immediate flush of all buffers (emergency flush)
-   */
   public forceFlush(): void {
     if (this.debugLoggingEnabled) {
       this.logger('Force flushing all buffers');
@@ -427,9 +371,6 @@ export class PerformanceManager extends BaseManager {
     this.flushOutputBuffer();
   }
 
-  /**
-   * Clear all buffers without writing (emergency clear)
-   */
   public clearBuffers(): void {
     if (this.debugLoggingEnabled) {
       this.logger('Clearing all buffers without writing');
@@ -443,11 +384,7 @@ export class PerformanceManager extends BaseManager {
     });
   }
 
-  /**
-   * Optimize terminal performance by preloading next operations
-   */
   public preloadNextOperation(): void {
-    // Schedule a small flush to keep the pipeline moving
     this.bufferEntries.forEach((entry, terminal) => {
       if (entry.data.length > 0) {
         this.scheduleEntryFlush(terminal, entry);
@@ -455,28 +392,17 @@ export class PerformanceManager extends BaseManager {
     });
   }
 
-  /**
-   * Dispose of all timers and cleanup resources
-   */
   public override dispose(): void {
     if (this.debugLoggingEnabled) {
       this.logger('Disposing performance manager');
     }
 
-    // Flush any remaining output before disposal
     this.flushOutputBuffer();
-
-    // Clear any pending resize operations using ResizeManager
     ResizeManager.clearResize('terminal-resize');
-
-    // Clear references
     this.isCliAgentMode = false;
     this.bufferEntries.clear();
-
-    // Call parent dispose
     super.dispose();
 
-    // Safe lifecycle logging
     if (this.debugLoggingEnabled) {
       this.logger('PerformanceManager', 'completed');
     }

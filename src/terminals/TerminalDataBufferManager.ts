@@ -8,16 +8,7 @@ import { ICliAgentDetectionService } from '../interfaces/CliAgentService';
 
 const ENABLE_TERMINAL_DEBUG_LOGS = process.env.SECONDARY_TERMINAL_DEBUG_LOGS === 'true';
 
-/**
- * TerminalDataBufferManager
- *
- * Responsibility: Handle data buffering and flushing for terminal output
- * - Batch small data chunks for performance optimization
- * - Manage flush timers and buffer lifecycle
- * - Validate and normalize control sequences
- *
- * Performance Optimization: Reduces event frequency from ~1000fps to ~125fps
- */
+/** Handles data buffering and flushing for terminal output (~125fps batch rate) */
 export class TerminalDataBufferManager {
   private readonly _dataBuffers = new Map<string, string[]>();
   private readonly _dataFlushTimers = new Map<string, NodeJS.Timeout>();
@@ -41,44 +32,24 @@ export class TerminalDataBufferManager {
     }
   }
 
-  /**
-   * Buffer data for a terminal to reduce event frequency
-   */
   public bufferData(terminalId: string, data: string): void {
-    // ✅ CRITICAL FIX: Strict terminal ID validation to prevent cross-terminal contamination
-    if (!terminalId || typeof terminalId !== 'string') {
-      log('🚨 [TERMINAL] Invalid terminalId for data buffering:', terminalId);
-      return;
-    }
-
-    // Validate terminal exists before buffering data
-    if (!this._terminals.has(terminalId)) {
-      log(`⚠️ [TERMINAL] Attempting to buffer data for non-existent terminal: ${terminalId}`);
+    if (!terminalId || typeof terminalId !== 'string' || !this._terminals.has(terminalId)) {
       return;
     }
 
     if (!this._dataBuffers.has(terminalId)) {
       this._dataBuffers.set(terminalId, []);
-      this.debugLog(`📊 [TERMINAL] Created new data buffer for terminal: ${terminalId}`);
     }
 
     const buffer = this._dataBuffers.get(terminalId);
     if (!buffer) {
-      log('🚨 [TERMINAL] Buffer creation failed for terminal:', terminalId);
       this._dataBuffers.set(terminalId, []);
       return;
     }
 
-    // ✅ CRITICAL: Add terminal ID validation to each data chunk
-    const validatedData = this._validateDataForTerminal(terminalId, data);
-    const normalizedData = this._normalizeControlSequences(terminalId, validatedData);
+    const normalizedData = this._normalizeControlSequences(terminalId, data);
     buffer.push(normalizedData);
 
-    this.debugLog(
-      `📊 [TERMINAL] Data buffered for ${terminalId}: ${data.length} chars (buffer size: ${buffer.length})`
-    );
-
-    // Flush immediately if buffer is full or data is large
     if (buffer.length >= this.MAX_BUFFER_SIZE || data.length > 1000) {
       this.flushBuffer(terminalId);
     } else {
@@ -86,47 +57,19 @@ export class TerminalDataBufferManager {
     }
   }
 
-  /**
-   * ✅ NEW: Validate data belongs to specific terminal
-   * Prevents cross-terminal data contamination
-   */
-  private _validateDataForTerminal(terminalId: string, data: string): string {
-    // Basic validation - could be enhanced with more sophisticated checks
-    if (data.includes('\x1b]0;') && !data.includes(terminalId)) {
-      // Window title escape sequences might contain terminal context
-      this.debugLog(`🔍 [TERMINAL] Window title detected for ${terminalId}`);
-    }
-
-    // Return data as-is for now, but this method provides a hook for future validation
-    return data;
-  }
-
-  /**
-   * Schedule a flush for a terminal's buffer
-   */
   private _scheduleFlush(terminalId: string): void {
     if (!this._dataFlushTimers.has(terminalId)) {
-      const timer = setTimeout(() => {
-        this.flushBuffer(terminalId);
-      }, this.DATA_FLUSH_INTERVAL);
+      const timer = setTimeout(() => this.flushBuffer(terminalId), this.DATA_FLUSH_INTERVAL);
       this._dataFlushTimers.set(terminalId, timer);
     }
   }
 
-  /**
-   * Flush the buffer for a specific terminal
-   */
   public flushBuffer(terminalId: string): void {
-    // ✅ CRITICAL FIX: Strict terminal ID validation before flushing
     if (!terminalId || typeof terminalId !== 'string') {
-      log('🚨 [TERMINAL] Invalid terminalId for buffer flushing:', terminalId);
       return;
     }
 
-    // Double-check terminal still exists
     if (!this._terminals.has(terminalId)) {
-      log(`⚠️ [TERMINAL] Cannot flush buffer for removed terminal: ${terminalId}`);
-      // Clean up orphaned buffer and timer
       this._dataBuffers.delete(terminalId);
       this._ansiFilterState.delete(terminalId);
       const timer = this._dataFlushTimers.get(terminalId);
@@ -146,61 +89,45 @@ export class TerminalDataBufferManager {
     const buffer = this._dataBuffers.get(terminalId);
     if (buffer && buffer.length > 0) {
       const combinedData = buffer.join('');
-      buffer.length = 0; // Clear buffer
+      buffer.length = 0;
 
-      // ✅ CRITICAL: Additional validation before emitting data
       const terminal = this._terminals.get(terminalId);
       if (!terminal) {
-        log(`🚨 [TERMINAL] Terminal disappeared during flush: ${terminalId}`);
         return;
       }
 
-      // Send to CLI Agent detection service with validation
       try {
         this._cliAgentService.detectFromOutput(terminalId, combinedData);
-      } catch (error) {
-        log(`⚠️ [TERMINAL] CLI Agent detection failed for ${terminalId}:`, error);
+      } catch {
+        // Ignore CLI Agent detection errors
       }
 
-      // ✅ EMIT DATA WITH STRICT TERMINAL ID ASSOCIATION
-      this.debugLog(
-        `📤 [TERMINAL] Flushing data for terminal ${terminal.name} (${terminalId}): ${combinedData.length} chars`
-      );
       this._dataEmitter.fire({
-        terminalId: terminalId, // Ensure exact ID match
+        terminalId,
         data: combinedData,
-        timestamp: Date.now(), // Add timestamp for debugging
-        terminalName: terminal.name, // Add terminal name for validation
+        timestamp: Date.now(),
+        terminalName: terminal.name,
       });
     }
   }
 
-  /**
-   * Flush all buffers
-   */
   public flushAllBuffers(): void {
     for (const terminalId of this._dataBuffers.keys()) {
       this.flushBuffer(terminalId);
     }
   }
 
-  /**
-   * Normalize control sequences in data
-   */
   private _normalizeControlSequences(terminalId: string, data: string): string {
     if (!data) {
       return data;
     }
 
-    // Normalize form-feed to clear screen + cursor home (matches VS Code terminal behavior)
+    // Normalize form-feed to clear screen + cursor home
     if (data.indexOf('\f') !== -1) {
-      const CLEAR_SEQUENCE = '\u001b[2J\u001b[H';
-      data = data.replace(/\f+/g, CLEAR_SEQUENCE);
+      data = data.replace(/\f+/g, '\u001b[2J\u001b[H');
     }
 
-    // Prevent unexpected scrollback loss:
-    // Some TUIs (or terminfo "clear" sequences) emit CSI 3 J, which clears scrollback in xterm.js.
-    // VS Code's integrated terminal effectively preserves scrollback; match that behavior here.
+    // Filter CSI 3 J (erase scrollback) to preserve scrollback like VS Code
     return this._filterEraseScrollbackSequence(terminalId, data);
   }
 
@@ -227,8 +154,6 @@ export class TerminalDataBufferManager {
           state.csiParams = '';
           continue;
         }
-
-        // Not a CSI sequence; emit the ESC and this char.
         out += '\u001b' + ch;
         state.mode = 'normal';
         continue;
@@ -242,15 +167,13 @@ export class TerminalDataBufferManager {
         continue;
       }
 
-      // Final byte reached
       const finalByte = ch;
       const params = state.csiParams;
       state.mode = 'normal';
       state.csiParams = '';
 
-      // CSI 3 J => erase scrollback (drop it)
+      // Skip CSI 3 J (erase scrollback)
       if (finalByte === 'J' && params === '3') {
-        this.debugLog(`🧽 [TERMINAL] Stripped CSI 3 J (erase scrollback) for ${terminalId}`);
         continue;
       }
 
@@ -261,9 +184,6 @@ export class TerminalDataBufferManager {
     return out;
   }
 
-  /**
-   * Clean up buffer for a terminal
-   */
   public cleanupBuffer(terminalId: string): void {
     this.flushBuffer(terminalId);
     this._dataBuffers.delete(terminalId);
@@ -275,9 +195,6 @@ export class TerminalDataBufferManager {
     }
   }
 
-  /**
-   * Dispose all buffers and timers
-   */
   public dispose(): void {
     this.flushAllBuffers();
     for (const timer of this._dataFlushTimers.values()) {

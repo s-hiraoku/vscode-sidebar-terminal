@@ -1,18 +1,6 @@
 /**
- * Scrollback Manager
- *
  * Manages terminal scrollback buffer with ANSI color preservation,
  * wrapped line processing, and empty line trimming.
- *
- * Features:
- * - SerializeAddon integration for ANSI color preservation
- * - Wrapped line detection and joining
- * - Empty line trimming for storage optimization
- * - Buffer reverse iteration for efficient processing
- * - BaseManager integration for consistent lifecycle management
- *
- * @see openspec/changes/optimize-terminal-rendering/specs/scrollback-fix/spec.md
- * @see docs/refactoring/issue-216-manager-standardization.md
  */
 
 import { Terminal, IBufferLine } from '@xterm/xterm';
@@ -36,9 +24,6 @@ export interface ScrollbackData {
   timestamp: number;
 }
 
-/**
- * Scrollback Manager Interface
- */
 export interface IScrollbackManager {
   saveScrollback(terminalId: string, options?: ScrollbackOptions): ScrollbackData | null;
   restoreScrollback(terminalId: string, content: string): boolean;
@@ -46,14 +31,6 @@ export interface IScrollbackManager {
   getBufferReverseIterator(buffer: any, startLine: number): IterableIterator<IBufferLine>;
 }
 
-/**
- * Scrollback Manager Implementation
- *
- * Extends BaseManager for consistent lifecycle management and monitoring.
- * Implements IScrollbackManager for scrollback operations.
- *
- * @see Issue #216 - Manager Pattern Standardization
- */
 export class ScrollbackManager extends BaseManager implements IScrollbackManager {
   private serializeAddons: Map<string, SerializeAddon> = new Map();
   private terminals: Map<string, Terminal> = new Map();
@@ -66,18 +43,10 @@ export class ScrollbackManager extends BaseManager implements IScrollbackManager
     });
   }
 
-  /**
-   * Initialize ScrollbackManager
-   * No special initialization needed - manager is ready immediately
-   */
   protected doInitialize(): void {
-    // ScrollbackManager is stateless and ready immediately
     this.logger('ScrollbackManager initialized');
   }
 
-  /**
-   * Register terminal with SerializeAddon
-   */
   public registerTerminal(
     terminalId: string,
     terminal: Terminal,
@@ -88,18 +57,12 @@ export class ScrollbackManager extends BaseManager implements IScrollbackManager
     terminalLogger.info(`📋 ScrollbackManager: Registered terminal ${terminalId}`);
   }
 
-  /**
-   * Unregister terminal
-   */
   public unregisterTerminal(terminalId: string): void {
     this.terminals.delete(terminalId);
     this.serializeAddons.delete(terminalId);
     terminalLogger.info(`🗑️ ScrollbackManager: Unregistered terminal ${terminalId}`);
   }
 
-  /**
-   * Save scrollback with ANSI color preservation
-   */
   public saveScrollback(terminalId: string, options?: ScrollbackOptions): ScrollbackData | null {
     terminalLogger.debug(`💾 ScrollbackManager: Saving scrollback for ${terminalId}`);
 
@@ -166,9 +129,6 @@ export class ScrollbackManager extends BaseManager implements IScrollbackManager
     }
   }
 
-  /**
-   * Restore scrollback with ANSI colors
-   */
   public restoreScrollback(terminalId: string, content: string): boolean {
     terminalLogger.debug(`🔄 ScrollbackManager: Restoring scrollback for ${terminalId}`);
 
@@ -202,17 +162,12 @@ export class ScrollbackManager extends BaseManager implements IScrollbackManager
   }
 
   /**
-   * Get full buffer line including wrapped continuation lines
-   *
-   * VS Code Pattern: Detect wrapped lines using line.isWrapped property
-   * and join them backwards to reconstruct the original line.
+   * Get full buffer line including wrapped continuation lines.
+   * Detects wrapped lines using line.isWrapped and joins them backwards.
    */
   public getFullBufferLine(line: IBufferLine, lineIndex: number, buffer: any): string {
     try {
       let fullLine = line.translateToString(true);
-
-      // Check if this line is wrapped from previous line
-      // Join backwards to get the complete original line
       let currentIndex = lineIndex;
       let currentLine = line;
 
@@ -237,11 +192,7 @@ export class ScrollbackManager extends BaseManager implements IScrollbackManager
     }
   }
 
-  /**
-   * Get buffer reverse iterator for efficient iteration
-   *
-   * Iterates buffer from startLine backwards to 0
-   */
+  /** Iterates buffer from startLine backwards to 0. */
   public *getBufferReverseIterator(buffer: any, startLine: number): IterableIterator<IBufferLine> {
     try {
       for (let i = startLine; i >= 0; i--) {
@@ -255,9 +206,6 @@ export class ScrollbackManager extends BaseManager implements IScrollbackManager
     }
   }
 
-  /**
-   * Process wrapped lines to preserve original line structure
-   */
   private processWrappedLines(terminal: Terminal, content: string): string {
     try {
       const buffer = terminal.buffer.active;
@@ -303,22 +251,15 @@ export class ScrollbackManager extends BaseManager implements IScrollbackManager
     }
   }
 
-  /**
-   * Trim empty lines from content
-   *
-   * Removes trailing and leading empty lines while preserving
-   * meaningful whitespace in the middle.
-   */
+  /** Removes leading and trailing empty lines while preserving meaningful whitespace. */
   private trimEmptyLines(content: string): string {
     try {
       const lines = content.split('\n');
 
-      // Trim trailing empty lines
       while (lines.length > 0 && lines[lines.length - 1]!.trim().length === 0) {
         lines.pop();
       }
 
-      // Trim leading empty lines
       while (lines.length > 0 && lines[0]!.trim().length === 0) {
         lines.shift();
       }
@@ -333,9 +274,6 @@ export class ScrollbackManager extends BaseManager implements IScrollbackManager
     }
   }
 
-  /**
-   * Get statistics for debugging
-   */
   public getStats(): {
     registeredTerminals: number;
     terminals: string[];
@@ -346,10 +284,6 @@ export class ScrollbackManager extends BaseManager implements IScrollbackManager
     };
   }
 
-  /**
-   * Dispose all resources
-   * Called by BaseManager.dispose() for cleanup
-   */
   protected doDispose(): void {
     this.terminals.clear();
     this.serializeAddons.clear();

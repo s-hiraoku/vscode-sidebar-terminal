@@ -465,24 +465,24 @@ export class CliAgentPatternRegistry {
   public cleanAnsiEscapeSequences(text: string): string {
     return (
       text
-        // 基本的なANSIエスケープシーケンス（色、カーソル移動等）
+        // Basic ANSI escape sequences (colors, cursor movement, etc.)
         // eslint-disable-next-line no-control-regex
         .replace(/\x1b\[[0-9;]*[A-Za-z]/g, '')
-        // OSCシーケンス（ウィンドウタイトル設定等）
+        // OSC sequences (window title setting, etc.)
         // eslint-disable-next-line no-control-regex
         .replace(/\x1b\][0-9];[^\x07]*\x07/g, '')
-        // エスケープシーケンス終了
+        // Escape sequence terminator
         // eslint-disable-next-line no-control-regex
         .replace(/\x1b\\/g, '')
-        // キャリッジリターン除去
+        // Remove carriage return
         .replace(/\r/g, '')
-        // プライベートモード設定
+        // Private mode setting
         // eslint-disable-next-line no-control-regex
         .replace(/\x1b\?[0-9]*[hl]/g, '')
-        // アプリケーション/通常キーパッド
+        // Application/normal keypad mode
         // eslint-disable-next-line no-control-regex
         .replace(/\x1b[=>]/g, '')
-        // 制御文字を除去
+        // Remove control characters
         // eslint-disable-next-line no-control-regex
         .replace(/[\x00-\x1F\x7F]/g, '')
         .trim()

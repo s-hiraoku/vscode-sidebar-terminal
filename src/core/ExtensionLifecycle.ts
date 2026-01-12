@@ -13,33 +13,7 @@ import { TelemetryService } from '../services/TelemetryService';
 import { CommandRegistrar } from './CommandRegistrar';
 import { SessionLifecycleManager } from './SessionLifecycleManager';
 
-/**
- * Manages the complete lifecycle of the VS Code extension.
- *
- * This class is responsible for initializing, configuring, and cleaning up all
- * components of the Secondary Terminal extension. It serves as the central
- * orchestrator for terminal management, session persistence, command handling,
- * and service integration.
- *
- * @remarks
- * The ExtensionLifecycle class handles:
- * - Extension activation and deactivation
- * - Component initialization and dependency injection
- * - Command registration and event handling
- * - Session management and restoration
- * - Service lifecycle management
- * - Resource cleanup and disposal
- *
- * @example
- * ```typescript
- * const lifecycle = new ExtensionLifecycle();
- * await lifecycle.activate(context);
- * // ... extension runs ...
- * await lifecycle.deactivate();
- * ```
- *
- * @public
- */
+/** Manages extension activation, service initialization, and cleanup. */
 export class ExtensionLifecycle {
   private terminalManager: TerminalManager | undefined;
   private sidebarProvider: SecondaryTerminalProvider | undefined;
@@ -54,44 +28,10 @@ export class ExtensionLifecycle {
   private telemetryService: TelemetryService | undefined;
   private _extensionContext: vscode.ExtensionContext | undefined;
 
-  // Extracted services for better maintainability
   private commandRegistrar: CommandRegistrar | undefined;
   private sessionLifecycleManager: SessionLifecycleManager | undefined;
 
-  /**
-   * Activates the extension and initializes all components.
-   *
-   * This method is the main entry point for extension activation. It performs
-   * the following operations in sequence:
-   * 1. Configures logging based on extension mode (development/production)
-   * 2. Initializes the terminal manager
-   * 3. Sets up session management for terminal persistence
-   * 4. Initializes command handlers
-   * 5. Configures shell integration service
-   * 6. Registers the sidebar terminal provider
-   * 7. Sets up keyboard shortcut service
-   * 8. Initializes Phase 8 services (decorations and links)
-   * 9. Registers all VS Code commands
-   * 10. Sets up automatic session saving
-   *
-   * @param context - The VS Code extension context containing subscriptions and resources
-   * @returns A promise that resolves immediately to prevent activation spinner hanging
-   *
-   * @remarks
-   * - The method resolves immediately even if some initialization steps are asynchronous
-   * - Session restoration is handled asynchronously by SecondaryTerminalProvider
-   * - Errors are caught, logged, and shown to the user without throwing
-   *
-   * @throws Never throws; all errors are caught and handled internally
-   *
-   * @example
-   * ```typescript
-   * const lifecycle = new ExtensionLifecycle();
-   * await lifecycle.activate(context);
-   * ```
-   *
-   * @public
-   */
+  /** Activates the extension and initializes all components. */
   activate(context: vscode.ExtensionContext): Promise<void> {
     const activationStartTime = Date.now();
     this._extensionContext = context;
@@ -325,35 +265,7 @@ export class ExtensionLifecycle {
     }
   }
 
-  /**
-   * Deactivates the extension and performs cleanup.
-   *
-   * This method ensures proper cleanup of all extension resources:
-   * 1. Saves current terminal sessions
-   * 2. Disposes of the standard session manager
-   * 3. Disposes of keyboard shortcut service
-   * 4. Disposes of Phase 8 services (decorations and links)
-   * 5. Disposes of terminal manager and all terminals
-   * 6. Disposes of sidebar provider
-   * 7. Clears command handlers
-   * 8. Disposes of shell integration service
-   *
-   * @returns A promise that resolves when all cleanup is complete
-   *
-   * @remarks
-   * - All errors during cleanup are logged but not thrown
-   * - Session data is saved before disposing managers
-   * - Resources are disposed in reverse order of initialization
-   *
-   * @throws Never throws; all errors are caught and logged
-   *
-   * @example
-   * ```typescript
-   * await lifecycle.deactivate();
-   * ```
-   *
-   * @public
-   */
+  /** Deactivates the extension and performs cleanup. */
   async deactivate(): Promise<void> {
     logger.lifecycle('Sidebar Terminal deactivation started');
 
@@ -428,51 +340,10 @@ export class ExtensionLifecycle {
     logger.lifecycle('Sidebar Terminal deactivation complete');
   }
 
-  /**
-   * Gets the current terminal manager instance.
-   *
-   * @returns The terminal manager instance, or undefined if not initialized
-   *
-   * @remarks
-   * This method is primarily intended for testing purposes.
-   *
-   * @public
-   */
-  getTerminalManager(): TerminalManager | undefined {
-    return this.terminalManager;
-  }
+  getTerminalManager(): TerminalManager | undefined { return this.terminalManager; }
+  getSidebarProvider(): SecondaryTerminalProvider | undefined { return this.sidebarProvider; }
+  getExtensionPersistenceService(): ExtensionPersistenceService | undefined { return this.extensionPersistenceService; }
 
-  /**
-   * Gets the current sidebar provider instance.
-   *
-   * @returns The sidebar provider instance, or undefined if not initialized
-   *
-   * @remarks
-   * This method is primarily intended for testing purposes.
-   *
-   * @public
-   */
-  getSidebarProvider(): SecondaryTerminalProvider | undefined {
-    return this.sidebarProvider;
-  }
-
-  /**
-   * Gets the current standard session manager instance.
-   *
-   * @returns The standard session manager instance, or undefined if not initialized
-   *
-   * @remarks
-   * This method is primarily intended for testing purposes.
-   *
-   * @public
-   */
-  getExtensionPersistenceService(): ExtensionPersistenceService | undefined {
-    return this.extensionPersistenceService;
-  }
-
-  /**
-   * Setup telemetry event listeners for tracking key metrics
-   */
   private setupTelemetryEventListeners(): void {
     if (!this.telemetryService) {
       logger.warn('Telemetry service not available, skipping telemetry event listener setup');
