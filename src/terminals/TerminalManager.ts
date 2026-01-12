@@ -64,6 +64,7 @@ export class TerminalManager {
   private readonly _ptyDataDisposables = new Map<string, vscode.Disposable>();
   private readonly _bufferManager: CircularBufferManager;
   private readonly _initialPromptGuards = new Map<string, { dispose: () => void }>();
+  private readonly _cleaningTerminals = new Set<string>();
 
   // Public event accessors
   public readonly onData = this._dataEmitter.event;
@@ -399,24 +400,32 @@ export class TerminalManager {
     this._processCoordinator.setupTerminalEvents(
       terminal,
       (terminalId: string, exitCode: number) => {
-        this._cliAgentService.handleTerminalRemoved(terminalId);
+        if (this._cleaningTerminals.has(terminalId)) {
+          return;
+        }
         this._exitEmitter.fire({ terminalId, exitCode });
-        this._terminals.delete(terminalId);
-        this._terminalRemovedEmitter.fire(terminalId);
-        this._stateCoordinator.notifyStateUpdate();
+        this._cleanupTerminalData(terminalId);
       }
     );
   }
 
   private _cleanupTerminalData(terminalId: string): void {
-    this._processCoordinator.cleanupInitialPromptGuard(terminalId);
-    this._processCoordinator.cleanupPtyOutput(terminalId);
-    this._dataBufferManager.cleanupBuffer(terminalId);
-    this._cliAgentService.handleTerminalRemoved(terminalId);
-    this._terminals.delete(terminalId);
-    this._terminalRemovedEmitter.fire(terminalId);
-    this._stateCoordinator.updateActiveTerminalAfterRemoval(terminalId);
-    this._stateCoordinator.notifyStateUpdate();
+    if (this._cleaningTerminals.has(terminalId)) {
+      return;
+    }
+    this._cleaningTerminals.add(terminalId);
+    try {
+      this._processCoordinator.cleanupInitialPromptGuard(terminalId);
+      this._processCoordinator.cleanupPtyOutput(terminalId);
+      this._dataBufferManager.cleanupBuffer(terminalId);
+      this._cliAgentService.handleTerminalRemoved(terminalId);
+      this._terminals.delete(terminalId);
+      this._terminalRemovedEmitter.fire(terminalId);
+      this._stateCoordinator.updateActiveTerminalAfterRemoval(terminalId);
+      this._stateCoordinator.notifyStateUpdate();
+    } finally {
+      this._cleaningTerminals.delete(terminalId);
+    }
   }
 
   public dispose(): void {
