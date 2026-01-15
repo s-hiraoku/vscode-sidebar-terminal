@@ -258,8 +258,8 @@ export class TerminalManager {
   // === Legacy Methods ===
 
   /** @deprecated Use deleteTerminal() with active terminal ID */
-  public async safeKillTerminal(terminalId?: string): Promise<boolean> {
-    const targetId = terminalId || this._activeTerminalManager.getActive();
+  public async safeKillTerminal(_terminalId?: string): Promise<boolean> {
+    const targetId = _terminalId || this._activeTerminalManager.getActive();
     if (!targetId) {
       log('No terminal to kill');
       return false;
@@ -400,7 +400,7 @@ export class TerminalManager {
     this._processCoordinator.setupTerminalEvents(
       terminal,
       (terminalId: string, exitCode: number) => {
-        if (this._cleaningTerminals.has(terminalId)) {
+        if (this._cleaningTerminals.has(terminalId) || !this._terminals.has(terminalId)) {
           return;
         }
         this._exitEmitter.fire({ terminalId, exitCode });
@@ -410,7 +410,7 @@ export class TerminalManager {
   }
 
   private _cleanupTerminalData(terminalId: string): void {
-    if (this._cleaningTerminals.has(terminalId)) {
+    if (this._cleaningTerminals.has(terminalId) || !this._terminals.has(terminalId)) {
       return;
     }
     this._cleaningTerminals.add(terminalId);
