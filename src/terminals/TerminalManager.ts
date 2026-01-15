@@ -58,12 +58,7 @@ export class TerminalManager {
   private readonly _ioCoordinator: TerminalIOCoordinator;
   private readonly _processCoordinator: TerminalProcessCoordinator;
   private readonly _lifecycleManager: TerminalLifecycleManager;
-  private operationQueue: Promise<void> = Promise.resolve();
-  private readonly _shellInitialized = new Set<string>();
-  private readonly _ptyOutputStarted = new Set<string>();
-  private readonly _ptyDataDisposables = new Map<string, vscode.Disposable>();
   private readonly _bufferManager: CircularBufferManager;
-  private readonly _initialPromptGuards = new Map<string, { dispose: () => void }>();
   private readonly _cleaningTerminals = new Set<string>();
 
   // Public event accessors
@@ -148,7 +143,7 @@ export class TerminalManager {
       this._exitEmitter,
       (terminal: TerminalInstance) => this._setupTerminalEvents(terminal),
       () => this._stateCoordinator.notifyStateUpdate(),
-      (terminalId: string) => this._cleanupTerminalData(terminalId)
+      (terminalId: string) => this._performCleanup(terminalId)
     );
   }
 
@@ -186,7 +181,15 @@ export class TerminalManager {
   }
 
   public removeTerminal(terminalId: string): void {
-    this._lifecycleManager.removeTerminal(terminalId);
+    if (this._cleaningTerminals.has(terminalId)) {
+      return;
+    }
+    this._cleaningTerminals.add(terminalId);
+    try {
+      this._lifecycleManager.removeTerminal(terminalId);
+    } finally {
+      this._cleaningTerminals.delete(terminalId);
+    }
   }
 
   public getTerminal(terminalId: string): TerminalInstance | undefined {
@@ -406,17 +409,21 @@ export class TerminalManager {
         if (this._cleaningTerminals.has(terminalId) || !this._terminals.has(terminalId)) {
           return;
         }
-        this._exitEmitter.fire({ terminalId, exitCode });
-        this._cleanupTerminalData(terminalId);
+        this._cleaningTerminals.add(terminalId);
+        try {
+          this._exitEmitter.fire({ terminalId, exitCode });
+          this._performCleanup(terminalId);
+        } finally {
+          this._cleaningTerminals.delete(terminalId);
+        }
       }
     );
   }
 
-  private _cleanupTerminalData(terminalId: string): void {
-    if (this._cleaningTerminals.has(terminalId) || !this._terminals.has(terminalId)) {
+  private _performCleanup(terminalId: string): void {
+    if (!this._terminals.has(terminalId)) {
       return;
     }
-    this._cleaningTerminals.add(terminalId);
     try {
       this._processCoordinator.cleanupInitialPromptGuard(terminalId);
       this._processCoordinator.cleanupPtyOutput(terminalId);
@@ -428,8 +435,6 @@ export class TerminalManager {
       this._stateCoordinator.notifyStateUpdate();
     } catch (_error) {
       log(`Error cleaning up terminal ${terminalId}: ${_error}`);
-    } finally {
-      this._cleaningTerminals.delete(terminalId);
     }
   }
 
