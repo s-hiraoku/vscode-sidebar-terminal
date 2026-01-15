@@ -84,12 +84,12 @@ export class PerformanceManager extends BaseManager {
 
       if (this.debugLoggingEnabled) {
         let reason: string;
-        if (isSmallInput) {
-          reason = 'small input (typing)';
-        } else if (isLargeOutput) {
+        if (isLargeOutput) {
           reason = 'large output';
         } else if (bufferFull) {
           reason = 'buffer full';
+        } else if (isSmallInput) {
+          reason = 'small input (typing)';
         } else if (this.isCliAgentMode && isModerateOutput) {
           reason = 'CLI Agent mode';
         } else {
