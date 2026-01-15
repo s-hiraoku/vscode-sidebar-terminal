@@ -30,7 +30,7 @@ describe('TerminalManager - Idempotent Removal', () => {
     spawnStub.mockRestore();
   });
 
-  it('should fire terminalRemoved event exactly once even if _cleanupTerminalData is called multiple times', async () => {
+  it('should fire terminalRemoved event exactly once even if _performCleanup is called multiple times', async () => {
     const terminalId = terminalManager.createTerminal();
     let removedEventCount = 0;
 
@@ -41,12 +41,12 @@ describe('TerminalManager - Idempotent Removal', () => {
     });
 
     // First cleanup
-    (terminalManager as any)._cleanupTerminalData(terminalId);
+    (terminalManager as any)._performCleanup(terminalId);
     expect(removedEventCount).toBe(1);
 
     // Second cleanup (should be idempotent)
-    (terminalManager as any)._cleanupTerminalData(terminalId);
-    expect(removedEventCount).toBe(1, 'TerminalRemoved event should not fire twice');
+    (terminalManager as any)._performCleanup(terminalId);
+    expect(removedEventCount).toBe(1);
   });
 
   it('should only fire exit event once if cleanup is already in progress', async () => {
@@ -69,11 +69,11 @@ describe('TerminalManager - Idempotent Removal', () => {
     expect(exitCallback).toBeDefined();
 
     // Start cleanup
-    (terminalManager as any)._cleanupTerminalData(terminalId2);
+    (terminalManager as any)._performCleanup(terminalId2);
     
     // Call exit callback AFTER cleanup finished
     exitCallback(terminalId2, 0);
     
-    expect(exitEventCount).toBe(0, 'Exit event should not fire if terminal is already removed');
+    expect(exitEventCount).toBe(0);
   });
 });

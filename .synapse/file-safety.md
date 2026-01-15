@@ -26,6 +26,7 @@ AFTER YOUR EDIT IS COMPLETE
 ================================================================================
 
 Run BOTH commands:
+`<task_id>` is your current task identifier or any unique string/UUID for this change set (e.g., `task-123`, `550e8400-e29b-41d4-a716-446655440000`), typically provided by your task system or chosen as a unique alphanumeric string.
 ```bash
 synapse file-safety record <file_path> {{agent_id}} <task_id> --type MODIFY --intent "what you changed"
 synapse file-safety unlock <file_path> {{agent_id}}
