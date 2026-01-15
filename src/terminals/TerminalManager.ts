@@ -186,17 +186,7 @@ export class TerminalManager {
   }
 
   public removeTerminal(terminalId: string): void {
-    if (this._cleaningTerminals.has(terminalId)) {
-      return;
-    }
-    this._cleaningTerminals.add(terminalId);
-    try {
-      this._lifecycleManager.removeTerminal(terminalId);
-    } finally {
-      setTimeout(() => {
-        this._cleaningTerminals.delete(terminalId);
-      }, 1000);
-    }
+    this._lifecycleManager.removeTerminal(terminalId);
   }
 
   public getTerminal(terminalId: string): TerminalInstance | undefined {
@@ -423,12 +413,10 @@ export class TerminalManager {
   }
 
   private _cleanupTerminalData(terminalId: string): void {
-    if (!this._cleaningTerminals.has(terminalId)) {
-      this._cleaningTerminals.add(terminalId);
-      setTimeout(() => {
-        this._cleaningTerminals.delete(terminalId);
-      }, 1000);
+    if (this._cleaningTerminals.has(terminalId) || !this._terminals.has(terminalId)) {
+      return;
     }
+    this._cleaningTerminals.add(terminalId);
     try {
       this._processCoordinator.cleanupInitialPromptGuard(terminalId);
       this._processCoordinator.cleanupPtyOutput(terminalId);
@@ -438,8 +426,10 @@ export class TerminalManager {
       this._terminalRemovedEmitter.fire(terminalId);
       this._stateCoordinator.updateActiveTerminalAfterRemoval(terminalId);
       this._stateCoordinator.notifyStateUpdate();
-    } catch (error) {
-      log(`Error cleaning up terminal ${terminalId}: ${error}`);
+    } catch (_error) {
+      log(`Error cleaning up terminal ${terminalId}: ${_error}`);
+    } finally {
+      this._cleaningTerminals.delete(terminalId);
     }
   }
 
