@@ -332,11 +332,14 @@ export class TerminalManager {
 
   public getConnectedAgentType(): 'claude' | 'gemini' | 'codex' | 'copilot' | null {
     const agent = this._cliAgentService.getConnectedAgent();
-    if (!agent) return null;
-    const validTypes = ['claude', 'gemini', 'codex', 'copilot'] as const;
-    return validTypes.includes(agent.type as (typeof validTypes)[number])
-      ? (agent.type as 'claude' | 'gemini' | 'codex' | 'copilot')
-      : null;
+    if (!agent) {
+      return null;
+    }
+    const type = agent.type;
+    if (type === 'claude' || type === 'gemini' || type === 'codex' || type === 'copilot') {
+      return type;
+    }
+    return null;
   }
 
   public switchAiAgentConnection(terminalId: string): {
