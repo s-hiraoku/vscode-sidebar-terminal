@@ -1,0 +1,32 @@
+{
+  "env": {
+    "SYNAPSE_HISTORY_ENABLED": "true",
+    "SYNAPSE_AUTH_ENABLED": "false",
+    "SYNAPSE_API_KEYS": "",
+    "SYNAPSE_ADMIN_KEY": "",
+    "SYNAPSE_ALLOW_LOCALHOST": "true",
+    "SYNAPSE_USE_HTTPS": "false",
+    "SYNAPSE_WEBHOOK_SECRET": "",
+    "SYNAPSE_WEBHOOK_TIMEOUT": "10",
+    "SYNAPSE_WEBHOOK_MAX_RETRIES": "3",
+    "SYNAPSE_FILE_SAFETY_ENABLED": "true",
+    "SYNAPSE_FILE_SAFETY_DB_PATH": ".synapse/file_safety.db"
+  },
+  "instructions": {
+    "default": "default.md",
+    "claude": "",
+    "gemini": "gemini.md",
+    "codex": ""
+  },
+  "a2a": {
+    "flow": "auto"
+  },
+  "delegation": {
+    "enabled": false
+  },
+  "resume_flags": {
+    "claude": ["--continue", "--resume", "-c", "-r"],
+    "codex": ["resume"],
+    "gemini": ["--resume"]
+  }
+}

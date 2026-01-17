@@ -1,6 +1,5 @@
-/**
- * ターミナル分割管理クラス
- */
+/** Manages terminal split layout and distribution. */
+
 import { SPLIT_CONSTANTS } from '../constants/webview';
 import { showSplitLimitWarning } from '../utils/NotificationUtils';
 import { BaseManager } from './BaseManager';
@@ -14,10 +13,7 @@ import { IManagerCoordinator } from '../interfaces/ManagerInterfaces';
 import { DOMUtils } from '../utils/DOMUtils';
 
 export class SplitManager extends BaseManager implements ISplitLayoutController {
-  // Specialized logger for Split Manager
   private readonly splitManagerLogger = splitLogger;
-
-  // Internal coordinator reference (Issue #216: constructor injection)
   private readonly coordinator: IManagerCoordinator;
 
   constructor(coordinator: IManagerCoordinator) {
@@ -31,41 +27,24 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
     this.splitManagerLogger.lifecycle('initialization', 'starting');
   }
 
-  /**
-   * Initialize the SplitManager (BaseManager abstract method implementation)
-   */
   protected doInitialize(): void {
     this.splitManagerLogger.lifecycle('initialization', 'completed');
   }
 
-  /**
-   * Dispose SplitManager resources (BaseManager abstract method implementation)
-   */
   protected doDispose(): void {
     this.splitManagerLogger.lifecycle('disposal', 'starting');
-
-    // Clear all terminals and containers
     this.terminals.clear();
     this.terminalContainers.clear();
-
-    // Reset split state
     this.isSplitMode = false;
     this.splitDirection = null;
-
     this.splitManagerLogger.lifecycle('disposal', 'completed');
   }
 
-  // Split functionality
   public isSplitMode = false;
   private splitDirection: 'horizontal' | 'vertical' | null = null;
-
-  // 🆕 Current panel location (for optimal split direction)
   private currentPanelLocation: 'sidebar' | 'panel' = 'sidebar';
-
-  // Multiple terminal management
   public terminals = new Map<string, TerminalInstance>();
   private terminalContainers = new Map<string, HTMLElement>();
-
   private maxSplitCount = SPLIT_CONSTANTS.MAX_SPLIT_COUNT;
   private minTerminalHeight = SPLIT_CONSTANTS.MIN_TERMINAL_HEIGHT;
 
@@ -124,11 +103,6 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
     return { canSplit: true, terminalHeight };
   }
 
-  /**
-   * 🆕 Update split direction dynamically based on panel location (Issue #148)
-   * @param direction - New split direction
-   * @param location - Panel location that triggered the change
-   */
   public updateSplitDirection(
     direction: 'horizontal' | 'vertical',
     location: 'sidebar' | 'panel'
@@ -137,10 +111,8 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
       `Updating split direction: ${this.splitDirection} -> ${direction} (location: ${location})`
     );
 
-    // 🆕 Update current panel location
     this.setPanelLocation(location);
 
-    // Check if direction actually changed
     if (this.splitDirection === direction) {
       this.splitManagerLogger.debug(`Split direction unchanged: ${direction}`);
       return;
@@ -157,12 +129,6 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
     this.splitManagerLogger.info(`Split direction updated to: ${direction}`);
   }
 
-  /**
-   * 🆕 Apply new split layout while preserving terminal state
-   * @param newDirection - New split direction
-   * @param previousDirection - Previous split direction
-   * @param location - Panel location
-   */
   private applyNewSplitLayout(
     newDirection: 'horizontal' | 'vertical',
     previousDirection: 'horizontal' | 'vertical' | null,
@@ -180,13 +146,9 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
     }, 100);
   }
 
-  /**
-   * 🆕 Refit all terminals after layout change
-   */
   private refitAllTerminals(): void {
     this.splitManagerLogger.info(`Refitting all ${this.terminals.size} terminals`);
 
-    // 🔧 CRITICAL FIX: Reset parent container styles first
     const terminalsWrapper = document.getElementById('terminals-wrapper');
     const terminalBody = document.getElementById('terminal-body');
     if (terminalsWrapper) {
@@ -198,27 +160,22 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
       terminalBody.style.maxWidth = '';
     }
 
-    // 🔧 CRITICAL FIX: Reset ALL terminal container styles first
     this.terminals.forEach((_terminalData, terminalId) => {
       const container = this.terminalContainers.get(terminalId);
       if (container) {
-        DOMUtils.resetXtermInlineStyles(container, false); // Don't force reflow individually
+        DOMUtils.resetXtermInlineStyles(container, false);
       }
     });
 
-    // 🔧 CRITICAL FIX: Force a single reflow after all resets
     // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     document.body.offsetWidth;
 
-    // 🔧 CRITICAL FIX: Use requestAnimationFrame to ensure CSS has been applied
     requestAnimationFrame(() => {
       this.terminals.forEach((terminalData, terminalId) => {
         if (terminalData.fitAddon && terminalData.terminal) {
           try {
-            // Refit the terminal
             terminalData.fitAddon.fit();
             terminalData.terminal.refresh(0, terminalData.terminal.rows - 1);
-
             this.splitManagerLogger.debug(`Refitted terminal ${terminalId}`);
           } catch (error) {
             this.splitManagerLogger.error(`Error refitting terminal ${terminalId}: ${error}`);
@@ -298,31 +255,20 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
 
   public prepareSplitMode(direction: 'horizontal' | 'vertical'): void {
     this.splitManagerLogger.info(`Preparing split mode: ${direction}`);
-
-    // Set split mode flag and direction
     this.isSplitMode = true;
     this.splitDirection = direction;
-
     this.requestSplitLayoutUpdate();
-
     this.splitManagerLogger.info('Split mode prepared');
   }
 
-  /**
-   * 🆕 Exit split mode and return all terminals to normal layout
-   * ISplitLayoutController implementation
-   */
   public exitSplitMode(): void {
     this.splitManagerLogger.info('Exiting split mode');
-
-    // Disable split mode
     this.isSplitMode = false;
     this.splitDirection = null;
 
     const containerManager = this.coordinator?.getTerminalContainerManager?.();
     containerManager?.clearSplitArtifacts();
 
-    // Refit all terminals after layout change
     setTimeout(() => {
       this.refitAllTerminals();
     }, 100);
@@ -332,14 +278,8 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
 
   public splitTerminal(direction: 'horizontal' | 'vertical'): void {
     this.splitManagerLogger.info(`Splitting terminal with direction: ${direction}`);
-
-    // Ensure internal state reflects that split mode is now active
     this.isSplitMode = true;
-
-    // Set split direction for layout calculation
     this.splitDirection = direction;
-
-    // Add terminal to multi-split layout (works for both directions)
     this.addTerminalToMultiSplit();
   }
 
@@ -355,10 +295,6 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
     this.splitManagerLogger.info('Terminal added to multi-split layout');
   }
 
-  /**
-   * 分割ターミナルのサイズを再配分
-   * @param newHeight 新しい高さ（ピクセル）
-   */
   public redistributeSplitTerminals(newHeight: number): void {
     this.splitManagerLogger.info(`Redistributing split terminals with new height: ${newHeight}px`);
 
@@ -431,11 +367,9 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
       });
     }
 
-    // Refit all terminals
     this.refitAllTerminals();
   }
 
-  // Getters
   public getSplitTerminals(): Map<string, HTMLElement> {
     return this.terminalContainers;
   }
@@ -465,9 +399,6 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
     }
   }
 
-  /**
-   * 🆕 Set current panel location
-   */
   public setPanelLocation(location: 'sidebar' | 'panel'): void {
     this.splitManagerLogger.info(
       `📍 [SPLIT] Panel location updated: ${this.currentPanelLocation} → ${location}`
@@ -475,20 +406,12 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
     this.currentPanelLocation = location;
   }
 
-  /**
-   * 🆕 Get current panel location
-   */
   public getCurrentPanelLocation(): 'sidebar' | 'panel' {
     return this.currentPanelLocation;
   }
 
-  // Setters
   public setTerminal(id: string, terminal: TerminalInstance): void {
-    // Create a new terminal instance with the correct id if needed
-    const terminalWithId: TerminalInstance = {
-      ...terminal,
-      id: id,
-    };
+    const terminalWithId: TerminalInstance = { ...terminal, id };
     this.terminals.set(id, terminalWithId);
   }
 
@@ -496,7 +419,6 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
     this.terminalContainers.set(id, container);
   }
 
-  // Remove methods
   public removeTerminal(id: string): void {
     const terminal = this.terminals.get(id);
     const container = this.terminalContainers.get(id);
@@ -505,33 +427,26 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
       `Removing terminal ${id}, terminal: ${!!terminal}, container: ${!!container}`
     );
 
-    // 🔧 FIX: Check split mode state BEFORE removal
     const wasInSplitMode = this.isSplitMode;
     const remainingAfterRemoval = this.terminals.size - (terminal ? 1 : 0);
 
     if (terminal) {
-      // Dispose terminal
       try {
         terminal.terminal.dispose();
         this.splitManagerLogger.debug(`Terminal ${id} disposed successfully`);
       } catch (error) {
         this.splitManagerLogger.error(`Error disposing terminal ${id}: ${error}`);
       }
-
-      // Remove from terminals map
       this.terminals.delete(id);
     }
 
     if (container) {
       try {
-        // Remove container from DOM
         container.remove();
         this.splitManagerLogger.debug(`Container for terminal ${id} removed from DOM`);
       } catch (error) {
         this.splitManagerLogger.error(`Error removing container for terminal ${id}: ${error}`);
       }
-
-      // Remove from containers map
       this.terminalContainers.delete(id);
     }
 
@@ -541,37 +456,28 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
       `Remaining containers: ${Array.from(this.terminalContainers.keys())}`
     );
 
-    // 🔧 FIX: Handle split mode state AFTER removal is complete
-    // Use setTimeout to ensure DOM cleanup is done first
     if (wasInSplitMode) {
       setTimeout(() => {
         if (remainingAfterRemoval <= 1) {
           this.splitManagerLogger.info(
-            `🔧 Exiting split mode after removal (${this.terminals.size} terminal remaining)`
+            `Exiting split mode after removal (${this.terminals.size} terminal remaining)`
           );
-          // Only reset split mode flags, don't call full exitSplitMode which causes refit issues
           this.isSplitMode = false;
           this.splitDirection = null;
         } else if (this.terminals.size > 1) {
-          // 🔧 FIX: Refresh split layout after terminal removal
           this.splitManagerLogger.info(
-            `🔧 Refreshing split layout after removal (${this.terminals.size} terminals remaining)`
+            `Refreshing split layout after removal (${this.terminals.size} terminals remaining)`
           );
           this.requestSplitLayoutUpdate();
-          // Refit remaining terminals after layout update
           setTimeout(() => this.refitAllTerminals(), 50);
         }
       }, 50);
     }
   }
 
-  /**
-   * Dispose and cleanup all resources
-   */
   public override dispose(): void {
     this.splitManagerLogger.info('Disposing split manager');
 
-    // Dispose all terminals
     for (const [id, terminal] of this.terminals) {
       try {
         terminal.terminal.dispose();
@@ -580,15 +486,11 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
       }
     }
 
-    // Clear all maps and reset state
     this.terminals.clear();
     this.terminalContainers.clear();
     this.isSplitMode = false;
     this.splitDirection = null;
-
-    // Call parent dispose
     super.dispose();
-
     this.splitManagerLogger.lifecycle('SplitManager', 'completed');
   }
 }

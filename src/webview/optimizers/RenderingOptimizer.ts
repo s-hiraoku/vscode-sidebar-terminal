@@ -1,13 +1,6 @@
 /**
- * Rendering Optimizer
- *
- * Optimizes terminal rendering performance through:
- * - ResizeObserver-based debounced resizing (100ms)
- * - Dimension validation (min 50px width/height)
- * - WebGL auto-fallback to DOM renderer
- * - Device-specific smooth scrolling (trackpad: 0ms, mouse: 125ms)
- *
- * @see openspec/changes/optimize-terminal-rendering/specs/optimize-rendering/spec.md
+ * Optimizes terminal rendering through debounced resizing, dimension validation,
+ * WebGL auto-fallback, and device-specific smooth scrolling.
  */
 
 import { Terminal } from '@xterm/xterm';
@@ -59,22 +52,15 @@ export class RenderingOptimizer implements Disposable {
     };
   }
 
-  /**
-   * Setup optimized resize handling with ResizeObserver
-   */
   public setupOptimizedResize(
     terminal: Terminal,
     fitAddon: FitAddon,
     container: HTMLElement,
     terminalId: string
   ): void {
-    // Clean up existing observer
     this.disposeResizeObserver();
-
-    // 🔧 CRITICAL FIX: Store container reference for style reset during resize
     this.container = container;
 
-    // Create ResizeObserver for efficient resize detection
     this.resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         this.handleResize(entry, terminal, fitAddon, terminalId);
@@ -85,25 +71,19 @@ export class RenderingOptimizer implements Disposable {
     terminalLogger.info(`✅ ResizeObserver setup for terminal: ${terminalId}`);
   }
 
-  /**
-   * Handle resize with debouncing and dimension validation
-   */
   private handleResize(
     entry: ResizeObserverEntry,
     terminal: Terminal,
     fitAddon: FitAddon,
     terminalId: string
   ): void {
-    // Clear existing timer
     if (this.resizeTimer !== null) {
       window.clearTimeout(this.resizeTimer);
     }
 
-    // Debounce resize events
     this.resizeTimer = window.setTimeout(() => {
       const { width, height } = entry.contentRect;
 
-      // Validate dimensions
       if (!this.isValidDimension(width, height)) {
         terminalLogger.warn(
           `⚠️ Skipping resize for terminal ${terminalId}: invalid dimensions (${width}x${height})`
@@ -111,15 +91,9 @@ export class RenderingOptimizer implements Disposable {
         return;
       }
 
-      // Perform resize
       try {
-        // 🔧 CRITICAL FIX: Reset xterm.js internal element styles BEFORE fit()
-        // xterm.js sets fixed pixel widths that prevent expansion beyond initial size
         this.resetXtermInlineStyles(terminalId);
-
         fitAddon.fit();
-        // 🔧 CRITICAL FIX: Refresh terminal after fit to ensure cursor is displayed
-        // This is essential for cursor visibility after resize operations
         terminal.refresh(0, terminal.rows - 1);
         terminalLogger.debug(`✅ Terminal ${terminalId} resized to ${width}x${height}`);
       } catch (error) {
@@ -128,25 +102,16 @@ export class RenderingOptimizer implements Disposable {
     }, this.options.resizeDebounceMs);
   }
 
-  /**
-   * 🔧 CRITICAL FIX: Reset xterm.js internal element inline styles
-   * Delegates to shared DOMUtils.resetXtermInlineStyles
-   */
   private resetXtermInlineStyles(terminalId: string): void {
     if (!this.container) {
       terminalLogger.warn(`⚠️ No container reference for terminal ${terminalId}`);
       return;
     }
 
-    // 🔧 FIX: Use shared utility to reset xterm inline styles
     DOMUtils.resetXtermInlineStyles(this.container);
-
     terminalLogger.debug(`🔧 Reset xterm inline styles for terminal ${terminalId}`);
   }
 
-  /**
-   * Validate terminal dimensions
-   */
   private isValidDimension(width: number, height: number): boolean {
     return width > this.options.minWidth && height > this.options.minHeight;
   }

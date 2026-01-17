@@ -1,6 +1,6 @@
 /**
- * 共有型定義 - 全コンポーネントで使用する基本型
- * Extension Host と WebView 間で共有される型定義
+ * Shared type definitions - Base types used across all components
+ * Type definitions shared between Extension Host and WebView
  */
 
 // ===== Result Pattern (Issue #224) =====
@@ -28,7 +28,7 @@ export {
   all,
 } from './result';
 
-// ===== 基本ターミナル設定 =====
+// ===== Base Terminal Configuration =====
 
 /**
  * Active border display mode for terminals
@@ -39,13 +39,13 @@ export {
 export type ActiveBorderMode = 'none' | 'always' | 'multipleOnly';
 
 /**
- * 基本ターミナル設定インターフェース
- * 全てのターミナル設定の基盤となる型
+ * Base terminal configuration interface
+ * Foundation type for all terminal configurations
  */
 export interface BaseTerminalConfig {}
 
 /**
- * 表示関連設定
+ * Display-related configuration
  */
 export interface DisplayConfig extends BaseTerminalConfig {
   readonly fontSize: number;
@@ -55,7 +55,7 @@ export interface DisplayConfig extends BaseTerminalConfig {
 }
 
 /**
- * シェル関連設定
+ * Shell-related configuration
  */
 export interface ShellConfig {
   readonly shell?: string;
@@ -65,7 +65,7 @@ export interface ShellConfig {
 }
 
 /**
- * ターミナル制限設定
+ * Terminal limits configuration
  */
 export interface TerminalLimitsConfig {
   readonly maxTerminals: number;
@@ -74,7 +74,7 @@ export interface TerminalLimitsConfig {
 }
 
 /**
- * 操作関連設定
+ * Interaction-related configuration
  */
 export interface InteractionConfig {
   readonly confirmBeforeKill?: boolean;
@@ -83,11 +83,11 @@ export interface InteractionConfig {
   readonly activeBorderMode?: ActiveBorderMode;
 }
 
-// ===== 統合型定義 =====
+// ===== Unified Type Definitions =====
 
 /**
- * Extension Host で使用するターミナル設定
- * 従来の TerminalConfig の置き換え
+ * Terminal configuration used in Extension Host
+ * Replacement for the legacy TerminalConfig
  */
 export interface ExtensionTerminalConfig
   extends BaseTerminalConfig,
@@ -111,9 +111,9 @@ export interface ExtensionTerminalConfig
 }
 
 /**
- * 部分的なターミナル設定
- * WebView から Extension への設定更新で使用
- * フォント設定はVS Code設定から直接取得するため除外
+ * Partial terminal settings
+ * Used for settings updates from WebView to Extension
+ * Font settings are excluded as they are obtained directly from VS Code settings
  */
 export interface PartialTerminalSettings {
   fontSize?: number;
@@ -155,8 +155,8 @@ export interface PartialTerminalSettings {
 }
 
 /**
- * WebView用フォント設定値
- * 設定変更ではなく、現在の値を受信するためのインターフェース
+ * Font settings values for WebView
+ * Interface for receiving current values, not for settings changes
  */
 export interface WebViewFontSettings {
   fontSize: number;
@@ -174,8 +174,8 @@ export interface WebViewFontSettings {
 }
 
 /**
- * WebView用統合設定
- * PartialTerminalSettings + フォント設定値
+ * Unified settings for WebView
+ * PartialTerminalSettings + font settings values
  */
 export interface WebViewTerminalSettings extends PartialTerminalSettings {
   fontSize: number;
@@ -199,8 +199,8 @@ export interface WebViewSettingsPayload {
 }
 
 /**
- * 完全なターミナル設定
- * 全ての設定項目を含む統合型
+ * Complete terminal settings
+ * Unified type containing all configuration items
  */
 export interface CompleteTerminalSettings
   extends BaseTerminalConfig,
@@ -209,10 +209,10 @@ export interface CompleteTerminalSettings
     TerminalLimitsConfig,
     InteractionConfig {}
 
-// ===== WebView 固有設定 =====
+// ===== WebView-Specific Configuration =====
 
 /**
- * WebView表示設定
+ * WebView display settings
  */
 export interface WebViewDisplayConfig extends DisplayConfig {
   readonly minTerminalHeight: number;
@@ -228,12 +228,12 @@ export interface WebViewDisplayConfig extends DisplayConfig {
 }
 
 /**
- * 完全な拡張設定
- * 従来の ExtensionConfig の置き換え
+ * Complete extension configuration
+ * Replacement for the legacy ExtensionConfig
  */
 export interface CompleteExtensionConfig extends WebViewDisplayConfig, TerminalLimitsConfig {}
 
-// ===== 型エイリアス =====
+// ===== Type Aliases =====
 
 export type TerminalTheme = 'auto' | 'dark' | 'light';
 
@@ -341,18 +341,18 @@ export interface ProfileSelectionResult {
   source: 'user' | 'default' | 'auto-detected';
 }
 
-// ===== 後方互換性のためのエイリアス =====
+// ===== Backward Compatibility Aliases =====
 
 /**
- * 後方互換性のための型エイリアス
- * 段階的移行で使用
+ * Type alias for backward compatibility
+ * Used during gradual migration
  */
 export type TerminalConfig = ExtensionTerminalConfig;
 
-// ===== 設定キー定数 =====
+// ===== Configuration Key Constants =====
 
 /**
- * 設定アクセス用のキー定数
+ * Key constants for configuration access
  */
 export const CONFIG_SECTIONS = {
   SIDEBAR_TERMINAL: 'secondaryTerminal',
@@ -361,7 +361,7 @@ export const CONFIG_SECTIONS = {
 } as const;
 
 export const CONFIG_KEYS = {
-  // secondaryTerminal セクション
+  // secondaryTerminal section
   THEME: 'theme',
   CURSOR_BLINK: 'cursorBlink',
   MAX_TERMINALS: 'maxTerminals',
@@ -372,10 +372,10 @@ export const CONFIG_KEYS = {
   CONFIRM_BEFORE_KILL: 'confirmBeforeKill',
   PROTECT_LAST_TERMINAL: 'protectLastTerminal',
 
-  // editor セクション
+  // editor section
   MULTI_CURSOR_MODIFIER: 'multiCursorModifier',
 
-  // terminal.integrated セクション
+  // terminal.integrated section
   ALT_CLICK_MOVES_CURSOR: 'altClickMovesCursor',
   SHELL_WINDOWS: 'shell.windows',
   SHELL_OSX: 'shell.osx',
@@ -393,10 +393,10 @@ export const CONFIG_KEYS = {
   ACTIVE_BORDER_MODE: 'activeBorderMode',
 } as const;
 
-// ===== ターミナル管理型 =====
+// ===== Terminal Management Types =====
 
 /**
- * ターミナル情報
+ * Terminal information
  */
 export interface TerminalInfo {
   id: string;
@@ -405,7 +405,7 @@ export interface TerminalInfo {
 }
 
 /**
- * ターミナル状態管理
+ * Terminal state management
  */
 /**
  * Terminal process states based on VS Code's implementation
@@ -446,7 +446,7 @@ export interface TerminalState {
 }
 
 /**
- * ターミナル削除結果
+ * Terminal deletion result
  */
 export interface DeleteResult {
   success: boolean;
@@ -455,37 +455,37 @@ export interface DeleteResult {
 }
 
 /**
- * ターミナルインスタンス
+ * Terminal instance
  */
 export interface TerminalInstance {
   id: string;
   pty?: import('@homebridge/node-pty-prebuilt-multiarch').IPty; // Properly typed node-pty interface
-  ptyProcess?: import('@homebridge/node-pty-prebuilt-multiarch').IPty; // 新しいpty参照名（セッション復元対応）
+  ptyProcess?: import('@homebridge/node-pty-prebuilt-multiarch').IPty; // New pty reference name (for session restoration)
   process?: NodeJS.Process; // For lifecycle service compatibility
   name: string;
-  number?: number; // ターミナル番号（1-5）
-  cwd?: string; // 現在の作業ディレクトリ
+  number?: number; // Terminal number (1-5)
+  cwd?: string; // Current working directory
   shell?: string; // Shell path
   shellArgs?: string[]; // Shell arguments
   pid?: number; // Process ID
   isActive: boolean;
-  createdAt?: Date; // 作成日時
+  createdAt?: Date; // Creation timestamp
   creationDisplayModeOverride?: 'normal' | 'fullscreen' | 'split';
 
-  // プロセス状態管理（VS Code準拠）
-  processState?: ProcessState; // プロセスの現在の状態
-  interactionState?: InteractionState; // インタラクション状態
-  persistentProcessId?: string; // 永続プロセスID
-  shouldPersist?: boolean; // プロセスを永続化するかどうか
+  // Process state management (VS Code compliant)
+  processState?: ProcessState; // Current process state
+  interactionState?: InteractionState; // Interaction state
+  persistentProcessId?: string; // Persistent process ID
+  shouldPersist?: boolean; // Whether to persist the process
 
-  // セッション復元関連のプロパティ
-  isSessionRestored?: boolean; // セッション復元で作成されたターミナルかどうか
-  sessionRestoreMessage?: string; // 復元メッセージ
-  sessionScrollback?: string[]; // 復元時の履歴データ
+  // Session restoration related properties
+  isSessionRestored?: boolean; // Whether the terminal was created through session restoration
+  sessionRestoreMessage?: string; // Restoration message
+  sessionScrollback?: string[]; // History data for restoration
 }
 
 /**
- * ターミナルイベント
+ * Terminal event
  */
 export interface TerminalEvent {
   terminalId: string;
@@ -497,7 +497,7 @@ export interface TerminalEvent {
 }
 
 /**
- * Alt+Click状態
+ * Alt+Click state
  */
 export interface AltClickState {
   isVSCodeAltClickEnabled: boolean;
@@ -505,7 +505,7 @@ export interface AltClickState {
 }
 
 /**
- * ターミナル操作イベント
+ * Terminal interaction event
  */
 export interface TerminalInteractionEvent {
   type:
@@ -535,10 +535,10 @@ export interface TerminalInteractionEvent {
   data?: unknown;
 }
 
-// ===== メッセージ通信型 =====
+// ===== Message Communication Types =====
 
 /**
- * WebView からExtension Host へのメッセージ
+ * Message from WebView to Extension Host
  */
 export interface WebviewMessage {
   command:
@@ -692,7 +692,7 @@ export interface WebviewMessage {
   exitCode?: number;
   terminalId?: string;
   terminalName?: string;
-  terminalNumber?: number; // ターミナル番号（1-5）- Extension → WebView 通信用
+  terminalNumber?: number; // Terminal number (1-5) - For Extension to WebView communication
 
   // Shell Integration properties
   status?: string;
@@ -707,7 +707,7 @@ export interface WebviewMessage {
     accessibility?: boolean;
   };
 
-  // ターミナル情報（復元用）
+  // Terminal information (for restoration)
   terminalInfo?: {
     originalId: string;
     name: string;
@@ -726,20 +726,20 @@ export interface WebviewMessage {
   reason?: string;
   terminals?: TerminalInfo[];
   activeTerminalId?: string;
-  settings?: PartialTerminalSettings; // 部分的な設定を受け取るよう修正
-  fontSettings?: WebViewFontSettings; // フォント設定を受け取る
-  state?: TerminalState; // 新しいアーキテクチャ用の状態更新
+  settings?: PartialTerminalSettings; // Modified to receive partial settings
+  fontSettings?: WebViewFontSettings; // Receive font settings
+  state?: TerminalState; // State update for new architecture
   claudeStatus?: {
     activeTerminalName: string | null;
     status: 'connected' | 'disconnected' | 'none';
     agentType: string | null;
-  }; // CLI Agent接続状態の情報
+  }; // CLI Agent connection status information
   cliAgentStatus?: {
     activeTerminalName: string | null;
     status: 'connected' | 'disconnected' | 'none';
     agentType: string | null;
     terminalId?: string; // 🛠️ FIX: Add terminalId for reliable status updates
-  }; // CLI Agent接続状態の情報（新しい名前）
+  }; // CLI Agent connection status information (new name)
 
   forceReconnect?: boolean; // Force reconnect flag for CLI Agent switching
 
@@ -756,67 +756,67 @@ export interface WebviewMessage {
   connectedAgentType?: string | null;
   disconnectedCount?: number;
 
-  cols?: number; // リサイズ用
-  rows?: number; // リサイズ用
+  cols?: number; // For resize
+  rows?: number; // For resize
   linkType?: 'file' | 'url';
   url?: string;
   filePath?: string;
   lineNumber?: number;
   columnNumber?: number;
   order?: string[];
-  requestSource?: 'header' | 'panel'; // 削除リクエストの送信元
-  timestamp?: number; // エラー報告用
+  requestSource?: 'header' | 'panel'; // Source of deletion request
+  timestamp?: number; // For error reporting
   type?: string; // For test messages and error reporting
-  message?: string; // エラー報告用
-  context?: string; // エラー報告用
-  stack?: string; // エラー報告用
+  message?: string; // For error reporting
+  context?: string; // For error reporting
+  stack?: string; // For error reporting
 
   // Panel location for dynamic split direction (Issue #148)
   location?: 'sidebar' | 'panel'; // Panel location information
   direction?: 'horizontal' | 'vertical'; // Split direction for terminal splitting
 
-  // セッション復元関連
-  sessionRestoreMessage?: string; // 復元メッセージ
-  sessionScrollback?: string[]; // 復元する履歴データ
-  scrollbackLines?: number; // 取得する履歴行数
-  scrollbackData?: string[]; // 取得された履歴データ
-  errorType?: string; // エラータイプ (file, corruption, permission, network, unknown)
-  recoveryAction?: string; // 回復処理の説明
-  requestId?: string; // リクエストID（応答待機用）
+  // Session restoration related
+  sessionRestoreMessage?: string; // Restoration message
+  sessionScrollback?: string[]; // History data to restore
+  scrollbackLines?: number; // Number of history lines to retrieve
+  scrollbackData?: string[]; // Retrieved history data
+  errorType?: string; // Error type (file, corruption, permission, network, unknown)
+  recoveryAction?: string; // Description of recovery action
+  requestId?: string; // Request ID (for response waiting)
 
-  // Scrollback復元関連
+  // Scrollback restoration related
   scrollbackContent?:
     | Array<{
         content: string;
         type?: 'output' | 'input' | 'error';
         timestamp?: number;
       }>
-    | string[]; // 復元するscrollback内容
+    | string[]; // Scrollback content to restore
 
-  // WebView側のコマンド名拡張（重複削除）
+  // WebView command name extension (duplicate removed)
   scrollbackProgress?: {
     terminalId: string;
     progress: number;
     currentLines: number;
     totalLines: number;
     stage: 'loading' | 'decompressing' | 'restoring';
-  }; // scrollback復元の進捗
-  maxLines?: number; // 取得する最大行数
-  useCompression?: boolean; // 圧縮を使用するか
+  }; // Scrollback restoration progress
+  maxLines?: number; // Maximum number of lines to retrieve
+  useCompression?: boolean; // Whether to use compression
   cursorPosition?: {
     x: number;
     y: number;
-  }; // カーソル位置
+  }; // Cursor position
 
-  // セッション関連の追加プロパティ
-  sessionData?: unknown; // セッションデータ
+  // Session-related additional properties
+  sessionData?: unknown; // Session data
 
   // Persistence-related properties
   terminalIds?: string[]; // Array of terminal IDs
   terminalData?: any; // Terminal data for persistence
 
-  // 🎯 FIX: 削除処理統一化で追加
-  success?: boolean; // 削除処理の成功/失敗
+  // 🎯 FIX: Added for unified deletion processing
+  success?: boolean; // Deletion operation success/failure
 
   // Additional WebView message properties
   terminal?: any; // Terminal object for responses
@@ -826,15 +826,15 @@ export interface WebviewMessage {
   // Custom event properties
   eventType?: string; // Custom event type for extensibility
   eventData?: unknown; // Custom event data
-  // reason?: string; // 失敗理由 - 重複のためコメント化（上部のreasonを使用）
+  // reason?: string; // Failure reason - commented out due to duplication (use reason above)
 
   // Message ID for response tracking
   messageId?: string; // Unique message identifier for request-response correlation
 
-  // AIエージェント切り替え関連プロパティ
-  action?: string; // switchAiAgentコマンドのアクション
-  newStatus?: 'connected' | 'disconnected' | 'none'; // AIエージェントの新しいステータス
-  agentType?: string | null; // エージェントタイプ
+  // AI agent switching related properties
+  action?: string; // Action for switchAiAgent command
+  newStatus?: 'connected' | 'disconnected' | 'none'; // New AI agent status
+  agentType?: string | null; // Agent type
 
   // 📋 Clipboard operation properties
   text?: string; // Text content for clipboard operations
@@ -877,7 +877,7 @@ export interface WebviewMessage {
 }
 
 /**
- * Extension Host からWebView へのメッセージ
+ * Message from Extension Host to WebView
  */
 export interface VsCodeMessage {
   command:
@@ -919,16 +919,16 @@ export interface VsCodeMessage {
   cols?: number;
   rows?: number;
   terminalId?: string;
-  terminalName?: string; // ターミナル名
+  terminalName?: string; // Terminal name
   type?: TerminalInteractionEvent['type'];
-  settings?: PartialTerminalSettings; // 部分的な設定を送信するよう修正
-  requestSource?: 'header' | 'panel'; // 新しいアーキテクチャ用の削除要求元
-  timestamp?: number; // エラー報告用
-  message?: string; // エラー報告用
-  context?: string; // エラー報告用
-  stack?: string; // エラー報告用
+  settings?: PartialTerminalSettings; // Modified to send partial settings
+  requestSource?: 'header' | 'panel'; // Deletion request source for new architecture
+  timestamp?: number; // For error reporting
+  message?: string; // For error reporting
+  context?: string; // For error reporting
+  stack?: string; // For error reporting
 
-  // ターミナル復元関連
+  // Terminal restoration related
   terminalInfo?: {
     originalId: string;
     name: string;
@@ -937,27 +937,27 @@ export interface VsCodeMessage {
     isActive: boolean;
   };
 
-  // セッション復元関連
-  scrollbackLines?: number; // 取得する履歴行数
-  scrollbackData?: string[]; // 履歴データ
-  maxLines?: number; // 取得する最大行数
+  // Session restoration related
+  scrollbackLines?: number; // Number of history lines to retrieve
+  scrollbackData?: string[]; // History data
+  maxLines?: number; // Maximum number of lines to retrieve
   scrollbackContent?: Array<{
     content: string;
     type?: 'output' | 'input' | 'error';
     timestamp?: number;
-  }>; // 復元するscrollback内容
-  requestId?: string; // リクエストID（応答待機用）
+  }>; // Scrollback content to restore
+  requestId?: string; // Request ID (for response waiting)
 
-  // セッション関連の追加プロパティ
-  serializedData?: Record<string, string>; // シリアライズされたデータ
-  terminalCount?: number; // ターミナル数
-  sessionData?: unknown; // セッションデータ
+  // Session-related additional properties
+  serializedData?: Record<string, string>; // Serialized data
+  terminalCount?: number; // Number of terminals
+  sessionData?: unknown; // Session data
 
   // 🆕 Panel location (Issue #148)
-  location?: 'sidebar' | 'panel'; // パネル位置情報
+  location?: 'sidebar' | 'panel'; // Panel location information
 
-  // AIエージェント切り替え関連プロパティ
-  action?: string; // switchAiAgentコマンドのアクション
+  // AI agent switching related properties
+  action?: string; // Action for switchAiAgent command
   forceReconnect?: boolean; // Manual reset functionality
   agentType?: 'claude' | 'gemini' | 'codex'; // Agent type for force reconnect
   isForceReconnect?: boolean; // Alternative property name for compatibility
@@ -1146,10 +1146,10 @@ export interface CliAgentStatusUpdateOptions {
   readonly context?: any;
 }
 
-// ===== 型ガード関数 =====
+// ===== Type Guard Functions =====
 
 /**
- * BaseTerminalConfig の型ガード
+ * Type guard for BaseTerminalConfig
  */
 export function isBaseTerminalConfig(obj: unknown): obj is BaseTerminalConfig {
   return typeof obj === 'object' && obj !== null;

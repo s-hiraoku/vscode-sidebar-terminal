@@ -3,6 +3,7 @@
     "claude-mem@thedotmack": true,
     "context7@claude-plugins-official": true,
     "playwright@claude-plugins-official": true,
-    "serena@claude-plugins-official": true
+    "serena@claude-plugins-official": true,
+    "ralph-wiggum@claude-plugins-official": true
   }
 }
