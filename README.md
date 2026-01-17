@@ -50,7 +50,7 @@ Automatic detection and status tracking for:
 - **Claude Code**
 - **Codex CLI**
 - **Gemini CLI**
-- **Copilot CLI**
+- **GitHub Copilot CLI**
 
 **Features:**
 

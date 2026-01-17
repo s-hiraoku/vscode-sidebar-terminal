@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.5] - 2026-01-17
+
+### Changed
+
+- **Code Simplification & Refactoring**: Major codebase cleanup removing ~2,700 lines of redundant code (#376)
+  - Simplified TerminalManager with improved cleanup guard mechanism using `_cleaningTerminals` Set
+  - Streamlined PTY recovery logic in TerminalIOCoordinator to avoid skipping valid alternatives
+  - Improved error logging format in SessionLifecycleManager for better debugging
+  - Translated Japanese comments to English for international contributors
+  - Removed unused dead fields and redundant validation code
+
+### Fixed
+
+- **Duplicate Terminal Cleanup Prevention**: Implemented idempotent cleanup pattern in TerminalManager
+  - Added `_cleaningTerminals` guard Set to prevent concurrent cleanup operations on the same terminal
+  - Fixed `safeKillTerminal` to properly respect the `terminalId` parameter and log errors appropriately
+  - Ensures terminal removal events fire exactly once per terminal
+
+- **PTY Recovery Logic**: Fixed issue where PTY recovery would skip all alternatives
+  - Corrected filter logic to properly exclude only the primary failing PTY instance
+  - Alternative PTY instances are now correctly attempted during recovery
+
+- **CLI Agent Type Detection**: Improved `getConnectedAgentType` method
+  - Added explicit copilot type support in switch statement
+  - Enhanced type validation for agent detection
+
 ## [0.2.4] - 2026-01-07
 
 ### Added
