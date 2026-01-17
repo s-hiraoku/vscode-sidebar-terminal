@@ -163,15 +163,18 @@ export class TerminalIOCoordinator {
   }
 
   private attemptPtyRecovery(terminal: TerminalInstance, data: string): boolean {
-    const primaryPty = terminal.ptyProcess || terminal.pty;
+    // Primary PTY is ptyProcess if available, otherwise pty
+    const primary = terminal.ptyProcess;
+    // Try alternative PTY instances (excluding the primary that already failed)
     const alternatives = [terminal.ptyProcess, terminal.pty].filter(
-      (p) => p && p !== primaryPty
+      (p): p is NonNullable<typeof p> => p != null && p !== primary
     );
 
     for (const ptyInstance of alternatives) {
-      if (ptyInstance && typeof ptyInstance.write === 'function') {
+      if (typeof ptyInstance.write === 'function') {
         try {
           ptyInstance.write(data);
+          // If we succeeded with terminal.pty, clear the failed ptyProcess
           if (ptyInstance === terminal.pty) {
             terminal.ptyProcess = undefined;
           }

@@ -34,8 +34,7 @@ describe('SessionLifecycleManager - scrollback extraction logging', () => {
     await (manager as any).extractScrollbackFromAllTerminals();
 
     expect(debugSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Scrollback extraction failed for terminal term-1'),
-      error
+      expect.stringContaining('Scrollback extraction failed for terminal term-1: scrollback failed')
     );
   });
 });

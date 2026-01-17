@@ -52,7 +52,7 @@ describe('TerminalManager - Idempotent Removal', () => {
   it('should only fire exit event once if cleanup is already in progress', async () => {
     let exitEventCount = 0;
 
-    terminalManager.onExit((_event) => {
+    terminalManager.onExit(() => {
       exitEventCount++;
     });
 
