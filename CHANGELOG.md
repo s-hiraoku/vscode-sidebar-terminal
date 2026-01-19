@@ -7,9 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.6] - 2026-01-19
+
 ### Fixed
 
-- **Tab Drag & Drop in Split Mode**: Fixed terminal display order not updating in split mode after tab drag-and-drop reordering
+- **Tab Drag & Drop in Split Mode**: Fixed terminal display order not updating in split mode after tab drag-and-drop reordering (#387)
   - `reorderContainers()` now updates `containerCache` Map order in addition to DOM order
   - `getContainerOrder()` correctly returns the user-arranged tab order
   - Split mode display now reflects the tab arrangement set via drag-and-drop
