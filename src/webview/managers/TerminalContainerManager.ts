@@ -431,7 +431,8 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
   }
 
   /**
-   * コンテナのDOM順序を変更
+   * コンテナのDOM順序を変更し、containerCacheの順序も更新
+   * これにより getContainerOrder() が正しい順序を返すようになる
    */
   public reorderContainers(order: string[]): void {
     if (!Array.isArray(order) || order.length === 0) {
@@ -451,12 +452,23 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
     }
 
     const reorderedContainers: HTMLElement[] = [];
+    // Create new ordered cache to preserve drag-drop order
+    const newContainerCache = new Map<string, HTMLElement>();
+
     for (const terminalId of order) {
       const container = this.containerCache.get(terminalId);
       if (container && document.contains(container)) {
         reorderedContainers.push(container);
+        newContainerCache.set(terminalId, container);
       } else if (container) {
         this.containerCache.delete(terminalId);
+      }
+    }
+
+    // Add any remaining containers not in order array (preserves containers not explicitly reordered)
+    for (const [terminalId, container] of this.containerCache) {
+      if (!newContainerCache.has(terminalId)) {
+        newContainerCache.set(terminalId, container);
       }
     }
 
@@ -465,13 +477,16 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
       return;
     }
 
+    // Update containerCache with new order (ES2015 Map preserves insertion order)
+    this.containerCache = newContainerCache;
+
     const fragment = document.createDocumentFragment();
     for (const container of reorderedContainers) {
       fragment.appendChild(container);
     }
     parentContainer.appendChild(fragment);
 
-    this.log(`✅ Successfully reordered ${reorderedContainers.length} containers`);
+    this.log(`✅ Successfully reordered ${reorderedContainers.length} containers, cache order updated`);
   }
 
   /**

@@ -40,7 +40,7 @@
 | **Multiple Terminals**  | Up to 5 concurrent terminal instances                      |
 | **Session Persistence** | Auto-save/restore sessions with 1,000 lines scrollback     |
 | **Split Views**         | Vertical/horizontal splitting for multi-terminal workflows |
-| **Tab Management**      | Drag & drop reordering, close buttons, smart switching     |
+| **Tab Management**      | Drag & drop reordering (synced with split view), close buttons, smart switching |
 | **Cross-Platform**      | Windows, macOS, and Linux support                          |
 
 ### AI Agent Integration

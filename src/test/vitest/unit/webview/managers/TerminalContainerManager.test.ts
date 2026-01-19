@@ -191,11 +191,52 @@ describe('TerminalContainerManager', () => {
       manager.registerContainer('t2', c2);
       parent?.appendChild(c1);
       parent?.appendChild(c2);
-      
+
       manager.reorderContainers(['t2', 't1']);
-      
+
       expect(parent?.firstChild).toBe(c2);
       expect(parent?.lastChild).toBe(c1);
+    });
+
+    it('should update containerCache order after reordering (fixes split mode display order)', () => {
+      const parent = document.getElementById('terminal-body');
+      const c1 = document.createElement('div');
+      const c2 = document.createElement('div');
+      const c3 = document.createElement('div');
+      manager.registerContainer('t1', c1);
+      manager.registerContainer('t2', c2);
+      manager.registerContainer('t3', c3);
+      parent?.appendChild(c1);
+      parent?.appendChild(c2);
+      parent?.appendChild(c3);
+
+      // Initial order should be t1, t2, t3
+      expect(manager.getContainerOrder()).toEqual(['t1', 't2', 't3']);
+
+      // Reorder to t3, t1, t2 (simulating drag-drop)
+      manager.reorderContainers(['t3', 't1', 't2']);
+
+      // Cache order should now reflect the new order
+      expect(manager.getContainerOrder()).toEqual(['t3', 't1', 't2']);
+    });
+
+    it('should preserve containers not in order array at the end', () => {
+      const parent = document.getElementById('terminal-body');
+      const c1 = document.createElement('div');
+      const c2 = document.createElement('div');
+      const c3 = document.createElement('div');
+      manager.registerContainer('t1', c1);
+      manager.registerContainer('t2', c2);
+      manager.registerContainer('t3', c3);
+      parent?.appendChild(c1);
+      parent?.appendChild(c2);
+      parent?.appendChild(c3);
+
+      // Reorder with only t2, t1 (t3 not mentioned)
+      manager.reorderContainers(['t2', 't1']);
+
+      // t3 should be preserved at the end
+      expect(manager.getContainerOrder()).toEqual(['t2', 't1', 't3']);
     });
   });
 
