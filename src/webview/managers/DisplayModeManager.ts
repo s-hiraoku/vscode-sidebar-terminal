@@ -163,6 +163,17 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
     containerManager.clearSplitArtifacts();
     this.log('Cleared split artifacts before fullscreen');
 
+    // 🔧 FIX (Issue #368): Clear inline height styles from split mode
+    // Split mode sets explicit height with !important which persists after mode change
+    const allContainers = containerManager.getAllContainers();
+    allContainers.forEach((container) => {
+      container.style.removeProperty('height');
+      container.style.removeProperty('flex-basis');
+      container.style.removeProperty('flex');
+      container.style.removeProperty('max-height');
+    });
+    this.log('Cleared inline height styles from containers');
+
     const displayState = {
       mode: 'fullscreen' as const,
       activeTerminalId: terminalId,
@@ -177,6 +188,13 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
     this.syncVisibilityFromSnapshot();
     this.refreshSplitToggleState();
     this.notifyModeChanged('fullscreen');
+
+    // 🔧 FIX (Issue #368): Refit terminal and notify PTY after fullscreen transition
+    // Without this, TUI apps retain split mode dimensions until manual resize
+    requestAnimationFrame(() => {
+      this.coordinator.refitAllTerminals?.();
+      this.log('🔄 [FULLSCREEN] Terminal refit scheduled after mode change');
+    });
 
     this.log(`Terminal ${terminalId} is now in fullscreen mode`);
   }
@@ -372,6 +390,19 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
     // 分割モードを解除
     this.exitSplitMode();
 
+    // 🔧 FIX (Issue #368): Clear inline height styles before showing terminals
+    const containerManager = this.coordinator?.getTerminalContainerManager?.();
+    if (containerManager) {
+      const allContainers = containerManager.getAllContainers();
+      allContainers.forEach((container) => {
+        container.style.removeProperty('height');
+        container.style.removeProperty('flex-basis');
+        container.style.removeProperty('flex');
+        container.style.removeProperty('max-height');
+      });
+      this.log('Cleared inline height styles from containers');
+    }
+
     // すべてのターミナルを表示
     this.showAllTerminals();
 
@@ -381,6 +412,12 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
 
     this.refreshSplitToggleState();
     this.notifyModeChanged('normal');
+
+    // 🔧 FIX (Issue #368): Refit terminal and notify PTY after mode change
+    requestAnimationFrame(() => {
+      this.coordinator.refitAllTerminals?.();
+      this.log('🔄 [NORMAL] Terminal refit scheduled after mode change');
+    });
   }
 
   /**

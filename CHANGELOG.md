@@ -13,10 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `SplitManager.refitAllTerminals()` now delegates to coordinator's version for proper PTY notification
   - PTY resize notification is now deferred until AFTER double-fit completes in `ResizeCoordinator`
   - `DisplayModeManager.showAllTerminalsSplit()` uses staged RAF approach (not immediate) for CSS layout settling
+  - `DisplayModeManager.showTerminalFullscreen()` now clears split mode inline height styles and calls refitAllTerminals
+  - `DisplayModeManager.applyNormalMode()` now clears inline height styles and calls refitAllTerminals
   - `SplitManager.redistributeSplitTerminals()` clears inline height styles before recalculating
   - Force browser reflow (`offsetHeight`) before reading container dimensions
   - Ensures terminal dimensions are fully calculated before SIGWINCH signal is sent
-  - TUI applications now correctly resize to fill the available terminal space
+  - TUI applications now correctly resize to fill the available terminal space when switching between modes
 
 ## [0.2.6] - 2026-01-19
 
