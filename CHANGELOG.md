@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.7] - 2026-01-21
+
 ### Fixed
 
 - **TUI Display Height in Split Mode**: Fixed TUI applications (vim, htop, zellij) displaying with reduced height when terminal is split (#368)
@@ -19,6 +21,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Force browser reflow (`offsetHeight`) before reading container dimensions
   - Ensures terminal dimensions are fully calculated before SIGWINCH signal is sent
   - TUI applications now correctly resize to fill the available terminal space when switching between modes
+
+### Changed
+
+- **Code Quality Improvements**:
+  - Added `clearContainerHeightStyles()` and `forceReflow()` utilities to DOMUtils
+  - Added disposal guard in ResizeCoordinator to prevent accessing null terminal during async operations
+  - Added timeout tracking in DisplayModeManager to prevent orphaned callbacks on rapid mode changes
 
 ## [0.2.6] - 2026-01-19
 
