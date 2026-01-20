@@ -76,6 +76,9 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
   // ターミナルの可視性マップ
   private terminalVisibility = new Map<string, boolean>();
 
+  // Timeout ID for final redistribute in split mode (Issue #368)
+  private _finalRedistributeTimeout: ReturnType<typeof setTimeout> | null = null;
+
   constructor(coordinator: IManagerCoordinator) {
     super('DisplayModeManager', {
       enableLogging: true,
@@ -105,6 +108,12 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
    */
   public setDisplayMode(mode: DisplayMode): void {
     this.log(`Setting display mode: ${this.currentMode} -> ${mode}`);
+
+    // Clear pending redistribute timeout when leaving split mode
+    if (this._finalRedistributeTimeout !== null) {
+      clearTimeout(this._finalRedistributeTimeout);
+      this._finalRedistributeTimeout = null;
+    }
 
     // 前回のモードを記録
     this.previousMode = this.currentMode;
@@ -269,7 +278,9 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
 
           // Stage 3: Final layout after CSS fully settles (100ms delay)
           // This is the critical call that ensures TUI apps get correct dimensions
-          setTimeout(() => {
+          // Store timeout ID to allow cancellation on rapid mode changes
+          this._finalRedistributeTimeout = setTimeout(() => {
+            this._finalRedistributeTimeout = null;
             redistribute();
             this.log('🔄 [SPLIT] Final redistribute completed after CSS settle');
           }, 100);
@@ -465,6 +476,12 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
    */
   protected doDispose(): void {
     this.log('Disposing DisplayModeManager');
+
+    // Clear pending redistribute timeout
+    if (this._finalRedistributeTimeout !== null) {
+      clearTimeout(this._finalRedistributeTimeout);
+      this._finalRedistributeTimeout = null;
+    }
 
     // 通常モードに戻す
     this.applyNormalMode();
