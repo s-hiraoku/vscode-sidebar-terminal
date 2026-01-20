@@ -11,6 +11,8 @@ vi.mock('../../../../../webview/utils/NotificationUtils', () => ({
 vi.mock('../../../../../webview/utils/DOMUtils', () => ({
   DOMUtils: {
     resetXtermInlineStyles: vi.fn(),
+    forceReflow: vi.fn(),
+    clearContainerHeightStyles: vi.fn(),
   },
 }));
 

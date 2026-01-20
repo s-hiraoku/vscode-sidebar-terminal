@@ -178,9 +178,7 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
         DOMUtils.resetXtermInlineStyles(container, false);
       }
     });
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-    document.body.offsetWidth;
+    DOMUtils.forceReflow();
 
     requestAnimationFrame(() => {
       this.terminals.forEach((terminalData, terminalId) => {
@@ -313,10 +311,8 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
     const terminalsWrapper = document.getElementById('terminals-wrapper');
     const terminalBody = document.getElementById('terminal-body');
 
-    // 🔧 FIX (Issue #368): Force browser reflow before reading dimensions
-    // This ensures CSS layout changes are applied before we calculate heights
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-    terminalsWrapper?.offsetHeight;
+    // Force reflow to ensure CSS changes are applied before reading dimensions
+    DOMUtils.forceReflow(terminalsWrapper);
 
     const wrapperTargets = terminalsWrapper
       ? Array.from(
@@ -348,17 +344,13 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
       return;
     }
 
-    // 🔧 FIX (Issue #368): Clear any existing inline height styles BEFORE calculating
-    // This allows CSS flex layout to determine natural heights first
+    // Clear existing inline height styles to allow CSS flex layout to recalculate
     targets.forEach((target) => {
       target.style.removeProperty('height');
       target.style.removeProperty('flex-basis');
       target.style.removeProperty('flex');
     });
-
-    // Force reflow after clearing styles
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-    terminalsWrapper?.offsetHeight;
+    DOMUtils.forceReflow(terminalsWrapper);
 
     const baseHeight =
       newHeight > 0 ? newHeight : terminalsWrapper?.clientHeight ?? terminalBody?.clientHeight ?? 0;

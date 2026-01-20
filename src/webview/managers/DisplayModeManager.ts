@@ -21,6 +21,7 @@
 import { BaseManager } from './BaseManager';
 import { IManagerCoordinator } from '../interfaces/ManagerInterfaces';
 import { ISplitLayoutController } from '../interfaces/ISplitLayoutController';
+import { DOMUtils } from '../utils/DOMUtils';
 
 /**
  * 表示モードの種類
@@ -163,15 +164,9 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
     containerManager.clearSplitArtifacts();
     this.log('Cleared split artifacts before fullscreen');
 
-    // 🔧 FIX (Issue #368): Clear inline height styles from split mode
-    // Split mode sets explicit height with !important which persists after mode change
+    // Clear inline height styles from split mode before fullscreen transition
     const allContainers = containerManager.getAllContainers();
-    allContainers.forEach((container) => {
-      container.style.removeProperty('height');
-      container.style.removeProperty('flex-basis');
-      container.style.removeProperty('flex');
-      container.style.removeProperty('max-height');
-    });
+    allContainers.forEach((container) => DOMUtils.clearContainerHeightStyles(container));
     this.log('Cleared inline height styles from containers');
 
     const displayState = {
@@ -245,29 +240,18 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
 
     containerManager.applyDisplayState(displayState);
 
-    // 🔧 FIX: Ensure container heights are aligned with the split direction
+    // Ensure container heights are aligned with the split direction
     const allContainers = containerManager.getAllContainers();
     if (direction === 'horizontal') {
-      // Clear any fixed heights from prior vertical splits/fullscreen
-      allContainers.forEach((container) => {
-        container.style.removeProperty('height');
-        container.style.removeProperty('maxHeight');
-      });
+      // Clear fixed heights from prior vertical splits/fullscreen
+      allContainers.forEach((container) => DOMUtils.clearContainerHeightStyles(container));
     } else {
-      // Vertical split: explicitly divide height after layout settles
-      // 🔧 FIX (Issue #368): Wait for CSS layout to be fully calculated before
-      // reading container dimensions. The browser needs time to reflow after
-      // applyDisplayState() changes the DOM structure.
-
-      // Force browser reflow BEFORE reading any dimensions
-      // This ensures CSS changes from applyDisplayState() are applied
-      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-      terminalsWrapper?.offsetHeight;
+      // Vertical split: divide height after layout settles
+      // Force reflow to ensure CSS changes are applied before reading dimensions
+      DOMUtils.forceReflow(terminalsWrapper);
 
       const redistribute = () => {
-        // Force reflow before reading clientHeight to get accurate value
-        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-        terminalsWrapper?.offsetHeight;
+        DOMUtils.forceReflow(terminalsWrapper);
         const availableHeight = terminalsWrapper?.clientHeight ?? 0;
         this.log(`🔄 [SPLIT] redistribute: availableHeight=${availableHeight}px`);
         if (availableHeight > 0) {
@@ -390,16 +374,11 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
     // 分割モードを解除
     this.exitSplitMode();
 
-    // 🔧 FIX (Issue #368): Clear inline height styles before showing terminals
+    // Clear inline height styles before showing terminals
     const containerManager = this.coordinator?.getTerminalContainerManager?.();
     if (containerManager) {
       const allContainers = containerManager.getAllContainers();
-      allContainers.forEach((container) => {
-        container.style.removeProperty('height');
-        container.style.removeProperty('flex-basis');
-        container.style.removeProperty('flex');
-        container.style.removeProperty('max-height');
-      });
+      allContainers.forEach((container) => DOMUtils.clearContainerHeightStyles(container));
       this.log('Cleared inline height styles from containers');
     }
 
