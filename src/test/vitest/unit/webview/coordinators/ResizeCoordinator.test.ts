@@ -253,6 +253,77 @@ describe('ResizeCoordinator', () => {
         vi.advanceTimersByTime(100);
       }).not.toThrow();
     });
+
+    it('should notify PTY with dimensions AFTER double-fit completes (Issue #368)', () => {
+      // This test verifies that PTY resize notification happens AFTER
+      // the second fit() call, ensuring TUI applications receive correct dimensions
+      const fitCallOrder: string[] = [];
+      let terminalDimensions = { cols: 80, rows: 24 };
+
+      const mockFit = vi.fn().mockImplementation(() => {
+        fitCallOrder.push('fit');
+        // Simulate fit() updating terminal dimensions on second call
+        if (fitCallOrder.filter(c => c === 'fit').length >= 2) {
+          terminalDimensions = { cols: 100, rows: 30 };
+        }
+      });
+
+      const mockContainer = document.createElement('div');
+
+      // Mock terminal that updates dimensions after fit
+      const mockTerminal = {
+        get cols() { return terminalDimensions.cols; },
+        get rows() { return terminalDimensions.rows; },
+      };
+
+      mockTerminals.set('terminal-1', {
+        terminal: mockTerminal,
+        fitAddon: { fit: mockFit, proposeDimensions: vi.fn() },
+        container: mockContainer,
+      });
+
+      coordinator.refitAllTerminals();
+
+      // Advance past BOTH requestAnimationFrame calls (first fit + second fit)
+      vi.advanceTimersByTime(100);
+
+      // fit() should be called at least twice (double-fit pattern)
+      expect(mockFit).toHaveBeenCalledTimes(2);
+
+      // PTY should be notified with the FINAL dimensions after double-fit
+      // This is the critical assertion for Issue #368
+      expect(mockDeps.notifyResize).toHaveBeenCalledWith('terminal-1', 100, 30);
+    });
+
+    it('should use deferred PTY notification for split mode timing (Issue #368)', () => {
+      // When in split mode, CSS layout changes need time to settle
+      // PTY notification should be deferred until layout is stable
+      const mockFit = vi.fn();
+      const mockContainer = document.createElement('div');
+
+      mockTerminals.set('terminal-1', {
+        terminal: { cols: 80, rows: 24 },
+        fitAddon: { fit: mockFit, proposeDimensions: vi.fn() },
+        container: mockContainer,
+      });
+
+      coordinator.refitAllTerminals();
+
+      // First RAF - initial fit
+      vi.advanceTimersByTime(16);
+
+      // PTY should NOT be notified immediately after first fit
+      // (This would be the old buggy behavior)
+
+      // Second RAF - double-fit completes
+      vi.advanceTimersByTime(16);
+
+      // Only after both fits complete should PTY be notified
+      // Advance more to ensure all callbacks processed
+      vi.advanceTimersByTime(100);
+
+      expect(mockDeps.notifyResize).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('setupPanelLocationListener', () => {

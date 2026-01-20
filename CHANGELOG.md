@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **TUI Display Height in Split Mode**: Fixed TUI applications (vim, htop, zellij) displaying with reduced height when terminal is split (#368)
+  - PTY resize notification is now deferred until AFTER double-fit completes
+  - Ensures terminal dimensions are fully calculated before SIGWINCH signal is sent
+  - TUI applications now correctly resize to fill the available terminal space
+
 ## [0.2.6] - 2026-01-19
 
 ### Fixed

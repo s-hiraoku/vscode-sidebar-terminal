@@ -203,29 +203,32 @@ export class ResizeCoordinator {
 
               terminalData.fitAddon?.fit();
 
-              // 🔧 CRITICAL FIX: Call fit() again after frame to ensure canvas updates
+              // 🔧 CRITICAL FIX (Issue #368): Call fit() again after frame to ensure canvas updates
+              // AND defer PTY notification until AFTER the second fit() completes
+              // This ensures TUI applications (vim, htop, zellij) receive correct dimensions
               requestAnimationFrame(() => {
                 DOMUtils.resetXtermInlineStyles(container, true);
                 terminalData.fitAddon?.fit();
+
+                // 🎯 VS Code Pattern: Notify PTY about new dimensions AFTER double-fit
+                // This is CRITICAL - without this, the shell process doesn't know about the new size
+                // Issue #368: PTY must be notified AFTER second fit() to get accurate dimensions
+                const newCols = terminalData.terminal.cols;
+                const newRows = terminalData.terminal.rows;
+                if (this.deps.notifyResize) {
+                  this.deps.notifyResize(terminalId, newCols, newRows);
+                  log(`📨 PTY resize notification sent: ${terminalId} (${newCols}x${newRows})`);
+                }
+
+                // デバッグ: fit後
+                log(`📐 [DEBUG] After fit - ${terminalId}:`);
+                log(`  .xterm: ${xtermEl?.clientWidth}x${xtermEl?.clientHeight}`);
+                if (xtermEl) {
+                  log(`  .xterm inline style: width=${xtermEl.style.width}, height=${xtermEl.style.height}`);
+                }
+
+                log(`✅ Terminal ${terminalId} refitted: ${newCols}x${newRows}`);
               });
-
-              // 🎯 VS Code Pattern: Notify PTY about new dimensions
-              // This is CRITICAL - without this, the shell process doesn't know about the new size
-              const newCols = terminalData.terminal.cols;
-              const newRows = terminalData.terminal.rows;
-              if (this.deps.notifyResize) {
-                this.deps.notifyResize(terminalId, newCols, newRows);
-                log(`📨 PTY resize notification sent: ${terminalId} (${newCols}x${newRows})`);
-              }
-
-              // デバッグ: fit後
-              log(`📐 [DEBUG] After fit - ${terminalId}:`);
-              log(`  .xterm: ${xtermEl?.clientWidth}x${xtermEl?.clientHeight}`);
-              if (xtermEl) {
-                log(`  .xterm inline style: width=${xtermEl.style.width}, height=${xtermEl.style.height}`);
-              }
-
-              log(`✅ Terminal ${terminalId} refitted: ${newCols}x${newRows}`);
             } catch (error) {
               log(`⚠️ Failed to refit terminal ${terminalId}:`, error);
             }
