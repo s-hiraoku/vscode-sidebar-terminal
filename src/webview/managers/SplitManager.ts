@@ -149,6 +149,18 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
   private refitAllTerminals(): void {
     this.splitManagerLogger.info(`Refitting all ${this.terminals.size} terminals`);
 
+    // 🔧 FIX (Issue #368): Use coordinator's refitAllTerminals for proper PTY notification
+    // The coordinator's version includes double-fit pattern and PTY resize notification
+    // which is critical for TUI applications (vim, htop, zellij) to receive correct dimensions
+    if (this.coordinator?.refitAllTerminals) {
+      this.splitManagerLogger.debug('Using coordinator refitAllTerminals for PTY notification');
+      this.coordinator.refitAllTerminals();
+      return;
+    }
+
+    // Fallback: original implementation (without PTY notification)
+    this.splitManagerLogger.warn('Coordinator refitAllTerminals not available, using fallback');
+
     const terminalsWrapper = document.getElementById('terminals-wrapper');
     const terminalBody = document.getElementById('terminal-body');
     if (terminalsWrapper) {

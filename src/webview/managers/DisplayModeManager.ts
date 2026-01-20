@@ -237,15 +237,30 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
       });
     } else {
       // Vertical split: explicitly divide height after layout settles
+      // 🔧 FIX (Issue #368): Use a staged approach to ensure CSS layout is complete
+      // before PTY notification. redistributeSplitTerminals() now uses coordinator's
+      // refitAllTerminals which includes proper PTY notification timing.
       const redistribute = () => {
         const availableHeight = terminalsWrapper?.clientHeight ?? 0;
         if (availableHeight > 0) {
           splitManager.redistributeSplitTerminals(availableHeight);
         }
       };
+
+      // Stage 1: Initial layout (may have stale dimensions)
       redistribute();
-      requestAnimationFrame(redistribute);
-      setTimeout(redistribute, 100);
+
+      // Stage 2: After first paint cycle
+      requestAnimationFrame(() => {
+        redistribute();
+
+        // Stage 3: Final layout after CSS fully settles (100ms delay)
+        // This is the critical call that ensures TUI apps get correct dimensions
+        setTimeout(() => {
+          redistribute();
+          this.log('🔄 [SPLIT] Final redistribute completed after CSS settle');
+        }, 100);
+      });
     }
 
     this.currentMode = 'split';
@@ -255,9 +270,8 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
     this.syncVisibilityFromSnapshot();
     this.refreshSplitToggleState();
 
-    // 🔧 FIX: Explicitly refit terminals after fullscreen -> split transition.
-    // Relying on ResizeObserver alone can miss layout changes when the wrapper is created later.
-    this.coordinator.refitAllTerminals?.();
+    // Note: refitAllTerminals is now called within redistributeSplitTerminals
+    // via coordinator, which includes proper PTY notification timing (Issue #368)
     this.log('🔄 [SPLIT] Split layout applied, terminals refit scheduled');
 
     this.log('All terminals are now in split view');
