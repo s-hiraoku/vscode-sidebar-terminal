@@ -165,8 +165,13 @@ export class ResizeCoordinator {
             // Second fit: ensures canvas updates correctly (Issue #368)
             // PTY notification must occur AFTER second fit for accurate dimensions
             requestAnimationFrame(() => {
+              // Guard: Exit early if terminal was disposed during async operation
+              if (!terminalData || !terminalData.terminal || !terminalData.fitAddon) {
+                return;
+              }
+
               DOMUtils.resetXtermInlineStyles(container, true);
-              terminalData.fitAddon?.fit();
+              terminalData.fitAddon.fit();
 
               const newCols = terminalData.terminal.cols;
               const newRows = terminalData.terminal.rows;

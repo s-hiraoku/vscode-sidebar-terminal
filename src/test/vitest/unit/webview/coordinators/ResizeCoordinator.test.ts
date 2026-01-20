@@ -315,7 +315,8 @@ describe('ResizeCoordinator', () => {
       vi.advanceTimersByTime(16);
 
       // PTY should NOT be notified immediately after first fit
-      // (This would be the old buggy behavior)
+      // (This would be the old buggy behavior - Issue #368)
+      expect(mockDeps.notifyResize).not.toHaveBeenCalled();
 
       // Second RAF - double-fit completes
       vi.advanceTimersByTime(16);
