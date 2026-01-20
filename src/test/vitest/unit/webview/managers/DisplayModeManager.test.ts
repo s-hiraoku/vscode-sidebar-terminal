@@ -10,6 +10,15 @@ import { DisplayModeManager } from '../../../../../webview/managers/DisplayModeM
 import { IManagerCoordinator } from '../../../../../webview/interfaces/ManagerInterfaces';
 import { ISplitLayoutController } from '../../../../../webview/interfaces/ISplitLayoutController';
 
+// Mock DOMUtils
+vi.mock('../../../../../webview/utils/DOMUtils', () => ({
+  DOMUtils: {
+    resetXtermInlineStyles: vi.fn(),
+    forceReflow: vi.fn(),
+    clearContainerHeightStyles: vi.fn(),
+  },
+}));
+
 describe('DisplayModeManager - Fullscreen Display (Issue #198)', () => {
   let displayManager: DisplayModeManager;
   let mockCoordinator: IManagerCoordinator;

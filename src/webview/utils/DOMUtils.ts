@@ -300,4 +300,28 @@ export namespace DOMUtils {
 
     return true;
   }
+
+  /**
+   * Clear split-related inline height styles from a container.
+   * Used when transitioning between display modes (split -> fullscreen/normal).
+   *
+   * @param container - The terminal container element
+   */
+  export function clearContainerHeightStyles(container: HTMLElement): void {
+    container.style.removeProperty('height');
+    container.style.removeProperty('flex-basis');
+    container.style.removeProperty('flex');
+    container.style.removeProperty('max-height');
+  }
+
+  /**
+   * Force browser reflow by reading offsetHeight.
+   * Call this after CSS changes to ensure layout is recalculated before reading dimensions.
+   *
+   * @param element - Element to read offsetHeight from (defaults to document.body)
+   */
+  export function forceReflow(element?: HTMLElement | null): void {
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+    (element ?? document.body).offsetHeight;
+  }
 }

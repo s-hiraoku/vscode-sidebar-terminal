@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **TUI Display Height in Split Mode**: Fixed TUI applications (vim, htop, zellij) displaying with reduced height when terminal is split (#368)
+  - `SplitManager.refitAllTerminals()` now delegates to coordinator's version for proper PTY notification
+  - PTY resize notification is now deferred until AFTER double-fit completes in `ResizeCoordinator`
+  - `DisplayModeManager.showAllTerminalsSplit()` uses staged RAF approach (not immediate) for CSS layout settling
+  - `DisplayModeManager.showTerminalFullscreen()` now clears split mode inline height styles and calls refitAllTerminals
+  - `DisplayModeManager.applyNormalMode()` now clears inline height styles and calls refitAllTerminals
+  - `SplitManager.redistributeSplitTerminals()` clears inline height styles before recalculating
+  - Force browser reflow (`offsetHeight`) before reading container dimensions
+  - Ensures terminal dimensions are fully calculated before SIGWINCH signal is sent
+  - TUI applications now correctly resize to fill the available terminal space when switching between modes
+
 ## [0.2.6] - 2026-01-19
 
 ### Fixed
@@ -1065,53 +1078,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Main code compiles successfully with 0 TypeScript errors
 - Created 6 new utility classes with comprehensive tests
 - Improved code maintainability and reusability
-
-## [Unreleased]
-
-### Fixed
-
-- **WebView Initialization**: Fixed `log is not defined` error during WebView startup
-  - Changed inline scripts to use `console.log()` instead of `log()` function
-  - Ensures WebView initializes successfully before webview.js loads
-- **Terminal Container Display**: Fixed terminals not appearing after creation
-  - Added missing `appendChild()` call to attach containers to DOM
-  - Containers now properly registered and visible in terminals-wrapper
-
-### Changed
-
-- **WebView Layout Architecture**: Refactored to follow VS Code GridView patterns
-  - **DOMManager**: Priority-based DOM operation scheduling (READ/WRITE/NORMAL)
-    - Prevents layout thrashing with batched operations
-    - Schedules operations at next animation frame
-    - 150 lines with comprehensive unit tests
-  - **LayoutController**: VS Code-style layout enablement control
-    - Controls when layout operations execute (initialization vs runtime)
-    - Supports batch operations with `withLayoutDisabled()`
-    - 114 lines with comprehensive unit tests
-  - **TerminalLifecycleManager**: Element reference storage pattern
-    - Stores `_terminalsWrapper` and `_terminalBody` references
-    - Removed `getElementById()` calls from hot paths
-    - Added `layout()` and `onPanelLocationChange()` methods
-    - Uses LayoutController for explicit layout control
-  - **Panel Location Detection**: Extension-driven approach
-    - PanelLocationService detects panel position accurately
-    - Removed ResizeObserver-based aspect ratio detection
-    - Eliminates 100ms setTimeout retry logic
-    - More reliable with multi-window support
-
-### Added
-
-- **Unit Tests**: Comprehensive test coverage for new utilities
-  - `DOMManager.spec.ts`: 200+ lines testing scheduling priorities
-  - `LayoutController.spec.ts`: 300+ lines testing layout control patterns
-  - Tests validate VS Code pattern compliance
-
-### Deprecated
-
-- **ResizeObserver Pattern**: Removed in favor of Extension-driven detection
-  - Aspect ratio calculation removed
-  - Polling-based detection eliminated
-  - More predictable panel location updates
 
 ## [0.1.129] - 2025-11-02
 

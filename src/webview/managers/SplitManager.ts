@@ -149,6 +149,18 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
   private refitAllTerminals(): void {
     this.splitManagerLogger.info(`Refitting all ${this.terminals.size} terminals`);
 
+    // 🔧 FIX (Issue #368): Use coordinator's refitAllTerminals for proper PTY notification
+    // The coordinator's version includes double-fit pattern and PTY resize notification
+    // which is critical for TUI applications (vim, htop, zellij) to receive correct dimensions
+    if (this.coordinator?.refitAllTerminals) {
+      this.splitManagerLogger.debug('Using coordinator refitAllTerminals for PTY notification');
+      this.coordinator.refitAllTerminals();
+      return;
+    }
+
+    // Fallback: original implementation (without PTY notification)
+    this.splitManagerLogger.warn('Coordinator refitAllTerminals not available, using fallback');
+
     const terminalsWrapper = document.getElementById('terminals-wrapper');
     const terminalBody = document.getElementById('terminal-body');
     if (terminalsWrapper) {
@@ -166,9 +178,7 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
         DOMUtils.resetXtermInlineStyles(container, false);
       }
     });
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-    document.body.offsetWidth;
+    DOMUtils.forceReflow();
 
     requestAnimationFrame(() => {
       this.terminals.forEach((terminalData, terminalId) => {
@@ -301,6 +311,9 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
     const terminalsWrapper = document.getElementById('terminals-wrapper');
     const terminalBody = document.getElementById('terminal-body');
 
+    // Force reflow to ensure CSS changes are applied before reading dimensions
+    DOMUtils.forceReflow(terminalsWrapper);
+
     const wrapperTargets = terminalsWrapper
       ? Array.from(
           terminalsWrapper.querySelectorAll<HTMLElement>('[data-terminal-wrapper-id]')
@@ -331,8 +344,19 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
       return;
     }
 
+    // Clear existing inline height styles to allow CSS flex layout to recalculate
+    targets.forEach((target) => {
+      target.style.removeProperty('height');
+      target.style.removeProperty('flex-basis');
+      target.style.removeProperty('flex');
+    });
+    DOMUtils.forceReflow(terminalsWrapper);
+
     const baseHeight =
       newHeight > 0 ? newHeight : terminalsWrapper?.clientHeight ?? terminalBody?.clientHeight ?? 0;
+
+    this.splitManagerLogger.debug(`baseHeight=${baseHeight}px, targetCount=${targetCount}`);
+
     if (baseHeight <= 0) {
       return;
     }
@@ -348,6 +372,8 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
       baseHeight - paddingTop - paddingBottom - rowGap * (targetCount - 1)
     );
     const terminalHeight = Math.floor(availableHeight / targetCount);
+
+    this.splitManagerLogger.debug(`availableHeight=${availableHeight}px, terminalHeight=${terminalHeight}px`);
 
     targets.forEach((target) => {
       target.style.setProperty('flex', '0 0 auto', 'important');

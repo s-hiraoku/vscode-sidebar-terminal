@@ -21,6 +21,7 @@
 import { BaseManager } from './BaseManager';
 import { IManagerCoordinator } from '../interfaces/ManagerInterfaces';
 import { ISplitLayoutController } from '../interfaces/ISplitLayoutController';
+import { DOMUtils } from '../utils/DOMUtils';
 
 /**
  * 表示モードの種類
@@ -75,6 +76,9 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
   // ターミナルの可視性マップ
   private terminalVisibility = new Map<string, boolean>();
 
+  // Timeout ID for final redistribute in split mode (Issue #368)
+  private _finalRedistributeTimeout: ReturnType<typeof setTimeout> | null = null;
+
   constructor(coordinator: IManagerCoordinator) {
     super('DisplayModeManager', {
       enableLogging: true,
@@ -104,6 +108,12 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
    */
   public setDisplayMode(mode: DisplayMode): void {
     this.log(`Setting display mode: ${this.currentMode} -> ${mode}`);
+
+    // Clear pending redistribute timeout when leaving split mode
+    if (this._finalRedistributeTimeout !== null) {
+      clearTimeout(this._finalRedistributeTimeout);
+      this._finalRedistributeTimeout = null;
+    }
 
     // 前回のモードを記録
     this.previousMode = this.currentMode;
@@ -163,6 +173,11 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
     containerManager.clearSplitArtifacts();
     this.log('Cleared split artifacts before fullscreen');
 
+    // Clear inline height styles from split mode before fullscreen transition
+    const allContainers = containerManager.getAllContainers();
+    allContainers.forEach((container) => DOMUtils.clearContainerHeightStyles(container));
+    this.log('Cleared inline height styles from containers');
+
     const displayState = {
       mode: 'fullscreen' as const,
       activeTerminalId: terminalId,
@@ -177,6 +192,13 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
     this.syncVisibilityFromSnapshot();
     this.refreshSplitToggleState();
     this.notifyModeChanged('fullscreen');
+
+    // 🔧 FIX (Issue #368): Refit terminal and notify PTY after fullscreen transition
+    // Without this, TUI apps retain split mode dimensions until manual resize
+    requestAnimationFrame(() => {
+      this.coordinator.refitAllTerminals?.();
+      this.log('🔄 [FULLSCREEN] Terminal refit scheduled after mode change');
+    });
 
     this.log(`Terminal ${terminalId} is now in fullscreen mode`);
   }
@@ -227,25 +249,43 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
 
     containerManager.applyDisplayState(displayState);
 
-    // 🔧 FIX: Ensure container heights are aligned with the split direction
+    // Ensure container heights are aligned with the split direction
     const allContainers = containerManager.getAllContainers();
     if (direction === 'horizontal') {
-      // Clear any fixed heights from prior vertical splits/fullscreen
-      allContainers.forEach((container) => {
-        container.style.removeProperty('height');
-        container.style.removeProperty('maxHeight');
-      });
+      // Clear fixed heights from prior vertical splits/fullscreen
+      allContainers.forEach((container) => DOMUtils.clearContainerHeightStyles(container));
     } else {
-      // Vertical split: explicitly divide height after layout settles
+      // Vertical split: divide height after layout settles
+      // Force reflow to ensure CSS changes are applied before reading dimensions
+      DOMUtils.forceReflow(terminalsWrapper);
+
       const redistribute = () => {
+        DOMUtils.forceReflow(terminalsWrapper);
         const availableHeight = terminalsWrapper?.clientHeight ?? 0;
+        this.log(`🔄 [SPLIT] redistribute: availableHeight=${availableHeight}px`);
         if (availableHeight > 0) {
           splitManager.redistributeSplitTerminals(availableHeight);
         }
       };
-      redistribute();
-      requestAnimationFrame(redistribute);
-      setTimeout(redistribute, 100);
+
+      // Stage 1: After first paint cycle (NOT immediate - CSS needs time to settle)
+      requestAnimationFrame(() => {
+        redistribute();
+
+        // Stage 2: After second paint cycle for more accurate dimensions
+        requestAnimationFrame(() => {
+          redistribute();
+
+          // Stage 3: Final layout after CSS fully settles (100ms delay)
+          // This is the critical call that ensures TUI apps get correct dimensions
+          // Store timeout ID to allow cancellation on rapid mode changes
+          this._finalRedistributeTimeout = setTimeout(() => {
+            this._finalRedistributeTimeout = null;
+            redistribute();
+            this.log('🔄 [SPLIT] Final redistribute completed after CSS settle');
+          }, 100);
+        });
+      });
     }
 
     this.currentMode = 'split';
@@ -255,9 +295,8 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
     this.syncVisibilityFromSnapshot();
     this.refreshSplitToggleState();
 
-    // 🔧 FIX: Explicitly refit terminals after fullscreen -> split transition.
-    // Relying on ResizeObserver alone can miss layout changes when the wrapper is created later.
-    this.coordinator.refitAllTerminals?.();
+    // Note: refitAllTerminals is now called within redistributeSplitTerminals
+    // via coordinator, which includes proper PTY notification timing (Issue #368)
     this.log('🔄 [SPLIT] Split layout applied, terminals refit scheduled');
 
     this.log('All terminals are now in split view');
@@ -346,6 +385,14 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
     // 分割モードを解除
     this.exitSplitMode();
 
+    // Clear inline height styles before showing terminals
+    const containerManager = this.coordinator?.getTerminalContainerManager?.();
+    if (containerManager) {
+      const allContainers = containerManager.getAllContainers();
+      allContainers.forEach((container) => DOMUtils.clearContainerHeightStyles(container));
+      this.log('Cleared inline height styles from containers');
+    }
+
     // すべてのターミナルを表示
     this.showAllTerminals();
 
@@ -355,6 +402,12 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
 
     this.refreshSplitToggleState();
     this.notifyModeChanged('normal');
+
+    // 🔧 FIX (Issue #368): Refit terminal and notify PTY after mode change
+    requestAnimationFrame(() => {
+      this.coordinator.refitAllTerminals?.();
+      this.log('🔄 [NORMAL] Terminal refit scheduled after mode change');
+    });
   }
 
   /**
@@ -423,6 +476,12 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
    */
   protected doDispose(): void {
     this.log('Disposing DisplayModeManager');
+
+    // Clear pending redistribute timeout
+    if (this._finalRedistributeTimeout !== null) {
+      clearTimeout(this._finalRedistributeTimeout);
+      this._finalRedistributeTimeout = null;
+    }
 
     // 通常モードに戻す
     this.applyNormalMode();
