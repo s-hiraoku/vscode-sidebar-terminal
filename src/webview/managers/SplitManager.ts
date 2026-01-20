@@ -313,6 +313,11 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
     const terminalsWrapper = document.getElementById('terminals-wrapper');
     const terminalBody = document.getElementById('terminal-body');
 
+    // 🔧 FIX (Issue #368): Force browser reflow before reading dimensions
+    // This ensures CSS layout changes are applied before we calculate heights
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+    terminalsWrapper?.offsetHeight;
+
     const wrapperTargets = terminalsWrapper
       ? Array.from(
           terminalsWrapper.querySelectorAll<HTMLElement>('[data-terminal-wrapper-id]')
@@ -343,8 +348,23 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
       return;
     }
 
+    // 🔧 FIX (Issue #368): Clear any existing inline height styles BEFORE calculating
+    // This allows CSS flex layout to determine natural heights first
+    targets.forEach((target) => {
+      target.style.removeProperty('height');
+      target.style.removeProperty('flex-basis');
+      target.style.removeProperty('flex');
+    });
+
+    // Force reflow after clearing styles
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+    terminalsWrapper?.offsetHeight;
+
     const baseHeight =
       newHeight > 0 ? newHeight : terminalsWrapper?.clientHeight ?? terminalBody?.clientHeight ?? 0;
+
+    this.splitManagerLogger.debug(`baseHeight=${baseHeight}px, targetCount=${targetCount}`);
+
     if (baseHeight <= 0) {
       return;
     }
@@ -360,6 +380,8 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
       baseHeight - paddingTop - paddingBottom - rowGap * (targetCount - 1)
     );
     const terminalHeight = Math.floor(availableHeight / targetCount);
+
+    this.splitManagerLogger.debug(`availableHeight=${availableHeight}px, terminalHeight=${terminalHeight}px`);
 
     targets.forEach((target) => {
       target.style.setProperty('flex', '0 0 auto', 'important');

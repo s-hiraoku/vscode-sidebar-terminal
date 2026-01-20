@@ -12,7 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **TUI Display Height in Split Mode**: Fixed TUI applications (vim, htop, zellij) displaying with reduced height when terminal is split (#368)
   - `SplitManager.refitAllTerminals()` now delegates to coordinator's version for proper PTY notification
   - PTY resize notification is now deferred until AFTER double-fit completes in `ResizeCoordinator`
-  - `DisplayModeManager.showAllTerminalsSplit()` uses staged approach for CSS layout settling
+  - `DisplayModeManager.showAllTerminalsSplit()` uses staged RAF approach (not immediate) for CSS layout settling
+  - `SplitManager.redistributeSplitTerminals()` clears inline height styles before recalculating
+  - Force browser reflow (`offsetHeight`) before reading container dimensions
   - Ensures terminal dimensions are fully calculated before SIGWINCH signal is sent
   - TUI applications now correctly resize to fill the available terminal space
 

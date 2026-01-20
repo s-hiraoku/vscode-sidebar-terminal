@@ -237,29 +237,41 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
       });
     } else {
       // Vertical split: explicitly divide height after layout settles
-      // 🔧 FIX (Issue #368): Use a staged approach to ensure CSS layout is complete
-      // before PTY notification. redistributeSplitTerminals() now uses coordinator's
-      // refitAllTerminals which includes proper PTY notification timing.
+      // 🔧 FIX (Issue #368): Wait for CSS layout to be fully calculated before
+      // reading container dimensions. The browser needs time to reflow after
+      // applyDisplayState() changes the DOM structure.
+
+      // Force browser reflow BEFORE reading any dimensions
+      // This ensures CSS changes from applyDisplayState() are applied
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+      terminalsWrapper?.offsetHeight;
+
       const redistribute = () => {
+        // Force reflow before reading clientHeight to get accurate value
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+        terminalsWrapper?.offsetHeight;
         const availableHeight = terminalsWrapper?.clientHeight ?? 0;
+        this.log(`🔄 [SPLIT] redistribute: availableHeight=${availableHeight}px`);
         if (availableHeight > 0) {
           splitManager.redistributeSplitTerminals(availableHeight);
         }
       };
 
-      // Stage 1: Initial layout (may have stale dimensions)
-      redistribute();
-
-      // Stage 2: After first paint cycle
+      // Stage 1: After first paint cycle (NOT immediate - CSS needs time to settle)
       requestAnimationFrame(() => {
         redistribute();
 
-        // Stage 3: Final layout after CSS fully settles (100ms delay)
-        // This is the critical call that ensures TUI apps get correct dimensions
-        setTimeout(() => {
+        // Stage 2: After second paint cycle for more accurate dimensions
+        requestAnimationFrame(() => {
           redistribute();
-          this.log('🔄 [SPLIT] Final redistribute completed after CSS settle');
-        }, 100);
+
+          // Stage 3: Final layout after CSS fully settles (100ms delay)
+          // This is the critical call that ensures TUI apps get correct dimensions
+          setTimeout(() => {
+            redistribute();
+            this.log('🔄 [SPLIT] Final redistribute completed after CSS settle');
+          }, 100);
+        });
       });
     }
 
