@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import * as pty from '@homebridge/node-pty-prebuilt-multiarch';
+import * as pty from 'node-pty';
 import { TERMINAL_CONSTANTS } from '../constants';
 import { terminal as log } from '../utils/logger';
 

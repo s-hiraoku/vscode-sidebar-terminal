@@ -2,7 +2,7 @@
  * Mock implementation of node-pty for testing environments
  */
 
-import type { IPty, IEvent, IDisposable } from '@homebridge/node-pty-prebuilt-multiarch';
+import type { IPty, IEvent, IDisposable } from 'node-pty';
 
 export type { IPty };
 

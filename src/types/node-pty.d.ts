@@ -1,47 +1,20 @@
 /**
  * Type definitions for node-pty
- * Provides minimal type definitions for node-pty compatibility
+ *
+ * The official node-pty package includes its own type definitions.
+ * This file is kept for reference and backward compatibility.
+ *
+ * The types are exported from 'node-pty' module directly:
+ * - IPty: Interface representing a pseudoterminal
+ * - IPtyForkOptions: Options for Unix systems
+ * - IWindowsPtyForkOptions: Options for Windows systems
+ * - IDisposable: Object that can be disposed
+ * - IEvent: Event listener interface
+ *
+ * Usage:
+ *   import * as pty from 'node-pty';
+ *   import type { IPty, IDisposable } from 'node-pty';
  */
 
-declare module '@homebridge/node-pty-prebuilt-multiarch' {
-  export interface IPty {
-    pid: number;
-    cols: number;
-    rows: number;
-    handleFlowControl?: boolean;
-    onData: (callback: (data: string) => void) => void;
-    onExit: (callback: (event: number | { exitCode: number; signal?: number }) => void) => void;
-    write: (data: string) => void;
-    resize: (cols: number, rows: number) => void;
-    kill: (signal?: string) => void;
-    clear?: () => void;
-  }
-
-  export interface IWindowsPtyForkOptions {
-    name?: string;
-    cols?: number;
-    rows?: number;
-    cwd?: string;
-    env?: { [key: string]: string };
-    encoding?: string;
-    useConpty?: boolean;
-    conptyInheritCursor?: boolean;
-  }
-
-  export interface IUnixForkOptions {
-    name?: string;
-    cols?: number;
-    rows?: number;
-    cwd?: string;
-    env?: { [key: string]: string };
-    encoding?: string;
-    uid?: number;
-    gid?: number;
-  }
-
-  export function spawn(
-    file?: string,
-    args?: string[] | string,
-    options?: IWindowsPtyForkOptions | IUnixForkOptions
-  ): IPty;
-}
+// Re-export from node-pty for convenience
+export type { IPty, IDisposable, IEvent, IPtyForkOptions, IWindowsPtyForkOptions } from 'node-pty';

@@ -109,7 +109,7 @@ describe.skip('CliAgentDetection in Terminal Manager', () => {
     require.cache[require.resolve('vscode')] = { exports: mockVscode } as any;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
-    require.cache[require.resolve('@homebridge/node-pty-prebuilt-multiarch')] = {
+    require.cache[require.resolve('node-pty')] = {
       exports: mockPty,
     } as any;
 

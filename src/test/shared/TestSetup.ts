@@ -336,7 +336,7 @@ export async function setupTestEnvironment(): Promise<void> {
   };
 
   // Register node-pty mocks in cache
-  const ptyModules = ['node-pty', '@homebridge/node-pty-prebuilt-multiarch'];
+  const ptyModules = ['node-pty'];
   ptyModules.forEach((moduleName) => {
     try {
       const modulePath = require.resolve(moduleName, { paths: [process.cwd()] });
@@ -1058,7 +1058,7 @@ export function teardownTestEnvironment(): void {
 
   // Clear require.cache entries we added
   try {
-    const modulesToClear = ['vscode', 'node-pty', '@homebridge/node-pty-prebuilt-multiarch'];
+    const modulesToClear = ['vscode', 'node-pty'];
     modulesToClear.forEach(moduleName => {
       try {
         const modulePath = require.resolve(moduleName, { paths: [process.cwd()] });
@@ -1220,7 +1220,7 @@ export function setupTestEnvironmentSync(): void {
 
   // Register node-pty mock in cache
   try {
-    const ptyPath = require.resolve('@homebridge/node-pty-prebuilt-multiarch', { paths: [process.cwd()] });
+    const ptyPath = require.resolve('node-pty', { paths: [process.cwd()] });
     require.cache[ptyPath] = {
       id: ptyPath,
       filename: ptyPath,

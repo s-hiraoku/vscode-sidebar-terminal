@@ -47,8 +47,8 @@ const extensionConfig = {
   },
   externals: {
     vscode: 'commonjs vscode',
-    // Keep @homebridge/node-pty-prebuilt-multiarch as external since it's included in the package
-    '@homebridge/node-pty-prebuilt-multiarch': 'commonjs @homebridge/node-pty-prebuilt-multiarch',
+    // Keep node-pty as external since it's included in the package
+    'node-pty': 'commonjs node-pty',
   },
   optimization: {
     minimize: process.env.NODE_ENV === 'production',

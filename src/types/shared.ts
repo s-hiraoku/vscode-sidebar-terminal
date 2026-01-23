@@ -459,8 +459,8 @@ export interface DeleteResult {
  */
 export interface TerminalInstance {
   id: string;
-  pty?: import('@homebridge/node-pty-prebuilt-multiarch').IPty; // Properly typed node-pty interface
-  ptyProcess?: import('@homebridge/node-pty-prebuilt-multiarch').IPty; // New pty reference name (for session restoration)
+  pty?: import('node-pty').IPty; // Properly typed node-pty interface
+  ptyProcess?: import('node-pty').IPty; // New pty reference name (for session restoration)
   process?: NodeJS.Process; // For lifecycle service compatibility
   name: string;
   number?: number; // Terminal number (1-5)

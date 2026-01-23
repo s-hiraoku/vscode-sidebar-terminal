@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as fs from 'fs';
-import * as pty from '@homebridge/node-pty-prebuilt-multiarch';
+import * as pty from 'node-pty';
 import { TerminalSpawner, TerminalSpawnRequest } from '../../../../terminals/TerminalSpawner';
 import { TERMINAL_CONSTANTS } from '../../../../constants';
 
@@ -14,7 +14,7 @@ vi.mock('fs', () => ({
   },
 }));
 
-vi.mock('@homebridge/node-pty-prebuilt-multiarch', () => ({
+vi.mock('node-pty', () => ({
   spawn: vi.fn(),
 }));
 

@@ -1,4 +1,4 @@
-import * as pty from '@homebridge/node-pty-prebuilt-multiarch';
+import * as pty from 'node-pty';
 import { TerminalInstance } from '../types/shared';
 import { OperationResult, OperationResultHandler } from '../utils/OperationResultHandler';
 

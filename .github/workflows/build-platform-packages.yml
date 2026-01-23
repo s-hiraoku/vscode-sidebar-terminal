@@ -94,17 +94,8 @@ jobs:
           - os: ubuntu-latest
             target: linux-arm64
             npm_config_cache: ~/.npm
-          - os: ubuntu-latest
-            target: linux-armhf
-            npm_config_cache: ~/.npm
-
-          # Alpine
-          - os: ubuntu-latest
-            target: alpine-x64
-            npm_config_cache: ~/.npm
-          - os: ubuntu-latest
-            target: alpine-arm64
-            npm_config_cache: ~/.npm
+          # Note: linux-armhf and alpine-* targets removed due to node-pty prebuilt binary limitations
+          # See: https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/393
 
     steps:
       - name: Checkout code

@@ -294,6 +294,7 @@ npm run lint          # ESLint check
 ## Known Limitations
 
 - **Running Processes**: Long-running processes terminate on VS Code restart (scrollback preserved). Use `tmux`/`screen` for process persistence.
+- **Platform Support**: Alpine Linux and Linux armhf are not supported due to node-pty prebuilt binary limitations
 - **Active Development**: Some features may have rough edges
 
 ## Privacy

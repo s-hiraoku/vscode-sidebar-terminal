@@ -12,28 +12,11 @@ src/**
 # Development and build tools
 node_modules/**
 # Include essential node-pty directories
-!node_modules/@homebridge/node-pty-prebuilt-multiarch/package.json
-!node_modules/@homebridge/node-pty-prebuilt-multiarch/LICENSE
-!node_modules/@homebridge/node-pty-prebuilt-multiarch/typings/**
-!node_modules/@homebridge/node-pty-prebuilt-multiarch/build/Release/**
-!node_modules/@homebridge/node-pty-prebuilt-multiarch/prebuilds/**
-!node_modules/@homebridge/node-pty-prebuilt-multiarch/third_party/**
-# Include only required lib files (exclude tests and maps)
-!node_modules/@homebridge/node-pty-prebuilt-multiarch/lib/index.js
-!node_modules/@homebridge/node-pty-prebuilt-multiarch/lib/terminal.js
-!node_modules/@homebridge/node-pty-prebuilt-multiarch/lib/unixTerminal.js
-!node_modules/@homebridge/node-pty-prebuilt-multiarch/lib/windowsTerminal.js
-!node_modules/@homebridge/node-pty-prebuilt-multiarch/lib/windowsPtyAgent.js
-!node_modules/@homebridge/node-pty-prebuilt-multiarch/lib/windowsConoutConnection.js
-!node_modules/@homebridge/node-pty-prebuilt-multiarch/lib/conpty_console_list_agent.js
-!node_modules/@homebridge/node-pty-prebuilt-multiarch/lib/eventEmitter2.js
-!node_modules/@homebridge/node-pty-prebuilt-multiarch/lib/interfaces.js
-!node_modules/@homebridge/node-pty-prebuilt-multiarch/lib/types.js
-!node_modules/@homebridge/node-pty-prebuilt-multiarch/lib/utils.js
-!node_modules/@homebridge/node-pty-prebuilt-multiarch/lib/prebuild-loader.js
-!node_modules/@homebridge/node-pty-prebuilt-multiarch/lib/prebuild-file-path.js
-!node_modules/@homebridge/node-pty-prebuilt-multiarch/lib/shared/conout.js
-!node_modules/@homebridge/node-pty-prebuilt-multiarch/lib/worker/conoutSocketWorker.js
+!node_modules/node-pty/package.json
+!node_modules/node-pty/LICENSE
+!node_modules/node-pty/typings/**
+!node_modules/node-pty/prebuilds/**
+!node_modules/node-pty/lib/**
 webpack.config.js
 .gitignore
 .yarnrc

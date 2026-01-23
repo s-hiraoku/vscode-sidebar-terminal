@@ -16,6 +16,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added missing ScrollbackManager to WebView manager documentation
   - Expanded File Structure to list all managers explicitly
 
+## [0.2.8] - 2026-01-24
+
+### Fixed
+
+- **Node.js 22 Compatibility**: Fixed extension failing to load on VS Code 1.108+ which uses Node.js 22 (#393)
+  - Migrated from `@homebridge/node-pty-prebuilt-multiarch` to official `node-pty@1.2.0-beta.8`
+  - Official node-pty package includes prebuilt binaries for Node.js 22
+  - Resolves "Cannot find module '../build/Debug/pty.node'" error on Fedora 43 and similar systems
+
+### Changed
+
+- **Platform Support**: Updated supported build targets
+  - Supported: Windows (x64, arm64), macOS (x64, arm64), Linux (x64, arm64)
+  - Removed: Alpine Linux (x64, arm64), Linux armhf due to node-pty prebuilt binary limitations
+
 ## [0.2.7] - 2026-01-21
 
 ### Fixed
