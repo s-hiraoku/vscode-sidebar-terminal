@@ -1,151 +1,182 @@
-# WebView CLAUDE.md - 実装効率化ガイド
+# WebView CLAUDE.md - Implementation Guide
 
-このファイルは WebView コンポーネントの効率的な実装をサポートします。
+This file provides guidance for efficient WebView component implementation.
 
-## 最重要アーキテクチャ
+## Core Architecture
 
 ### TerminalWebviewManager (main.ts)
 
-**メインコーディネーター** - 全WebViewマネージャーを統括
+**Main Coordinator** - Orchestrates all WebView managers
 
-- `IManagerCoordinator`インターフェース実装
-- 全マネージャーのライフサイクル管理
-- Extension ↔ WebView 通信の中央ハブ
+- Implements `IManagerCoordinator` interface
+- Manages lifecycle of all managers
+- Acts as central hub for Extension ↔ WebView communication
 
-### Manager階層構造
+### Manager Hierarchy
 
 ```
-TerminalWebviewManager
-├── MessageManager - Extension通信
-├── UIManager - UI制御・テーマ・視覚フィードバック
-├── InputManager - キーボードショートカット・IME・Alt+Click
-├── PerformanceManager - 出力バッファリング・デバウンス
-├── NotificationManager - ユーザーフィードバック・通知
-├── SplitManager - ターミナル分割・レイアウト
-└── ConfigManager - 設定永続化・構成管理
+TerminalWebviewManager (Coordinator)
+├── ConsolidatedMessageManager  # Extension ↔ WebView communication
+├── UIManager                   # UI control, themes, visual feedback
+├── InputManager                # Keyboard shortcuts, IME, Alt+Click
+├── PerformanceManager          # Output buffering, debouncing
+├── ScrollbackManager           # Scrollback buffer and navigation
+├── NotificationManager         # User feedback, notifications
+├── TerminalLifecycleCoordinator # Terminal creation/deletion
+├── SplitManager                # Terminal splitting, layout
+├── ConfigManager               # Settings persistence, configuration
+├── TerminalTabManager          # Tab management
+├── DisplayModeManager          # Display mode control
+└── HeaderManager               # Terminal header UI
 ```
 
-## 設計思想・実装パターン
+## Design Principles
 
-### 新マネージャー作成の設計原則
+### Creating New Managers
 
-**3段階実装パターン**
+**Three-Stage Implementation Pattern**
 
-1. **インターフェース設計**: `interfaces/ManagerInterfaces.ts`で型定義
-2. **実装クラス作成**: `managers/`以下に具体実装
-3. **統合**: TerminalWebviewManagerへの組み込み
+1. **Interface Design**: Define types in `interfaces/ManagerInterfaces.ts`
+2. **Implementation**: Create concrete implementation in `managers/`
+3. **Integration**: Integrate into TerminalWebviewManager
 
-**必須実装要素**
+**Required Implementation Elements**
 
-- `IManagerLifecycle`継承（initialize/dispose）
-- コーディネーター依存注入パターン
-- 適切なリソース解放実装
+- Inherit from `IManagerLifecycle` (initialize/dispose)
+- Use coordinator dependency injection pattern
+- Implement proper resource disposal
 
-### イベント処理アーキテクチャ
+### Event Handling Architecture
 
-**双方向通信設計**
+**Bidirectional Communication Design**
 
-- Extension → WebView: コマンドベースメッセージング
-- WebView → Extension: postMessage APIによる非同期通信
-- エラーハンドリング: try-catch + フォールバック処理
+- Extension → WebView: Command-based messaging
+- WebView → Extension: Asynchronous communication via postMessage API
+- Error handling: try-catch + fallback processing
 
-**メッセージプロトコル設計思想**
+**Message Protocol Design Principles**
 
-- コマンド分離による拡張性
-- データペイロード標準化
-- バージョニング対応
+- Extensibility through command separation
+- Standardized data payloads
+- Version compatibility support
 
-### パフォーマンス最適化戦略
+### Performance Optimization Strategy
 
-**バッファリング設計**
+**Buffering Design**
 
-- 高頻度出力の効率的処理
-- デバウンス処理による負荷軽減
-- メモリ効率を考慮したバッファ管理
+- Efficient processing of high-frequency output
+- Load reduction through debounce processing
+- Memory-efficient buffer management
 
-**レンダリング最適化**
+**Rendering Optimization**
 
-- DOM更新の最小化
-- 仮想化による大量データ処理
-- CSS変更によるレイアウト回避
+- Minimize DOM updates
+- Virtualization for large data handling
+- Avoid layout thrashing through CSS changes
 
-## 実装時の重要な考慮点
+## Key Implementation Considerations
 
-### Manager間の協調設計
+### Manager Coordination Design
 
-**責任分離の原則**
+**Responsibility Separation Principles**
 
-- 各Managerの単一責任原則厳守
-- 相互依存の最小化
-- コーディネーター経由の疎結合
+- Strict adherence to Single Responsibility Principle per Manager
+- Minimize interdependencies
+- Loose coupling via coordinator
 
-**よく使われる操作パターン**
+**Common Operation Patterns**
 
-- ターミナル操作: コーディネーター経由
-- 通知表示: NotificationManager統一インターフェース
-- テーマ・UI操作: UIManager集約
+- Terminal operations: Via coordinator
+- Notifications: Unified NotificationManager interface
+- Theme/UI operations: UIManager consolidation
 
-### デバッグ・トラブルシューティング戦略
+### Debugging & Troubleshooting Strategy
 
 **Terminal State Debug Panel**
 
-リアルタイムでWebView状態を監視する内蔵デバッグツール：
+Built-in debug tool for real-time WebView state monitoring:
 
 ```
-Ctrl+Shift+D    # Debug panelをトグル（表示/非表示）
+Ctrl+Shift+D    # Toggle debug panel (show/hide)
 ```
 
-**監視項目**:
+**Monitored Items**:
 
-- システム状態（READY/BUSY）
-- ターミナル管理情報（アクティブ数、スロット状況）
-- パフォーマンスメトリクス
-- 待機中操作の可視化
+- System state (READY/BUSY)
+- Terminal management info (active count, slot status)
+- Performance metrics
+- Pending operations visualization
 
-**一般的な問題パターン**
+**Common Problem Patterns**
 
-1. **通信断絶**: メッセージキューイング機能確認 → Debug panelで確認
-2. **メモリリーク**: dispose()パターン実装確認 → Performance Metricsで監視
-3. **パフォーマンス**: バッファリング設定確認 → Debug panelでリアルタイム確認
+1. **Communication Disconnection**: Check message queueing → Verify in Debug panel
+2. **Memory Leaks**: Check dispose() pattern implementation → Monitor via Performance Metrics
+3. **Performance**: Check buffering settings → Real-time verification in Debug panel
 
-**デバッグツール活用**
+**Debug Tools**
 
-- **内蔵Debug Panel**: 状態監視・トラブルシューティング
-- **WebView Developer Tools**: DOM・JavaScript デバッグ
-- **Extension Host ログ監視**: バックエンド処理確認
-- **パフォーマンス プロファイリング**: CPU・メモリ使用量分析
+- **Built-in Debug Panel**: State monitoring, troubleshooting
+- **WebView Developer Tools**: DOM, JavaScript debugging
+- **Extension Host Log Monitoring**: Backend processing verification
+- **Performance Profiling**: CPU, memory usage analysis
 
-### テスト戦略設計
+### Test Strategy Design
 
-**テスト分類**
+**Test Categories**
 
-- 単体テスト: 各Manager個別機能
-- 統合テスト: Manager間協調動作
-- E2Eテスト: 実WebView環境
+- Unit tests: Individual Manager functionality
+- Integration tests: Inter-Manager coordination
+- E2E tests: Real WebView environment
 
-**モック設計思想**
+**Mock Design Principles**
 
-- インターフェースベースモック
-- 依存注入によるテスト容易性
-- 実環境に近いテストデータ
+- Interface-based mocks
+- Test facilitation through dependency injection
+- Test data close to production environment
 
-## 実装チェックリスト
+## Implementation Checklists
 
-### 新機能実装時
+### New Feature Implementation
 
-- [ ] インターフェース定義 (ManagerInterfaces.ts)
-- [ ] 実装クラス作成 (managers/xxx.ts)
-- [ ] TerminalWebviewManagerに統合
-- [ ] dispose()メソッド実装
-- [ ] テストケース作成
-- [ ] TypeScript型安全性確認
+- [ ] Interface definition (ManagerInterfaces.ts)
+- [ ] Implementation class creation (managers/xxx.ts)
+- [ ] Integration into TerminalWebviewManager
+- [ ] dispose() method implementation
+- [ ] Test case creation
+- [ ] TypeScript type safety verification
 
-### リファクタリング時
+### Refactoring
 
-- [ ] 既存インターフェース維持
-- [ ] メッセージプロトコル互換性確認
-- [ ] パフォーマンス劣化確認
-- [ ] メモリリーク確認
-- [ ] 全テスト通過確認
+- [ ] Maintain existing interfaces
+- [ ] Message protocol compatibility verification
+- [ ] Performance regression check
+- [ ] Memory leak verification
+- [ ] All tests passing
 
-このガイドに従えば、WebViewコンポーネントの効率的な実装が可能です。
+## File Structure
+
+```
+src/webview/
+├── main.ts                     # Entry point, TerminalWebviewManager
+├── interfaces/
+│   └── ManagerInterfaces.ts    # Manager interfaces
+├── managers/
+│   ├── ConsolidatedMessageManager.ts
+│   ├── UIManager.ts
+│   ├── InputManager.ts
+│   ├── PerformanceManager.ts
+│   ├── ScrollbackManager.ts
+│   ├── NotificationManager.ts
+│   ├── TerminalLifecycleCoordinator.ts
+│   ├── SplitManager.ts
+│   ├── ConfigManager.ts
+│   ├── TerminalTabManager.ts
+│   ├── DisplayModeManager.ts
+│   └── HeaderManager.ts
+├── controllers/
+│   └── LifecycleController.ts  # Resource lifecycle management
+└── utils/
+    └── DOMUtils.ts             # DOM utility functions
+```
+
+Following this guide enables efficient WebView component implementation.
