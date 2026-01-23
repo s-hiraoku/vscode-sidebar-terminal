@@ -35,59 +35,67 @@
 
 ### Terminal Management
 
-| Feature                 | Description                                                |
-| ----------------------- | ---------------------------------------------------------- |
-| **Multiple Terminals**  | Up to 5 concurrent terminal instances                      |
-| **Session Persistence** | Auto-save/restore sessions with 1,000 lines scrollback     |
-| **Split Views**         | Vertical/horizontal splitting for multi-terminal workflows |
-| **Tab Management**      | Drag & drop reordering (synced with split view), close buttons, smart switching |
-| **Cross-Platform**      | Windows, macOS, and Linux support                          |
+| Feature | Description |
+|---------|-------------|
+| **Multiple Terminals** | Up to 5 concurrent terminal instances |
+| **Session Persistence** | Auto-save/restore sessions with configurable scrollback (up to 3,000 lines) |
+| **Split Views** | Vertical/horizontal splitting with drag-to-resize |
+| **Tab Management** | Drag & drop reordering (synced with split view), close buttons |
+| **Terminal Profiles** | Support for custom shell profiles per platform |
+| **Cross-Platform** | Windows, macOS, and Linux support |
 
 ### AI Agent Integration
 
 Automatic detection and status tracking for:
 
-- **Claude Code**
-- **Codex CLI**
-- **Gemini CLI**
-- **GitHub Copilot CLI**
+- **Claude Code** - Anthropic's AI coding assistant
+- **Codex CLI** - OpenAI's command-line tool
+- **Gemini CLI** - Google's AI assistant
+- **GitHub Copilot CLI** - GitHub's AI pair programmer
+- **CodeRabbit CLI** - AI code review tool
 
 **Features:**
 
 - Real-time connection status indicators
 - File reference sharing with `Cmd+Alt+L` (Mac) / `Ctrl+Alt+L` (Win/Linux)
+- Send all open files with `Cmd+Alt+A` (Mac) / `Ctrl+Alt+A` (Win/Linux)
 - Session persistence across VS Code restarts
 - Multi-agent workflows across terminals
 
 ### Developer Experience
 
-- **Full Clipboard Support** - Standard Ctrl/Cmd+C/V shortcuts
-- **IME Support** - Japanese, Chinese, Korean input methods
-- **Link Handling** - Click file paths to open in VS Code, URLs open in browser
-- **Alt+Click Positioning** - VS Code-standard cursor placement
-- **Debug Panel** - Real-time monitoring with `Ctrl+Shift+D`
+| Feature | Description |
+|---------|-------------|
+| **Full Clipboard Support** | Standard Ctrl/Cmd+C/V shortcuts, image paste support |
+| **IME Support** | Japanese, Chinese, Korean input methods with VS Code standard handling |
+| **Link Detection** | Click file paths to open in VS Code, URLs open in browser, email links |
+| **Alt+Click Positioning** | VS Code-standard cursor placement |
+| **Shell Integration** | Command tracking, working directory display, command history |
+| **Debug Panel** | Real-time monitoring with `Ctrl+Shift+D` |
+| **Mouse Tracking** | Support for TUI applications (vim, htop, zellij) with mouse mode |
 
 ## Keyboard Shortcuts
 
-| Shortcut                                      | Action                                                         |
-| --------------------------------------------- | -------------------------------------------------------------- |
-| `Cmd+C` / `Ctrl+C`                            | Copy selected text                                             |
-| `Cmd+V` / `Ctrl+V`                            | Paste (text and images)                                        |
-| `Shift+Enter` / `Option+Enter`                | Insert newline (Claude Code multiline prompts)                 |
-| `Cmd+Alt+L` / `Ctrl+Alt+L`                    | Insert current file reference for AI agents (from editor)      |
-| `Cmd+Alt+A` / `Ctrl+Alt+A`                      | Insert all open files references for AI agents |
-| `Cmd+K Cmd+C` / `Ctrl+K Ctrl+C`               | Activate GitHub Copilot Chat                                   |
-| ``Ctrl+` ``                                   | Focus Secondary Terminal view (when terminal is not focused)   |
-| ``Ctrl+Shift+` ``                             | Create new terminal                                            |
-| `Cmd+\\` (Mac) / `Ctrl+Shift+5`               | Split terminal vertically (when Secondary Terminal is focused) |
-| `Cmd+K` / `Ctrl+K`                            | Clear terminal (when Secondary Terminal is focused)            |
-| `Alt+Cmd+Left/Right` (Mac) / `Alt+Left/Right` | Focus previous/next terminal (when focused)                    |
-| `Cmd+Alt+1..5` (Mac) / `Alt+1..5`             | Focus terminal by index (when focused)                         |
-| `Ctrl+Shift+D`                                | Toggle debug panel (webview)                                   |
+| Shortcut | Action |
+|----------|--------|
+| `Cmd+C` / `Ctrl+C` | Copy selected text (or send SIGINT if no selection) |
+| `Cmd+V` / `Ctrl+V` | Paste (text and images) |
+| `Shift+Enter` / `Option+Enter` | Insert newline (Claude Code multiline prompts) |
+| `Cmd+Alt+L` / `Ctrl+Alt+L` | Insert current file reference for AI agents |
+| `Cmd+Alt+A` / `Ctrl+Alt+A` | Insert all open files references for AI agents |
+| `Cmd+K Cmd+C` / `Ctrl+K Ctrl+C` | Activate GitHub Copilot Chat |
+| ``Ctrl+` `` | Focus Secondary Terminal view |
+| ``Ctrl+Shift+` `` | Create new terminal |
+| `Cmd+\` (Mac) / `Ctrl+Shift+5` | Split terminal vertically |
+| `Cmd+K` / `Ctrl+K` | Clear terminal |
+| `Alt+Cmd+Left/Right` (Mac) / `Alt+Left/Right` | Focus previous/next terminal |
+| `Cmd+Alt+1..5` (Mac) / `Alt+1..5` | Focus terminal by index |
+| `Ctrl+Shift+D` | Toggle debug panel |
+| `Cmd+A` / `Ctrl+A` | Select all terminal content |
 
 Other UX features:
 
-- `Alt+Click` moves the cursor (VS Code-style) when enabled.
+- `Alt+Click` moves the cursor (VS Code-style) when enabled via `secondaryTerminal.altClickMovesCursor`
 
 > **Claude Code tips**:
 > - `Cmd+V` on macOS pastes both text and images (screenshots) into Claude Code
@@ -97,16 +105,23 @@ Other UX features:
 
 Access via `Ctrl+Shift+P` (Win/Linux) or `Cmd+Shift+P` (Mac):
 
-| Command                                                | Description           |
-| ------------------------------------------------------ | --------------------- |
-| `Secondary Terminal: Focus Terminal`                   | Focus terminal panel  |
-| `Secondary Terminal: Create New Terminal`              | Create a new terminal |
-| `Secondary Terminal: Split Terminal Vertically`        | Split vertically      |
-| `Secondary Terminal: Split Terminal Horizontally`      | Split horizontally    |
-| `Secondary Terminal: Select Terminal Profile`          | Choose a profile      |
-| `Secondary Terminal: Manage Terminal Profiles`         | Edit profiles         |
-| `Secondary Terminal: Show Version`                     | Display version info  |
-| `Secondary Terminal: Clear Corrupted Terminal History` | Clear session data    |
+| Command | Description |
+|---------|-------------|
+| `Secondary Terminal: Focus Terminal` | Focus terminal panel |
+| `Secondary Terminal: Create New Terminal` | Create a new terminal |
+| `Secondary Terminal: Kill Terminal` | Close current terminal |
+| `Secondary Terminal: Clear Terminal` | Clear terminal content |
+| `Secondary Terminal: Split Terminal Vertically` | Split vertically |
+| `Secondary Terminal: Split Terminal Horizontally` | Split horizontally |
+| `Secondary Terminal: Select Terminal Profile` | Choose a shell profile |
+| `Secondary Terminal: Manage Terminal Profiles` | Edit shell profiles |
+| `Secondary Terminal: Focus Terminal 1-5` | Focus specific terminal |
+| `Secondary Terminal: Focus Next/Previous Terminal` | Navigate terminals |
+| `Secondary Terminal: Save/Restore/Clear Session` | Session management |
+| `Secondary Terminal: Run Recent Command` | Execute from history |
+| `Secondary Terminal: Show Version` | Display version info |
+| `Secondary Terminal: Terminal Settings` | Open settings |
+| `Secondary Terminal: Clear Corrupted Terminal History` | Fix session data issues |
 
 ## Configuration
 
@@ -115,10 +130,14 @@ Access via `Ctrl+Shift+P` (Win/Linux) or `Cmd+Shift+P` (Mac):
 ```json
 {
   "secondaryTerminal.shell": "auto",
+  "secondaryTerminal.shellArgs": [],
   "secondaryTerminal.maxTerminals": 5,
   "secondaryTerminal.fontSize": 14,
   "secondaryTerminal.fontFamily": "MesloLGS NF, Monaco, monospace",
-  "secondaryTerminal.cursorBlink": true
+  "secondaryTerminal.cursorBlink": true,
+  "secondaryTerminal.cursorStyle": "block",
+  "secondaryTerminal.scrollback": 1000,
+  "secondaryTerminal.defaultDirectory": ""
 }
 ```
 
@@ -128,9 +147,68 @@ Access via `Ctrl+Shift+P` (Win/Linux) or `Cmd+Shift+P` (Mac):
 {
   "secondaryTerminal.enableCliAgentIntegration": true,
   "secondaryTerminal.enableGitHubCopilotIntegration": true,
-  "secondaryTerminal.focusAfterAtMention": true
+  "secondaryTerminal.focusAfterAtMention": true,
+  "secondaryTerminal.enableAtMentionSync": false
 }
 ```
+
+### Session Persistence Settings
+
+```json
+{
+  "secondaryTerminal.enablePersistentSessions": true,
+  "secondaryTerminal.persistentSessionScrollback": 1000,
+  "secondaryTerminal.persistentSessionReviveProcess": "onWindowClose",
+  "secondaryTerminal.persistentSessionStorageLimit": 20,
+  "secondaryTerminal.persistentSessionRetentionDays": 7
+}
+```
+
+### Split View Settings
+
+```json
+{
+  "secondaryTerminal.maxSplitTerminals": 4,
+  "secondaryTerminal.minTerminalHeight": 100,
+  "secondaryTerminal.enableSplitResize": true,
+  "secondaryTerminal.dynamicSplitDirection": true
+}
+```
+
+### Shell Integration Settings
+
+```json
+{
+  "secondaryTerminal.shellIntegration.enabled": true,
+  "secondaryTerminal.shellIntegration.showCommandStatus": true,
+  "secondaryTerminal.shellIntegration.showWorkingDirectory": true,
+  "secondaryTerminal.shellIntegration.commandHistory": true
+}
+```
+
+### Link Detection Settings
+
+```json
+{
+  "secondaryTerminal.links.enabled": true,
+  "secondaryTerminal.links.detectFileLinks": true,
+  "secondaryTerminal.links.detectWebLinks": true,
+  "secondaryTerminal.links.detectEmailLinks": true
+}
+```
+
+### Advanced Settings
+
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| `secondaryTerminal.confirmBeforeKill` | boolean | `true` | Show confirmation before closing terminals |
+| `secondaryTerminal.protectLastTerminal` | boolean | `true` | Prevent closing the last terminal |
+| `secondaryTerminal.altClickMovesCursor` | boolean | `true` | Enable Alt+Click cursor positioning |
+| `secondaryTerminal.sendKeybindingsToShell` | boolean | `true` | Send keybindings to shell |
+| `secondaryTerminal.allowChords` | boolean | `true` | Allow multi-key chord sequences |
+| `secondaryTerminal.minimumContrastRatio` | number | `4.5` | Minimum contrast ratio for text |
+| `secondaryTerminal.activeBorderMode` | string | `"always"` | When to show active terminal border |
+| `secondaryTerminal.logging.level` | string | `"info"` | Logging level (debug/info/warn/error) |
 
 ## Architecture
 
@@ -145,16 +223,19 @@ Access via `Ctrl+Shift+P` (Win/Linux) or `Cmd+Shift+P` (Mac):
 
 **WebView (Browser)**
 
-- xterm.js: Terminal emulation
+- xterm.js: Terminal emulation with WebGL rendering
 - Manager System: Input, UI, Performance, Splitting, Configuration
 
 ## Performance
 
-- **Build Size**: ~790 KiB extension + ~1.5 MiB webview
-- **Rendering**: WebGL with auto DOM fallback
-- **Output Buffering**: Adaptive 2-16ms intervals (up to 250fps for AI output)
-- **Memory**: Efficient cleanup with LIFO disposal pattern
-- **Scrollback**: <1s restore for 1,000 lines with ANSI color preservation
+| Metric | Value |
+|--------|-------|
+| **Build Size** | ~790 KiB extension + ~1.5 MiB webview |
+| **Rendering** | WebGL with auto DOM fallback |
+| **Output Buffering** | Adaptive 2-16ms intervals (up to 250fps for AI output) |
+| **Memory** | Efficient cleanup with LIFO disposal pattern |
+| **Scrollback Restore** | <1s for 1,000 lines with ANSI color preservation |
+| **Terminal Disposal** | <100ms cleanup time |
 
 ## Troubleshooting
 
@@ -162,17 +243,30 @@ Access via `Ctrl+Shift+P` (Win/Linux) or `Cmd+Shift+P` (Mac):
 
 - Check `secondaryTerminal.shell` setting points to valid shell
 - Verify shell is accessible from your PATH
+- Try setting an explicit shell path
 
 ### AI Agent Not Detected
 
 - Ensure `secondaryTerminal.enableCliAgentIntegration` is `true`
 - Check debug panel (`Ctrl+Shift+D`) for detection logs
-- Verify agent is properly installed
+- Verify agent is properly installed and running
 
 ### Performance Issues
 
 - Reduce `secondaryTerminal.maxTerminals` if needed
+- Lower `secondaryTerminal.scrollback` value
 - Check system resources via debug panel
+
+### Session Not Restoring
+
+- Verify `secondaryTerminal.enablePersistentSessions` is `true`
+- Check storage limits with `secondaryTerminal.persistentSessionStorageLimit`
+- Use "Clear Corrupted Terminal History" command if data is corrupted
+
+### TUI Applications Display Issues
+
+- Mouse tracking is automatically enabled for applications like zellij
+- If display issues occur in split mode, try switching to fullscreen mode
 
 ## Development
 
@@ -195,6 +289,7 @@ npm run lint          # ESLint check
 - TypeScript strict mode
 - 275+ unit tests
 - E2E test coverage with Playwright
+- TDD development workflow
 
 ## Known Limitations
 
@@ -222,6 +317,7 @@ See [GitHub Issues](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues)
 ## Links
 
 - [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=s-hiraoku.vscode-sidebar-terminal)
+- [Open VSX Registry](https://open-vsx.org/extension/s-hiraoku/vscode-sidebar-terminal)
 - [GitHub Repository](https://github.com/s-hiraoku/vscode-sidebar-terminal)
 - [Changelog](CHANGELOG.md)
 - [Blog Article (Japanese)](https://zenn.dev/hiraoku/articles/0de654620028a0)
@@ -232,4 +328,4 @@ MIT License - see [LICENSE](LICENSE) file.
 
 ---
 
-**Built with ❤️ for VS Code developers working with AI agents**
+**Built for VS Code developers working with AI agents**

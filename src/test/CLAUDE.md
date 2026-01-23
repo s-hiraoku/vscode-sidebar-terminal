@@ -1,53 +1,53 @@
-# Test CLAUDE.md - TDD実装効率化ガイド
+# Test CLAUDE.md - TDD Implementation Guide
 
-このファイルはテスト駆動開発（TDD）の効率的な実装をサポートします。
+This file provides guidance for efficient Test-Driven Development (TDD) implementation.
 
-## TDD実践体制
+## TDD Quality Standards
 
-### 現在の品質レベル
+### Current Quality Level
 
-- **テスト数**: 275+ テスト
-- **成功率**: 93%（段階的に95%へ向上中）
-- **TDDコンプライアンス**: 50%（85%まで向上予定）
-- **カバレッジ**: 85%以上必須
+- **Test Count**: 275+ tests
+- **Pass Rate**: 93% (progressively improving to 95%)
+- **TDD Compliance**: 50% (targeting 85%)
+- **Coverage**: 85%+ required
 
-### TDD品質ゲート（自動化済み）
+### TDD Quality Gate (Automated)
 
 ```bash
-# リリース前自動品質チェック
-npm run pre-release:check     # 包括的品質ゲート
-npm run tdd:quality-gate      # TDD品質基準チェック
-npm run tdd:comprehensive-check # カバレッジ+品質+ゲート
+# Pre-release automated quality checks
+npm run pre-release:check     # Comprehensive quality gate
+npm run tdd:quality-gate      # TDD quality standards check
+npm run tdd:comprehensive-check # Coverage + quality + gate
 ```
 
-## 効率的なテスト実装テンプレート
+## Efficient Test Implementation Templates
 
-### Red-Green-Refactor サイクル
+### Red-Green-Refactor Cycle
 
 ```typescript
-// 1. RED - 失敗するテストを書く
-describe('新機能', () => {
+// 1. RED - Write a failing test first
+describe('NewFeature', () => {
   it('should handle new functionality', () => {
     const result = newFeature();
-    expect(result).to.equal(expectedValue); // まだ実装されていないので失敗
+    expect(result).to.equal(expectedValue); // Fails - not implemented yet
   });
 });
 
-// 2. GREEN - テストを通す最小限のコード
+// 2. GREEN - Write minimal code to pass the test
 function newFeature() {
-  return expectedValue; // 最小限の実装
+  return expectedValue; // Minimal implementation
 }
 
-// 3. REFACTOR - コードを改善
+// 3. REFACTOR - Improve the code
 function newFeature() {
-  // 適切な実装に改善
+  // Proper implementation
   return calculateExpectedValue();
 }
 ```
 
-### 高効率テストパターン
+### High-Efficiency Test Patterns
 
-#### セッション管理テスト
+#### Session Management Tests
 
 ```typescript
 // src/test/unit/sessions/SessionManager.test.ts
@@ -65,13 +65,13 @@ describe('UnifiedSessionManager', () => {
   });
 
   it('should save and restore multiple terminals', async () => {
-    // Given: 複数ターミナルの状態
+    // Given: Multiple terminal states
     const terminals = createTestTerminals(3);
 
-    // When: セッション保存
+    // When: Save session
     await sessionManager.saveSession(terminals);
 
-    // Then: 正確に復元される
+    // Then: Restored accurately
     const restored = await sessionManager.restoreSession();
     expect(restored).to.have.length(3);
     expect(restored[0].scrollback).to.equal(terminals[0].scrollback);
@@ -79,7 +79,7 @@ describe('UnifiedSessionManager', () => {
 });
 ```
 
-#### WebViewマネージャーテスト
+#### WebView Manager Tests
 
 ```typescript
 // src/test/unit/webview/managers/MessageManager.test.ts
@@ -93,19 +93,19 @@ describe('MessageManager', () => {
   });
 
   it('should queue messages when webview is not ready', () => {
-    // Given: WebView未準備状態
+    // Given: WebView not ready state
     messageManager.setReady(false);
 
-    // When: メッセージ送信
+    // When: Send message
     messageManager.postMessage({ command: 'test', data: 'data' });
 
-    // Then: キューに保存される
+    // Then: Saved to queue
     expect(messageManager.getQueueSize()).to.equal(1);
   });
 });
 ```
 
-#### ターミナル管理テスト
+#### Terminal Management Tests
 
 ```typescript
 // src/test/unit/terminals/TerminalManager.test.ts
@@ -117,17 +117,17 @@ describe('TerminalManager', () => {
   });
 
   it('should prevent infinite deletion loops', async () => {
-    // Given: ターミナルが存在
+    // Given: Terminal exists
     const terminal = await terminalManager.createTerminal();
 
-    // When: 同時削除試行
+    // When: Concurrent deletion attempts
     const deletePromises = [
       terminalManager.deleteTerminal(terminal.id),
       terminalManager.deleteTerminal(terminal.id),
       terminalManager.deleteTerminal(terminal.id),
     ];
 
-    // Then: 1つだけ成功
+    // Then: Only one succeeds
     const results = await Promise.all(deletePromises);
     const successCount = results.filter((r) => r.success).length;
     expect(successCount).to.equal(1);
@@ -135,14 +135,14 @@ describe('TerminalManager', () => {
 });
 ```
 
-## テスト環境セットアップ
+## Test Environment Setup
 
-### TestSetup.ts パターン
+### TestSetup.ts Pattern
 
 ```typescript
-// src/test/shared/TestSetup.ts - 統一テスト環境
+// src/test/shared/TestSetup.ts - Unified test environment
 export function setupCompleteTestEnvironment() {
-  setupJSDOMEnvironment(); // DOM環境
+  setupJSDOMEnvironment(); // DOM environment
   setupConsoleMocks(); // Console mocking
   setupTestEnvironment(); // VS Code API mock
 
@@ -153,7 +153,7 @@ export function setupCompleteTestEnvironment() {
 }
 ```
 
-### モックファクトリーパターン
+### Mock Factory Pattern
 
 ```typescript
 // src/test/utils/TDDTestHelper.ts
@@ -183,47 +183,47 @@ export class TestDataFactory {
 }
 ```
 
-## パフォーマンステスト
+## Performance Tests
 
-### 負荷テストパターン
+### Load Testing Pattern
 
 ```typescript
 describe('Performance Tests', () => {
   it('should handle high-frequency terminal output', async () => {
     const startTime = Date.now();
 
-    // 高頻度データ送信テスト
+    // High-frequency data transmission test
     for (let i = 0; i < 1000; i++) {
       await terminalManager.sendData(1, `Line ${i}\n`);
     }
 
     const duration = Date.now() - startTime;
-    expect(duration).to.be.lessThan(1000); // 1秒以内
+    expect(duration).to.be.lessThan(1000); // Under 1 second
   });
 
   it('should prevent memory leaks', () => {
     const initialMemory = process.memoryUsage().heapUsed;
 
-    // 大量オブジェクト作成・削除
+    // Create and destroy many objects
     for (let i = 0; i < 100; i++) {
       const terminal = createTestTerminal();
       terminal.dispose();
     }
 
-    // GC強制実行
+    // Force GC
     if (global.gc) global.gc();
 
     const finalMemory = process.memoryUsage().heapUsed;
     const memoryIncrease = finalMemory - initialMemory;
 
-    expect(memoryIncrease).to.be.lessThan(1024 * 1024); // 1MB以内
+    expect(memoryIncrease).to.be.lessThan(1024 * 1024); // Under 1MB
   });
 });
 ```
 
-## CI/CD統合テスト
+## CI/CD Integration Tests
 
-### GitHub Actions品質ゲート
+### GitHub Actions Quality Gate
 
 ```yaml
 # .github/workflows/quality-gate.yml
@@ -236,33 +236,33 @@ describe('Performance Tests', () => {
     fi
 ```
 
-### リリース前自動チェック
+### Pre-Release Automated Checks
 
 ```bash
 # scripts/pre-release-check.sh
 #!/bin/bash
 set -e
 
-echo "🔍 Running TDD quality checks..."
+echo "Running TDD quality checks..."
 npm run tdd:quality-gate
 
-echo "📊 Running test coverage..."
+echo "Running test coverage..."
 npm run test:coverage
 
-echo "🧪 Running all tests..."
+echo "Running all tests..."
 npm test
 
-echo "✅ All quality gates passed!"
+echo "All quality gates passed!"
 ```
 
-## デバッグ・トラブルシューティング
+## Debugging & Troubleshooting
 
-### テスト失敗パターン別対処法
+### Test Failure Pattern Solutions
 
-#### 1. VS Code API関連エラー
+#### 1. VS Code API Related Errors
 
 ```typescript
-// Mock不備の場合
+// If mock is incomplete
 const setupMocks = () => {
   (global as any).vscode = {
     workspace: {
@@ -274,28 +274,28 @@ const setupMocks = () => {
 };
 ```
 
-#### 2. 非同期処理タイミング問題
+#### 2. Async Timing Issues
 
 ```typescript
-// Promise解決待ち
+// Wait for Promise resolution
 it('should handle async operations', async () => {
   const promise = asyncOperation();
   await expect(promise).to.eventually.equal(expectedValue);
 });
 
-// タイムアウト設定
+// Set timeout
 it('should complete within time limit', function (this: any) {
   this.timeout(5000);
   return longRunningTest();
 });
 ```
 
-#### 3. メモリリーク検出
+#### 3. Memory Leak Detection
 
 ```typescript
-// リソース解放確認
+// Confirm resource disposal
 afterEach(() => {
-  // 全リソース解放
+  // Release all resources
   if (testResource) {
     testResource.dispose();
     testResource = null;
@@ -303,32 +303,32 @@ afterEach(() => {
 });
 ```
 
-## TDD実践チェックリスト
+## TDD Practice Checklists
 
-### テスト作成時
+### When Creating Tests
 
-- [ ] Red: 失敗するテストを先に書く
-- [ ] Green: テストを通す最小限のコード
-- [ ] Refactor: コードを改善
-- [ ] テスト名が仕様を明確に表現
-- [ ] 1テスト1機能の原則
-- [ ] setup/teardown適切に実装
+- [ ] Red: Write failing test first
+- [ ] Green: Write minimal code to pass
+- [ ] Refactor: Improve the code
+- [ ] Test name clearly expresses specification
+- [ ] One test, one feature principle
+- [ ] Setup/teardown properly implemented
 
-### 品質保証時
+### Quality Assurance
 
-- [ ] TDD品質ゲートクリア（50%以上）
-- [ ] テストカバレッジ85%以上
-- [ ] 全テスト実行・成功確認
-- [ ] パフォーマンステスト実行
-- [ ] メモリリークチェック
-- [ ] CI/CD品質ゲート通過
+- [ ] TDD quality gate passed (50%+)
+- [ ] Test coverage 85%+
+- [ ] All tests executed and passing
+- [ ] Performance tests executed
+- [ ] Memory leak check
+- [ ] CI/CD quality gate passed
 
-### リファクタリング時
+### When Refactoring
 
-- [ ] 既存テストが通ることを確認
-- [ ] テストケース追加（新機能分）
-- [ ] テスト実行時間確認
-- [ ] モック・スタブ適切性確認
-- [ ] エッジケーステスト追加
+- [ ] Confirm existing tests pass
+- [ ] Add test cases for new features
+- [ ] Verify test execution time
+- [ ] Confirm mock/stub appropriateness
+- [ ] Add edge case tests
 
-このガイドでTDD品質を維持しながら効率的な実装が可能です。
+Following this guide enables efficient implementation while maintaining TDD quality.
