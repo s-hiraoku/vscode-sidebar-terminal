@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Documentation Cleanup**: Updated internal documentation for consistency and accuracy
+  - Removed obsolete `docs/research/` references from documentation structure
+  - Fixed compound modifier hyphenation in `src/test/CLAUDE.md` ("API-related")
+  - Synchronized Manager Hierarchy and File Structure sections in `src/webview/CLAUDE.md`
+  - Added missing ScrollbackManager to WebView manager documentation
+  - Expanded File Structure to list all managers explicitly
+
 ## [0.2.7] - 2026-01-21
 
 ### Fixed
