@@ -12,8 +12,7 @@ Project Root
 ├── PRIVACY.md             # Privacy policy
 ├── docs/
 │   ├── README_ja.md       # Japanese README
-│   ├── architecture/      # Architecture documentation
-│   └── research/          # Research and investigation notes
+│   └── architecture/      # Architecture documentation
 ├── src/
 │   ├── webview/CLAUDE.md  # WebView implementation guide
 │   └── test/CLAUDE.md     # TDD implementation guide
@@ -49,12 +48,6 @@ Project Root
 | docs/architecture/ARCHITECTURE_ANALYSIS.md | Overall architecture | Major changes |
 | docs/architecture/COMPONENT-RELATIONSHIPS.md | Component relationships | Structural changes |
 | docs/architecture/clean-architecture.md | Design principles | Rarely |
-
-### 4. Research Documentation
-
-| File | Purpose | When to Update |
-|------|---------|----------------|
-| docs/research/*.md | Investigation findings | After research tasks |
 
 ## Documentation Update Triggers
 

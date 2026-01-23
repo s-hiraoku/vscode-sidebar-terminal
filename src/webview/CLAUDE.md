@@ -20,6 +20,7 @@ TerminalWebviewManager (Coordinator)
 ├── UIManager                   # UI control, themes, visual feedback
 ├── InputManager                # Keyboard shortcuts, IME, Alt+Click
 ├── PerformanceManager          # Output buffering, debouncing
+├── ScrollbackManager           # Scrollback buffer and navigation
 ├── NotificationManager         # User feedback, notifications
 ├── TerminalLifecycleCoordinator # Terminal creation/deletion
 ├── SplitManager                # Terminal splitting, layout
@@ -164,9 +165,14 @@ src/webview/
 │   ├── UIManager.ts
 │   ├── InputManager.ts
 │   ├── PerformanceManager.ts
-│   ├── SplitManager.ts
 │   ├── ScrollbackManager.ts
-│   └── ...
+│   ├── NotificationManager.ts
+│   ├── TerminalLifecycleCoordinator.ts
+│   ├── SplitManager.ts
+│   ├── ConfigManager.ts
+│   ├── TerminalTabManager.ts
+│   ├── DisplayModeManager.ts
+│   └── HeaderManager.ts
 ├── controllers/
 │   └── LifecycleController.ts  # Resource lifecycle management
 └── utils/

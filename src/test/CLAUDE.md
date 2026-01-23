@@ -259,7 +259,7 @@ echo "All quality gates passed!"
 
 ### Test Failure Pattern Solutions
 
-#### 1. VS Code API Related Errors
+#### 1. VS Code API-related Errors
 
 ```typescript
 // If mock is incomplete
