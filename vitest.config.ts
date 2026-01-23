@@ -59,10 +59,6 @@ export default defineConfig({
       vscode: path.resolve(__dirname, 'src/test/vitest/mocks/vscode.ts'),
       // Mock node-pty
       'node-pty': path.resolve(__dirname, 'src/test/vitest/mocks/node-pty.ts'),
-      '@homebridge/node-pty-prebuilt-multiarch': path.resolve(
-        __dirname,
-        'src/test/vitest/mocks/node-pty.ts'
-      ),
     },
   },
 });

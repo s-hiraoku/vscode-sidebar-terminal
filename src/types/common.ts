@@ -21,5 +21,5 @@ export {
   VsCodeMessage,
 } from './shared';
 
-// IPty interface is now defined in node-pty.d.ts for @homebridge/node-pty-prebuilt-multiarch
+// IPty interface is now defined in node-pty.d.ts for node-pty
 // Import IPty from the node-pty module when needed

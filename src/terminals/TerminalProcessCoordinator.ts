@@ -5,7 +5,7 @@ import * as vscode from 'vscode';
 import { TerminalInstance, ProcessState } from '../types/shared';
 import { showWarningMessage } from '../utils/common';
 import { ShellIntegrationService } from '../services/ShellIntegrationService';
-import type { IDisposable } from '@homebridge/node-pty-prebuilt-multiarch';
+import type { IDisposable } from 'node-pty';
 
 /** Manages PTY process lifecycle and shell integration */
 export class TerminalProcessCoordinator {

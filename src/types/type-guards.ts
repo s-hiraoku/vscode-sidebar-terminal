@@ -84,7 +84,7 @@ export type MessageHandler<T extends WebviewMessage = WebviewMessage> = (
 /**
  * Node-pty compatible process type
  */
-export type PtyProcess = import('@homebridge/node-pty-prebuilt-multiarch').IPty;
+export type PtyProcess = import('node-pty').IPty;
 
 /**
  * Node.js process reference

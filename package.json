@@ -1064,11 +1064,8 @@
     "vsce:package:win32-arm64": "@vscode/vsce package --target win32-arm64",
     "vsce:package:linux-x64": "@vscode/vsce package --target linux-x64",
     "vsce:package:linux-arm64": "@vscode/vsce package --target linux-arm64",
-    "vsce:package:linux-armhf": "@vscode/vsce package --target linux-armhf",
     "vsce:package:darwin-x64": "@vscode/vsce package --target darwin-x64",
     "vsce:package:darwin-arm64": "@vscode/vsce package --target darwin-arm64",
-    "vsce:package:alpine-x64": "@vscode/vsce package --target alpine-x64",
-    "vsce:package:alpine-arm64": "@vscode/vsce package --target alpine-arm64",
     "create-icons": "node scripts/create-icon.js",
     "pre-release:check": "npm run tdd:comprehensive-check && node scripts/pre-release-hook.js",
     "release:patch": "npm run pre-release:check && npm version patch && git push origin --follow-tags",
@@ -1101,7 +1098,7 @@
     "docs:generate": "npx typedoc",
     "docs:watch": "npx typedoc --watch",
     "docs:clean": "rm -rf docs/api",
-    "rebuild:fast": "npm rebuild @homebridge/node-pty-prebuilt-multiarch"
+    "rebuild:fast": "npm rebuild node-pty"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.0",
@@ -1155,7 +1152,7 @@
     "webpack-cli": "^6.0.0"
   },
   "dependencies": {
-    "@homebridge/node-pty-prebuilt-multiarch": "^0.13.1",
+    "node-pty": "^1.2.0-beta.8",
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/addon-search": "^0.16.0",
     "@xterm/addon-serialize": "^0.14.0",
@@ -1166,10 +1163,10 @@
     "process": "^0.11.10"
   },
   "bundledDependencies": [
-    "@homebridge/node-pty-prebuilt-multiarch"
+    "node-pty"
   ],
   "bundleDependencies": [
-    "@homebridge/node-pty-prebuilt-multiarch"
+    "node-pty"
   ],
   "volta": {
     "node": "24.13.0"

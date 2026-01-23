@@ -16,11 +16,11 @@ vi.mock('../../../../../utils/common', () => ({
   },
 }));
 
-import * as pty from '@homebridge/node-pty-prebuilt-multiarch';
+import * as pty from 'node-pty';
 import { TerminalLifecycleService } from '../../../../../services/terminal/TerminalLifecycleService';
 
 // Mock other dependencies
-vi.mock('@homebridge/node-pty-prebuilt-multiarch', () => ({
+vi.mock('node-pty', () => ({
   spawn: vi.fn(),
 }));
 
