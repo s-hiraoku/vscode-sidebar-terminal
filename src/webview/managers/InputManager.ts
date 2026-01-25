@@ -682,6 +682,32 @@ export class InputManager extends BaseManager implements IInputManager {
       this.queueInputData(terminalId, event.key, needsImmediateFlush);
     });
 
+    // CRITICAL: Set up onData handler for mouse tracking escape sequences
+    // When TUI apps enable mouse tracking mode (DECSET 1000/1002/1003/1006),
+    // xterm.js converts mouse events to escape sequences and sends them via onData
+    // These need to be forwarded to the PTY for mouse tracking to work
+    //
+    // NOTE: onKey handles keyboard input, onData handles mouse tracking escape sequences
+    // We need to filter out regular keyboard input from onData to avoid duplicates
+    terminal.onData((data: string) => {
+      // onData is called for all data, but we only need to handle:
+      // - Mouse tracking escape sequences (starting with \x1b[< or \x1b[M)
+
+      // Check if this looks like a mouse tracking escape sequence
+      // Mouse tracking sequences start with ESC[< (SGR mode) or ESC[M (X10 mode)
+      const isMouseTracking = data.startsWith('\x1b[<') || data.startsWith('\x1b[M');
+
+      if (isMouseTracking) {
+        this.logger(`Terminal ${terminalId} mouse tracking: ${data.length} bytes`);
+        // Send mouse tracking sequences immediately
+        this.queueInputData(terminalId, data, true);
+        return;
+      }
+
+      // Ignore regular keyboard input - it's handled by onKey above
+      // This prevents duplicate input from being sent to the PTY
+    });
+
     // CRITICAL: Add compositionend listener for IME final text
     // This is the most reliable way to capture Japanese/Chinese/Korean input
     // The compositionend event fires with the final composed text
