@@ -438,9 +438,8 @@ export class TerminalEventManager extends BaseManager {
    */
   public removeTerminalEvents(terminalId: string): void {
     try {
-      // Event registry automatically cleans up by prefix
-      // TODO: Implement unregisterByPrefix in EventHandlerRegistry
-      // this.eventRegistry.unregisterByPrefix(`terminal-${terminalId}`);
+      // Unregister all listeners with terminal-specific prefix
+      this.eventRegistry.unregisterByPattern(new RegExp(`^terminal-${terminalId}`));
       terminalLogger.info(`✅ Event handlers removed for terminal: ${terminalId}`);
     } catch (error) {
       terminalLogger.error(`Failed to remove event handlers for ${terminalId}:`, error);

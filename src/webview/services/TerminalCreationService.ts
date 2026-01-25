@@ -266,12 +266,17 @@ export class TerminalCreationService implements Disposable {
         const uiManager = managers?.ui;
 
         // Prepare font settings using extracted helper method
-        const { fontSettings: currentFontSettings, fontOverrides } = this.prepareFontSettings(config, configManager);
+        const { fontSettings: currentFontSettings, fontOverrides } = this.prepareFontSettings(
+          config,
+          configManager
+        );
 
         // Resolve current settings with theme (handles ConfigManager vs coordinator race conditions)
         const currentSettings = this.resolveCurrentSettings(configManager);
         const resolvedTheme = getWebviewTheme(currentSettings);
-        terminalLogger.info(`🎨 [THEME] Creating terminal with theme: ${currentSettings?.theme} -> bg=${resolvedTheme.background}`);
+        terminalLogger.info(
+          `🎨 [THEME] Creating terminal with theme: ${currentSettings?.theme} -> bg=${resolvedTheme.background}`
+        );
 
         // Merge config with defaults using TerminalConfigService
         // Include font settings and theme in the merge to ensure they're applied from the start
@@ -322,8 +327,6 @@ export class TerminalCreationService implements Disposable {
 
         // Extract individual addons for convenience
         const { fitAddon, serializeAddon, searchAddon } = loadedAddons;
-
-
 
         // Create terminal container using factory with proper config
         const terminalNumberToUse = terminalNumber ?? this.extractTerminalNumber(terminalId);
@@ -423,7 +426,10 @@ export class TerminalCreationService implements Disposable {
             uiManager.applyVSCodeStyling(container);
           }
         } catch (error) {
-          terminalLogger.warn('⚠️ Container styling application failed; continuing without styling', error);
+          terminalLogger.warn(
+            '⚠️ Container styling application failed; continuing without styling',
+            error
+          );
         }
 
         // Make container visible
@@ -458,10 +464,14 @@ export class TerminalCreationService implements Disposable {
         // Block xterm.js keydown handling for paste shortcuts to prevent double-handling
         terminal.attachCustomKeyEventHandler((event: KeyboardEvent) => {
           // Use userAgentData if available (modern), fallback to userAgent
-          const isMac = (navigator as any).userAgentData?.platform === 'macOS' || /Mac/.test(navigator.userAgent);
+          const isMac =
+            (navigator as any).userAgentData?.platform === 'macOS' ||
+            /Mac/.test(navigator.userAgent);
           // Block Cmd+V on macOS and Ctrl+V on all platforms
-          if ((isMac && event.metaKey && event.key === 'v') ||
-              (event.ctrlKey && event.key === 'v' && !event.shiftKey)) {
+          if (
+            (isMac && event.metaKey && event.key === 'v') ||
+            (event.ctrlKey && event.key === 'v' && !event.shiftKey)
+          ) {
             terminalLogger.info(`📋 Paste keydown - bypassing xterm.js key handler`);
             return false; // Let browser fire paste event, we'll handle it there
           }
@@ -476,7 +486,9 @@ export class TerminalCreationService implements Disposable {
             return;
           }
 
-          const hasImage = Array.from(clipboardData.items).some(item => item.type.startsWith('image/'));
+          const hasImage = Array.from(clipboardData.items).some((item) =>
+            item.type.startsWith('image/')
+          );
 
           if (hasImage) {
             // IMAGE paste: Send \x16 to trigger Claude Code's native clipboard read
@@ -526,9 +538,12 @@ export class TerminalCreationService implements Disposable {
             // Use currentSettings already retrieved above, or get fresh copy
             const settingsForVisuals = currentSettings ?? configManager?.getCurrentSettings?.();
             // Use currentFontSettings already retrieved above, or get fresh copy
-            const fontSettingsForApply = currentFontSettings ?? configManager?.getCurrentFontSettings?.();
+            const fontSettingsForApply =
+              currentFontSettings ?? configManager?.getCurrentFontSettings?.();
 
-            terminalLogger.info(`🎨 [DEBUG] Immediate settings check - theme: ${settingsForVisuals?.theme}`);
+            terminalLogger.info(
+              `🎨 [DEBUG] Immediate settings check - theme: ${settingsForVisuals?.theme}`
+            );
 
             if (settingsForVisuals) {
               uiManager.applyAllVisualSettings(terminal, settingsForVisuals);
@@ -536,16 +551,26 @@ export class TerminalCreationService implements Disposable {
 
               // 🔧 CRITICAL FIX: Explicitly update container backgrounds immediately
               // This ensures the correct theme is visible right away
-              this.updateContainerBackgrounds(terminalId, container, terminalContent, settingsForVisuals);
+              this.updateContainerBackgrounds(
+                terminalId,
+                container,
+                terminalContent,
+                settingsForVisuals
+              );
             }
 
             if (fontSettingsForApply) {
               uiManager.applyFontSettings(terminal, fontSettingsForApply);
-              terminalLogger.info(`✅ Font settings applied to terminal: ${terminalId} (${fontSettingsForApply.fontFamily}, ${fontSettingsForApply.fontSize}px)`);
+              terminalLogger.info(
+                `✅ Font settings applied to terminal: ${terminalId} (${fontSettingsForApply.fontFamily}, ${fontSettingsForApply.fontSize}px)`
+              );
             }
           }
         } catch (error) {
-          terminalLogger.warn('⚠️ Terminal settings application failed; continuing with defaults', error);
+          terminalLogger.warn(
+            '⚠️ Terminal settings application failed; continuing with defaults',
+            error
+          );
         }
 
         // Phase 3: Attach terminal to LifecycleController for resource management
@@ -626,9 +651,7 @@ export class TerminalCreationService implements Disposable {
           timestamp: Date.now(),
         };
 
-        terminalLogger.info(
-          `📨 [WebView] Sending terminalReady for terminalId: ${terminalId}`
-        );
+        terminalLogger.info(`📨 [WebView] Sending terminalReady for terminalId: ${terminalId}`);
         terminalLogger.debug('📨 [WebView] Message payload:', terminalReadyMessage);
 
         this.coordinator.postMessageToExtension(terminalReadyMessage);
@@ -713,7 +736,9 @@ export class TerminalCreationService implements Disposable {
             // Use fresh settings to ensure we have the latest theme
             const finalSettings = configManager?.getCurrentSettings?.();
 
-            terminalLogger.info(`🎨 [DEBUG] Final theme check - currentSettings.theme: ${finalSettings?.theme}`);
+            terminalLogger.info(
+              `🎨 [DEBUG] Final theme check - currentSettings.theme: ${finalSettings?.theme}`
+            );
 
             if (uiManager && finalSettings) {
               // Re-apply theme to ensure correct colors after WebGL setup
@@ -722,7 +747,12 @@ export class TerminalCreationService implements Disposable {
 
               // 🔧 CRITICAL FIX: Explicitly update container backgrounds
               // terminal.element may not be available when applyTerminalTheme tries to scope the update
-              this.updateContainerBackgrounds(terminalId, container, terminalContent, finalSettings);
+              this.updateContainerBackgrounds(
+                terminalId,
+                container,
+                terminalContent,
+                finalSettings
+              );
             }
 
             // Force a full terminal refresh
@@ -736,7 +766,7 @@ export class TerminalCreationService implements Disposable {
         return terminal;
       } catch (error) {
         terminalLogger.error(`Failed to create terminal ${terminalId}:`, error);
-        
+
         // Restore ResizeObservers if they were paused
 
         if (currentRetry < maxRetries) {
@@ -787,6 +817,12 @@ export class TerminalCreationService implements Disposable {
       // Cleanup mouse tracking service
       this.mouseTrackingService.cleanup(terminalId);
 
+      // Cleanup input handlers in InputManager
+      if (this.coordinator.inputManager) {
+        this.coordinator.inputManager.removeTerminalHandlers(terminalId);
+        terminalLogger.info(`✅ Input handlers removed via InputManager for: ${terminalId}`);
+      }
+
       // Phase 3: Dispose terminal via LifecycleController for proper resource cleanup
       this.lifecycleController.disposeTerminal(terminalId);
 
@@ -821,12 +857,16 @@ export class TerminalCreationService implements Disposable {
         const displayManager = this.coordinator?.getDisplayModeManager?.();
         const currentMode = displayManager?.getCurrentMode?.() ?? 'normal';
 
-        terminalLogger.info(`🔧 [CLEANUP] Current mode: ${currentMode}, remaining: ${remainingTerminals}`);
+        terminalLogger.info(
+          `🔧 [CLEANUP] Current mode: ${currentMode}, remaining: ${remainingTerminals}`
+        );
 
         if (remainingTerminals <= 1) {
           // If only 1 or 0 terminals remain, clear all split artifacts including resizers
           containerManager.clearSplitArtifacts();
-          terminalLogger.info(`✅ Split artifacts cleared (remaining terminals: ${remainingTerminals})`);
+          terminalLogger.info(
+            `✅ Split artifacts cleared (remaining terminals: ${remainingTerminals})`
+          );
 
           // Switch to normal mode if we're in split mode with 1 terminal
           if (currentMode === 'split' && displayManager && remainingTerminals === 1) {
@@ -838,8 +878,9 @@ export class TerminalCreationService implements Disposable {
           const orderedIds = Array.from(this.splitManager.getTerminals().keys());
           const activeId = this.coordinator?.getActiveTerminalId?.() ?? orderedIds[0] ?? null;
           const currentLocation =
-            (this.splitManager as { getCurrentPanelLocation?: () => 'sidebar' | 'panel' })
-              .getCurrentPanelLocation?.() || 'sidebar';
+            (
+              this.splitManager as { getCurrentPanelLocation?: () => 'sidebar' | 'panel' }
+            ).getCurrentPanelLocation?.() || 'sidebar';
           const splitDirection = this.splitManager.getOptimalSplitDirection(currentLocation);
           containerManager.applyDisplayState({
             mode: 'split',
@@ -967,7 +1008,10 @@ export class TerminalCreationService implements Disposable {
       try {
         const rect = container.getBoundingClientRect();
 
-        if (rect.width > Limits.MIN_CONTAINER_DIMENSION && rect.height > Limits.MIN_CONTAINER_DIMENSION) {
+        if (
+          rect.width > Limits.MIN_CONTAINER_DIMENSION &&
+          rect.height > Limits.MIN_CONTAINER_DIMENSION
+        ) {
           // 🔧 CRITICAL FIX: Reset xterm inline styles BEFORE fit() to allow width expansion
           DOMUtils.resetXtermInlineStyles(container);
           fitAddon.fit();
@@ -992,7 +1036,10 @@ export class TerminalCreationService implements Disposable {
           setTimeout(() => {
             try {
               const finalRect = container.getBoundingClientRect();
-              if (finalRect.width > Limits.MIN_CONTAINER_DIMENSION && finalRect.height > Limits.MIN_CONTAINER_DIMENSION) {
+              if (
+                finalRect.width > Limits.MIN_CONTAINER_DIMENSION &&
+                finalRect.height > Limits.MIN_CONTAINER_DIMENSION
+              ) {
                 // 🔧 FIX: Reset xterm inline styles before delayed fit as well
                 DOMUtils.resetXtermInlineStyles(container);
                 fitAddon.fit();
@@ -1069,12 +1116,18 @@ export class TerminalCreationService implements Disposable {
 
       if (viewport) {
         this.mouseTrackingService.setup(terminal, terminalId, viewport, sendInput);
-        terminalLogger.info(`[MouseTracking] Setup complete after ${attempts} attempt(s) for: ${terminalId}`);
+        terminalLogger.info(
+          `[MouseTracking] Setup complete after ${attempts} attempt(s) for: ${terminalId}`
+        );
       } else if (attempts < maxAttempts) {
-        terminalLogger.debug(`[MouseTracking] Viewport not found, retry ${attempts}/${maxAttempts} for: ${terminalId}`);
+        terminalLogger.debug(
+          `[MouseTracking] Viewport not found, retry ${attempts}/${maxAttempts} for: ${terminalId}`
+        );
         setTimeout(trySetup, delayMs);
       } else {
-        terminalLogger.warn(`[MouseTracking] Could not find viewport after ${maxAttempts} attempts for: ${terminalId}`);
+        terminalLogger.warn(
+          `[MouseTracking] Could not find viewport after ${maxAttempts} attempts for: ${terminalId}`
+        );
       }
     };
 
@@ -1194,7 +1247,9 @@ export class TerminalCreationService implements Disposable {
       const coordinatorSettings = (this.coordinator as any)?.currentSettings;
       if (coordinatorSettings?.theme && coordinatorSettings.theme !== 'auto') {
         currentSettings = { ...currentSettings, ...coordinatorSettings };
-        terminalLogger.info(`🎨 [THEME] Using coordinator settings (theme: ${coordinatorSettings.theme})`);
+        terminalLogger.info(
+          `🎨 [THEME] Using coordinator settings (theme: ${coordinatorSettings.theme})`
+        );
       }
     }
 
@@ -1226,12 +1281,26 @@ export class TerminalCreationService implements Disposable {
     if (directFontFamily || directFontSize) {
       // Extension sent font settings directly in config
       currentFontSettings = {
-        fontFamily: directFontFamily || configFontSettings?.fontFamily || configManager?.getCurrentFontSettings?.()?.fontFamily,
-        fontSize: directFontSize || configFontSettings?.fontSize || configManager?.getCurrentFontSettings?.()?.fontSize,
-        fontWeight: (config as any)?.fontWeight || configFontSettings?.fontWeight || FontDefaults.FONT_WEIGHT,
-        fontWeightBold: (config as any)?.fontWeightBold || configFontSettings?.fontWeightBold || FontDefaults.FONT_WEIGHT_BOLD,
-        lineHeight: (config as any)?.lineHeight || configFontSettings?.lineHeight || FontDefaults.LINE_HEIGHT,
-        letterSpacing: (config as any)?.letterSpacing ?? configFontSettings?.letterSpacing ?? FontDefaults.LETTER_SPACING,
+        fontFamily:
+          directFontFamily ||
+          configFontSettings?.fontFamily ||
+          configManager?.getCurrentFontSettings?.()?.fontFamily,
+        fontSize:
+          directFontSize ||
+          configFontSettings?.fontSize ||
+          configManager?.getCurrentFontSettings?.()?.fontSize,
+        fontWeight:
+          (config as any)?.fontWeight || configFontSettings?.fontWeight || FontDefaults.FONT_WEIGHT,
+        fontWeightBold:
+          (config as any)?.fontWeightBold ||
+          configFontSettings?.fontWeightBold ||
+          FontDefaults.FONT_WEIGHT_BOLD,
+        lineHeight:
+          (config as any)?.lineHeight || configFontSettings?.lineHeight || FontDefaults.LINE_HEIGHT,
+        letterSpacing:
+          (config as any)?.letterSpacing ??
+          configFontSettings?.letterSpacing ??
+          FontDefaults.LETTER_SPACING,
       };
     } else if (configFontSettings) {
       currentFontSettings = configFontSettings;
@@ -1243,7 +1312,10 @@ export class TerminalCreationService implements Disposable {
     const fontOverrides: Partial<ITerminalOptions> = {};
     if (currentFontSettings) {
       // Only include fontFamily if it's a non-empty string
-      if (typeof currentFontSettings.fontFamily === 'string' && currentFontSettings.fontFamily.trim()) {
+      if (
+        typeof currentFontSettings.fontFamily === 'string' &&
+        currentFontSettings.fontFamily.trim()
+      ) {
         fontOverrides.fontFamily = currentFontSettings.fontFamily.trim();
       }
       // Only include fontSize if it's a positive number
@@ -1251,15 +1323,26 @@ export class TerminalCreationService implements Disposable {
         fontOverrides.fontSize = currentFontSettings.fontSize;
       }
       // Only include fontWeight if it's a non-empty string
-      if (typeof currentFontSettings.fontWeight === 'string' && currentFontSettings.fontWeight.trim()) {
-        fontOverrides.fontWeight = currentFontSettings.fontWeight.trim() as ITerminalOptions['fontWeight'];
+      if (
+        typeof currentFontSettings.fontWeight === 'string' &&
+        currentFontSettings.fontWeight.trim()
+      ) {
+        fontOverrides.fontWeight =
+          currentFontSettings.fontWeight.trim() as ITerminalOptions['fontWeight'];
       }
       // Only include fontWeightBold if it's a non-empty string
-      if (typeof currentFontSettings.fontWeightBold === 'string' && currentFontSettings.fontWeightBold.trim()) {
-        fontOverrides.fontWeightBold = currentFontSettings.fontWeightBold.trim() as ITerminalOptions['fontWeightBold'];
+      if (
+        typeof currentFontSettings.fontWeightBold === 'string' &&
+        currentFontSettings.fontWeightBold.trim()
+      ) {
+        fontOverrides.fontWeightBold =
+          currentFontSettings.fontWeightBold.trim() as ITerminalOptions['fontWeightBold'];
       }
       // Only include lineHeight if it's a positive number
-      if (typeof currentFontSettings.lineHeight === 'number' && currentFontSettings.lineHeight > 0) {
+      if (
+        typeof currentFontSettings.lineHeight === 'number' &&
+        currentFontSettings.lineHeight > 0
+      ) {
         fontOverrides.lineHeight = currentFontSettings.lineHeight;
       }
       // Only include letterSpacing if it's a number (can be 0 or negative)
@@ -1270,7 +1353,10 @@ export class TerminalCreationService implements Disposable {
       if (currentFontSettings.cursorStyle) {
         fontOverrides.cursorStyle = currentFontSettings.cursorStyle;
       }
-      if (typeof currentFontSettings.cursorWidth === 'number' && currentFontSettings.cursorWidth > 0) {
+      if (
+        typeof currentFontSettings.cursorWidth === 'number' &&
+        currentFontSettings.cursorWidth > 0
+      ) {
         fontOverrides.cursorWidth = currentFontSettings.cursorWidth;
       }
       // Display settings
