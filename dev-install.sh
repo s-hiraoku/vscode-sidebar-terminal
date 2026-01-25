@@ -1,8 +1,9 @@
 #!/bin/bash
 # Interactive Development Setup Script
-# Easily install and test the local extension
+# Easily install and test local extension
 
 set -e
+set -o pipefail
 
 # Colors
 RED='\033[0;31m'
@@ -37,6 +38,10 @@ print_success() {
 
 print_error() {
     echo -e "${RED}${ERROR} $1${NC}"
+}
+
+print_warning() {
+    echo -e "${YELLOW}${WARNING} $1${NC}"
 }
 
 print_info() {

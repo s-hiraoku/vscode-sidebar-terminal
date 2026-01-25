@@ -819,8 +819,12 @@ export class TerminalCreationService implements Disposable {
 
       // Cleanup input handlers in InputManager
       if (this.coordinator.inputManager) {
-        this.coordinator.inputManager.removeTerminalHandlers(terminalId);
-        terminalLogger.info(`✅ Input handlers removed via InputManager for: ${terminalId}`);
+        try {
+          this.coordinator.inputManager.removeTerminalHandlers(terminalId);
+          terminalLogger.info(`✅ Input handlers removed via InputManager for: ${terminalId}`);
+        } catch (error) {
+          terminalLogger.warn(`⚠️ Failed to remove InputManager handlers for ${terminalId}`, error);
+        }
       }
 
       // Phase 3: Dispose terminal via LifecycleController for proper resource cleanup
