@@ -162,7 +162,7 @@ read -p "$(echo -e ${CYAN}"Select option [1-5]: "${NC})" choice
 case $choice in
     1)
         print_step "Packaging extension..."
-        npm run vsce:package
+        npx @vscode/vsce package
         vsix_file=$(ls -t *.vsix | head -n 1)
         if [ -z "$vsix_file" ]; then
             print_error "No .vsix file found after packaging"
@@ -180,7 +180,7 @@ case $choice in
         ;;
     3)
         print_step "Packaging extension..."
-        npm run vsce:package
+        npx @vscode/vsce package
         vsix_file=$(ls -t *.vsix | head -n 1)
         if [ -z "$vsix_file" ]; then
             print_error "No .vsix file found after packaging"
