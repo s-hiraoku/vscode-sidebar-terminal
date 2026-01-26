@@ -160,11 +160,7 @@ export interface IManagerCoordinator {
   switchToTerminal?(terminalId: string): Promise<boolean>;
   applySettings?(settings: unknown): void;
   // テーマ一括更新（auto テーマ連動機能）
-  updateAllTerminalThemes?(theme: {
-    background: string;
-    foreground: string;
-    cursor: string;
-  }): void;
+  updateAllTerminalThemes?(theme: { background: string; foreground: string; cursor: string }): void;
   // Claude状態管理（レガシー）
   updateClaudeStatus(
     activeTerminalName: string | null,
@@ -257,6 +253,7 @@ export interface IInputManager {
     container: HTMLElement,
     manager: IManagerCoordinator
   ): void;
+  removeTerminalHandlers(terminalId: string): void;
   getAltClickState(): AltClickState;
   isVSCodeAltClickEnabled(settings: PartialTerminalSettings): boolean;
   handleSpecialKeys(

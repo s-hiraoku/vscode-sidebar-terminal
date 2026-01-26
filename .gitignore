@@ -37,3 +37,7 @@ yarn-error.log*
 .claude/settings.local.json
 .claude/*.local.md
 .envrc
+
+# opencode
+.sisyphus/
+.opencode/

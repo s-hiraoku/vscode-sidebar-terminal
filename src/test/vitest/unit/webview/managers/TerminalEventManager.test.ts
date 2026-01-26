@@ -24,8 +24,9 @@ vi.mock('../../../../../webview/utils/EventHandlerRegistry', () => ({
   EventHandlerRegistry: class {
     register = vi.fn();
     unregister = vi.fn();
+    unregisterByPattern = vi.fn();
     dispose = vi.fn();
-  }
+  },
 }));
 
 describe('TerminalEventManager', () => {
@@ -97,7 +98,7 @@ describe('TerminalEventManager', () => {
     it('should skip legacy input handler when InputManager is present', () => {
       // Setup coordinator with InputManager
       (mockCoordinator as any).inputManager = {};
-      
+
       manager.setupTerminalEvents(mockTerminal as Terminal, 't1', mockContainer);
 
       expect(mockTerminal.onData).not.toHaveBeenCalled();
@@ -115,7 +116,7 @@ describe('TerminalEventManager', () => {
       expect(mockCoordinator.postMessageToExtension).toHaveBeenCalledWith({
         command: 'input',
         data: 'test input',
-        terminalId: 't1'
+        terminalId: 't1',
       });
     });
   });
@@ -123,7 +124,7 @@ describe('TerminalEventManager', () => {
   describe('Click Handling', () => {
     it('should setup click handler for activation', () => {
       manager.setupTerminalEvents(mockTerminal as Terminal, 't1', mockContainer);
-      
+
       expect(mockRegistry.register).toHaveBeenCalledWith(
         'terminal-t1-click',
         expect.anything(),
@@ -134,7 +135,7 @@ describe('TerminalEventManager', () => {
 
     it('should activate terminal on click if no selection', () => {
       manager.setupTerminalEvents(mockTerminal as Terminal, 't1', mockContainer);
-      
+
       // Get registered handler
       const calls = (mockRegistry.register as any).mock.calls;
       const clickCall = calls.find((call: any) => call[0] === 'terminal-t1-click');
@@ -149,7 +150,7 @@ describe('TerminalEventManager', () => {
 
     it('should NOT activate terminal on click if selection exists', () => {
       manager.setupTerminalEvents(mockTerminal as Terminal, 't1', mockContainer);
-      
+
       const calls = (mockRegistry.register as any).mock.calls;
       const clickCall = calls.find((call: any) => call[0] === 'terminal-t1-click');
       const clickHandler = clickCall[3];
@@ -164,14 +165,14 @@ describe('TerminalEventManager', () => {
   describe('Focus Optimization', () => {
     it('should register focus and blur handlers', () => {
       manager.setupTerminalEvents(mockTerminal as Terminal, 't1', mockContainer);
-      
+
       expect(mockRegistry.register).toHaveBeenCalledWith(
         'terminal-t1-focus',
         mockTerminal.textarea,
         'focus',
         expect.any(Function)
       );
-      
+
       expect(mockRegistry.register).toHaveBeenCalledWith(
         'terminal-t1-blur',
         mockTerminal.textarea,
@@ -212,7 +213,7 @@ describe('TerminalEventManager', () => {
       vi.useFakeTimers();
       // textarea does not have 'focused' attribute initially
       manager.focusTerminal(mockTerminal as Terminal, 't1');
-      
+
       vi.advanceTimersByTime(10);
       expect(mockTerminal.focus).toHaveBeenCalled();
       vi.useRealTimers();
@@ -223,14 +224,70 @@ describe('TerminalEventManager', () => {
       // Mock active element
       Object.defineProperty(document, 'activeElement', {
         value: mockTerminal.textarea,
-        configurable: true
+        configurable: true,
       });
 
       manager.focusTerminal(mockTerminal as Terminal, 't1');
-      
+
       vi.advanceTimersByTime(10);
       expect(mockTerminal.focus).not.toHaveBeenCalled();
       vi.useRealTimers();
+    });
+  });
+
+  describe('Event Removal with Regex Metacharacters', () => {
+    it('should escape regex metacharacters in terminalId before unregistering', () => {
+      const terminalId = '$1[test]';
+      const unregisterByPatternSpy = vi.spyOn(mockRegistry, 'unregisterByPattern');
+
+      manager.setupTerminalEvents(mockTerminal as Terminal, terminalId, mockContainer);
+
+      const registerCalls = (mockRegistry.register as any).mock.calls;
+      expect(registerCalls.length).toBeGreaterThan(0);
+
+      manager.removeTerminalEvents(terminalId);
+
+      expect(unregisterByPatternSpy).toHaveBeenCalled();
+      expect(unregisterByPatternSpy.mock.calls.length).toBeGreaterThan(0);
+
+      const firstCallArgs = unregisterByPatternSpy.mock.calls[0];
+      if (firstCallArgs && firstCallArgs[0]) {
+        const patternArg = firstCallArgs[0];
+        expect(patternArg).toBeInstanceOf(RegExp);
+        expect(patternArg.test('terminal-$1[test]-click')).toBe(true);
+        expect(patternArg.test('terminal-$1[test]-pointerdown')).toBe(true);
+        expect(patternArg.test('terminal-$1[test]-mousemove')).toBe(true);
+        expect(patternArg.test('terminal-$2-click')).toBe(false);
+        expect(patternArg.test('terminal-click')).toBe(false);
+      }
+    });
+
+    it('should not remove events for other terminals when removing one', () => {
+      const terminalId = 't1';
+      const unregisterByPatternSpy = vi.spyOn(mockRegistry, 'unregisterByPattern');
+
+      manager.setupTerminalEvents(mockTerminal as Terminal, 't1', mockContainer);
+      manager.setupTerminalEvents(mockTerminal as Terminal, 't2', mockContainer);
+
+      const t1Registers = (mockRegistry.register as any).mock.calls.filter((call: any[]) =>
+        call[0].startsWith('terminal-t1')
+      );
+      const t2Registers = (mockRegistry.register as any).mock.calls.filter((call: any[]) =>
+        call[0].startsWith('terminal-t2')
+      );
+
+      expect(t1Registers.length).toBeGreaterThan(0);
+      expect(t2Registers.length).toBeGreaterThan(0);
+
+      manager.removeTerminalEvents('t1');
+
+      expect(unregisterByPatternSpy).toHaveBeenCalled();
+
+      const t2RegistersAfter = (mockRegistry.register as any).mock.calls.filter((call: any[]) =>
+        call[0].startsWith('terminal-t2')
+      );
+
+      expect(t2RegistersAfter.length).toBe(t2Registers.length);
     });
   });
 });

@@ -102,11 +102,10 @@ export class InputManager extends BaseManager implements IInputManager {
   private imeHandler: IIMEHandler;
 
   // Debounce timers for events
-  private eventDebounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
-  private pendingInputBuffers = new Map<
-    string,
-    { data: string[]; timer: ReturnType<typeof setTimeout> | null }
-  >();
+  private eventDebounceTimers = new Map<string, number>();
+  private pendingInputBuffers = new Map<string, { data: string[]; timer: number | null }>();
+  // Terminal-specific disposables for xterm.js events
+  private terminalDisposables = new Map<string, Array<{ dispose(): void }>>();
   // Simple arrow key handling for agent interactions
   private agentInteractionMode = false;
 
@@ -663,9 +662,11 @@ export class InputManager extends BaseManager implements IInputManager {
   ): void {
     this.logger(`Setting up VS Code standard input handling for terminal ${terminalId}`);
 
+    const disposables: Array<{ dispose(): void }> = [];
+
     // CRITICAL: Set up keyboard input handling with IME awareness
     // Use onKey for regular keyboard input (non-IME)
-    terminal.onKey((event: { key: string; domEvent: KeyboardEvent }) => {
+    const onKeyDisposable = terminal.onKey((event: { key: string; domEvent: KeyboardEvent }) => {
       // VS Code standard: Check IME composition state before processing
       if (this.imeHandler.isIMEComposing()) {
         this.logger(
@@ -681,17 +682,46 @@ export class InputManager extends BaseManager implements IInputManager {
       const needsImmediateFlush = this.shouldFlushImmediately(event.key, event.domEvent);
       this.queueInputData(terminalId, event.key, needsImmediateFlush);
     });
+    disposables.push(onKeyDisposable);
+
+    // Handle mouse tracking escape sequences from TUI apps
+    // onKey handles keyboard input; onData forwards mouse sequences to PTY
+    const onDataDisposable = terminal.onData((data: string) => {
+      const isMouseTracking = data.startsWith('\x1b[<') || data.startsWith('\x1b[M');
+
+      if (isMouseTracking) {
+        this.logger(`Terminal ${terminalId} mouse tracking: ${data.length} bytes`);
+        this.queueInputData(terminalId, data, true);
+        return;
+      }
+
+      // Ignore regular keyboard input - handled by onKey
+    });
+    disposables.push(onDataDisposable);
 
     // CRITICAL: Add compositionend listener for IME final text
-    // This is the most reliable way to capture Japanese/Chinese/Korean input
-    // The compositionend event fires with the final composed text
-    container.addEventListener('compositionend', (event: CompositionEvent) => {
+    // This is most reliable way to capture Japanese/Chinese/Korean input
+    // The compositionend event fires with final composed text
+    const compositionEndHandler = (event: CompositionEvent): void => {
       const finalText = event.data;
       if (finalText) {
         this.logger(`Terminal ${terminalId} IME compositionend - final text: "${finalText}"`);
         this.queueInputData(terminalId, finalText, true);
       }
-    });
+    };
+
+    container.addEventListener('compositionend', compositionEndHandler as EventListener);
+
+    // Wrap in disposable for cleanup
+    const compositionEndDisposable = {
+      dispose: () => {
+        container.removeEventListener('compositionend', compositionEndHandler as EventListener);
+      },
+    };
+    disposables.push(compositionEndDisposable);
+
+    // Save disposables for terminal-specific cleanup
+    this.terminalDisposables.set(terminalId, disposables);
 
     // Set up focus handling - xterm.js doesn't have onFocus/onBlur, comment out
     // terminal.onFocus(() => {
@@ -811,6 +841,35 @@ export class InputManager extends BaseManager implements IInputManager {
     );
 
     return isEnabled;
+  }
+
+  /**
+   * Remove all handlers and event listeners for a specific terminal
+   */
+  public removeTerminalHandlers(terminalId: string): void {
+    this.logger(`Removing terminal handlers for ${terminalId}`);
+
+    const pendingBuffer = this.pendingInputBuffers.get(terminalId);
+    if (pendingBuffer) {
+      if (pendingBuffer.timer) {
+        clearTimeout(pendingBuffer.timer);
+      }
+      pendingBuffer.data = [];
+      this.pendingInputBuffers.delete(terminalId);
+    }
+
+    const disposables = this.terminalDisposables.get(terminalId);
+    if (disposables) {
+      for (const disposable of disposables) {
+        disposable.dispose();
+      }
+      this.terminalDisposables.delete(terminalId);
+    }
+
+    this.eventRegistry.unregister(`terminal-click-${terminalId}`);
+    this.eventRegistry.unregister(`terminal-pointerdown-${terminalId}`);
+
+    this.logger(`Terminal handlers removed for ${terminalId}`);
   }
 
   /**
@@ -994,7 +1053,7 @@ export class InputManager extends BaseManager implements IInputManager {
             timestamp: Date.now(),
           });
           this.eventDebounceTimers.delete(key);
-        }, InputTimings.INPUT_DEBOUNCE_DELAY_MS); // Reduced from 200ms to 50ms for better responsiveness
+        }, InputTimings.INPUT_DEBOUNCE_DELAY_MS) as unknown as number; // Reduced from 200ms to 50ms for better responsiveness
 
         this.eventDebounceTimers.set(key, timer);
       } else {
@@ -1071,7 +1130,8 @@ export class InputManager extends BaseManager implements IInputManager {
     // - Image paste: Send \x16 to trigger Claude Code's native clipboard read
     // We don't intercept keydown here because the paste event needs to fire for clipboard access
     // Use userAgentData if available (modern), fallback to userAgent (deprecated navigator.platform)
-    const isMac = (navigator as any).userAgentData?.platform === 'macOS' || /Mac/.test(navigator.userAgent);
+    const isMac =
+      (navigator as any).userAgentData?.platform === 'macOS' || /Mac/.test(navigator.userAgent);
     if (event.key === 'v') {
       if (isMac && event.metaKey) {
         // macOS Cmd+V: Let paste event handler deal with it
@@ -1137,36 +1197,6 @@ export class InputManager extends BaseManager implements IInputManager {
   }
 
   /**
-   * Check if data from onData should be flushed immediately
-   * Used for processed escape sequences from xterm.js
-   */
-  private shouldFlushImmediatelyFromData(data: string): boolean {
-    if (!data) {
-      return true;
-    }
-
-    // Flush immediately for:
-    // - Enter/Return (\r or \n)
-    // - Control characters (ASCII 0-31)
-    // - Escape sequences (start with \x1b)
-    if (/[\r\n]/.test(data)) {
-      return true;
-    }
-
-    // Control characters (Ctrl+C = \x03, Ctrl+D = \x04, etc.)
-    if (data.length === 1 && data.charCodeAt(0) < KeyboardConstants.CONTROL_CHAR_THRESHOLD) {
-      return true;
-    }
-
-    // Escape sequences (arrow keys, function keys, etc.)
-    if (data.startsWith('\x1b')) {
-      return true;
-    }
-
-    return false;
-  }
-
-  /**
    * VS Code Standard: Determine if a key should be intercepted for VS Code handling
    * Returns true if VS Code should handle this key (not sent to shell)
    * Returns false if key should pass through to shell
@@ -1181,7 +1211,8 @@ export class InputManager extends BaseManager implements IInputManager {
     manager: IManagerCoordinator
   ): boolean {
     // Use userAgentData if available (modern), fallback to userAgent (deprecated navigator.platform)
-    const isMac = (navigator as any).userAgentData?.platform === 'macOS' || /Mac/.test(navigator.userAgent);
+    const isMac =
+      (navigator as any).userAgentData?.platform === 'macOS' || /Mac/.test(navigator.userAgent);
     const ctrlOrCmd = isMac ? event.metaKey : event.ctrlKey;
 
     // NEVER intercept these - they must go to shell:
@@ -1311,7 +1342,7 @@ export class InputManager extends BaseManager implements IInputManager {
     entry.timer = setTimeout(() => {
       entry!.timer = null;
       this.flushPendingInput(terminalId);
-    }, 0);
+    }, 0) as unknown as number;
   }
 
   private flushPendingInput(terminalId: string): void {
@@ -1360,14 +1391,19 @@ export class InputManager extends BaseManager implements IInputManager {
   /**
    * Dispose InputManager resources (BaseManager abstract method implementation)
    */
-  /**
-   * Dispose InputManager resources (BaseManager abstract method implementation)
-   */
   protected doDispose(): void {
     this.logger('disposal', 'starting');
 
     // Dispose EventHandlerRegistry - this will clean up all registered event listeners
     this.eventRegistry.dispose();
+
+    // Dispose all terminal-specific handlers
+    for (const disposables of this.terminalDisposables.values()) {
+      for (const disposable of disposables) {
+        disposable.dispose();
+      }
+    }
+    this.terminalDisposables.clear();
 
     // Clear debounce timers
     for (const timer of this.eventDebounceTimers.values()) {
