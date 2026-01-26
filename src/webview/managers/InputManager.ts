@@ -699,19 +699,29 @@ export class InputManager extends BaseManager implements IInputManager {
     });
     disposables.push(onDataDisposable);
 
-    // Save disposables for terminal-specific cleanup
-    this.terminalDisposables.set(terminalId, disposables);
-
     // CRITICAL: Add compositionend listener for IME final text
-    // This is the most reliable way to capture Japanese/Chinese/Korean input
-    // The compositionend event fires with the final composed text
-    container.addEventListener('compositionend', (event: CompositionEvent) => {
+    // This is most reliable way to capture Japanese/Chinese/Korean input
+    // The compositionend event fires with final composed text
+    const compositionEndHandler = (event: CompositionEvent): void => {
       const finalText = event.data;
       if (finalText) {
         this.logger(`Terminal ${terminalId} IME compositionend - final text: "${finalText}"`);
         this.queueInputData(terminalId, finalText, true);
       }
-    });
+    };
+
+    container.addEventListener('compositionend', compositionEndHandler as EventListener);
+
+    // Wrap in disposable for cleanup
+    const compositionEndDisposable = {
+      dispose: () => {
+        container.removeEventListener('compositionend', compositionEndHandler as EventListener);
+      },
+    };
+    disposables.push(compositionEndDisposable);
+
+    // Save disposables for terminal-specific cleanup
+    this.terminalDisposables.set(terminalId, disposables);
 
     // Set up focus handling - xterm.js doesn't have onFocus/onBlur, comment out
     // terminal.onFocus(() => {
@@ -1043,7 +1053,7 @@ export class InputManager extends BaseManager implements IInputManager {
             timestamp: Date.now(),
           });
           this.eventDebounceTimers.delete(key);
-        }, InputTimings.INPUT_DEBOUNCE_DELAY_MS); // Reduced from 200ms to 50ms for better responsiveness
+        }, InputTimings.INPUT_DEBOUNCE_DELAY_MS) as unknown as number; // Reduced from 200ms to 50ms for better responsiveness
 
         this.eventDebounceTimers.set(key, timer);
       } else {
@@ -1332,7 +1342,7 @@ export class InputManager extends BaseManager implements IInputManager {
     entry.timer = setTimeout(() => {
       entry!.timer = null;
       this.flushPendingInput(terminalId);
-    }, 0) as NodeJS.Timeout;
+    }, 0) as unknown as number;
   }
 
   private flushPendingInput(terminalId: string): void {
