@@ -102,11 +102,8 @@ export class InputManager extends BaseManager implements IInputManager {
   private imeHandler: IIMEHandler;
 
   // Debounce timers for events
-  private eventDebounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
-  private pendingInputBuffers = new Map<
-    string,
-    { data: string[]; timer: ReturnType<typeof setTimeout> | null }
-  >();
+  private eventDebounceTimers = new Map<string, number>();
+  private pendingInputBuffers = new Map<string, { data: string[]; timer: number | null }>();
   // Terminal-specific disposables for xterm.js events
   private terminalDisposables = new Map<string, Array<{ dispose(): void }>>();
   // Simple arrow key handling for agent interactions
@@ -842,7 +839,15 @@ export class InputManager extends BaseManager implements IInputManager {
   public removeTerminalHandlers(terminalId: string): void {
     this.logger(`Removing terminal handlers for ${terminalId}`);
 
-    // Dispose xterm.js event listeners
+    const pendingBuffer = this.pendingInputBuffers.get(terminalId);
+    if (pendingBuffer) {
+      if (pendingBuffer.timer) {
+        clearTimeout(pendingBuffer.timer);
+      }
+      pendingBuffer.data = [];
+      this.pendingInputBuffers.delete(terminalId);
+    }
+
     const disposables = this.terminalDisposables.get(terminalId);
     if (disposables) {
       for (const disposable of disposables) {
@@ -851,7 +856,6 @@ export class InputManager extends BaseManager implements IInputManager {
       this.terminalDisposables.delete(terminalId);
     }
 
-    // Unregister DOM event listeners from registry
     this.eventRegistry.unregister(`terminal-click-${terminalId}`);
     this.eventRegistry.unregister(`terminal-pointerdown-${terminalId}`);
 
@@ -1328,7 +1332,7 @@ export class InputManager extends BaseManager implements IInputManager {
     entry.timer = setTimeout(() => {
       entry!.timer = null;
       this.flushPendingInput(terminalId);
-    }, 0);
+    }, 0) as NodeJS.Timeout;
   }
 
   private flushPendingInput(terminalId: string): void {

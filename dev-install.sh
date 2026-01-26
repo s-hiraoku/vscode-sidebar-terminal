@@ -163,11 +163,15 @@ case $choice in
     1)
         print_step "Packaging extension..."
         npx @vscode/vsce package
-        vsix_file=$(ls -t *.vsix | head -n 1)
-        if [ -z "$vsix_file" ]; then
+        # Check for .vsix files using shell glob to avoid ls errors
+        shopt -s nullglob
+        vsix_files=(*.vsix)
+        shopt -u nullglob
+        if [ ${#vsix_files[@]} -eq 0 ]; then
             print_error "No .vsix file found after packaging"
             exit 1
         fi
+        vsix_file=$(ls -t *.vsix | head -n 1)
         print_step "Installing extension from $vsix_file..."
         code --install-extension "$vsix_file"
         print_success "Extension installed! Reload VSCode window."
@@ -181,11 +185,15 @@ case $choice in
     3)
         print_step "Packaging extension..."
         npx @vscode/vsce package
-        vsix_file=$(ls -t *.vsix | head -n 1)
-        if [ -z "$vsix_file" ]; then
+        # Check for .vsix files using shell glob to avoid ls errors
+        shopt -s nullglob
+        vsix_files=(*.vsix)
+        shopt -u nullglob
+        if [ ${#vsix_files[@]} -eq 0 ]; then
             print_error "No .vsix file found after packaging"
             exit 1
         fi
+        vsix_file=$(ls -t *.vsix | head -n 1)
         print_step "Installing extension from $vsix_file..."
         code --install-extension "$vsix_file"
         print_step "Launching Extension Development Host..."
