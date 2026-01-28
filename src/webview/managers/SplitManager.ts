@@ -404,6 +404,19 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
     return this.isSplitMode;
   }
 
+  /**
+   * Get current split direction
+   * Returns 'vertical' for sidebar (stacked), 'horizontal' for panel (side-by-side)
+   */
+  public getSplitDirection(): 'horizontal' | 'vertical' {
+    // If split direction is set, return it
+    if (this.splitDirection) {
+      return this.splitDirection;
+    }
+    // Otherwise, derive from panel location
+    return this.currentPanelLocation === 'panel' ? 'horizontal' : 'vertical';
+  }
+
   public getTerminals(): Map<string, TerminalInstance> {
     return this.terminals;
   }

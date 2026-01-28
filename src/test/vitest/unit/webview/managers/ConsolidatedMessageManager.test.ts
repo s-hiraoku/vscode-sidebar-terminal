@@ -345,6 +345,70 @@ describe('ConsolidatedMessageManager', () => {
       // No error should be thrown
     });
 
+    it('should call updateSplitResizers after sessionRestoreCompleted in split mode', async () => {
+      const { vi } = await import('vitest');
+      vi.useFakeTimers();
+
+      const updateSplitResizersMock = vi.fn();
+      const mockDisplayModeManager = {
+        getCurrentMode: () => 'split' as const,
+      };
+
+      const coordinatorWithSplit = {
+        ...mockCoordinator,
+        getDisplayModeManager: () => mockDisplayModeManager,
+        updateSplitResizers: updateSplitResizersMock,
+      };
+
+      const message: MessageCommand = {
+        command: 'sessionRestoreCompleted',
+        restoredCount: 2,
+        skippedCount: 0,
+      };
+
+      await messageManager.receiveMessage(message, coordinatorWithSplit as any);
+
+      // Advance timers to trigger the setTimeout callback (100ms)
+      vi.advanceTimersByTime(100);
+
+      // Verify updateSplitResizers was called because mode is 'split'
+      expect(updateSplitResizersMock).toHaveBeenCalledTimes(1);
+
+      vi.useRealTimers();
+    });
+
+    it('should not call updateSplitResizers after sessionRestoreCompleted in normal mode', async () => {
+      const { vi } = await import('vitest');
+      vi.useFakeTimers();
+
+      const updateSplitResizersMock = vi.fn();
+      const mockDisplayModeManager = {
+        getCurrentMode: () => 'normal' as const,
+      };
+
+      const coordinatorWithNormal = {
+        ...mockCoordinator,
+        getDisplayModeManager: () => mockDisplayModeManager,
+        updateSplitResizers: updateSplitResizersMock,
+      };
+
+      const message: MessageCommand = {
+        command: 'sessionRestoreCompleted',
+        restoredCount: 1,
+        skippedCount: 0,
+      };
+
+      await messageManager.receiveMessage(message, coordinatorWithNormal as any);
+
+      // Advance timers
+      vi.advanceTimersByTime(100);
+
+      // Verify updateSplitResizers was NOT called because mode is 'normal'
+      expect(updateSplitResizersMock).not.toHaveBeenCalled();
+
+      vi.useRealTimers();
+    });
+
     it('should handle sessionRestoreError message', async () => {
       const message: MessageCommand = {
         command: 'sessionRestoreError',
