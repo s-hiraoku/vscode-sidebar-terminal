@@ -19,6 +19,7 @@ vi.mock('../../../../../webview/managers/container/SplitLayoutService', () => ({
     getSplitWrapperCache = vi.fn().mockReturnValue(new Map());
     getWrapperArea = vi.fn();
     clear = vi.fn();
+    setCoordinator = vi.fn(); // 🔧 FIX: Added for split resizer initialization
   }
 }));
 

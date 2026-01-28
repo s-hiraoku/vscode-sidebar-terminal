@@ -169,3 +169,16 @@ export const SESSION_RESTORE_CONSTANTS = {
   /** Wait delay after terminal creation before proceeding with restoration (ms) */
   TERMINAL_CREATION_WAIT_MS: 100,
 } as const;
+
+/**
+ * Split Resize Manager 定数
+ * ドラッグリサイズ機能に関する設定
+ */
+export const SPLIT_RESIZE_CONSTANTS = {
+  /** Minimum terminal size during resize (px) */
+  MIN_RESIZE_SIZE_PX: 50,
+  /** Throttle interval for pointermove events (~60fps) */
+  RESIZE_THROTTLE_MS: 16,
+  /** Debounce delay before notifying PTY of resize completion (ms) */
+  PTY_NOTIFY_DEBOUNCE_MS: 100,
+} as const;

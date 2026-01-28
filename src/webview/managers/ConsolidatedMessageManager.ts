@@ -183,9 +183,18 @@ export class ConsolidatedMessageManager implements IMessageManager {
     registry.set('sessionRestoreProgress', (msg) =>
       this.sessionController.handleSessionRestoreProgressMessage(msg)
     );
-    registry.set('sessionRestoreCompleted', (msg) =>
-      this.sessionController.handleSessionRestoreCompletedMessage(msg)
-    );
+    registry.set('sessionRestoreCompleted', (msg, coord) => {
+      this.sessionController.handleSessionRestoreCompletedMessage(msg);
+      // 🔧 FIX: Initialize split resizers after session restore completes
+      // This handles the case where split mode with multiple terminals is restored
+      setTimeout(() => {
+        const displayModeManager = coord.getDisplayModeManager?.();
+        if (displayModeManager?.getCurrentMode() === 'split') {
+          (coord as any)?.updateSplitResizers?.();
+          this.logger.info('Split resizers initialized after session restore');
+        }
+      }, 100);
+    });
     registry.set('sessionRestoreError', (msg) =>
       this.sessionController.handleSessionRestoreErrorMessage(msg)
     );

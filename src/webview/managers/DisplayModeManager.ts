@@ -301,6 +301,9 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
 
     this.log('All terminals are now in split view');
     this.notifyModeChanged('split');
+
+    // Note: Split resizers are now initialized automatically by SplitLayoutService
+    // after activateSplitLayout() is called. No need for manual call here.
   }
 
   /**

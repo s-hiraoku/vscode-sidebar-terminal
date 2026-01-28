@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.9] - 2026-01-29
+
+### Fixed
+
+- **Split Resizer Initialization**: Fixed drag-to-resize separators not working in multiple scenarios
+  - Resizers now properly initialize when split mode is restored on startup with multiple terminals
+  - Resizers now properly reinitialize when adding new terminals to split view
+  - Resizers now properly reinitialize when removing terminals from split view
+  - Added automatic resizer initialization in `SplitLayoutService.activateSplitLayout()` after DOM creation
+  - Added resizer initialization after session restore completes when in split mode
+
 ### Changed
 
 - **Documentation Cleanup**: Updated internal documentation for consistency and accuracy

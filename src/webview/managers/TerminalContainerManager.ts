@@ -74,6 +74,11 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
   protected doInitialize(): void {
     this.log('Initializing TerminalContainerManager');
     this.discoverExistingContainers();
+
+    // 🔧 FIX: Pass coordinator to SplitLayoutService for resizer initialization
+    // This enables automatic resizer initialization after split layout activation
+    this.splitLayoutService.setCoordinator(this.coordinator as any);
+
     this.log('TerminalContainerManager initialized successfully');
   }
 
