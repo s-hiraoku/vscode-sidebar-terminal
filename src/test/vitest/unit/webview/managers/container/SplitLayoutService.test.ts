@@ -89,6 +89,59 @@ describe('SplitLayoutService', () => {
       
       expect(t1.classList.contains('terminal-container--split')).toBe(true);
     });
+
+    it('should insert resizers between terminals with correct attributes', () => {
+      const t1 = document.createElement('div');
+      const t2 = document.createElement('div');
+
+      const containers = new Map([
+        ['term-1', t1],
+        ['term-2', t2],
+      ]);
+
+      service.activateSplitLayout(
+        terminalBody,
+        ['term-1', 'term-2'],
+        'vertical',
+        (id) => containers.get(id)
+      );
+
+      const wrapper = document.getElementById('terminals-wrapper')!;
+      const resizers = wrapper.querySelectorAll('.split-resizer');
+
+      expect(resizers.length).toBe(1);
+      expect(resizers[0].getAttribute('data-resizer-before')).toBe('term-1');
+      expect(resizers[0].getAttribute('data-resizer-after')).toBe('term-2');
+    });
+
+    it('should sync terminals-wrapper class with split direction', () => {
+      const t1 = document.createElement('div');
+      const t2 = document.createElement('div');
+
+      const containers = new Map([
+        ['term-1', t1],
+        ['term-2', t2],
+      ]);
+
+      service.activateSplitLayout(
+        terminalBody,
+        ['term-1', 'term-2'],
+        'horizontal',
+        (id) => containers.get(id)
+      );
+
+      const wrapper = document.getElementById('terminals-wrapper')!;
+      expect(wrapper.classList.contains('terminal-split-horizontal')).toBe(true);
+
+      service.activateSplitLayout(
+        terminalBody,
+        ['term-1', 'term-2'],
+        'vertical',
+        (id) => containers.get(id)
+      );
+
+      expect(wrapper.classList.contains('terminal-split-horizontal')).toBe(false);
+    });
   });
 
   describe('removeSplitArtifacts', () => {
