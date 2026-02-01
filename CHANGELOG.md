@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Windows ARM64 Compatibility**: Downgraded node-pty from 1.2.0-beta.8 to 1.2.0-beta.2
+  - The `@lydell/node-pty-win32-arm64` native package is only available at beta.2
+  - Prevents Windows ARM64 users from experiencing installation failures
+
+- **Keybinding Conflict**: Changed `selectProfile` shortcut from `Ctrl+Shift+P` to `Ctrl+Shift+T`
+  - Resolves conflict with VS Code's Command Palette shortcut
+  - Now requires terminal focus (`terminalFocus && view == secondaryTerminal`)
+
+### Changed
+
+- **Type Safety Improvements**: Removed unsafe type casts in resizer coordination
+  - `ConsolidatedMessageManager`: Added try/catch and type guard for `updateSplitResizers`
+  - `TerminalContainerManager`: Created type-safe `IResizeCoordinator` adapter
+  - `SplitLayoutService`: Exported `IResizeCoordinator` interface for type-safe usage
+
+- **Test Infrastructure**: Improved test environment setup and cleanup
+  - `LoggerService.test.ts`: Proper singleton disposal before mock clearing
+  - `SplitResizeManager.dom.test.ts`: Use shared `setupCompleteTestEnvironment`
+  - `UIController.test.ts`: Replace manual DOM cleanup with shared test environment
+
 ## [0.2.9] - 2026-01-29
 
 ### Fixed
@@ -32,7 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **Node.js 22 Compatibility**: Fixed extension failing to load on VS Code 1.108+ which uses Node.js 22 (#393)
-  - Migrated from `@homebridge/node-pty-prebuilt-multiarch` to official `node-pty@1.2.0-beta.8`
+  - Migrated from `@homebridge/node-pty-prebuilt-multiarch` to official `node-pty@1.2.0-beta.2`
   - Official node-pty package includes prebuilt binaries for Node.js 22
   - Resolves "Cannot find module '../build/Debug/pty.node'" error on Fedora 43 and similar systems
 
