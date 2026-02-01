@@ -996,9 +996,9 @@
       },
       {
         "command": "secondaryTerminal.selectProfile",
-        "key": "ctrl+shift+p",
-        "mac": "cmd+shift+p",
-        "when": "view == secondaryTerminal"
+        "key": "ctrl+shift+t",
+        "mac": "cmd+shift+t",
+        "when": "terminalFocus && view == secondaryTerminal"
       },
       {
         "command": "secondaryTerminal.focusTerminal1",
@@ -1152,7 +1152,7 @@
     "webpack-cli": "^6.0.0"
   },
   "dependencies": {
-    "node-pty": "^1.2.0-beta.8",
+    "node-pty": "1.2.0-beta.8",
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/addon-search": "^0.16.0",
     "@xterm/addon-serialize": "^0.14.0",
