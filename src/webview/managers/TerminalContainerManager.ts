@@ -27,7 +27,11 @@ import {
   TerminalDisplayState,
   TerminalDisplaySnapshot,
 } from '../interfaces/ManagerInterfaces';
-import { SplitLayoutService, ContainerVisibilityService } from './container';
+import {
+  SplitLayoutService,
+  ContainerVisibilityService,
+  type IResizeCoordinator,
+} from './container';
 import { DOMUtils } from '../utils/DOMUtils';
 
 /**
@@ -77,7 +81,14 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
 
     // 🔧 FIX: Pass coordinator to SplitLayoutService for resizer initialization
     // This enables automatic resizer initialization after split layout activation
-    this.splitLayoutService.setCoordinator(this.coordinator as any);
+    // Create a type-safe adapter implementing IResizeCoordinator
+    const resizeCoordinator: IResizeCoordinator = {
+      updateSplitResizers:
+        'updateSplitResizers' in this.coordinator
+          ? () => (this.coordinator as { updateSplitResizers: () => void }).updateSplitResizers()
+          : undefined,
+    };
+    this.splitLayoutService.setCoordinator(resizeCoordinator);
 
     this.log('TerminalContainerManager initialized successfully');
   }

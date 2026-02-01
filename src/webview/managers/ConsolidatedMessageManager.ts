@@ -188,14 +188,23 @@ export class ConsolidatedMessageManager implements IMessageManager {
       // 🔧 FIX: Initialize split resizers after session restore completes
       // This handles the case where split mode with multiple terminals is restored
       setTimeout(() => {
-        const displayModeManager = coord.getDisplayModeManager?.();
-        const containerManager = coord.getTerminalContainerManager?.();
-        const snapshot = containerManager?.getDisplaySnapshot?.();
-        const visibleCount = snapshot?.visibleTerminals?.length ?? 0;
-        if (displayModeManager?.getCurrentMode() === 'split' && visibleCount > 1) {
-          displayModeManager.showAllTerminalsSplit?.();
-          (coord as any)?.updateSplitResizers?.();
-          this.logger.info('Split resizers initialized after session restore');
+        try {
+          const displayModeManager = coord.getDisplayModeManager?.();
+          const containerManager = coord.getTerminalContainerManager?.();
+          const snapshot = containerManager?.getDisplaySnapshot?.();
+          const visibleCount = snapshot?.visibleTerminals?.length ?? 0;
+          if (displayModeManager?.getCurrentMode() === 'split' && visibleCount > 1) {
+            displayModeManager.showAllTerminalsSplit?.();
+            // Use optional chaining with type guard for updateSplitResizers
+            const updateResizers =
+              coord && 'updateSplitResizers' in coord
+                ? (coord as { updateSplitResizers?: () => void }).updateSplitResizers
+                : undefined;
+            updateResizers?.();
+            this.logger.info('Split resizers initialized after session restore');
+          }
+        } catch (error) {
+          this.logger.error('Failed to initialize split resizers after session restore', error);
         }
       }, 100);
     });

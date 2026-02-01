@@ -11,7 +11,7 @@ import { SPLIT_LAYOUT_CONSTANTS } from '../../constants/webview';
 /**
  * Interface for coordinator with updateSplitResizers method
  */
-interface IResizeCoordinator {
+export interface IResizeCoordinator {
   updateSplitResizers?(): void;
 }
 
