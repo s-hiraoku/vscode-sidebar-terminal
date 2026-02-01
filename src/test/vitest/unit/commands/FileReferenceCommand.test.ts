@@ -27,8 +27,9 @@ describe('FileReferenceCommand', () => {
         },
       ]),
       getCurrentGloballyActiveAgent: vi.fn(),
-      focusTerminal: vi.fn(),
+      focusTerminal: vi.fn().mockResolvedValue(undefined),
       sendInput: vi.fn(),
+      refreshCliAgentState: vi.fn().mockReturnValue(false),
     };
 
     // Create FileReferenceCommand instance

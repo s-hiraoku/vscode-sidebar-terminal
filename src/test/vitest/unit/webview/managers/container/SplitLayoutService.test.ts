@@ -89,6 +89,101 @@ describe('SplitLayoutService', () => {
       
       expect(t1.classList.contains('terminal-container--split')).toBe(true);
     });
+
+    it('should rebuild resizers when activation order changes', () => {
+      const t1 = document.createElement('div');
+      const t2 = document.createElement('div');
+      const t3 = document.createElement('div');
+
+      const containers = new Map([
+        ['term-1', t1],
+        ['term-2', t2],
+        ['term-3', t3],
+      ]);
+
+      service.activateSplitLayout(
+        terminalBody,
+        ['term-1', 'term-2', 'term-3'],
+        'vertical',
+        (id) => containers.get(id)
+      );
+
+      let wrapper = document.getElementById('terminals-wrapper')!;
+      let resizers = wrapper.querySelectorAll('.split-resizer');
+      expect(resizers.length).toBe(2);
+      expect(resizers[0].getAttribute('data-resizer-before')).toBe('term-1');
+      expect(resizers[0].getAttribute('data-resizer-after')).toBe('term-2');
+      expect(resizers[1].getAttribute('data-resizer-before')).toBe('term-2');
+      expect(resizers[1].getAttribute('data-resizer-after')).toBe('term-3');
+
+      service.activateSplitLayout(
+        terminalBody,
+        ['term-3', 'term-1', 'term-2'],
+        'vertical',
+        (id) => containers.get(id)
+      );
+
+      wrapper = document.getElementById('terminals-wrapper')!;
+      resizers = wrapper.querySelectorAll('.split-resizer');
+      expect(resizers.length).toBe(2);
+      expect(resizers[0].getAttribute('data-resizer-before')).toBe('term-3');
+      expect(resizers[0].getAttribute('data-resizer-after')).toBe('term-1');
+      expect(resizers[1].getAttribute('data-resizer-before')).toBe('term-1');
+      expect(resizers[1].getAttribute('data-resizer-after')).toBe('term-2');
+    });
+
+    it('should insert resizers between terminals with correct attributes', () => {
+      const t1 = document.createElement('div');
+      const t2 = document.createElement('div');
+
+      const containers = new Map([
+        ['term-1', t1],
+        ['term-2', t2],
+      ]);
+
+      service.activateSplitLayout(
+        terminalBody,
+        ['term-1', 'term-2'],
+        'vertical',
+        (id) => containers.get(id)
+      );
+
+      const wrapper = document.getElementById('terminals-wrapper')!;
+      const resizers = wrapper.querySelectorAll('.split-resizer');
+
+      expect(resizers.length).toBe(1);
+      expect(resizers[0].getAttribute('data-resizer-before')).toBe('term-1');
+      expect(resizers[0].getAttribute('data-resizer-after')).toBe('term-2');
+    });
+
+    it('should sync terminals-wrapper class with split direction', () => {
+      const t1 = document.createElement('div');
+      const t2 = document.createElement('div');
+
+      const containers = new Map([
+        ['term-1', t1],
+        ['term-2', t2],
+      ]);
+
+      service.activateSplitLayout(
+        terminalBody,
+        ['term-1', 'term-2'],
+        'horizontal',
+        (id) => containers.get(id)
+      );
+
+      const wrapper = document.getElementById('terminals-wrapper')!;
+      expect(wrapper.classList.contains('terminal-split-horizontal')).toBe(true);
+
+      service.activateSplitLayout(
+        terminalBody,
+        ['term-1', 'term-2'],
+        'vertical',
+        (id) => containers.get(id)
+      );
+
+      expect(wrapper.classList.contains('terminal-split-horizontal')).toBe(false);
+    });
   });
 
   describe('removeSplitArtifacts', () => {
@@ -113,9 +208,96 @@ describe('SplitLayoutService', () => {
       const el = document.createElement('div');
       service.cacheWrapper('t1', el);
       expect(service.getWrapper('t1')).toBe(el);
-      
+
       service.removeWrapper('t1');
       expect(service.getWrapper('t1')).toBeUndefined();
+    });
+  });
+
+  describe('coordinator integration', () => {
+    it('should store coordinator reference via setCoordinator', () => {
+      const mockCoordinator = {
+        updateSplitResizers: vi.fn(),
+      };
+
+      // Should not throw
+      expect(() => service.setCoordinator(mockCoordinator)).not.toThrow();
+    });
+
+    it('should call updateSplitResizers after activateSplitLayout', async () => {
+      vi.useFakeTimers();
+
+      const mockCoordinator = {
+        updateSplitResizers: vi.fn(),
+      };
+      service.setCoordinator(mockCoordinator);
+
+      const t1 = document.createElement('div');
+      t1.id = 'container-1';
+      const t2 = document.createElement('div');
+      t2.id = 'container-2';
+
+      const containers = new Map([
+        ['term-1', t1],
+        ['term-2', t2]
+      ]);
+
+      service.activateSplitLayout(
+        terminalBody,
+        ['term-1', 'term-2'],
+        'vertical',
+        (id) => containers.get(id)
+      );
+
+      // Advance timers to trigger the setTimeout callback (50ms)
+      vi.advanceTimersByTime(50);
+
+      // Verify updateSplitResizers was called
+      expect(mockCoordinator.updateSplitResizers).toHaveBeenCalledTimes(1);
+
+      vi.useRealTimers();
+    });
+
+    it('should not fail activateSplitLayout if coordinator is not set', () => {
+      const t1 = document.createElement('div');
+      t1.id = 'container-1';
+
+      const containers = new Map([['term-1', t1]]);
+
+      // Should not throw even without coordinator
+      expect(() => service.activateSplitLayout(
+        terminalBody,
+        ['term-1'],
+        'vertical',
+        (id) => containers.get(id)
+      )).not.toThrow();
+    });
+
+    it('should not fail if coordinator has no updateSplitResizers method', async () => {
+      vi.useFakeTimers();
+
+      const mockCoordinator = {
+        // No updateSplitResizers method
+      };
+      service.setCoordinator(mockCoordinator as any);
+
+      const t1 = document.createElement('div');
+      t1.id = 'container-1';
+
+      const containers = new Map([['term-1', t1]]);
+
+      // Should not throw
+      expect(() => service.activateSplitLayout(
+        terminalBody,
+        ['term-1'],
+        'vertical',
+        (id) => containers.get(id)
+      )).not.toThrow();
+
+      vi.advanceTimersByTime(50);
+      // No error should occur
+
+      vi.useRealTimers();
     });
   });
 });

@@ -328,6 +328,22 @@ describe('LightweightTerminalWebviewManager', () => {
           expect(stateDisplay.updateFromState).toHaveBeenCalled();
           expect(stateDisplay.updateCreationState).toHaveBeenCalled();
       });
+
+      it('should refresh split layout when split mode has multiple terminals and no resizers', () => {
+          const displayModeManager = (manager as any).displayModeManager;
+          displayModeManager.getCurrentMode.mockReturnValue('split');
+
+          const newState = {
+              terminals: [{ id: 't1' }, { id: 't2' }],
+              availableSlots: [3],
+              maxTerminals: 5,
+              activeTerminalId: 't1'
+          };
+
+          manager.updateState(newState);
+
+          expect(displayModeManager.showAllTerminalsSplit).toHaveBeenCalledTimes(1);
+      });
   });
 
   describe('Lifecycle', () => {

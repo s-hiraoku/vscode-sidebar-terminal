@@ -72,6 +72,7 @@ const NOOP_SHELL_INTEGRATION_MANAGER: IShellIntegrationBridge = {
   showCommandHistory: () => {},
 };
 import { SplitManager } from './SplitManager';
+import { SplitResizeManager } from './SplitResizeManager';
 import { SettingsPanel } from '../components/SettingsPanel';
 import { NotificationManager } from './NotificationManager';
 import { ConfigManager } from './ConfigManager';
@@ -131,6 +132,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
   // 既存マネージャー
   public splitManager: SplitManager;
+  private splitResizeManager: SplitResizeManager | null = null;
   private settingsPanel!: SettingsPanel;
   private notificationManager!: NotificationManager;
   private configManager!: ConfigManager;
@@ -203,6 +205,9 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
     // コーディネーターの初期化
     this.initializeCoordinators();
+
+    // SplitResizeManager の初期化
+    this.initializeSplitResizeManager();
 
     // 設定読み込み
     this.loadSettings();
@@ -333,6 +338,46 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     });
 
     log('✅ Coordinators initialized');
+  }
+
+  /**
+   * SplitResizeManager の初期化
+   */
+  private initializeSplitResizeManager(): void {
+    this.splitResizeManager = new SplitResizeManager({
+      onResizeComplete: () => {
+        // PTY に通知するためにすべてのターミナルをリサイズ
+        this.refitAllTerminals();
+      },
+      getSplitDirection: () => {
+        return this.splitManager.getSplitDirection();
+      },
+    });
+    log('✅ SplitResizeManager initialized');
+  }
+
+  /**
+   * SplitResizeManager にリサイザーを登録
+   * 分割レイアウト変更時に呼び出される
+   */
+  public updateSplitResizers(): void {
+    if (!this.splitResizeManager) {
+      return;
+    }
+
+    const terminalsWrapper = document.getElementById('terminals-wrapper');
+    if (!terminalsWrapper) {
+      // Clear stale references when wrapper is missing
+      this.splitResizeManager.reinitialize([]);
+      return;
+    }
+
+    const resizers = Array.from(
+      terminalsWrapper.querySelectorAll<HTMLElement>('.split-resizer')
+    );
+
+    // Always reinitialize to clear stale references, even with empty array
+    this.splitResizeManager.reinitialize(resizers);
   }
 
   /**
@@ -1525,6 +1570,9 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       // 2. Update UI state immediately
       this.updateUIFromState(this.currentTerminalState);
 
+      // 2.5. 🔧 FIX: Ensure split resizers appear on initial split display
+      this.ensureSplitResizersOnInitialDisplay(terminalState);
+
       // 3. Update terminal creation availability
       this.updateTerminalCreationState();
 
@@ -1551,6 +1599,32 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
    */
   private updateUIFromState(state: TerminalState): void {
     this.terminalStateDisplayManager.updateFromState(state);
+  }
+
+  /**
+   * Ensure split resizers are shown on initial display when split mode is active.
+   */
+  private ensureSplitResizersOnInitialDisplay(state: TerminalState): void {
+    const displayModeManager = this.displayModeManager;
+    if (!displayModeManager) {
+      return;
+    }
+
+    if (displayModeManager.getCurrentMode?.() !== 'split') {
+      return;
+    }
+
+    if (state.terminals.length <= 1) {
+      return;
+    }
+
+    const resizerCount = document.querySelectorAll('.split-resizer').length;
+    if (resizerCount > 0) {
+      return;
+    }
+
+    log('🔧 [SPLIT] Missing resizers on initial display - refreshing split layout');
+    displayModeManager.showAllTerminalsSplit?.();
   }
 
   /**
@@ -1923,6 +1997,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       this.displayModeManager?.dispose();
       this.terminalContainerManager?.dispose();
       this.debugPanelManager?.dispose();
+      this.splitResizeManager?.dispose();
 
       // 既存マネージャーのクリーンアップ
       this.messageManager.dispose();

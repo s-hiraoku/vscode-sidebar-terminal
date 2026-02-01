@@ -27,7 +27,11 @@ import {
   TerminalDisplayState,
   TerminalDisplaySnapshot,
 } from '../interfaces/ManagerInterfaces';
-import { SplitLayoutService, ContainerVisibilityService } from './container';
+import {
+  SplitLayoutService,
+  ContainerVisibilityService,
+  type IResizeCoordinator,
+} from './container';
 import { DOMUtils } from '../utils/DOMUtils';
 
 /**
@@ -74,6 +78,18 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
   protected doInitialize(): void {
     this.log('Initializing TerminalContainerManager');
     this.discoverExistingContainers();
+
+    // 🔧 FIX: Pass coordinator to SplitLayoutService for resizer initialization
+    // This enables automatic resizer initialization after split layout activation
+    // Create a type-safe adapter implementing IResizeCoordinator
+    const resizeCoordinator: IResizeCoordinator = {
+      updateSplitResizers:
+        'updateSplitResizers' in this.coordinator
+          ? () => (this.coordinator as { updateSplitResizers: () => void }).updateSplitResizers()
+          : undefined,
+    };
+    this.splitLayoutService.setCoordinator(resizeCoordinator);
+
     this.log('TerminalContainerManager initialized successfully');
   }
 
@@ -285,9 +301,14 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
     const terminalBody = this.getTerminalBody();
     const targetBody = terminalBody ?? document.getElementById('terminal-body');
 
-    // Clear resizers
+    // Clear tracked resizers first
     this.splitLayoutService.getSplitResizers().forEach((resizer) => resizer.remove());
     this.splitLayoutService.getSplitResizers().clear();
+
+    // Remove any stale resizers still in the DOM (e.g., after restore or reorder)
+    targetBody?.querySelectorAll<HTMLElement>('.split-resizer').forEach((resizer) => {
+      resizer.remove();
+    });
 
     // Clear wrappers and move containers back
     const splitWrapperCache = this.splitLayoutService.getSplitWrapperCache();
@@ -440,26 +461,17 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
       return;
     }
 
-    let parentContainer = document.getElementById('terminals-wrapper');
-    if (!parentContainer) {
-      parentContainer = document.getElementById('terminal-body');
-      this.log('terminals-wrapper not found, falling back to terminal-body', 'warn');
-    }
-
-    if (!parentContainer) {
-      this.log('Neither terminals-wrapper nor terminal-body found', 'error');
-      return;
-    }
-
     const reorderedContainers: HTMLElement[] = [];
     // Create new ordered cache to preserve drag-drop order
     const newContainerCache = new Map<string, HTMLElement>();
+    const orderedIds: string[] = [];
 
     for (const terminalId of order) {
       const container = this.containerCache.get(terminalId);
       if (container && document.contains(container)) {
         reorderedContainers.push(container);
         newContainerCache.set(terminalId, container);
+        orderedIds.push(terminalId);
       } else if (container) {
         this.containerCache.delete(terminalId);
       }
@@ -469,6 +481,7 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
     for (const [terminalId, container] of this.containerCache) {
       if (!newContainerCache.has(terminalId)) {
         newContainerCache.set(terminalId, container);
+        orderedIds.push(terminalId);
       }
     }
 
@@ -479,6 +492,34 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
 
     // Update containerCache with new order (ES2015 Map preserves insertion order)
     this.containerCache = newContainerCache;
+
+    // Split mode: rebuild layout based on new order to keep wrappers/resizers consistent
+    if (this.currentDisplayState.mode === 'split') {
+      this.applyDisplayState({
+        mode: 'split',
+        activeTerminalId: this.currentDisplayState.activeTerminalId,
+        orderedTerminalIds: orderedIds,
+        splitDirection: this.currentDisplayState.splitDirection ?? 'vertical',
+      });
+      return;
+    }
+
+    // Fullscreen mode: keep cache order but avoid DOM moves that break visibility
+    if (this.currentDisplayState.mode === 'fullscreen') {
+      this.log('Skipping DOM reorder in fullscreen mode');
+      return;
+    }
+
+    let parentContainer = document.getElementById('terminals-wrapper');
+    if (!parentContainer) {
+      parentContainer = document.getElementById('terminal-body');
+      this.log('terminals-wrapper not found, falling back to terminal-body', 'warn');
+    }
+
+    if (!parentContainer) {
+      this.log('Neither terminals-wrapper nor terminal-body found', 'error');
+      return;
+    }
 
     const fragment = document.createDocumentFragment();
     for (const container of reorderedContainers) {

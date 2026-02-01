@@ -204,6 +204,7 @@
 .split-resizer {
   background: var(--vscode-widget-border, #454545);
   flex-shrink: 0;
+  transition: background-color 0.15s ease;
 }
 
 /* Vertical split (sidebar) - horizontal resizer */
@@ -218,6 +219,49 @@
   width: 4px;
   height: 100%;
   cursor: col-resize;
+}
+
+/* Hover state - visual feedback */
+.split-resizer:hover {
+  background: var(--vscode-sash-hoverBorder, #007acc);
+}
+
+/* Active dragging state */
+.split-resizer.dragging {
+  background: var(--vscode-sash-hoverBorder, #007acc);
+}
+
+/* ========================================
+   RESIZING STATE - Body level overrides
+   Prevents text selection and enforces cursor
+   ======================================== */
+
+body.resizing-split {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+body.resizing-split * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+/* Cursor override during horizontal resize */
+body.resizing-horizontal {
+  cursor: col-resize !important;
+}
+
+body.resizing-horizontal * {
+  cursor: col-resize !important;
+}
+
+/* Cursor override during vertical resize */
+body.resizing-vertical {
+  cursor: row-resize !important;
+}
+
+body.resizing-vertical * {
+  cursor: row-resize !important;
 }
 
 /* ========================================

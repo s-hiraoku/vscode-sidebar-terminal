@@ -9,6 +9,13 @@ import { containerLogger } from '../../utils/ManagerLogger';
 import { SPLIT_LAYOUT_CONSTANTS } from '../../constants/webview';
 
 /**
+ * Interface for coordinator with updateSplitResizers method
+ */
+export interface IResizeCoordinator {
+  updateSplitResizers?(): void;
+}
+
+/**
  * Service for managing split terminal layouts
  */
 export class SplitLayoutService {
@@ -17,6 +24,16 @@ export class SplitLayoutService {
 
   /** Set of split resizer elements */
   private splitResizers = new Set<HTMLElement>();
+
+  /** Reference to coordinator for calling updateSplitResizers */
+  private coordinator: IResizeCoordinator | null = null;
+
+  /**
+   * Set the coordinator reference for resizer initialization
+   */
+  public setCoordinator(coordinator: IResizeCoordinator): void {
+    this.coordinator = coordinator;
+  }
 
   /**
    * Get the split wrapper cache
@@ -112,6 +129,9 @@ export class SplitLayoutService {
     // 🆕 Get or create terminals-wrapper and apply layout direction
     const terminalsWrapper = this.ensureTerminalsWrapper(terminalBody);
 
+    // Sync CSS class for resizer orientation
+    terminalsWrapper.classList.toggle('terminal-split-horizontal', splitDirection === 'horizontal');
+
     // Apply flex-direction to terminals-wrapper
     terminalsWrapper.style.flexDirection = flexDirection;
     containerLogger.info(
@@ -160,19 +180,32 @@ export class SplitLayoutService {
       terminalsWrapper.appendChild(wrapper);
       this.splitWrapperCache.set(terminalId, wrapper);
 
-      // 🔧 DISABLED: Resizers are not functional yet, so skip adding them
-      // This prevents orphaned resizer elements from accumulating
-      // TODO: Re-enable when resize functionality is implemented
-      // if (index < orderedTerminalIds.length - 1) {
-      //   const resizer = this.createSplitResizer(splitDirection);
-      //   terminalsWrapper.appendChild(resizer);
-      //   this.splitResizers.add(resizer);
-      // }
+      // Add resizer between terminals (not after the last one)
+      // 🔧 FIX: Use containersToWrap instead of orderedTerminalIds to ensure
+      // data-resizer-after always references an existing wrapper
+      if (index < containersToWrap.length - 1) {
+        const nextTerminalId = containersToWrap[index + 1].id;
+        const resizer = this.createSplitResizer(splitDirection);
+        // Add data attributes for drag-to-resize functionality
+        resizer.setAttribute('data-resizer-before', terminalId);
+        resizer.setAttribute('data-resizer-after', nextTerminalId);
+        terminalsWrapper.appendChild(resizer);
+        this.splitResizers.add(resizer);
+      }
     });
 
     containerLogger.info(
-      `Split layout activated: ${orderedTerminalIds.length} wrappers (resizers disabled)`
+      `Split layout activated: ${containersToWrap.length} wrappers, ${this.splitResizers.size} resizers`
     );
+
+    // 🔧 FIX: Initialize split resizers for drag-to-resize functionality
+    // Use setTimeout to ensure DOM is fully updated after layout creation
+    if (this.coordinator?.updateSplitResizers) {
+      setTimeout(() => {
+        this.coordinator?.updateSplitResizers?.();
+        containerLogger.info('Split resizers initialized after layout activation');
+      }, 50);
+    }
   }
 
   /**

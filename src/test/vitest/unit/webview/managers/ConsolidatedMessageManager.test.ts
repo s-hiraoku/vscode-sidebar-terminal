@@ -6,10 +6,22 @@
  * Vitest Migration: Converted from Mocha/Chai to Vitest
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ConsolidatedMessageManager } from '../../../../../webview/managers/ConsolidatedMessageManager';
-import { IManagerCoordinator } from '../../../../../webview/interfaces/ManagerInterfaces';
+import {
+  IManagerCoordinator,
+  IDisplayModeManager,
+} from '../../../../../webview/interfaces/ManagerInterfaces';
 import { MessageCommand } from '../../../../../webview/managers/messageTypes';
+
+/**
+ * Test-only interface extending IManagerCoordinator with split resizer support.
+ * Used to provide type-safe mocking for tests that verify split resizer behavior.
+ */
+interface SplitResizerCoordinator extends IManagerCoordinator {
+  getDisplayModeManager: () => Pick<IDisplayModeManager, 'getCurrentMode' | 'showAllTerminalsSplit'>;
+  updateSplitResizers: () => void;
+}
 
 describe('ConsolidatedMessageManager', () => {
   let messageManager: ConsolidatedMessageManager;
@@ -461,6 +473,110 @@ describe('ConsolidatedMessageManager', () => {
       expect(stats).toHaveProperty('isProcessing');
       expect(typeof stats.queueSize).toBe('number');
       expect(typeof stats.isProcessing).toBe('boolean');
+    });
+  });
+
+  describe('Session restore resizer handling', () => {
+    it('should call updateSplitResizers after session restore in split mode with multiple terminals', async () => {
+      const updateSplitResizers = vi.fn();
+      const showAllTerminalsSplit = vi.fn();
+      const getDisplayModeManager = () => ({
+        getCurrentMode: () => 'split',
+        showAllTerminalsSplit,
+      });
+      const getTerminalContainerManager = () => ({
+        getDisplaySnapshot: () => ({
+          visibleTerminals: ['terminal-1', 'terminal-2'],
+        }),
+      });
+
+      const coordinator = {
+        ...mockCoordinator,
+        getDisplayModeManager,
+        getTerminalContainerManager,
+        updateSplitResizers,
+      } as unknown as SplitResizerCoordinator;
+
+      const message: MessageCommand = {
+        command: 'sessionRestoreCompleted',
+        restoredCount: 2,
+        skippedCount: 0,
+      };
+
+      await messageManager.receiveMessage(message, coordinator);
+
+      // Wait for the setTimeout (100ms) to complete
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      // Both showAllTerminalsSplit and updateSplitResizers should be called
+      expect(showAllTerminalsSplit).toHaveBeenCalledTimes(1);
+      expect(updateSplitResizers).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not call updateSplitResizers after session restore in normal mode', async () => {
+      const updateSplitResizers = vi.fn();
+      const getDisplayModeManager = () => ({
+        getCurrentMode: () => 'normal',
+      });
+      const getTerminalContainerManager = () => ({
+        getDisplaySnapshot: () => ({
+          visibleTerminals: ['terminal-1'],
+        }),
+      });
+
+      const coordinator = {
+        ...mockCoordinator,
+        getDisplayModeManager,
+        getTerminalContainerManager,
+        updateSplitResizers,
+      } as unknown as SplitResizerCoordinator;
+
+      const message: MessageCommand = {
+        command: 'sessionRestoreCompleted',
+        restoredCount: 1,
+        skippedCount: 0,
+      };
+
+      await messageManager.receiveMessage(message, coordinator);
+
+      // Wait for the setTimeout (100ms) to complete
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      // updateSplitResizers should not be called in normal mode
+      expect(updateSplitResizers).not.toHaveBeenCalled();
+    });
+
+    it('should not call updateSplitResizers when only one terminal is visible in split mode', async () => {
+      const updateSplitResizers = vi.fn();
+      const getDisplayModeManager = () => ({
+        getCurrentMode: () => 'split',
+      });
+      const getTerminalContainerManager = () => ({
+        getDisplaySnapshot: () => ({
+          visibleTerminals: ['terminal-1'],
+        }),
+      });
+
+      const coordinator = {
+        ...mockCoordinator,
+        getDisplayModeManager,
+        getTerminalContainerManager,
+        updateSplitResizers,
+      } as unknown as SplitResizerCoordinator;
+
+      const message: MessageCommand = {
+        command: 'sessionRestoreCompleted',
+        restoredCount: 1,
+        skippedCount: 0,
+      };
+
+      await messageManager.receiveMessage(message, coordinator);
+
+      // Wait for the setTimeout (100ms) to complete
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      // updateSplitResizers should not be called when only 1 terminal visible
+      expect(updateSplitResizers).not.toHaveBeenCalled();
     });
   });
 });

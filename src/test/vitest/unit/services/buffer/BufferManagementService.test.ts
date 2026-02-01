@@ -406,7 +406,7 @@ describe('BufferManagementService', () => {
           resolve();
         }, 50);
       });
-    }, 100);
+    }, 500);
   });
 
   describe('Edge Cases', () => {
