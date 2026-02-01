@@ -129,6 +129,9 @@ export class SplitLayoutService {
     // 🆕 Get or create terminals-wrapper and apply layout direction
     const terminalsWrapper = this.ensureTerminalsWrapper(terminalBody);
 
+    // Sync CSS class for resizer orientation
+    terminalsWrapper.classList.toggle('terminal-split-horizontal', splitDirection === 'horizontal');
+
     // Apply flex-direction to terminals-wrapper
     terminalsWrapper.style.flexDirection = flexDirection;
     containerLogger.info(
@@ -178,8 +181,10 @@ export class SplitLayoutService {
       this.splitWrapperCache.set(terminalId, wrapper);
 
       // Add resizer between terminals (not after the last one)
-      if (index < orderedTerminalIds.length - 1) {
-        const nextTerminalId = orderedTerminalIds[index + 1];
+      // 🔧 FIX: Use containersToWrap instead of orderedTerminalIds to ensure
+      // data-resizer-after always references an existing wrapper
+      if (index < containersToWrap.length - 1) {
+        const nextTerminalId = containersToWrap[index + 1].id;
         const resizer = this.createSplitResizer(splitDirection);
         // Add data attributes for drag-to-resize functionality
         resizer.setAttribute('data-resizer-before', terminalId);
@@ -190,7 +195,7 @@ export class SplitLayoutService {
     });
 
     containerLogger.info(
-      `Split layout activated: ${orderedTerminalIds.length} wrappers, ${this.splitResizers.size} resizers`
+      `Split layout activated: ${containersToWrap.length} wrappers, ${this.splitResizers.size} resizers`
     );
 
     // 🔧 FIX: Initialize split resizers for drag-to-resize functionality

@@ -189,7 +189,11 @@ export class ConsolidatedMessageManager implements IMessageManager {
       // This handles the case where split mode with multiple terminals is restored
       setTimeout(() => {
         const displayModeManager = coord.getDisplayModeManager?.();
-        if (displayModeManager?.getCurrentMode() === 'split') {
+        const containerManager = coord.getTerminalContainerManager?.();
+        const snapshot = containerManager?.getDisplaySnapshot?.();
+        const visibleCount = snapshot?.visibleTerminals?.length ?? 0;
+        if (displayModeManager?.getCurrentMode() === 'split' && visibleCount > 1) {
+          displayModeManager.showAllTerminalsSplit?.();
           (coord as any)?.updateSplitResizers?.();
           this.logger.info('Split resizers initialized after session restore');
         }

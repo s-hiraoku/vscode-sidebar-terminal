@@ -367,6 +367,8 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
     const terminalsWrapper = document.getElementById('terminals-wrapper');
     if (!terminalsWrapper) {
+      // Clear stale references when wrapper is missing
+      this.splitResizeManager.reinitialize([]);
       return;
     }
 
@@ -374,9 +376,8 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       terminalsWrapper.querySelectorAll<HTMLElement>('.split-resizer')
     );
 
-    if (resizers.length > 0) {
-      this.splitResizeManager.reinitialize(resizers);
-    }
+    // Always reinitialize to clear stale references, even with empty array
+    this.splitResizeManager.reinitialize(resizers);
   }
 
   /**
@@ -1569,6 +1570,9 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       // 2. Update UI state immediately
       this.updateUIFromState(this.currentTerminalState);
 
+      // 2.5. 🔧 FIX: Ensure split resizers appear on initial split display
+      this.ensureSplitResizersOnInitialDisplay(terminalState);
+
       // 3. Update terminal creation availability
       this.updateTerminalCreationState();
 
@@ -1595,6 +1599,32 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
    */
   private updateUIFromState(state: TerminalState): void {
     this.terminalStateDisplayManager.updateFromState(state);
+  }
+
+  /**
+   * Ensure split resizers are shown on initial display when split mode is active.
+   */
+  private ensureSplitResizersOnInitialDisplay(state: TerminalState): void {
+    const displayModeManager = this.displayModeManager;
+    if (!displayModeManager) {
+      return;
+    }
+
+    if (displayModeManager.getCurrentMode?.() !== 'split') {
+      return;
+    }
+
+    if (state.terminals.length <= 1) {
+      return;
+    }
+
+    const resizerCount = document.querySelectorAll('.split-resizer').length;
+    if (resizerCount > 0) {
+      return;
+    }
+
+    log('🔧 [SPLIT] Missing resizers on initial display - refreshing split layout');
+    displayModeManager.showAllTerminalsSplit?.();
   }
 
   /**
