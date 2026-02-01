@@ -1,9 +1,24 @@
 // @vitest-environment jsdom
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { setupCompleteTestEnvironment } from '../../../../shared/TestSetup';
 import { SplitResizeManager } from '../../../../../webview/managers/SplitResizeManager';
 
+// Test environment setup
+let testEnv: ReturnType<typeof setupCompleteTestEnvironment>;
+
 describe('SplitResizeManager (DOM)', () => {
+  beforeEach(() => {
+    testEnv = setupCompleteTestEnvironment();
+  });
+
+  afterEach(() => {
+    // Clean up test environment
+    if (testEnv?.dom) {
+      testEnv.dom.window.close();
+    }
+  });
+
   it('should calculate correct resize ratios for the resized pair', () => {
     const manager = new SplitResizeManager({
       onResizeComplete: () => {},

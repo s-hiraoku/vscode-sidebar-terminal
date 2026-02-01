@@ -1,14 +1,16 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { setupCompleteTestEnvironment } from '../../../../shared/TestSetup';
 import { UIController } from '../../../../../../src/webview/services/UIController';
 import { UIControllerConfig } from '../../../../../../src/webview/services/IUIController';
 
 describe('UIController', () => {
   let uiController: UIController;
   let config: UIControllerConfig;
+  let testEnv: ReturnType<typeof setupCompleteTestEnvironment>;
 
   beforeEach(() => {
-    // Clean up DOM
-    document.body.innerHTML = '';
+    // Use shared test environment setup
+    testEnv = setupCompleteTestEnvironment();
 
     // Default config
     config = {
@@ -24,6 +26,10 @@ describe('UIController', () => {
 
   afterEach(() => {
     uiController.dispose();
+    // Clean up test environment
+    if (testEnv?.dom) {
+      testEnv.dom.window.close();
+    }
   });
 
   describe('Initialization', () => {
