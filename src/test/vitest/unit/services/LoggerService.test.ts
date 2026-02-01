@@ -36,6 +36,12 @@ describe('LoggerService', () => {
   });
 
   afterEach(() => {
+    // Dispose the logger singleton before clearing mocks
+    const instance = (LoggerService as any).instance;
+    if (instance) {
+      instance.dispose();
+    }
+    (LoggerService as any).instance = null;
     vi.clearAllMocks();
   });
 
@@ -146,7 +152,9 @@ describe('LoggerService', () => {
         affectsConfiguration: (section: string) => section === 'secondaryTerminal.logging'
       };
       
-      onDidChangeConfigurationCallbacks.forEach(cb => cb(event));
+      onDidChangeConfigurationCallbacks.forEach((cb) => {
+        cb(event);
+      });
 
       expect(logger.getLogLevel()).toBe(LogLevel.ERROR);
     });
