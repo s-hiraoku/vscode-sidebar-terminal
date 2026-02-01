@@ -90,6 +90,48 @@ describe('SplitLayoutService', () => {
       expect(t1.classList.contains('terminal-container--split')).toBe(true);
     });
 
+    it('should rebuild resizers when activation order changes', () => {
+      const t1 = document.createElement('div');
+      const t2 = document.createElement('div');
+      const t3 = document.createElement('div');
+
+      const containers = new Map([
+        ['term-1', t1],
+        ['term-2', t2],
+        ['term-3', t3],
+      ]);
+
+      service.activateSplitLayout(
+        terminalBody,
+        ['term-1', 'term-2', 'term-3'],
+        'vertical',
+        (id) => containers.get(id)
+      );
+
+      let wrapper = document.getElementById('terminals-wrapper')!;
+      let resizers = wrapper.querySelectorAll('.split-resizer');
+      expect(resizers.length).toBe(2);
+      expect(resizers[0].getAttribute('data-resizer-before')).toBe('term-1');
+      expect(resizers[0].getAttribute('data-resizer-after')).toBe('term-2');
+      expect(resizers[1].getAttribute('data-resizer-before')).toBe('term-2');
+      expect(resizers[1].getAttribute('data-resizer-after')).toBe('term-3');
+
+      service.activateSplitLayout(
+        terminalBody,
+        ['term-3', 'term-1', 'term-2'],
+        'vertical',
+        (id) => containers.get(id)
+      );
+
+      wrapper = document.getElementById('terminals-wrapper')!;
+      resizers = wrapper.querySelectorAll('.split-resizer');
+      expect(resizers.length).toBe(2);
+      expect(resizers[0].getAttribute('data-resizer-before')).toBe('term-3');
+      expect(resizers[0].getAttribute('data-resizer-after')).toBe('term-1');
+      expect(resizers[1].getAttribute('data-resizer-before')).toBe('term-1');
+      expect(resizers[1].getAttribute('data-resizer-after')).toBe('term-2');
+    });
+
     it('should insert resizers between terminals with correct attributes', () => {
       const t1 = document.createElement('div');
       const t2 = document.createElement('div');
