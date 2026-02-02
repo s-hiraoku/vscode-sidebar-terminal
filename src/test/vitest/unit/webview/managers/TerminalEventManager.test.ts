@@ -24,8 +24,9 @@ vi.mock('../../../../../webview/utils/EventHandlerRegistry', () => ({
   EventHandlerRegistry: class {
     register = vi.fn();
     unregister = vi.fn();
+    unregisterByPattern = vi.fn();
     dispose = vi.fn();
-  }
+  },
 }));
 
 describe('TerminalEventManager', () => {
@@ -223,14 +224,71 @@ describe('TerminalEventManager', () => {
       // Mock active element
       Object.defineProperty(document, 'activeElement', {
         value: mockTerminal.textarea,
-        configurable: true
+        configurable: true,
       });
 
       manager.focusTerminal(mockTerminal as Terminal, 't1');
-      
+
       vi.advanceTimersByTime(10);
       expect(mockTerminal.focus).not.toHaveBeenCalled();
       vi.useRealTimers();
+    });
+  });
+
+  describe('Event Removal with Regex Metacharacters', () => {
+    it('should escape regex metacharacters in terminalId before unregistering', () => {
+      const terminalId = '$1[test]';
+      const unregisterByPatternSpy = vi.spyOn(mockRegistry, 'unregisterByPattern');
+
+      manager.setupTerminalEvents(mockTerminal as Terminal, terminalId, mockContainer);
+
+      const registerCalls = (mockRegistry.register as any).mock.calls;
+      expect(registerCalls.length).toBeGreaterThan(0);
+
+      manager.removeTerminalEvents(terminalId);
+
+      expect(unregisterByPatternSpy).toHaveBeenCalled();
+      expect(unregisterByPatternSpy.mock.calls.length).toBeGreaterThan(0);
+
+      const firstCallArgs = unregisterByPatternSpy.mock.calls[0];
+      if (firstCallArgs && firstCallArgs[0]) {
+        const patternArg = firstCallArgs[0];
+        expect(patternArg).toBeInstanceOf(RegExp);
+        // Verify the escaped pattern matches the expected terminal event keys
+        expect(patternArg.test('terminal-$1[test]-click')).toBe(true);
+        expect(patternArg.test('terminal-$1[test]-pointerdown')).toBe(true);
+        // Should NOT match other terminals
+        expect(patternArg.test('terminal-$2-click')).toBe(false);
+        expect(patternArg.test('terminal-click')).toBe(false);
+      }
+    });
+
+    it('should not remove events for other terminals when removing one', () => {
+      const unregisterByPatternSpy = vi.spyOn(mockRegistry, 'unregisterByPattern');
+
+      manager.setupTerminalEvents(mockTerminal as Terminal, 't1', mockContainer);
+      manager.setupTerminalEvents(mockTerminal as Terminal, 't2', mockContainer);
+
+      const t1Registers = (mockRegistry.register as any).mock.calls.filter((call: any[]) =>
+        call[0].startsWith('terminal-t1')
+      );
+      const t2Registers = (mockRegistry.register as any).mock.calls.filter((call: any[]) =>
+        call[0].startsWith('terminal-t2')
+      );
+
+      expect(t1Registers.length).toBeGreaterThan(0);
+      expect(t2Registers.length).toBeGreaterThan(0);
+
+      manager.removeTerminalEvents('t1');
+
+      expect(unregisterByPatternSpy).toHaveBeenCalled();
+
+      // t2 registrations should remain unchanged
+      const t2RegistersAfter = (mockRegistry.register as any).mock.calls.filter((call: any[]) =>
+        call[0].startsWith('terminal-t2')
+      );
+
+      expect(t2RegistersAfter.length).toBe(t2Registers.length);
     });
   });
 });

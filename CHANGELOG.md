@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Memory Leak Prevention**: Fixed memory leaks when terminals are destroyed (#416)
+  - Added proper tracking and disposal of xterm.js event handlers (`onKey`, `onData`, `compositionend`)
+  - Added `removeTerminalHandlers()` method for terminal-specific resource cleanup
+  - Ensures all event subscriptions are properly disposed when terminals are removed
+
+- **ReDoS Security Fix**: Fixed potential ReDoS vulnerability in TerminalEventManager (CWE-1333)
+  - Escape regex metacharacters in terminal IDs before creating RegExp patterns
+  - Implemented proper `unregisterByPattern()` call for event cleanup
+
+### Added
+
+- **Mouse Tracking Support**: Added `terminal.onData()` handler for TUI apps
+  - Properly forwards mouse tracking escape sequences (`\x1b[<` and `\x1b[M`) to PTY
+  - Enables better mouse support in terminal applications like vim, htop, etc.
+
 ## [0.2.10] - 2026-02-02
 
 ### Fixed

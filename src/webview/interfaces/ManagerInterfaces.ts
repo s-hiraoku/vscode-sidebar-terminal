@@ -257,6 +257,11 @@ export interface IInputManager {
     container: HTMLElement,
     manager: IManagerCoordinator
   ): void;
+  /**
+   * Remove all handlers and event listeners for a specific terminal
+   * This prevents memory leaks when terminals are destroyed
+   */
+  removeTerminalHandlers(terminalId: string): void;
   getAltClickState(): AltClickState;
   isVSCodeAltClickEnabled(settings: PartialTerminalSettings): boolean;
   handleSpecialKeys(
