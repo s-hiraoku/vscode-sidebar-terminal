@@ -297,6 +297,41 @@ describe('ResizeCoordinator', () => {
       expect(mockDeps.notifyResize).toHaveBeenCalledWith('terminal-1', 100, 30);
     });
 
+    it('should refresh terminal after double-fit to avoid stale render on shrink', () => {
+      const fitCallOrder: string[] = [];
+      let terminalDimensions = { cols: 80, rows: 24 };
+
+      const mockFit = vi.fn().mockImplementation(() => {
+        fitCallOrder.push('fit');
+        if (fitCallOrder.filter(c => c === 'fit').length >= 2) {
+          terminalDimensions = { cols: 80, rows: 10 };
+        }
+      });
+
+      const mockRefresh = vi.fn();
+      const mockContainer = document.createElement('div');
+
+      const mockTerminal = {
+        get cols() { return terminalDimensions.cols; },
+        get rows() { return terminalDimensions.rows; },
+        refresh: mockRefresh,
+      };
+
+      mockTerminals.set('terminal-1', {
+        terminal: mockTerminal,
+        fitAddon: { fit: mockFit, proposeDimensions: vi.fn() },
+        container: mockContainer,
+      });
+
+      coordinator.refitAllTerminals();
+
+      // Advance past both requestAnimationFrame calls
+      vi.advanceTimersByTime(100);
+
+      expect(mockFit).toHaveBeenCalledTimes(2);
+      expect(mockRefresh).toHaveBeenCalledWith(0, 9);
+    });
+
     it('should use deferred PTY notification for split mode timing (Issue #368)', () => {
       // When in split mode, CSS layout changes need time to settle
       // PTY notification should be deferred until layout is stable

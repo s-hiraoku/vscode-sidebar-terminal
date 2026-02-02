@@ -18,7 +18,7 @@ import { RESIZE_COORDINATOR_CONSTANTS } from '../constants/webview';
  */
 export interface IResizeDependencies {
   getTerminals(): Map<string, {
-    terminal: { cols: number; rows: number };
+    terminal: { cols: number; rows: number; refresh?: (start: number, end: number) => void };
     fitAddon: { fit(): void; proposeDimensions(): { cols?: number; rows?: number } | undefined } | null;
     container: HTMLElement | null;
   }>;
@@ -175,6 +175,10 @@ export class ResizeCoordinator {
 
               const newCols = terminalData.terminal.cols;
               const newRows = terminalData.terminal.rows;
+              if (typeof terminalData.terminal.refresh === 'function') {
+                const lastRow = Math.max(newRows - 1, 0);
+                terminalData.terminal.refresh(0, lastRow);
+              }
               if (this.deps.notifyResize) {
                 this.deps.notifyResize(terminalId, newCols, newRows);
                 log(`📨 PTY resize: ${terminalId} (${newCols}x${newRows})`);
