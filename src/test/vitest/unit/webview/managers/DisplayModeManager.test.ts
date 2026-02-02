@@ -257,17 +257,20 @@ describe('DisplayModeManager - Fullscreen Display (Issue #198)', () => {
       expect(displayManager.getCurrentMode()).toBe('split');
     });
 
-    it('should clear container height styles when entering split from fullscreen', () => {
+    it('should clear container height styles when entering horizontal split from fullscreen', () => {
       // Arrange - enter fullscreen to apply fullscreen height styles
       displayManager.showTerminalFullscreen('1');
       (DOMUtils.clearContainerHeightStyles as unknown as { mockClear: () => void }).mockClear();
+
+      // Set split direction to horizontal (where clearContainerHeightStyles is called)
+      (mockSplitManager.getOptimalSplitDirection as ReturnType<typeof vi.fn>).mockReturnValue('horizontal');
 
       const containers = Array.from(mockContainerManager.getAllContainers().values());
 
       // Act - switch to split mode
       displayManager.showAllTerminalsSplit();
 
-      // Assert - clear height styles for all containers before split sizing
+      // Assert - clear height styles for all containers in horizontal split
       containers.forEach((container) => {
         expect(DOMUtils.clearContainerHeightStyles).toHaveBeenCalledWith(container);
       });
