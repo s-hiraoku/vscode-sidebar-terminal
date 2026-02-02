@@ -9,6 +9,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { DisplayModeManager } from '../../../../../webview/managers/DisplayModeManager';
 import { IManagerCoordinator } from '../../../../../webview/interfaces/ManagerInterfaces';
 import { ISplitLayoutController } from '../../../../../webview/interfaces/ISplitLayoutController';
+import { DOMUtils } from '../../../../../webview/utils/DOMUtils';
 
 // Mock DOMUtils
 vi.mock('../../../../../webview/utils/DOMUtils', () => ({
@@ -254,6 +255,22 @@ describe('DisplayModeManager - Fullscreen Display (Issue #198)', () => {
 
       // Assert
       expect(displayManager.getCurrentMode()).toBe('split');
+    });
+
+    it('should clear container height styles when entering split from fullscreen', () => {
+      // Arrange - enter fullscreen to apply fullscreen height styles
+      displayManager.showTerminalFullscreen('1');
+      (DOMUtils.clearContainerHeightStyles as unknown as { mockClear: () => void }).mockClear();
+
+      const containers = Array.from(mockContainerManager.getAllContainers().values());
+
+      // Act - switch to split mode
+      displayManager.showAllTerminalsSplit();
+
+      // Assert - clear height styles for all containers before split sizing
+      containers.forEach((container) => {
+        expect(DOMUtils.clearContainerHeightStyles).toHaveBeenCalledWith(container);
+      });
     });
 
     it('should handle split -> fullscreen transition', () => {
