@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.10] - 2026-02-02
+
+### Fixed
+
+- **Terminal Redraw on Resize**: Fixed stale terminal content when shrinking terminal size
+  - Added `terminal.refresh()` call after double-fit operation in ResizeCoordinator
+  - Ensures visible area is properly redrawn after dimension changes
+  - Prevents ghost content from remaining visible after terminal shrinks
+
+### Changed
+
+- **Dependencies**:
+  - Updated `node-pty` to 1.2.0-beta.10
+  - Updated `@playwright/test` to 1.58.1
+  - Updated `css-loader` to 7.1.3
+  - Updated `happy-dom` to 20.4.0
+
 ## [0.2.9] - 2026-01-29
 
 ### Fixed
