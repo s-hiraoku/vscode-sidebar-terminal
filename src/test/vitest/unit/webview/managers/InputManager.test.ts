@@ -84,6 +84,7 @@ describe('InputManager', () => {
       getSelection: vi.fn().mockReturnValue(''),
       clearSelection: vi.fn(),
       onKey: vi.fn().mockReturnValue({ dispose: vi.fn() }),
+      onData: vi.fn().mockReturnValue({ dispose: vi.fn() }),
       textarea: {},
       onFocus: vi.fn(),
       onBlur: vi.fn(),
@@ -340,6 +341,79 @@ describe('InputManager', () => {
       const intercepted = (manager as any).shouldInterceptKeyForVSCode(event, mockTerminal, mockCoordinator);
 
       expect(intercepted).toBe(true);
+    });
+  });
+
+  describe('Terminal Handler Cleanup', () => {
+    it('should remove terminal handlers and disposables on removeTerminalHandlers', () => {
+      const container = dom.window.document.createElement('div');
+      const onKeyDispose = vi.fn();
+      const onDataDispose = vi.fn();
+      mockTerminal.onKey.mockReturnValue({ dispose: onKeyDispose });
+      mockTerminal.onData.mockReturnValue({ dispose: onDataDispose });
+
+      manager.addXtermClickHandler(mockTerminal, 'terminal-1', container, mockCoordinator);
+
+      // Verify handlers were added
+      expect(mockTerminal.onKey).toHaveBeenCalled();
+      expect(mockTerminal.onData).toHaveBeenCalled();
+
+      // Remove handlers
+      manager.removeTerminalHandlers('terminal-1');
+
+      // Verify disposables were called
+      expect(onKeyDispose).toHaveBeenCalled();
+      expect(onDataDispose).toHaveBeenCalled();
+    });
+
+    it('should clear pending input buffers on removeTerminalHandlers', () => {
+      const container = dom.window.document.createElement('div');
+      manager.addXtermClickHandler(mockTerminal, 'terminal-1', container, mockCoordinator);
+
+      // Queue some input (not flushed yet)
+      const onKeyHandler = mockTerminal.onKey.mock.calls[0][0];
+      onKeyHandler({ key: 'a', domEvent: { key: 'a' } });
+      onKeyHandler({ key: 'b', domEvent: { key: 'b' } });
+
+      // Remove handlers (should clear pending buffer)
+      manager.removeTerminalHandlers('terminal-1');
+
+      // Advance timers - nothing should be sent because buffer was cleared
+      vi.advanceTimersByTime(100);
+
+      // Only the initial setup should have occurred, no additional sends after removal
+      const sendInputCalls = mockCoordinator.getMessageManager().sendInput.mock.calls;
+      // The removeTerminalHandlers should have cleared the buffer
+      expect(sendInputCalls.length).toBe(0);
+    });
+
+    it('should handle removeTerminalHandlers for non-existent terminal gracefully', () => {
+      // Should not throw
+      expect(() => manager.removeTerminalHandlers('non-existent-terminal')).not.toThrow();
+    });
+
+    it('should clean up handlers when addXtermClickHandler is called for existing terminal', () => {
+      const container = dom.window.document.createElement('div');
+      const firstOnKeyDispose = vi.fn();
+      const firstOnDataDispose = vi.fn();
+      mockTerminal.onKey.mockReturnValueOnce({ dispose: firstOnKeyDispose });
+      mockTerminal.onData.mockReturnValueOnce({ dispose: firstOnDataDispose });
+
+      // First setup
+      manager.addXtermClickHandler(mockTerminal, 'terminal-1', container, mockCoordinator);
+
+      // Reset mocks for second setup
+      const secondOnKeyDispose = vi.fn();
+      const secondOnDataDispose = vi.fn();
+      mockTerminal.onKey.mockReturnValue({ dispose: secondOnKeyDispose });
+      mockTerminal.onData.mockReturnValue({ dispose: secondOnDataDispose });
+
+      // Second setup for same terminal - should cleanup first
+      manager.addXtermClickHandler(mockTerminal, 'terminal-1', container, mockCoordinator);
+
+      // First handlers should have been disposed
+      expect(firstOnKeyDispose).toHaveBeenCalled();
+      expect(firstOnDataDispose).toHaveBeenCalled();
     });
   });
 });

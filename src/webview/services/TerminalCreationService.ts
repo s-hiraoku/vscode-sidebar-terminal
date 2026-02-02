@@ -793,6 +793,16 @@ export class TerminalCreationService implements Disposable {
       // Cleanup event handlers
       this.eventManager.removeTerminalEvents(terminalId);
 
+      // Cleanup InputManager handlers (xterm.js onKey, onData, compositionend)
+      if (this.coordinator.inputManager) {
+        try {
+          this.coordinator.inputManager.removeTerminalHandlers(terminalId);
+          terminalLogger.info(`✅ Input handlers removed via InputManager for: ${terminalId}`);
+        } catch (error) {
+          terminalLogger.warn(`⚠️ Failed to remove InputManager handlers for ${terminalId}`, error);
+        }
+      }
+
       // Cleanup link providers
       this.linkManager.unregisterTerminalLinkProvider(terminalId);
 

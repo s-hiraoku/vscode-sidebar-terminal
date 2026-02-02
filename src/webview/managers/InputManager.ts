@@ -107,6 +107,10 @@ export class InputManager extends BaseManager implements IInputManager {
     string,
     { data: string[]; timer: ReturnType<typeof setTimeout> | null }
   >();
+
+  // Terminal-specific disposables for xterm.js events (memory leak prevention)
+  private terminalDisposables = new Map<string, Array<{ dispose(): void }>>();
+
   // Simple arrow key handling for agent interactions
   private agentInteractionMode = false;
 
@@ -663,9 +667,14 @@ export class InputManager extends BaseManager implements IInputManager {
   ): void {
     this.logger(`Setting up VS Code standard input handling for terminal ${terminalId}`);
 
+    // Clean up any existing handlers if this terminal is re-initialized
+    this.removeTerminalHandlers(terminalId);
+
+    const disposables: Array<{ dispose(): void }> = [];
+
     // CRITICAL: Set up keyboard input handling with IME awareness
     // Use onKey for regular keyboard input (non-IME)
-    terminal.onKey((event: { key: string; domEvent: KeyboardEvent }) => {
+    const onKeyDisposable = terminal.onKey((event: { key: string; domEvent: KeyboardEvent }) => {
       // VS Code standard: Check IME composition state before processing
       if (this.imeHandler.isIMEComposing()) {
         this.logger(
@@ -681,17 +690,46 @@ export class InputManager extends BaseManager implements IInputManager {
       const needsImmediateFlush = this.shouldFlushImmediately(event.key, event.domEvent);
       this.queueInputData(terminalId, event.key, needsImmediateFlush);
     });
+    disposables.push(onKeyDisposable);
+
+    // Handle mouse tracking escape sequences from TUI apps
+    // onKey handles keyboard input; onData forwards mouse sequences to PTY
+    const onDataDisposable = terminal.onData((data: string) => {
+      const isMouseTracking = data.startsWith('\x1b[<') || data.startsWith('\x1b[M');
+
+      if (isMouseTracking) {
+        this.logger(`Terminal ${terminalId} mouse tracking: ${data.length} bytes`);
+        this.queueInputData(terminalId, data, true);
+        return;
+      }
+
+      // Ignore regular keyboard input - handled by onKey
+    });
+    disposables.push(onDataDisposable);
 
     // CRITICAL: Add compositionend listener for IME final text
     // This is the most reliable way to capture Japanese/Chinese/Korean input
     // The compositionend event fires with the final composed text
-    container.addEventListener('compositionend', (event: CompositionEvent) => {
+    const compositionEndHandler = (event: CompositionEvent): void => {
       const finalText = event.data;
       if (finalText) {
         this.logger(`Terminal ${terminalId} IME compositionend - final text: "${finalText}"`);
         this.queueInputData(terminalId, finalText, true);
       }
-    });
+    };
+
+    container.addEventListener('compositionend', compositionEndHandler as EventListener);
+
+    // Wrap in disposable for cleanup
+    const compositionEndDisposable = {
+      dispose: () => {
+        container.removeEventListener('compositionend', compositionEndHandler as EventListener);
+      },
+    };
+    disposables.push(compositionEndDisposable);
+
+    // Save disposables for terminal-specific cleanup
+    this.terminalDisposables.set(terminalId, disposables);
 
     // Set up focus handling - xterm.js doesn't have onFocus/onBlur, comment out
     // terminal.onFocus(() => {
@@ -811,6 +849,43 @@ export class InputManager extends BaseManager implements IInputManager {
     );
 
     return isEnabled;
+  }
+
+  /**
+   * Remove all handlers and event listeners for a specific terminal
+   * This prevents memory leaks when terminals are destroyed
+   */
+  public removeTerminalHandlers(terminalId: string): void {
+    this.logger(`Removing terminal handlers for ${terminalId}`);
+
+    // Clear pending input buffers and timers for this terminal
+    const pendingBuffer = this.pendingInputBuffers.get(terminalId);
+    if (pendingBuffer) {
+      if (pendingBuffer.timer !== null) {
+        clearTimeout(pendingBuffer.timer);
+      }
+      pendingBuffer.data = [];
+      this.pendingInputBuffers.delete(terminalId);
+    }
+
+    // Dispose xterm.js event subscriptions (onKey, onData, compositionend)
+    const disposables = this.terminalDisposables.get(terminalId);
+    if (disposables) {
+      for (const disposable of disposables) {
+        try {
+          disposable.dispose();
+        } catch (error) {
+          this.logger(`Error disposing handler for terminal ${terminalId}: ${error}`);
+        }
+      }
+      this.terminalDisposables.delete(terminalId);
+    }
+
+    // Unregister DOM event handlers
+    this.eventRegistry.unregister(`terminal-click-${terminalId}`);
+    this.eventRegistry.unregister(`terminal-pointerdown-${terminalId}`);
+
+    this.logger(`Terminal handlers removed for ${terminalId}`);
   }
 
   /**
@@ -1137,36 +1212,6 @@ export class InputManager extends BaseManager implements IInputManager {
   }
 
   /**
-   * Check if data from onData should be flushed immediately
-   * Used for processed escape sequences from xterm.js
-   */
-  private shouldFlushImmediatelyFromData(data: string): boolean {
-    if (!data) {
-      return true;
-    }
-
-    // Flush immediately for:
-    // - Enter/Return (\r or \n)
-    // - Control characters (ASCII 0-31)
-    // - Escape sequences (start with \x1b)
-    if (/[\r\n]/.test(data)) {
-      return true;
-    }
-
-    // Control characters (Ctrl+C = \x03, Ctrl+D = \x04, etc.)
-    if (data.length === 1 && data.charCodeAt(0) < KeyboardConstants.CONTROL_CHAR_THRESHOLD) {
-      return true;
-    }
-
-    // Escape sequences (arrow keys, function keys, etc.)
-    if (data.startsWith('\x1b')) {
-      return true;
-    }
-
-    return false;
-  }
-
-  /**
    * VS Code Standard: Determine if a key should be intercepted for VS Code handling
    * Returns true if VS Code should handle this key (not sent to shell)
    * Returns false if key should pass through to shell
@@ -1383,6 +1428,18 @@ export class InputManager extends BaseManager implements IInputManager {
       entry.data.length = 0;
     }
     this.pendingInputBuffers.clear();
+
+    // Dispose all terminal-specific xterm.js subscriptions
+    for (const [terminalId, disposables] of this.terminalDisposables) {
+      for (const disposable of disposables) {
+        try {
+          disposable.dispose();
+        } catch (error) {
+          this.logger(`Error disposing handler for terminal ${terminalId}: ${error}`);
+        }
+      }
+    }
+    this.terminalDisposables.clear();
 
     // Reset Alt+Click state
     this.altClickState = {
