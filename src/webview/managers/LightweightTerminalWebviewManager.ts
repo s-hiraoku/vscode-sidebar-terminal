@@ -1612,11 +1612,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     isInitialStateSync: boolean = false
   ): void {
     const displayModeManager = this.displayModeManager;
-    if (!displayModeManager) {
-      return;
-    }
-
-    if (state.terminals.length <= 1) {
+    if (!displayModeManager || state.terminals.length <= 1) {
       return;
     }
 
@@ -1625,31 +1621,22 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     const domWrapperCount = terminalsWrapper
       ? terminalsWrapper.querySelectorAll('[data-terminal-wrapper-id]').length
       : 0;
-    const wrapperCount = domWrapperCount > 0 ? domWrapperCount : stateTerminalCount;
-    const currentMode = displayModeManager.getCurrentMode?.() ?? 'normal';
-    const hasPersistedSplitWrappers = domWrapperCount > 1;
     const resizerCount = terminalsWrapper
       ? terminalsWrapper.querySelectorAll('.split-resizer').length
       : document.querySelectorAll('.split-resizer').length;
-    const shouldForceInitialSplitRecovery =
-      isInitialStateSync &&
-      currentMode !== 'split' &&
-      !hasPersistedSplitWrappers &&
-      resizerCount === 0;
-    if (currentMode !== 'split' && !hasPersistedSplitWrappers && !shouldForceInitialSplitRecovery) {
-      return;
-    }
+    const currentMode = displayModeManager.getCurrentMode?.() ?? 'normal';
+    const wrapperCount = domWrapperCount > 0 ? domWrapperCount : stateTerminalCount;
+    const expectedResizerCount = wrapperCount - 1;
+    const resizerLayoutValid = resizerCount === expectedResizerCount;
+    const wrapperLayoutValid = domWrapperCount === 0 || domWrapperCount === stateTerminalCount;
+    const layoutIsValid = resizerLayoutValid && wrapperLayoutValid;
 
-    const expectedResizerCount = Math.max(0, wrapperCount - 1);
-    const isResizerLayoutValid = resizerCount === expectedResizerCount;
-    const isWrapperCountValid = wrapperCount === stateTerminalCount;
-
-    if (isResizerLayoutValid && isWrapperCountValid) {
+    if (layoutIsValid) {
       return;
     }
 
     log(
-      `🔧 [SPLIT] Layout mismatch on initial display - refreshing split layout (state=${stateTerminalCount}, wrappers=${wrapperCount}, resizers=${resizerCount}, expectedResizers=${expectedResizerCount})`
+      `🔧 [SPLIT] Layout mismatch on display - refreshing split layout (state=${stateTerminalCount}, wrappers=${wrapperCount}, resizers=${resizerCount}, expectedResizers=${expectedResizerCount}, mode=${currentMode}, initial=${isInitialStateSync})`
     );
     displayModeManager.showAllTerminalsSplit?.();
     this.updateSplitResizers();

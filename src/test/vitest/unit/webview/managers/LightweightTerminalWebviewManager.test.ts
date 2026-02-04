@@ -345,6 +345,37 @@ describe('LightweightTerminalWebviewManager', () => {
           expect(displayModeManager.showAllTerminalsSplit).toHaveBeenCalledTimes(1);
       });
 
+      it('should recover split layout when terminal count increases after initial single-terminal update', () => {
+          const displayModeManager = (manager as any).displayModeManager;
+          displayModeManager.getCurrentMode.mockReturnValue('normal');
+          const updateSplitResizersSpy = vi
+            .spyOn(manager, 'updateSplitResizers')
+            .mockImplementation(() => {});
+
+          const initialState = {
+              terminals: [{ id: 't1' }],
+              availableSlots: [2, 3],
+              maxTerminals: 5,
+              activeTerminalId: 't1'
+          };
+
+          manager.updateState(initialState);
+
+          expect(displayModeManager.showAllTerminalsSplit).not.toHaveBeenCalled();
+
+          const nextState = {
+              terminals: [{ id: 't1' }, { id: 't2' }],
+              availableSlots: [3],
+              maxTerminals: 5,
+              activeTerminalId: 't1'
+          };
+
+          manager.updateState(nextState);
+
+          expect(displayModeManager.showAllTerminalsSplit).toHaveBeenCalledTimes(1);
+          expect(updateSplitResizersSpy).toHaveBeenCalledTimes(1);
+      });
+
       it('should refresh split layout when resizer count does not match wrapper count', () => {
           const displayModeManager = (manager as any).displayModeManager;
           displayModeManager.getCurrentMode.mockReturnValue('split');
