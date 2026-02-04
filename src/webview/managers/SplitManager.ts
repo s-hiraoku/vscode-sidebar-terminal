@@ -383,13 +383,8 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
       ? Array.from(terminalsWrapper.querySelectorAll<HTMLElement>('.split-resizer'))
           .filter(isVisibleElement)
           .reduce((total, resizer) => {
-            const computed = window.getComputedStyle(resizer);
-            const inlineHeight = parseFloat(resizer.style.height) || 0;
-            const computedHeight = parseFloat(computed.height) || 0;
-            const measuredHeight = resizer.getBoundingClientRect().height || 0;
-            const offsetHeight = resizer.offsetHeight || 0;
-            const effectiveHeight = Math.max(measuredHeight, offsetHeight, computedHeight, inlineHeight);
-            return total + effectiveHeight;
+            const rectHeight = resizer.getBoundingClientRect().height;
+            return total + (rectHeight > 0 ? rectHeight : resizer.offsetHeight);
           }, 0)
       : 0;
 

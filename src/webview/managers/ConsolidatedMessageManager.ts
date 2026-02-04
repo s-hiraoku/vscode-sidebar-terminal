@@ -306,18 +306,7 @@ export class ConsolidatedMessageManager implements IMessageManager {
         return 'not-applicable';
       }
 
-      const containerManager = coordinator.getTerminalContainerManager?.();
-      const snapshot = containerManager?.getDisplaySnapshot?.();
-      const snapshotVisibleCount = Array.isArray(snapshot?.visibleTerminals)
-        ? snapshot.visibleTerminals.length
-        : 0;
-
-      const terminalsWrapper = document.getElementById('terminals-wrapper');
-      const domWrapperCount = terminalsWrapper
-        ? terminalsWrapper.querySelectorAll('[data-terminal-wrapper-id]').length
-        : 0;
-
-      const visibleCount = Math.max(snapshotVisibleCount, domWrapperCount);
+      const visibleCount = this.getVisibleTerminalCount(coordinator);
       if (visibleCount <= 1) {
         this.logger.debug(
           `Split resizer recovery deferred after ${trigger} (attempt=${attempt}, visible=${visibleCount})`
@@ -326,17 +315,34 @@ export class ConsolidatedMessageManager implements IMessageManager {
       }
 
       displayModeManager.showAllTerminalsSplit?.();
-      const updateResizers =
-        'updateSplitResizers' in coordinator
-          ? (coordinator as { updateSplitResizers?: () => void }).updateSplitResizers
-          : undefined;
-      updateResizers?.();
+      this.invokeUpdateSplitResizers(coordinator);
 
       this.logger.info(`Split resizers recovered after ${trigger} (attempt=${attempt})`);
       return 'recovered';
     } catch (error) {
       this.logger.error(`Failed to recover split resizers after ${trigger}`, error);
       return 'not-applicable';
+    }
+  }
+
+  private getVisibleTerminalCount(coordinator: IManagerCoordinator): number {
+    const containerManager = coordinator.getTerminalContainerManager?.();
+    const snapshot = containerManager?.getDisplaySnapshot?.();
+    const snapshotVisibleCount = Array.isArray(snapshot?.visibleTerminals)
+      ? snapshot.visibleTerminals.length
+      : 0;
+
+    const terminalsWrapper = document.getElementById('terminals-wrapper');
+    const domWrapperCount = terminalsWrapper
+      ? terminalsWrapper.querySelectorAll('[data-terminal-wrapper-id]').length
+      : 0;
+
+    return Math.max(snapshotVisibleCount, domWrapperCount);
+  }
+
+  private invokeUpdateSplitResizers(coordinator: IManagerCoordinator): void {
+    if ('updateSplitResizers' in coordinator) {
+      (coordinator as { updateSplitResizers?: () => void }).updateSplitResizers?.();
     }
   }
 
