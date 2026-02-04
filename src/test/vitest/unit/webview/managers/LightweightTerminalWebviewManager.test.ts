@@ -344,6 +344,163 @@ describe('LightweightTerminalWebviewManager', () => {
 
           expect(displayModeManager.showAllTerminalsSplit).toHaveBeenCalledTimes(1);
       });
+
+      it('should recover split layout when terminal count increases after initial single-terminal update', () => {
+          const displayModeManager = (manager as any).displayModeManager;
+          displayModeManager.getCurrentMode.mockReturnValue('normal');
+          const updateSplitResizersSpy = vi
+            .spyOn(manager, 'updateSplitResizers')
+            .mockImplementation(() => {});
+
+          const initialState = {
+              terminals: [{ id: 't1' }],
+              availableSlots: [2, 3],
+              maxTerminals: 5,
+              activeTerminalId: 't1'
+          };
+
+          manager.updateState(initialState);
+
+          expect(displayModeManager.showAllTerminalsSplit).not.toHaveBeenCalled();
+
+          const nextState = {
+              terminals: [{ id: 't1' }, { id: 't2' }],
+              availableSlots: [3],
+              maxTerminals: 5,
+              activeTerminalId: 't1'
+          };
+
+          manager.updateState(nextState);
+
+          expect(displayModeManager.showAllTerminalsSplit).toHaveBeenCalledTimes(1);
+          expect(updateSplitResizersSpy).toHaveBeenCalledTimes(1);
+      });
+
+      it('should refresh split layout when resizer count does not match wrapper count', () => {
+          const displayModeManager = (manager as any).displayModeManager;
+          displayModeManager.getCurrentMode.mockReturnValue('split');
+          const updateSplitResizersSpy = vi
+            .spyOn(manager, 'updateSplitResizers')
+            .mockImplementation(() => {});
+
+          const terminalBody = document.getElementById('terminal-body')!;
+          const terminalsWrapper = document.createElement('div');
+          terminalsWrapper.id = 'terminals-wrapper';
+
+          const wrapper1 = document.createElement('div');
+          wrapper1.setAttribute('data-terminal-wrapper-id', 't1');
+          const wrapper2 = document.createElement('div');
+          wrapper2.setAttribute('data-terminal-wrapper-id', 't2');
+          const wrapper3 = document.createElement('div');
+          wrapper3.setAttribute('data-terminal-wrapper-id', 't3');
+          const resizer = document.createElement('div');
+          resizer.className = 'split-resizer';
+
+          terminalsWrapper.append(wrapper1, resizer, wrapper2, wrapper3);
+          terminalBody.appendChild(terminalsWrapper);
+
+          const newState = {
+              terminals: [{ id: 't1' }, { id: 't2' }, { id: 't3' }],
+              availableSlots: [4],
+              maxTerminals: 5,
+              activeTerminalId: 't1'
+          };
+
+          manager.updateState(newState);
+
+          expect(displayModeManager.showAllTerminalsSplit).toHaveBeenCalledTimes(1);
+          expect(updateSplitResizersSpy).toHaveBeenCalledTimes(1);
+      });
+
+      it('should refresh split layout when terminal count increases but wrapper count is stale', () => {
+          const displayModeManager = (manager as any).displayModeManager;
+          displayModeManager.getCurrentMode.mockReturnValue('split');
+          const updateSplitResizersSpy = vi
+            .spyOn(manager, 'updateSplitResizers')
+            .mockImplementation(() => {});
+
+          const terminalBody = document.getElementById('terminal-body')!;
+          const terminalsWrapper = document.createElement('div');
+          terminalsWrapper.id = 'terminals-wrapper';
+
+          // Stale DOM: still 2 wrappers + 1 resizer from previous split layout.
+          const wrapper1 = document.createElement('div');
+          wrapper1.setAttribute('data-terminal-wrapper-id', 't1');
+          const wrapper2 = document.createElement('div');
+          wrapper2.setAttribute('data-terminal-wrapper-id', 't2');
+          const resizer = document.createElement('div');
+          resizer.className = 'split-resizer';
+
+          terminalsWrapper.append(wrapper1, resizer, wrapper2);
+          terminalBody.appendChild(terminalsWrapper);
+
+          // Latest state already has 3 terminals.
+          const newState = {
+              terminals: [{ id: 't1' }, { id: 't2' }, { id: 't3' }],
+              availableSlots: [4],
+              maxTerminals: 5,
+              activeTerminalId: 't1'
+          };
+
+          manager.updateState(newState);
+
+          expect(displayModeManager.showAllTerminalsSplit).toHaveBeenCalledTimes(1);
+          expect(updateSplitResizersSpy).toHaveBeenCalledTimes(1);
+      });
+
+      it('should recover split layout on startup when mode snapshot is normal but split wrappers exist', () => {
+          const displayModeManager = (manager as any).displayModeManager;
+          // Simulate startup mismatch: mode manager still reports normal.
+          displayModeManager.getCurrentMode.mockReturnValue('normal');
+          const updateSplitResizersSpy = vi
+            .spyOn(manager, 'updateSplitResizers')
+            .mockImplementation(() => {});
+
+          const terminalBody = document.getElementById('terminal-body')!;
+          const terminalsWrapper = document.createElement('div');
+          terminalsWrapper.id = 'terminals-wrapper';
+
+          // Persisted split DOM without resizers.
+          const wrapper1 = document.createElement('div');
+          wrapper1.setAttribute('data-terminal-wrapper-id', 't1');
+          const wrapper2 = document.createElement('div');
+          wrapper2.setAttribute('data-terminal-wrapper-id', 't2');
+          terminalsWrapper.append(wrapper1, wrapper2);
+          terminalBody.appendChild(terminalsWrapper);
+
+          const newState = {
+              terminals: [{ id: 't1' }, { id: 't2' }],
+              availableSlots: [3],
+              maxTerminals: 5,
+              activeTerminalId: 't1'
+          };
+
+          manager.updateState(newState);
+
+          expect(displayModeManager.showAllTerminalsSplit).toHaveBeenCalledTimes(1);
+          expect(updateSplitResizersSpy).toHaveBeenCalledTimes(1);
+      });
+
+      it('should recover split layout on first state update when multiple terminals exist without split artifacts', () => {
+          const displayModeManager = (manager as any).displayModeManager;
+          // Startup race: mode manager still in normal and split artifacts are not built yet.
+          displayModeManager.getCurrentMode.mockReturnValue('normal');
+          const updateSplitResizersSpy = vi
+            .spyOn(manager, 'updateSplitResizers')
+            .mockImplementation(() => {});
+
+          const newState = {
+              terminals: [{ id: 't1' }, { id: 't2' }],
+              availableSlots: [3],
+              maxTerminals: 5,
+              activeTerminalId: 't1'
+          };
+
+          manager.updateState(newState);
+
+          expect(displayModeManager.showAllTerminalsSplit).toHaveBeenCalledTimes(1);
+          expect(updateSplitResizersSpy).toHaveBeenCalledTimes(1);
+      });
   });
 
   describe('Lifecycle', () => {

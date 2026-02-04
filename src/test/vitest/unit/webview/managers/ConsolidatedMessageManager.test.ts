@@ -477,6 +477,85 @@ describe('ConsolidatedMessageManager', () => {
   });
 
   describe('Session restore resizer handling', () => {
+    it('should recover split resizers on sessionRestored message in split mode', async () => {
+      const updateSplitResizers = vi.fn();
+      const showAllTerminalsSplit = vi.fn();
+      const getDisplayModeManager = () => ({
+        getCurrentMode: () => 'split',
+        showAllTerminalsSplit,
+      });
+      const getTerminalContainerManager = () => ({
+        getDisplaySnapshot: () => ({
+          visibleTerminals: ['terminal-1', 'terminal-2'],
+        }),
+      });
+
+      const coordinator = {
+        ...mockCoordinator,
+        getDisplayModeManager,
+        getTerminalContainerManager,
+        updateSplitResizers,
+      } as unknown as SplitResizerCoordinator;
+
+      const message: MessageCommand = {
+        command: 'sessionRestored',
+        success: true,
+        restoredCount: 2,
+        totalCount: 2,
+      };
+
+      await messageManager.receiveMessage(message, coordinator);
+
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      expect(showAllTerminalsSplit).toHaveBeenCalledTimes(1);
+      expect(updateSplitResizers).toHaveBeenCalledTimes(1);
+    });
+
+    it('should recover split resizers when snapshot is stale but split wrappers exist', async () => {
+      const updateSplitResizers = vi.fn();
+      const showAllTerminalsSplit = vi.fn();
+      const getDisplayModeManager = () => ({
+        getCurrentMode: () => 'split',
+        showAllTerminalsSplit,
+      });
+      const getTerminalContainerManager = () => ({
+        getDisplaySnapshot: () => ({
+          visibleTerminals: ['terminal-1'],
+        }),
+      });
+
+      const terminalsWrapper = document.createElement('div');
+      terminalsWrapper.id = 'terminals-wrapper';
+      const wrapper1 = document.createElement('div');
+      wrapper1.setAttribute('data-terminal-wrapper-id', 'terminal-1');
+      const wrapper2 = document.createElement('div');
+      wrapper2.setAttribute('data-terminal-wrapper-id', 'terminal-2');
+      terminalsWrapper.append(wrapper1, wrapper2);
+      document.body.appendChild(terminalsWrapper);
+
+      const coordinator = {
+        ...mockCoordinator,
+        getDisplayModeManager,
+        getTerminalContainerManager,
+        updateSplitResizers,
+      } as unknown as SplitResizerCoordinator;
+
+      const message: MessageCommand = {
+        command: 'sessionRestoreCompleted',
+        restoredCount: 2,
+        skippedCount: 0,
+      };
+
+      await messageManager.receiveMessage(message, coordinator);
+
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      expect(showAllTerminalsSplit).toHaveBeenCalledTimes(1);
+      expect(updateSplitResizers).toHaveBeenCalledTimes(1);
+      terminalsWrapper.remove();
+    });
+
     it('should call updateSplitResizers after session restore in split mode with multiple terminals', async () => {
       const updateSplitResizers = vi.fn();
       const showAllTerminalsSplit = vi.fn();
@@ -577,6 +656,58 @@ describe('ConsolidatedMessageManager', () => {
 
       // updateSplitResizers should not be called when only 1 terminal visible
       expect(updateSplitResizers).not.toHaveBeenCalled();
+    });
+
+    it('should recover split resizers when split wrappers appear after delayed session restore rendering', async () => {
+      vi.useFakeTimers();
+      try {
+        const updateSplitResizers = vi.fn();
+        const showAllTerminalsSplit = vi.fn();
+        const getDisplayModeManager = () => ({
+          getCurrentMode: () => 'split',
+          showAllTerminalsSplit,
+        });
+        const getTerminalContainerManager = () => ({
+          getDisplaySnapshot: () => ({
+            visibleTerminals: ['terminal-1'],
+          }),
+        });
+
+        const coordinator = {
+          ...mockCoordinator,
+          getDisplayModeManager,
+          getTerminalContainerManager,
+          updateSplitResizers,
+        } as unknown as SplitResizerCoordinator;
+
+        const message: MessageCommand = {
+          command: 'sessionRestored',
+          success: true,
+          restoredCount: 2,
+          totalCount: 2,
+        };
+
+        await messageManager.receiveMessage(message, coordinator);
+
+        // Simulate delayed DOM build after startup restore.
+        setTimeout(() => {
+          const terminalsWrapper = document.createElement('div');
+          terminalsWrapper.id = 'terminals-wrapper';
+          const wrapper1 = document.createElement('div');
+          wrapper1.setAttribute('data-terminal-wrapper-id', 'terminal-1');
+          const wrapper2 = document.createElement('div');
+          wrapper2.setAttribute('data-terminal-wrapper-id', 'terminal-2');
+          terminalsWrapper.append(wrapper1, wrapper2);
+          document.body.appendChild(terminalsWrapper);
+        }, 160);
+
+        await vi.advanceTimersByTimeAsync(350);
+
+        expect(showAllTerminalsSplit).toHaveBeenCalledTimes(1);
+        expect(updateSplitResizers).toHaveBeenCalledTimes(1);
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 });

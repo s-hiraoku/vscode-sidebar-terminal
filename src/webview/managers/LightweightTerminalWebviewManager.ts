@@ -164,6 +164,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   private isInitialized = false;
   private currentTerminalState: TerminalState | null = null;
   private currentSettings: PartialTerminalSettings = {};
+  private hasProcessedInitialState = false;
 
   constructor() {
     log('🚀 RefactoredTerminalWebviewManager initializing...');
@@ -1548,6 +1549,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       }
 
       const terminalState = state as TerminalState;
+      const isInitialStateSync = !this.hasProcessedInitialState;
 
       log('🔄 [STATE] Processing state update:', {
         terminals: terminalState.terminals.length,
@@ -1571,7 +1573,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       this.updateUIFromState(this.currentTerminalState);
 
       // 2.5. 🔧 FIX: Ensure split resizers appear on initial split display
-      this.ensureSplitResizersOnInitialDisplay(terminalState);
+      this.ensureSplitResizersOnInitialDisplay(terminalState, isInitialStateSync);
 
       // 3. Update terminal creation availability
       this.updateTerminalCreationState();
@@ -1587,6 +1589,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
         setTimeout(() => this.terminalOperations.processPendingCreationRequests(), 50);
       }
 
+      this.hasProcessedInitialState = true;
       log('✅ [STATE] State update completed successfully');
     } catch (error) {
       log('❌ [STATE] Error processing state update:', error);
@@ -1604,27 +1607,39 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   /**
    * Ensure split resizers are shown on initial display when split mode is active.
    */
-  private ensureSplitResizersOnInitialDisplay(state: TerminalState): void {
+  private ensureSplitResizersOnInitialDisplay(
+    state: TerminalState,
+    isInitialStateSync: boolean = false
+  ): void {
     const displayModeManager = this.displayModeManager;
-    if (!displayModeManager) {
+    if (!displayModeManager || state.terminals.length <= 1) {
       return;
     }
 
-    if (displayModeManager.getCurrentMode?.() !== 'split') {
+    const terminalsWrapper = document.getElementById('terminals-wrapper');
+    const stateTerminalCount = state.terminals.length;
+    const domWrapperCount = terminalsWrapper
+      ? terminalsWrapper.querySelectorAll('[data-terminal-wrapper-id]').length
+      : 0;
+    const resizerCount = terminalsWrapper
+      ? terminalsWrapper.querySelectorAll('.split-resizer').length
+      : document.querySelectorAll('.split-resizer').length;
+    const currentMode = displayModeManager.getCurrentMode?.() ?? 'normal';
+    const wrapperCount = domWrapperCount > 0 ? domWrapperCount : stateTerminalCount;
+    const expectedResizerCount = wrapperCount - 1;
+    const resizerLayoutValid = resizerCount === expectedResizerCount;
+    const wrapperLayoutValid = domWrapperCount === 0 || domWrapperCount === stateTerminalCount;
+    const layoutIsValid = resizerLayoutValid && wrapperLayoutValid;
+
+    if (layoutIsValid) {
       return;
     }
 
-    if (state.terminals.length <= 1) {
-      return;
-    }
-
-    const resizerCount = document.querySelectorAll('.split-resizer').length;
-    if (resizerCount > 0) {
-      return;
-    }
-
-    log('🔧 [SPLIT] Missing resizers on initial display - refreshing split layout');
+    log(
+      `🔧 [SPLIT] Layout mismatch on display - refreshing split layout (state=${stateTerminalCount}, wrappers=${wrapperCount}, resizers=${resizerCount}, expectedResizers=${expectedResizerCount}, mode=${currentMode}, initial=${isInitialStateSync})`
+    );
     displayModeManager.showAllTerminalsSplit?.();
+    this.updateSplitResizers();
   }
 
   /**

@@ -92,6 +92,12 @@ describe('WebviewCoordinator', () => {
     expect(lifecycleHandler.handleMessage).toHaveBeenCalledOnce();
   });
 
+  it('dispatches setDisplayMode to the split handler', async () => {
+    const message = { command: 'setDisplayMode', mode: 'split' } as MessageCommand;
+    await coordinator.dispatch(message, {} as any);
+    expect(splitHandler.handleMessage).toHaveBeenCalledOnce();
+  });
+
   it('routes session restore events to the session controller', async () => {
     const message = { command: 'sessionRestore' } as MessageCommand;
     await coordinator.dispatch(message, {} as any);
