@@ -52,12 +52,13 @@ git commit -m "feat: 新機能を追加"
 ### 2. リリース準備
 
 ```bash
-# リリース用ブランチ（for-publish）にマージ
-git checkout for-publish
+# main にマージ（リリースは main から実行）
+git checkout main
+git pull origin main
 git merge feature/new-feature
 
 # 変更をプッシュ（バージョンアップ前）
-git push origin for-publish
+git push origin main
 ```
 
 ### 3. リリース実行（自動化版）
@@ -82,7 +83,7 @@ npm run release:major
 npm version patch   # または minor/major
 
 # 変更をプッシュ
-git push origin for-publish
+git push origin main
 
 # リリースタグを作成してプッシュ
 git tag v$(node -p "require('./package.json').version")
@@ -251,8 +252,9 @@ git checkout -b hotfix/critical-bug
 # 修正作業
 # ... fix critical bug ...
 
-# for-publishブランチに直接マージ
-git checkout for-publish
+# main に直接マージ（リリースは main から実行）
+git checkout main
+git pull origin main
 git merge hotfix/critical-bug
 
 # 自動化されたパッチリリース
