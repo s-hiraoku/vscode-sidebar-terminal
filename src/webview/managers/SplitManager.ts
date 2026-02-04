@@ -308,8 +308,17 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
   public redistributeSplitTerminals(newHeight: number): void {
     this.splitManagerLogger.info(`Redistributing split terminals with new height: ${newHeight}px`);
 
+    if (this.getSplitDirection() === 'horizontal') {
+      this.splitManagerLogger.debug(
+        'Skipping vertical redistribution because current split direction is horizontal'
+      );
+      return;
+    }
+
     const terminalsWrapper = document.getElementById('terminals-wrapper');
     const terminalBody = document.getElementById('terminal-body');
+    const isVisibleElement = (element: HTMLElement): boolean =>
+      element.style.display !== 'none' && !element.classList.contains('hidden-mode');
 
     // Force reflow to ensure CSS changes are applied before reading dimensions
     DOMUtils.forceReflow(terminalsWrapper);
@@ -317,21 +326,16 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
     const wrapperTargets = terminalsWrapper
       ? Array.from(
           terminalsWrapper.querySelectorAll<HTMLElement>('[data-terminal-wrapper-id]')
-        )
+        ).filter(isVisibleElement)
       : [];
 
     const containerTargets = terminalsWrapper
       ? Array.from(
           terminalsWrapper.querySelectorAll<HTMLElement>('[data-terminal-container]')
-        ).filter((container) =>
-          container.style.display !== 'none' && !container.classList.contains('hidden-mode')
-        )
+        ).filter(isVisibleElement)
       : Array.from(
           (terminalBody ?? document.body).querySelectorAll<HTMLElement>('[data-terminal-container]')
-        ).filter(
-          (container) =>
-            container.style.display !== 'none' && !container.classList.contains('hidden-mode')
-        );
+        ).filter(isVisibleElement);
 
     const targets = wrapperTargets.length > 0 ? wrapperTargets : containerTargets;
     const targetCount = targets.length;
@@ -366,19 +370,45 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
     const paddingBottom = wrapperStyles ? parseFloat(wrapperStyles.paddingBottom) || 0 : 0;
     const rowGapValue = wrapperStyles?.rowGap || wrapperStyles?.gap || '0px';
     const rowGap = parseFloat(rowGapValue) || 0;
+    const splitItems = terminalsWrapper
+      ? Array.from(terminalsWrapper.children).filter(
+          (child): child is HTMLElement =>
+            child instanceof HTMLElement &&
+            isVisibleElement(child) &&
+            (child.hasAttribute('data-terminal-wrapper-id') || child.classList.contains('split-resizer'))
+        )
+      : [];
+    const gapCount = Math.max(splitItems.length - 1, 0);
+    const totalResizerHeight = terminalsWrapper
+      ? Array.from(terminalsWrapper.querySelectorAll<HTMLElement>('.split-resizer'))
+          .filter(isVisibleElement)
+          .reduce((total, resizer) => {
+            const computed = window.getComputedStyle(resizer);
+            const inlineHeight = parseFloat(resizer.style.height) || 0;
+            const computedHeight = parseFloat(computed.height) || 0;
+            const measuredHeight = resizer.getBoundingClientRect().height || 0;
+            const offsetHeight = resizer.offsetHeight || 0;
+            const effectiveHeight = Math.max(measuredHeight, offsetHeight, computedHeight, inlineHeight);
+            return total + effectiveHeight;
+          }, 0)
+      : 0;
 
     const availableHeight = Math.max(
       0,
-      baseHeight - paddingTop - paddingBottom - rowGap * (targetCount - 1)
+      baseHeight - paddingTop - paddingBottom - rowGap * gapCount - totalResizerHeight
     );
     const terminalHeight = Math.floor(availableHeight / targetCount);
+    const remainder = Math.max(0, availableHeight - terminalHeight * targetCount);
 
-    this.splitManagerLogger.debug(`availableHeight=${availableHeight}px, terminalHeight=${terminalHeight}px`);
+    this.splitManagerLogger.debug(
+      `availableHeight=${availableHeight}px, terminalHeight=${terminalHeight}px, remainder=${remainder}px`
+    );
 
-    targets.forEach((target) => {
+    targets.forEach((target, index) => {
+      const allocatedHeight = terminalHeight + (index === targetCount - 1 ? remainder : 0);
       target.style.setProperty('flex', '0 0 auto', 'important');
-      target.style.setProperty('flex-basis', `${terminalHeight}px`, 'important');
-      target.style.setProperty('height', `${terminalHeight}px`, 'important');
+      target.style.setProperty('flex-basis', `${allocatedHeight}px`, 'important');
+      target.style.setProperty('height', `${allocatedHeight}px`, 'important');
       target.style.minHeight = '0';
     });
 

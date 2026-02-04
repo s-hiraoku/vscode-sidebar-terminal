@@ -75,6 +75,7 @@ export class ConsolidatedMessageManager implements IMessageManager {
 
   // Message command to handler mapping for efficient dispatch
   private readonly messageHandlers: Map<string, MessageHandlerFn>;
+  private readonly splitRecoveryTimeouts = new Set<ReturnType<typeof setTimeout>>();
 
   constructor(coordinator?: IManagerCoordinator) {
     this.logger.lifecycle('initialization', 'starting');
@@ -185,28 +186,7 @@ export class ConsolidatedMessageManager implements IMessageManager {
     );
     registry.set('sessionRestoreCompleted', (msg, coord) => {
       this.sessionController.handleSessionRestoreCompletedMessage(msg);
-      // 🔧 FIX: Initialize split resizers after session restore completes
-      // This handles the case where split mode with multiple terminals is restored
-      setTimeout(() => {
-        try {
-          const displayModeManager = coord.getDisplayModeManager?.();
-          const containerManager = coord.getTerminalContainerManager?.();
-          const snapshot = containerManager?.getDisplaySnapshot?.();
-          const visibleCount = snapshot?.visibleTerminals?.length ?? 0;
-          if (displayModeManager?.getCurrentMode() === 'split' && visibleCount > 1) {
-            displayModeManager.showAllTerminalsSplit?.();
-            // Use optional chaining with type guard for updateSplitResizers
-            const updateResizers =
-              coord && 'updateSplitResizers' in coord
-                ? (coord as { updateSplitResizers?: () => void }).updateSplitResizers
-                : undefined;
-            updateResizers?.();
-            this.logger.info('Split resizers initialized after session restore');
-          }
-        } catch (error) {
-          this.logger.error('Failed to initialize split resizers after session restore', error);
-        }
-      }, 100);
+      this.scheduleSplitResizerRecovery(coord, 'sessionRestoreCompleted');
     });
     registry.set('sessionRestoreError', (msg) =>
       this.sessionController.handleSessionRestoreErrorMessage(msg)
@@ -216,9 +196,10 @@ export class ConsolidatedMessageManager implements IMessageManager {
       this.sessionController.handleSessionSaveErrorMessage(msg)
     );
     registry.set('sessionCleared', () => this.sessionController.handleSessionClearedMessage());
-    registry.set('sessionRestored', (msg) =>
-      this.sessionController.handleSessionRestoredMessage(msg)
-    );
+    registry.set('sessionRestored', (msg, coord) => {
+      this.sessionController.handleSessionRestoredMessage(msg);
+      this.scheduleSplitResizerRecovery(coord, 'sessionRestored');
+    });
     registry.set('sessionRestoreSkipped', (msg) =>
       this.sessionController.handleSessionRestoreSkippedMessage(msg)
     );
@@ -288,6 +269,75 @@ export class ConsolidatedMessageManager implements IMessageManager {
     );
 
     return registry;
+  }
+
+  private scheduleSplitResizerRecovery(coordinator: IManagerCoordinator, trigger: string): void {
+    const initialDelayMs = 100;
+    const retryDelayMs = 120;
+    const maxAttempts = 4;
+
+    const tryRecover = (attempt: number): void => {
+      const result = this.recoverSplitResizersIfNeeded(coordinator, trigger, attempt);
+      if (result !== 'retry' || attempt >= maxAttempts) {
+        return;
+      }
+      this.scheduleSplitRecoveryTimeout(() => tryRecover(attempt + 1), retryDelayMs);
+    };
+
+    this.scheduleSplitRecoveryTimeout(() => tryRecover(1), initialDelayMs);
+  }
+
+  private scheduleSplitRecoveryTimeout(callback: () => void, delayMs: number): void {
+    const timeoutId = setTimeout(() => {
+      this.splitRecoveryTimeouts.delete(timeoutId);
+      callback();
+    }, delayMs);
+    this.splitRecoveryTimeouts.add(timeoutId);
+  }
+
+  private recoverSplitResizersIfNeeded(
+    coordinator: IManagerCoordinator,
+    trigger: string,
+    attempt: number
+  ): 'recovered' | 'retry' | 'not-applicable' {
+    try {
+      const displayModeManager = coordinator.getDisplayModeManager?.();
+      if (displayModeManager?.getCurrentMode?.() !== 'split') {
+        return 'not-applicable';
+      }
+
+      const containerManager = coordinator.getTerminalContainerManager?.();
+      const snapshot = containerManager?.getDisplaySnapshot?.();
+      const snapshotVisibleCount = Array.isArray(snapshot?.visibleTerminals)
+        ? snapshot.visibleTerminals.length
+        : 0;
+
+      const terminalsWrapper = document.getElementById('terminals-wrapper');
+      const domWrapperCount = terminalsWrapper
+        ? terminalsWrapper.querySelectorAll('[data-terminal-wrapper-id]').length
+        : 0;
+
+      const visibleCount = Math.max(snapshotVisibleCount, domWrapperCount);
+      if (visibleCount <= 1) {
+        this.logger.debug(
+          `Split resizer recovery deferred after ${trigger} (attempt=${attempt}, visible=${visibleCount})`
+        );
+        return 'retry';
+      }
+
+      displayModeManager.showAllTerminalsSplit?.();
+      const updateResizers =
+        'updateSplitResizers' in coordinator
+          ? (coordinator as { updateSplitResizers?: () => void }).updateSplitResizers
+          : undefined;
+      updateResizers?.();
+
+      this.logger.info(`Split resizers recovered after ${trigger} (attempt=${attempt})`);
+      return 'recovered';
+    } catch (error) {
+      this.logger.error(`Failed to recover split resizers after ${trigger}`, error);
+      return 'not-applicable';
+    }
   }
 
   /**
@@ -495,6 +545,9 @@ export class ConsolidatedMessageManager implements IMessageManager {
 
   public dispose(): void {
     this.logger.info('Disposing ConsolidatedMessageManager');
+
+    this.splitRecoveryTimeouts.forEach((timeoutId) => clearTimeout(timeoutId));
+    this.splitRecoveryTimeouts.clear();
 
     // Dispose all message handlers
     this.panelLocationHandler.dispose();

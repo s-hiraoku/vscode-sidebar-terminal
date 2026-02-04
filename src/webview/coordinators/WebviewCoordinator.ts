@@ -175,7 +175,7 @@ export class WebviewCoordinator {
       (message, coordinator) => this.deps.panelLocationHandler.handleMessage(message, coordinator)
     );
 
-    this.register(['split', 'relayoutTerminals'], (message, coordinator) =>
+    this.register(['split', 'setDisplayMode', 'relayoutTerminals'], (message, coordinator) =>
       this.deps.splitHandler.handleMessage(message, coordinator)
     );
 

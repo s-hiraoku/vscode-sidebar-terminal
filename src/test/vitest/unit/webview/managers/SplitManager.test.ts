@@ -194,5 +194,79 @@ describe('SplitManager', () => {
       expect(t1.style.height).toBe('200px');
       expect(t2.style.height).toBe('200px');
     });
+
+    it('should account for resizer and all flex gaps when redistributing split wrappers', () => {
+      manager.isSplitMode = true;
+
+      const terminalBody = document.getElementById('terminal-body')!;
+      const terminalsWrapper = document.createElement('div');
+      terminalsWrapper.id = 'terminals-wrapper';
+      terminalsWrapper.style.paddingTop = '4px';
+      terminalsWrapper.style.paddingBottom = '4px';
+      terminalsWrapper.style.gap = '4px';
+      terminalBody.appendChild(terminalsWrapper);
+
+      const wrapper1 = document.createElement('div');
+      const wrapper2 = document.createElement('div');
+      const wrapper3 = document.createElement('div');
+      wrapper1.setAttribute('data-terminal-wrapper-id', 't1');
+      wrapper2.setAttribute('data-terminal-wrapper-id', 't2');
+      wrapper3.setAttribute('data-terminal-wrapper-id', 't3');
+
+      const resizer1 = document.createElement('div');
+      const resizer2 = document.createElement('div');
+      resizer1.className = 'split-resizer';
+      resizer2.className = 'split-resizer';
+      Object.defineProperty(resizer1, 'offsetHeight', { value: 4, configurable: true });
+      Object.defineProperty(resizer2, 'offsetHeight', { value: 4, configurable: true });
+
+      terminalsWrapper.append(wrapper1, resizer1, wrapper2, resizer2, wrapper3);
+
+      manager.redistributeSplitTerminals(600);
+
+      const h1 = parseInt(wrapper1.style.height, 10);
+      const h2 = parseInt(wrapper2.style.height, 10);
+      const h3 = parseInt(wrapper3.style.height, 10);
+      const totalWrapperHeight = h1 + h2 + h3;
+      const totalResizerHeight = 8;
+      const totalGapHeight = 4 * 4; // 5 items => 4 gaps
+      const totalPadding = 8;
+
+      expect(totalWrapperHeight + totalResizerHeight + totalGapHeight + totalPadding).toBeLessThanOrEqual(600);
+    });
+
+    it('should assign remainder pixels to the last split wrapper', () => {
+      manager.isSplitMode = true;
+
+      const terminalBody = document.getElementById('terminal-body')!;
+      const terminalsWrapper = document.createElement('div');
+      terminalsWrapper.id = 'terminals-wrapper';
+      terminalsWrapper.style.paddingTop = '4px';
+      terminalsWrapper.style.paddingBottom = '4px';
+      terminalsWrapper.style.gap = '4px';
+      terminalBody.appendChild(terminalsWrapper);
+
+      const wrapper1 = document.createElement('div');
+      const wrapper2 = document.createElement('div');
+      const wrapper3 = document.createElement('div');
+      wrapper1.setAttribute('data-terminal-wrapper-id', 't1');
+      wrapper2.setAttribute('data-terminal-wrapper-id', 't2');
+      wrapper3.setAttribute('data-terminal-wrapper-id', 't3');
+
+      const resizer1 = document.createElement('div');
+      const resizer2 = document.createElement('div');
+      resizer1.className = 'split-resizer';
+      resizer2.className = 'split-resizer';
+      Object.defineProperty(resizer1, 'offsetHeight', { value: 4, configurable: true });
+      Object.defineProperty(resizer2, 'offsetHeight', { value: 4, configurable: true });
+
+      terminalsWrapper.append(wrapper1, resizer1, wrapper2, resizer2, wrapper3);
+
+      manager.redistributeSplitTerminals(601);
+
+      expect(wrapper1.style.height).toBe('189px');
+      expect(wrapper2.style.height).toBe('189px');
+      expect(wrapper3.style.height).toBe('191px');
+    });
   });
 });
