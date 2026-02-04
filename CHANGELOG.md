@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.12] - 2026-02-05
+
+### Fixed
+
+- **Split Mode Resizer Recovery**: Fixed drag-to-resize separators not appearing after initial terminal updates
+  - Resizers now properly recover when split layout is modified during initialization
+  - Added automatic rebalancing of split terminal heights after resizer recovery
+  - Improved stability of split mode with delayed terminal count changes
+
+### Changed
+
+- **Code Simplification**: Refactored split management code for improved maintainability
+  - Simplified resizer height calculation in SplitManager (6 lines → 2 lines)
+  - Extracted helper methods in ConsolidatedMessageManager for better readability
+  - Optimized early return conditions in LightweightTerminalWebviewManager
+
 ## [0.2.11] - 2026-02-03
 
 ### Fixed
