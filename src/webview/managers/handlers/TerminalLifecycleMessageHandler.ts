@@ -43,9 +43,11 @@ interface AckTracker {
 export class TerminalLifecycleMessageHandler implements IMessageHandler {
   private readonly outputGates = new Map<string, { enabled: boolean; buffer: string[] }>();
   private readonly initAckTrackers = new Map<string, AckTracker>();
+  private readonly processingTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private readonly handlers: Map<string, CommandHandler>;
   private static readonly ACK_INITIAL_DELAY_MS = 200;
   private static readonly ACK_MAX_ATTEMPTS = 4;
+  private static readonly PROCESSING_IDLE_TIMEOUT_MS = 1000;
 
   constructor(
     private readonly messageQueue: MessageQueue,
@@ -186,7 +188,10 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
       }
 
       // 🔧 FIX: Include isActive in config so container is created with correct initial styling
-      const configWithActive = config ? { ...config, isActive } : { isActive };
+      const indicatorColor = terminal?.indicatorColor;
+      const configWithActive = config
+        ? { ...config, isActive, ...(indicatorColor ? { indicatorColor } : {}) }
+        : { isActive, ...(indicatorColor ? { indicatorColor } : {}) };
 
       const result = await coordinator.createTerminal(
         terminalId,
@@ -291,6 +296,8 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
       // ✅ await で削除完了を待つ
       await this.handleTerminalRemovedFromExtension(terminalId, coordinator);
       this.outputGates.delete(terminalId);
+      this.clearProcessingTimer(terminalId);
+      this.setProcessingIndicator(terminalId, false, coordinator);
       this.clearAckTracker(terminalId);
       this.logger.info(`✅ Cleanup completed for ${terminalId}`);
     }
@@ -458,6 +465,7 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
     );
 
     const gate = this.ensureOutputGate(terminalId);
+    this.markTerminalProcessing(terminalId, coordinator);
     if (!gate.enabled) {
       gate.buffer.push(data);
       this.logger.info(
@@ -577,6 +585,43 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
       clearTimeout(tracker.timer);
     }
     this.initAckTrackers.delete(terminalId);
+  }
+
+  private markTerminalProcessing(terminalId: string, coordinator: IManagerCoordinator): void {
+    this.setProcessingIndicator(terminalId, true, coordinator);
+    this.clearProcessingTimer(terminalId);
+
+    const timer = setTimeout(() => {
+      this.processingTimers.delete(terminalId);
+      this.setProcessingIndicator(terminalId, false, coordinator);
+    }, TerminalLifecycleMessageHandler.PROCESSING_IDLE_TIMEOUT_MS);
+
+    this.processingTimers.set(terminalId, timer);
+  }
+
+  private clearProcessingTimer(terminalId: string): void {
+    const timer = this.processingTimers.get(terminalId);
+    if (!timer) {
+      return;
+    }
+
+    clearTimeout(timer);
+    this.processingTimers.delete(terminalId);
+  }
+
+  private setProcessingIndicator(
+    terminalId: string,
+    isProcessing: boolean,
+    coordinator: IManagerCoordinator
+  ): void {
+    const managers = coordinator.getManagers?.();
+    const uiManager = managers?.ui as
+      | {
+          setTerminalProcessingIndicator?: (id: string, processing: boolean) => void;
+        }
+      | undefined;
+
+    uiManager?.setTerminalProcessingIndicator?.(terminalId, isProcessing);
   }
 
   private ensureOutputGate(terminalId: string): { enabled: boolean; buffer: string[] } {
@@ -729,6 +774,12 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
 
     // Clear output gates
     this.outputGates.clear();
+
+    // Clear processing timers
+    for (const timer of this.processingTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.processingTimers.clear();
 
     // Clear handler registry
     this.handlers.clear();

@@ -11,6 +11,7 @@ export interface TerminalHeaderElements {
   titleSection: HTMLElement;
   nameSpan: HTMLElement;
   idSpan: HTMLElement;
+  processingIndicator: HTMLElement | null;
   statusSection: HTMLElement;
   statusSpan: HTMLElement | null;
   indicator: HTMLElement | null;
@@ -26,14 +27,36 @@ export interface HeaderConfig {
   customClasses?: string[];
   showSplitButton?: boolean;
   onRenameSubmit?: (terminalId: string, newName: string) => void;
+  onHeaderUpdate?: (
+    terminalId: string,
+    updates: { newName?: string; indicatorColor?: string }
+  ) => void;
   onHeaderClick?: (terminalId: string) => void;
   onCloseClick?: (terminalId: string) => void;
   onSplitClick?: (terminalId: string) => void;
   onAiAgentToggleClick?: (terminalId: string) => void;
+  indicatorColor?: string;
   // Theme colors (optional - defaults to VS Code CSS variables)
   backgroundColor?: string;
   foregroundColor?: string;
 }
+
+export const HEADER_INDICATOR_COLOR_PALETTE = [
+  '#FF0000',
+  '#FF7F00',
+  '#FFFF00',
+  '#00FF00',
+  '#00FFFF',
+  '#0000FF',
+  '#8B00FF',
+  '#FF00FF',
+  '#FF69B4',
+  '#008080',
+  '#4B0082',
+  '#FFD700',
+  '#00BFA6',
+  '#FFFFFF',
+] as const;
 
 /**
  * シンプルなヘッダー構造:
@@ -60,6 +83,7 @@ export class HeaderFactory {
     // Use provided colors or fall back to VS Code CSS variables
     const bgColor = config.backgroundColor || 'var(--vscode-tab-activeBackground)';
     const fgColor = config.foregroundColor || 'var(--vscode-tab-activeForeground)';
+    const indicatorColor = config.indicatorColor || '#00FFFF';
 
     // メインコンテナ
     const container = DOMUtils.createElement(
@@ -78,12 +102,51 @@ export class HeaderFactory {
         userSelect: 'none',
         minHeight: '32px',
         boxSizing: 'border-box',
+        position: 'relative',
+        overflow: 'hidden',
       },
       {
         'data-terminal-id': terminalId,
         className: ['terminal-header', ...customClasses].join(' '),
       }
     );
+    container.style.setProperty('--terminal-indicator-color', indicatorColor);
+
+    HeaderFactory.ensureProcessingIndicatorStyles();
+
+    const processingIndicator = DOMUtils.createElement(
+      'div',
+      {
+        position: 'absolute',
+        top: '0',
+        left: '0',
+        right: '0',
+        height: '2px',
+        overflow: 'hidden',
+        pointerEvents: 'none',
+        opacity: '0',
+        transition: 'opacity 0.12s ease',
+      },
+      {
+        className: 'terminal-processing-indicator',
+      }
+    );
+
+    const processingIndicatorFlow = DOMUtils.createElement(
+      'div',
+      {
+        width: '42%',
+        height: '100%',
+        background:
+          'linear-gradient(90deg, transparent 0%, var(--terminal-indicator-color) 22%, var(--terminal-indicator-color) 78%, transparent 100%)',
+        transform: 'translateX(-130%)',
+        animation: 'terminal-processing-flow 1.1s linear infinite',
+      },
+      {
+        className: 'terminal-processing-indicator-flow',
+      }
+    );
+    processingIndicator.appendChild(processingIndicatorFlow);
 
     // タイトルセクション
     const titleSection = DOMUtils.createElement(
@@ -340,6 +403,9 @@ export class HeaderFactory {
         if (target.closest('.terminal-name-edit-input')) {
           return;
         }
+        if (target.closest('.terminal-header-editor')) {
+          return;
+        }
         if (event.detail >= 2) {
           return;
         }
@@ -352,12 +418,15 @@ export class HeaderFactory {
       container.style.cursor = 'pointer';
     }
 
-    if (config.onRenameSubmit) {
-      HeaderFactory.setupInlineRename({
+    if (config.onRenameSubmit || config.onHeaderUpdate) {
+      HeaderFactory.setupHeaderEditor({
         terminalId,
+        container,
         titleSection,
         nameSpan,
+        initialIndicatorColor: indicatorColor,
         onRenameSubmit: config.onRenameSubmit,
+        onHeaderUpdate: config.onHeaderUpdate,
       });
     }
 
@@ -371,7 +440,7 @@ export class HeaderFactory {
       DOMUtils.appendChildren(controlsSection, aiAgentToggleButton, closeButton);
     }
 
-    DOMUtils.appendChildren(container, titleSection, statusSection, controlsSection);
+    DOMUtils.appendChildren(container, processingIndicator, titleSection, statusSection, controlsSection);
 
     log(`🏗️ [HeaderFactory] Created unified header for terminal: ${terminalId}`);
 
@@ -380,6 +449,7 @@ export class HeaderFactory {
       titleSection,
       nameSpan,
       idSpan,
+      processingIndicator,
       statusSection,
       statusSpan: null, // CLI Agent status要素はまだ作成されていない
       indicator: null, // CLI Agent indicator要素はまだ作成されていない
@@ -390,16 +460,31 @@ export class HeaderFactory {
     };
   }
 
-  private static setupInlineRename(params: {
+  private static setupHeaderEditor(params: {
     terminalId: string;
+    container: HTMLElement;
     titleSection: HTMLElement;
     nameSpan: HTMLElement;
-    onRenameSubmit: (terminalId: string, newName: string) => void;
+    initialIndicatorColor: string;
+    onRenameSubmit?: (terminalId: string, newName: string) => void;
+    onHeaderUpdate?: (
+      terminalId: string,
+      updates: { newName?: string; indicatorColor?: string }
+    ) => void;
   }): void {
-    const { terminalId, titleSection, nameSpan, onRenameSubmit } = params;
+    const { terminalId, container, titleSection, nameSpan, onRenameSubmit, onHeaderUpdate } = params;
     let isEditing = false;
+    let currentIndicatorColor = params.initialIndicatorColor;
 
-    nameSpan.addEventListener('dblclick', (event: MouseEvent) => {
+    const openEditor = (event: MouseEvent): void => {
+      const target = event.target as HTMLElement;
+      if (target.closest('.terminal-control')) {
+        return;
+      }
+      if (target.closest('.terminal-header-color-option')) {
+        return;
+      }
+
       event.preventDefault();
       event.stopPropagation();
 
@@ -409,6 +494,14 @@ export class HeaderFactory {
       isEditing = true;
 
       const originalName = nameSpan.textContent?.trim() || '';
+
+      const editor = document.createElement('div');
+      editor.className = 'terminal-header-editor';
+      editor.style.display = 'flex';
+      editor.style.flexDirection = 'column';
+      editor.style.gap = '6px';
+      editor.style.width = '100%';
+      editor.style.minWidth = '0';
 
       const input = document.createElement('input');
       input.type = 'text';
@@ -427,6 +520,51 @@ export class HeaderFactory {
       input.style.boxSizing = 'border-box';
       input.style.userSelect = 'text';
 
+      const palette = document.createElement('div');
+      palette.className = 'terminal-header-color-palette';
+      palette.style.display = 'flex';
+      palette.style.flexWrap = 'wrap';
+      palette.style.gap = '4px';
+
+      const refreshSelection = (): void => {
+        const options = palette.querySelectorAll<HTMLButtonElement>('.terminal-header-color-option');
+        options.forEach((option) => {
+          const isSelected = option.dataset.indicatorColor === currentIndicatorColor;
+          option.style.outline = isSelected ? '1px solid var(--vscode-focusBorder)' : '1px solid transparent';
+          option.style.opacity = isSelected ? '1' : '0.78';
+        });
+      };
+
+      HEADER_INDICATOR_COLOR_PALETTE.forEach((color) => {
+        const colorButton = document.createElement('button');
+        colorButton.type = 'button';
+        colorButton.className = 'terminal-header-color-option';
+        colorButton.dataset.indicatorColor = color;
+        colorButton.title = color;
+        colorButton.style.width = '14px';
+        colorButton.style.height = '14px';
+        colorButton.style.borderRadius = '50%';
+        colorButton.style.border = '1px solid rgba(127, 127, 127, 0.6)';
+        colorButton.style.padding = '0';
+        colorButton.style.cursor = 'pointer';
+        colorButton.style.backgroundColor = color;
+        colorButton.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        });
+        colorButton.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          currentIndicatorColor = color;
+          container.style.setProperty('--terminal-indicator-color', color);
+          refreshSelection();
+          onHeaderUpdate?.(terminalId, { indicatorColor: color });
+          log(`🎨 [HeaderFactory] Indicator color updated: ${terminalId} -> ${color}`);
+        });
+        palette.appendChild(colorButton);
+      });
+      refreshSelection();
+
       const finalizeRename = (commit: boolean): void => {
         if (!isEditing) {
           return;
@@ -436,8 +574,8 @@ export class HeaderFactory {
         const nextName = input.value.trim();
         const shouldCommit = commit && nextName.length > 0 && nextName !== originalName;
 
-        if (input.parentElement === titleSection) {
-          titleSection.replaceChild(nameSpan, input);
+        if (editor.parentElement === titleSection) {
+          titleSection.replaceChild(nameSpan, editor);
         } else if (!nameSpan.parentElement) {
           titleSection.appendChild(nameSpan);
         }
@@ -445,7 +583,8 @@ export class HeaderFactory {
         if (shouldCommit) {
           nameSpan.textContent = nextName;
           nameSpan.setAttribute('title', nextName);
-          onRenameSubmit(terminalId, nextName);
+          onRenameSubmit?.(terminalId, nextName);
+          onHeaderUpdate?.(terminalId, { newName: nextName });
           log(`✏️ [HeaderFactory] Terminal renamed via header: ${terminalId} -> ${nextName}`);
         } else {
           nameSpan.textContent = originalName;
@@ -468,10 +607,13 @@ export class HeaderFactory {
       });
       input.addEventListener('blur', () => finalizeRename(true));
 
+      editor.appendChild(input);
+      editor.appendChild(palette);
+
       if (nameSpan.parentElement === titleSection) {
-        titleSection.replaceChild(input, nameSpan);
+        titleSection.replaceChild(editor, nameSpan);
       } else {
-        titleSection.appendChild(input);
+        titleSection.appendChild(editor);
       }
 
       input.focus();
@@ -487,7 +629,10 @@ export class HeaderFactory {
           input.select();
         }
       }, 24);
-    });
+    };
+
+    nameSpan.addEventListener('dblclick', openEditor);
+    container.addEventListener('dblclick', openEditor);
   }
 
   /**
@@ -610,7 +755,23 @@ export class HeaderFactory {
    */
   public static updateTerminalName(elements: TerminalHeaderElements, newName: string): void {
     elements.nameSpan.textContent = newName;
+    elements.nameSpan.setAttribute('title', newName);
     log(`🔄 [HeaderFactory] Updated terminal name: ${newName}`);
+  }
+
+  public static setIndicatorColor(elements: TerminalHeaderElements, color: string): void {
+    elements.container.style.setProperty('--terminal-indicator-color', color);
+    log(`🎨 [HeaderFactory] Updated indicator color: ${color}`);
+  }
+
+  public static setProcessingIndicatorActive(
+    elements: TerminalHeaderElements,
+    isActive: boolean
+  ): void {
+    if (!elements.processingIndicator) {
+      return;
+    }
+    elements.processingIndicator.style.opacity = isActive ? '1' : '0';
   }
 
   /**
@@ -652,5 +813,21 @@ export class HeaderFactory {
         `🔄 [HeaderFactory] AI Agent toggle button visibility: ${visible} (status: ${agentStatus || 'none'})`
       );
     }
+  }
+
+  private static ensureProcessingIndicatorStyles(): void {
+    if (document.getElementById('terminal-processing-indicator-style')) {
+      return;
+    }
+
+    const style = document.createElement('style');
+    style.id = 'terminal-processing-indicator-style';
+    style.textContent = `
+      @keyframes terminal-processing-flow {
+        0% { transform: translateX(-130%); }
+        100% { transform: translateX(250%); }
+      }
+    `;
+    document.head.appendChild(style);
   }
 }

@@ -587,6 +587,12 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         category: 'terminal' as const,
       },
       {
+        command: 'updateTerminalHeader',
+        handler: async (msg: WebviewMessage) =>
+          await this._terminalCommandHandlers.handleUpdateTerminalHeader(msg),
+        category: 'terminal' as const,
+      },
+      {
         command: 'requestInitialTerminal',
         handler: async (msg: WebviewMessage) =>
           await this._terminalCommandHandlers.handleRequestInitialTerminal(msg),

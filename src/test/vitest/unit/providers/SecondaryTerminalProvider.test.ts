@@ -71,6 +71,7 @@ describe('SecondaryTerminalProvider', () => {
       getActiveTerminalId: vi.fn().mockReturnValue(null),
       setActiveTerminal: vi.fn(),
       renameTerminal: vi.fn().mockReturnValue(true),
+      updateTerminalHeader: vi.fn().mockReturnValue(true),
       createTerminal: vi.fn().mockReturnValue('term-1'),
       onTerminalCreated: vi.fn(() => ({ dispose: vi.fn() })),
       onTerminalRemoved: vi.fn(() => ({ dispose: vi.fn() })),
@@ -180,6 +181,25 @@ describe('SecondaryTerminalProvider', () => {
           'term-1',
           'Renamed from Header'
         );
+      });
+    });
+
+    it('should route updateTerminalHeader message to terminal command handlers', async () => {
+      provider!.resolveWebviewView(mockWebviewView, {} as any, {} as any);
+      const messageHandler = mockWebviewView.webview.onDidReceiveMessage.mock.calls[0][0];
+
+      await messageHandler({
+        command: 'updateTerminalHeader',
+        terminalId: 'term-1',
+        newName: 'Renamed + Colored',
+        indicatorColor: '#FF69B4',
+      });
+
+      await vi.waitFor(() => {
+        expect(mockTerminalManager.updateTerminalHeader).toHaveBeenCalledWith('term-1', {
+          newName: 'Renamed + Colored',
+          indicatorColor: '#FF69B4',
+        });
       });
     });
   });

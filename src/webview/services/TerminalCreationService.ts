@@ -345,35 +345,38 @@ export class TerminalCreationService implements Disposable {
           showCloseButton: true,
           showSplitButton: false,
           customTitle: terminalName,
-          onRenameSubmit: (clickedTerminalId, newName) => {
-            terminalLogger.info(`✏️ Header rename submitted: ${clickedTerminalId} -> ${newName}`);
+          indicatorColor: (config as { indicatorColor?: string } | undefined)?.indicatorColor,
+          onHeaderUpdate: (clickedTerminalId, updates) => {
+            if (updates.newName) {
+              terminalLogger.info(
+                `✏️ Header rename submitted: ${clickedTerminalId} -> ${updates.newName}`
+              );
 
-            // Keep container metadata in sync for downstream selectors.
-            const terminalContainer = document.querySelector(
-              `[data-terminal-id="${clickedTerminalId}"]`
-            ) as HTMLElement | null;
-            if (terminalContainer) {
-              terminalContainer.setAttribute('data-terminal-name', newName);
-            }
+              const terminalContainer = document.querySelector(
+                `[data-terminal-id="${clickedTerminalId}"]`
+              ) as HTMLElement | null;
+              if (terminalContainer) {
+                terminalContainer.setAttribute('data-terminal-name', updates.newName);
+              }
 
-            // Update tab label immediately on WebView side.
-            const tabManager = this.coordinator.getManagers().tabs;
-            if (tabManager) {
-              const extendedTabManager = tabManager as unknown as {
-                handleTerminalRenamed?: (terminalId: string, updatedName: string) => void;
-              };
-              if (typeof extendedTabManager.handleTerminalRenamed === 'function') {
-                extendedTabManager.handleTerminalRenamed(clickedTerminalId, newName);
-              } else {
-                tabManager.addTab(clickedTerminalId, newName);
+              const tabManager = this.coordinator.getManagers().tabs;
+              if (tabManager) {
+                const extendedTabManager = tabManager as unknown as {
+                  handleTerminalRenamed?: (terminalId: string, updatedName: string) => void;
+                };
+                if (typeof extendedTabManager.handleTerminalRenamed === 'function') {
+                  extendedTabManager.handleTerminalRenamed(clickedTerminalId, updates.newName);
+                } else {
+                  tabManager.addTab(clickedTerminalId, updates.newName);
+                }
               }
             }
 
-            // Persist rename in extension state.
             this.coordinator.postMessageToExtension({
-              command: 'renameTerminal',
+              command: 'updateTerminalHeader',
               terminalId: clickedTerminalId,
-              newName,
+              ...(updates.newName ? { newName: updates.newName } : {}),
+              ...(updates.indicatorColor ? { indicatorColor: updates.indicatorColor } : {}),
             });
           },
           onHeaderClick: (clickedTerminalId) => {

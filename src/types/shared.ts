@@ -402,6 +402,7 @@ export interface TerminalInfo {
   id: string;
   name: string;
   isActive: boolean;
+  indicatorColor?: string;
 }
 
 /**
@@ -463,6 +464,7 @@ export interface TerminalInstance {
   ptyProcess?: import('node-pty').IPty; // New pty reference name (for session restoration)
   process?: NodeJS.Process; // For lifecycle service compatibility
   name: string;
+  indicatorColor?: string;
   number?: number; // Terminal number (1-5)
   cwd?: string; // Current working directory
   shell?: string; // Shell path
@@ -559,6 +561,7 @@ export interface WebviewMessage {
     | 'openTerminalLink'
     | 'reorderTerminals'
     | 'renameTerminal'
+    | 'updateTerminalHeader'
     | 'stateUpdate'
     | 'claudeStatusUpdate'
     | 'cliAgentStatusUpdate'
@@ -694,6 +697,7 @@ export interface WebviewMessage {
   terminalId?: string;
   terminalName?: string;
   newName?: string;
+  indicatorColor?: string;
   terminalNumber?: number; // Terminal number (1-5) - For Extension to WebView communication
 
   // Shell Integration properties

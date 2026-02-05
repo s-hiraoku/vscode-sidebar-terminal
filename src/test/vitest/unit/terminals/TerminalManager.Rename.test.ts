@@ -81,4 +81,32 @@ describe('TerminalManager - renameTerminal', () => {
 
     disposable.dispose();
   });
+
+  it('updates terminal header name and indicator color together', () => {
+    terminalManager = new TerminalManager(createMockCliAgentService());
+
+    (terminalManager as any)._terminals.set('t1', {
+      id: 't1',
+      name: 'Old Name',
+      isActive: true,
+      indicatorColor: '#00FFFF',
+    });
+
+    const states: any[] = [];
+    const disposable = terminalManager.onStateUpdate((state) => states.push(state));
+
+    const updated = terminalManager.updateTerminalHeader('t1', {
+      newName: 'New Name',
+      indicatorColor: '#FF69B4',
+    });
+
+    expect(updated).toBe(true);
+    expect((terminalManager as any)._terminals.get('t1').name).toBe('New Name');
+    expect((terminalManager as any)._terminals.get('t1').indicatorColor).toBe('#FF69B4');
+    expect(states).toHaveLength(1);
+    expect(states[0]?.terminals?.[0]?.name).toBe('New Name');
+    expect(states[0]?.terminals?.[0]?.indicatorColor).toBe('#FF69B4');
+
+    disposable.dispose();
+  });
 });

@@ -3,7 +3,10 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { HeaderFactory } from '../../../../../webview/factories/HeaderFactory';
+import {
+  HeaderFactory,
+  HEADER_INDICATOR_COLOR_PALETTE,
+} from '../../../../../webview/factories/HeaderFactory';
 
 // Mock logger
 vi.mock('../../../../../src/utils/logger', () => ({
@@ -255,6 +258,69 @@ describe('HeaderFactory', () => {
 
       expect(onRenameSubmit).not.toHaveBeenCalled();
       expect(elements.nameSpan.textContent).toBe('Original');
+    });
+
+    it('should open unified editor on header double click with color palette', () => {
+      const onHeaderUpdate = vi.fn();
+      const elements = HeaderFactory.createTerminalHeader({
+        terminalId: 't1',
+        terminalName: 'Original',
+        onHeaderUpdate,
+      });
+
+      elements.container.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+
+      const editor = elements.titleSection.querySelector('.terminal-header-editor');
+      const input = elements.titleSection.querySelector('.terminal-name-edit-input');
+      const colorOptions = elements.titleSection.querySelectorAll('.terminal-header-color-option');
+
+      expect(editor).toBeTruthy();
+      expect(input).toBeTruthy();
+      expect(colorOptions).toHaveLength(HEADER_INDICATOR_COLOR_PALETTE.length);
+      expect(onHeaderUpdate).not.toHaveBeenCalled();
+    });
+
+    it('should update indicator color immediately from unified editor', () => {
+      const onHeaderUpdate = vi.fn();
+      const elements = HeaderFactory.createTerminalHeader({
+        terminalId: 't1',
+        terminalName: 'Original',
+        onHeaderUpdate,
+      });
+
+      elements.container.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+
+      const pinkOption = elements.titleSection.querySelector(
+        '[data-indicator-color="#FF69B4"]'
+      ) as HTMLButtonElement;
+      pinkOption.click();
+
+      expect(onHeaderUpdate).toHaveBeenCalledWith('t1', { indicatorColor: '#FF69B4' });
+      expect(elements.container.style.getPropertyValue('--terminal-indicator-color')).toBe('#FF69B4');
+    });
+  });
+
+  describe('Processing Indicator', () => {
+    it('should toggle processing indicator visibility', () => {
+      const elements = HeaderFactory.createTerminalHeader({
+        terminalId: 't1',
+        terminalName: 'Indicator Test',
+      });
+
+      const flow = elements.container.querySelector('.terminal-processing-indicator') as HTMLElement;
+      expect(flow).toBeTruthy();
+      expect(flow.style.opacity).toBe('0');
+
+      HeaderFactory.setProcessingIndicatorActive(elements, true);
+      expect(flow.style.opacity).toBe('1');
+
+      HeaderFactory.setProcessingIndicatorActive(elements, false);
+      expect(flow.style.opacity).toBe('0');
+    });
+
+    it('should expose agreed color palette including white', () => {
+      expect(HEADER_INDICATOR_COLOR_PALETTE).toContain('#FFFFFF');
+      expect(HEADER_INDICATOR_COLOR_PALETTE).toHaveLength(14);
     });
   });
 });

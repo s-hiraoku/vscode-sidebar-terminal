@@ -255,7 +255,35 @@ export class TerminalManager {
       return true;
     }
 
-    return this._stateCoordinator.renameTerminal(terminalId, trimmedName);
+    return this._stateCoordinator.updateTerminalHeader(terminalId, { newName: trimmedName });
+  }
+
+  public updateTerminalHeader(
+    terminalId: string,
+    updates: { newName?: string; indicatorColor?: string }
+  ): boolean {
+    const terminal = this._terminals.get(terminalId);
+    if (!terminal) {
+      return false;
+    }
+
+    const nextName = updates.newName?.trim();
+    const hasName = typeof nextName === 'string' && nextName.length > 0;
+    const hasColor =
+      typeof updates.indicatorColor === 'string' && updates.indicatorColor.trim().length > 0;
+
+    if (!hasName && !hasColor) {
+      return false;
+    }
+
+    if (hasName && terminal.name === nextName && !hasColor) {
+      return true;
+    }
+
+    return this._stateCoordinator.updateTerminalHeader(terminalId, {
+      ...(hasName ? { newName: nextName } : {}),
+      ...(hasColor ? { indicatorColor: updates.indicatorColor!.trim().toUpperCase() } : {}),
+    });
   }
 
   // === I/O Operations ===

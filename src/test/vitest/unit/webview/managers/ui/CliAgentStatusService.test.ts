@@ -46,6 +46,7 @@ describe('CliAgentStatusService', () => {
         container,
         nameSpan,
         idSpan: document.createElement('span'),
+        processingIndicator: null,
         titleSection: document.createElement('div'),
         statusSection: document.createElement('div'),
         statusSpan: null,

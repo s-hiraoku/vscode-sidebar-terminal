@@ -25,11 +25,16 @@ export interface TerminalHeaderConfig {
   showSplitButton?: boolean;
   customTitle?: string;
   onRenameSubmit?: (terminalId: string, newName: string) => void;
+  onHeaderUpdate?: (
+    terminalId: string,
+    updates: { newName?: string; indicatorColor?: string }
+  ) => void;
   onHeaderClick?: (terminalId: string) => void;
   onContainerClick?: (terminalId: string) => void;
   onCloseClick?: (terminalId: string) => void;
   onSplitClick?: (terminalId: string) => void;
   onAiAgentToggleClick?: (terminalId: string) => void;
+  indicatorColor?: string;
 }
 
 export interface ContainerElements {
@@ -118,10 +123,12 @@ export class TerminalContainerFactory {
           terminalName: headerConfig.customTitle || config.name,
           showSplitButton: headerConfig.showSplitButton,
           onRenameSubmit: headerConfig.onRenameSubmit,
+          onHeaderUpdate: headerConfig.onHeaderUpdate,
           onHeaderClick: headerConfig.onHeaderClick,
           onCloseClick: headerConfig.onCloseClick,
           onSplitClick: headerConfig.onSplitClick,
           onAiAgentToggleClick: headerConfig.onAiAgentToggleClick,
+          indicatorColor: headerConfig.indicatorColor,
         });
         header = headerElements.container;
         closeButton = headerElements.closeButton;

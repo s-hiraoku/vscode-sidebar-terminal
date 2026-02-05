@@ -107,19 +107,44 @@ export class HeaderService {
   /**
    * Update terminal header title
    */
-  public updateTerminalHeader(terminalId: string, newName: string): void {
+  public updateTerminalHeader(
+    terminalId: string,
+    newName?: string,
+    indicatorColor?: string
+  ): void {
     const headerElements = this.headerElementsCache.get(terminalId);
     if (headerElements) {
-      // Use HeaderFactory to update the name
-      HeaderFactory.updateTerminalName(headerElements, newName);
+      if (typeof newName === 'string' && newName.trim().length > 0) {
+        HeaderFactory.updateTerminalName(headerElements, newName);
+      }
+      if (typeof indicatorColor === 'string' && indicatorColor.trim().length > 0) {
+        HeaderFactory.setIndicatorColor(headerElements, indicatorColor);
+      }
     } else {
       // Fallback: Update DOM directly
-      const header = document.querySelector(`[data-terminal-id="${terminalId}"] .terminal-name`);
-      if (header) {
-        header.textContent = newName;
-        uiLogger.info(`Updated terminal header (fallback) for ${terminalId}: ${newName}`);
+      if (typeof newName === 'string') {
+        const header = document.querySelector(`[data-terminal-id="${terminalId}"] .terminal-name`);
+        if (header) {
+          header.textContent = newName;
+          uiLogger.info(`Updated terminal header (fallback) for ${terminalId}: ${newName}`);
+        }
+      }
+
+      if (typeof indicatorColor === 'string') {
+        const headerContainer = document.querySelector(
+          `[data-terminal-id="${terminalId}"].terminal-header`
+        ) as HTMLElement | null;
+        headerContainer?.style.setProperty('--terminal-indicator-color', indicatorColor);
       }
     }
+  }
+
+  public setTerminalProcessingIndicator(terminalId: string, isProcessing: boolean): void {
+    const headerElements = this.headerElementsCache.get(terminalId);
+    if (!headerElements) {
+      return;
+    }
+    HeaderFactory.setProcessingIndicatorActive(headerElements, isProcessing);
   }
 
   /**

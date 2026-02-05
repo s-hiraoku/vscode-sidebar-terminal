@@ -55,6 +55,7 @@ describe('TerminalCommandHandlers', () => {
       killTerminal: vi.fn().mockResolvedValue(undefined),
       reorderTerminals: vi.fn(),
       renameTerminal: vi.fn().mockReturnValue(true),
+      updateTerminalHeader: vi.fn().mockReturnValue(true),
       getTerminal: vi.fn().mockReturnValue({ shellPath: '/bin/bash' }),
       switchAiAgentConnection: vi.fn().mockReturnValue({ success: true, newStatus: 'connected' }),
     };
@@ -142,6 +143,23 @@ describe('TerminalCommandHandlers', () => {
       } as any);
 
       expect(mockTerminalManager.renameTerminal).not.toHaveBeenCalled();
+    });
+
+    it('should handle update terminal header with name and color', async () => {
+      await handlers.handleUpdateTerminalHeader({
+        command: 'updateTerminalHeader',
+        terminalId: 't1',
+        newName: 'Agent Terminal',
+        indicatorColor: '#FF69B4',
+      } as any);
+
+      expect(mockTerminalManager.updateTerminalHeader).toHaveBeenCalledWith('t1', {
+        newName: 'Agent Terminal',
+        indicatorColor: '#FF69B4',
+      });
+      expect(mockCommService.sendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ command: 'stateUpdate' })
+      );
     });
   });
 

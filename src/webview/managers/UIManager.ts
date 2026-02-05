@@ -582,8 +582,16 @@ export class UIManager extends BaseManager implements IUIManager {
    * Update terminal header title
    * Delegates to HeaderService
    */
-  public updateTerminalHeader(terminalId: string, newName: string): void {
-    this.headerService.updateTerminalHeader(terminalId, newName);
+  public updateTerminalHeader(
+    terminalId: string,
+    newName?: string,
+    indicatorColor?: string
+  ): void {
+    this.headerService.updateTerminalHeader(terminalId, newName, indicatorColor);
+  }
+
+  public setTerminalProcessingIndicator(terminalId: string, isProcessing: boolean): void {
+    this.headerService.setTerminalProcessingIndicator(terminalId, isProcessing);
   }
 
   /**

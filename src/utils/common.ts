@@ -77,8 +77,14 @@ export function normalizeTerminalInfo(terminal: {
   id: string;
   name: string;
   isActive: boolean;
+  indicatorColor?: string;
 }): TerminalInfo {
-  return { id: terminal.id, name: terminal.name, isActive: terminal.isActive };
+  return {
+    id: terminal.id,
+    name: terminal.name,
+    isActive: terminal.isActive,
+    ...(terminal.indicatorColor ? { indicatorColor: terminal.indicatorColor } : {}),
+  };
 }
 
 export function generateTerminalName(index: number): string {
