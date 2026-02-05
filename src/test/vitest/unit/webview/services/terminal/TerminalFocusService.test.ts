@@ -4,6 +4,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { TerminalFocusService } from '../../../../../../webview/services/terminal/TerminalFocusService';
+import { setupCompleteTestEnvironment } from '../../../../../shared/TestSetup';
 
 // Mock logger
 vi.mock('../../../../../../webview/utils/ManagerLogger', () => ({
@@ -19,8 +20,10 @@ describe('TerminalFocusService', () => {
   let mockTerminal: any;
   let mockContainer: HTMLElement;
   let mockTextarea: HTMLTextAreaElement;
+  let testEnv: ReturnType<typeof setupCompleteTestEnvironment>;
 
   beforeEach(() => {
+    testEnv = setupCompleteTestEnvironment();
     vi.useFakeTimers();
     service = new TerminalFocusService();
     

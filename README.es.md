@@ -9,15 +9,15 @@
 
 [English](README.md) | [日本語](README.ja.md) | [中文](README.zh-CN.md) | [한국어](README.ko.md) | **Español** | [Français](README.fr.md) | [Deutsch](README.de.md)
 
-Tu barra lateral, tu terminal, tus agentes de IA -- todo en un solo lugar. Un terminal completo que vive en la barra lateral de VS Code, con detección integrada de agentes de IA para Claude Code, Codex CLI, Gemini CLI y GitHub Copilot CLI.
+Tu barra lateral, tu terminal, tus agentes de IA — todo en un solo lugar. Un terminal completo que vive en la barra lateral de VS Code, con detección integrada de agentes de IA para Claude Code, Codex CLI, Gemini CLI y GitHub Copilot CLI.
 
 ![Demo](resources/readme-hero.png)
 
 ## ¿Por qué Secondary Terminal?
 
-- **Terminal nativo en la barra lateral** -- Mantén tu terminal visible mientras editas. No más alternar el panel inferior.
-- **Consciente de agentes de IA** -- Detecta automáticamente Claude Code, Copilot, Gemini y Codex. Muestra el estado de conexión en tiempo real y optimiza el renderizado para salida de streaming de IA (hasta 250fps).
-- **Completo** -- Vistas divididas, persistencia de sesiones, integración de shell, búsqueda en terminal, decoraciones de comandos, 89 configuraciones personalizables. No es un juguete -- es un terminal de producción.
+- **Terminal nativo en la barra lateral** — Mantén tu terminal visible mientras editas. No más alternar el panel inferior.
+- **Consciente de agentes de IA** — Detecta automáticamente Claude Code, Copilot, Gemini y Codex. Muestra el estado de conexión en tiempo real y optimiza el renderizado para salida de streaming de IA (hasta 250 fps).
+- **Completo** — Vistas divididas, persistencia de sesiones, integración de shell, búsqueda en terminal, decoraciones de comandos, 89 configuraciones personalizables. No es un juguete — es un terminal de producción.
 
 ## Inicio Rápido
 
@@ -35,8 +35,8 @@ Tu barra lateral, tu terminal, tus agentes de IA -- todo en un solo lugar. Un te
 | **Detección automática**     | Indicadores de estado en tiempo real para Claude Code, Codex CLI, Gemini CLI, GitHub Copilot CLI         |
 | **Referencias de archivos**  | `Cmd+Alt+L` / `Ctrl+Alt+L` inserta la ruta del archivo actual; `Cmd+Alt+A` / `Ctrl+Alt+A` inserta todos los archivos abiertos |
 | **Pegado de imágenes**       | `Cmd+V` en macOS pega capturas de pantalla directamente en Claude Code                                   |
-| **Renderizado optimizado**   | Buffering adaptativo de 250fps para salida de streaming de IA                                            |
-| **Persistencia de sesiones** | El estado del terminal sobrevive a los reinicios de VS Code -- continúa donde lo dejaste                 |
+| **Renderizado optimizado**   | Buffering adaptativo de 250 fps para salida de streaming de IA                                            |
+| **Persistencia de sesiones** | El estado del terminal sobrevive a los reinicios de VS Code —continúa donde lo dejaste                 |
 | **Multi-agente**             | Ejecuta diferentes agentes en diferentes terminales, cambia con `Cmd+Alt+1..5` / `Alt+1..5`             |
 
 ### Funciones Avanzadas del Terminal
@@ -47,7 +47,7 @@ Tu barra lateral, tu terminal, tus agentes de IA -- todo en un solo lugar. Un te
 | **Vistas divididas**            | División vertical/horizontal con redimensionamiento por arrastre           |
 | **Persistencia de sesiones**    | Auto-guardar/restaurar con preservación de colores ANSI (hasta 3.000 líneas de scrollback) |
 | **Integración de shell**        | Indicadores de estado de comandos, visualización del directorio de trabajo, historial de comandos |
-| **Buscar en terminal**          | `Ctrl+F` / `Cmd+F` -- buscar en la salida del terminal con soporte regex  |
+| **Buscar en terminal**          | `Ctrl+F` / `Cmd+F` —buscar en la salida del terminal con soporte regex  |
 | **Decoraciones de comandos**    | Indicadores visuales de éxito/error/en ejecución en los límites de comandos|
 | **Marcas de navegación**        | `Cmd+Up/Down` / `Ctrl+Up/Down` para saltar entre comandos                 |
 | **Compresión de scrollback**    | Almacenamiento comprimido con carga progresiva para historiales grandes    |
@@ -62,7 +62,7 @@ Tu barra lateral, tu terminal, tus agentes de IA -- todo en un solo lugar. Un te
 | **Alt+Clic**           | Posicionamiento estándar del cursor de VS Code                     |
 | **Seguimiento de ratón** | Soporte para apps TUI (vim, htop, zellij) con modo de ratón automático |
 | **Portapapeles completo** | Ctrl/Cmd+C/V con soporte para pegado de imágenes                |
-| **Multiplataforma**    | Windows, macOS, Linux -- 9 compilaciones específicas por plataforma |
+| **Multiplataforma**    | Windows, macOS, Linux —9 compilaciones específicas por plataforma |
 | **Accesibilidad**      | Soporte para lectores de pantalla                                  |
 | **Panel de depuración** | Monitoreo en tiempo real con `Ctrl+Shift+D`                       |
 
@@ -128,7 +128,7 @@ Busca `secondaryTerminal` en la Configuración de VS Code para ver la lista comp
 | Métrica                  | Valor                                                   |
 | ------------------------ | ------------------------------------------------------- |
 | **Renderizado**          | WebGL con fallback automático a DOM                     |
-| **Buffering de salida**  | Intervalos adaptativos de 2-16ms (hasta 250fps para salida de IA) |
+| **Buffering de salida**  | Intervalos adaptativos de 2-16ms (hasta 250 fps para salida de IA) |
 | **Restauración de scrollback** | <1s para 1.000 líneas con preservación de colores ANSI |
 | **Disposición de terminal** | Tiempo de limpieza <100ms                            |
 | **Tamaño de compilación** | Extensión ~790 KiB + WebView ~1.5 MiB                 |
@@ -178,7 +178,7 @@ Calidad: TypeScript modo estricto, flujo de trabajo TDD, 3.800+ pruebas unitaria
 
 ## Privacidad
 
-Esta extensión respeta la configuración de telemetría de VS Code. Solo recopilamos métricas de uso anónimas (uso de funciones, tasas de error) -- nunca contenido del terminal, rutas de archivos ni datos personales.
+Esta extensión respeta la configuración de telemetría de VS Code. Solo recopilamos métricas de uso anónimas (uso de funciones, tasas de error) —nunca contenido del terminal, rutas de archivos ni datos personales.
 
 Para desactivar: Establece `telemetry.telemetryLevel` en `"off"` en la configuración de VS Code. Consulta [PRIVACY.md](PRIVACY.md) para más detalles.
 

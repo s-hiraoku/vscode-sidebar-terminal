@@ -360,7 +360,7 @@ export class TerminalCreationService implements Disposable {
                 terminalContainer.setAttribute('data-terminal-name', updates.newName);
               }
 
-              const tabManager = this.coordinator.getManagers().tabs;
+              const tabManager = this.coordinator.getManagers?.()?.tabs;
               if (tabManager) {
                 const extendedTabManager = tabManager as unknown as {
                   handleTerminalRenamed?: (terminalId: string, updatedName: string) => void;
