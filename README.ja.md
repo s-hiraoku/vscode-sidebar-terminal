@@ -9,14 +9,14 @@
 
 [English](README.md) | **日本語**
 
-サイドバー、ターミナル、AI エージェント -- すべてを一つの場所に。VS Code サイドバーに常駐するフル機能ターミナル。Claude Code、Codex CLI、Gemini CLI、GitHub Copilot CLI、CodeRabbit CLI の AI エージェント検出を内蔵しています。
+サイドバー、ターミナル、AI エージェント -- すべてを一つの場所に。VS Code サイドバーに常駐するフル機能ターミナル。Claude Code、Codex CLI、Gemini CLI、GitHub Copilot CLIの AI エージェント検出を内蔵しています。
 
 ![Demo](resources/readme-hero.png)
 
 ## なぜ Secondary Terminal？
 
 - **サイドバーネイティブターミナル** -- 編集しながらターミナルを常時表示。ボトムパネルの切り替えはもう不要です。
-- **AI エージェント対応** -- Claude Code、Copilot、Gemini、Codex、CodeRabbit を自動検出。リアルタイム接続ステータスを表示し、AI ストリーミング出力に最適化されたレンダリング（最大250fps）を提供します。
+- **AI エージェント対応** -- Claude Code、Copilot、Gemini、Codexを自動検出。リアルタイム接続ステータスを表示し、AI ストリーミング出力に最適化されたレンダリング（最大250fps）を提供します。
 - **フル機能** -- 分割表示、セッション永続化、シェル統合、ターミナル内検索、コマンドデコレーション、89の設定項目。おもちゃではなく、本格的なプロダクションターミナルです。
 
 ## クイックスタート
@@ -32,7 +32,7 @@
 
 |                        |                                                                                                                |
 | ---------------------- | -------------------------------------------------------------------------------------------------------------- |
-| **自動検出**           | Claude Code、Codex CLI、Gemini CLI、GitHub Copilot CLI、CodeRabbit CLI のリアルタイムステータス表示            |
+| **自動検出**           | Claude Code、Codex CLI、Gemini CLI、GitHub Copilot CLIのリアルタイムステータス表示                             |
 | **ファイル参照**       | `Cmd+Alt+L` / `Ctrl+Alt+L` で現在のファイルパスを挿入、`Cmd+Alt+A` / `Ctrl+Alt+A` で開いている全ファイルを挿入 |
 | **画像貼り付け**       | macOS で `Cmd+V` によりスクリーンショットを Claude Code に直接貼り付け                                         |
 | **最適化レンダリング** | AI ストリーミング出力向け 250fps 適応バッファリング                                                            |

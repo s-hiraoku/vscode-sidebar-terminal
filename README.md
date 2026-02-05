@@ -9,14 +9,14 @@
 
 **English** | [日本語](README.ja.md)
 
-Your sidebar, your terminal, your AI agents -- all in one place. A full-featured terminal that lives in the VS Code sidebar, with built-in AI agent detection for Claude Code, Codex CLI, Gemini CLI, GitHub Copilot CLI, and CodeRabbit CLI.
+Your sidebar, your terminal, your AI agents -- all in one place. A full-featured terminal that lives in the VS Code sidebar, with built-in AI agent detection for Claude Code, Codex CLI, Gemini CLI, GitHub Copilot CLI.
 
 ![Demo](resources/readme-hero.png)
 
 ## Why Secondary Terminal?
 
 - **Sidebar-native terminal** -- Keep your terminal visible while editing. No more toggling the bottom panel.
-- **AI agent aware** -- Auto-detects Claude Code, Copilot, Gemini, Codex, and CodeRabbit. Shows real-time connection status and optimizes rendering for AI streaming output (up to 250fps).
+- **AI agent aware** -- Auto-detects Claude Code, Copilot, Gemini, Codex. Shows real-time connection status and optimizes rendering for AI streaming output (up to 250fps).
 - **Full-featured** -- Split views, session persistence, shell integration, find-in-terminal, command decorations, 89 configurable settings. Not a toy -- a production terminal.
 
 ## Quick Start
@@ -32,7 +32,7 @@ Your sidebar, your terminal, your AI agents -- all in one place. A full-featured
 
 |                         |                                                                                                         |
 | ----------------------- | ------------------------------------------------------------------------------------------------------- |
-| **Auto-detection**      | Real-time status indicators for Claude Code, Codex CLI, Gemini CLI, GitHub Copilot CLI, CodeRabbit CLI  |
+| **Auto-detection**      | Real-time status indicators for Claude Code, Codex CLI, Gemini CLI, GitHub Copilot CLI                  |
 | **File references**     | `Cmd+Alt+L` / `Ctrl+Alt+L` inserts current file path; `Cmd+Alt+A` / `Ctrl+Alt+A` inserts all open files |
 | **Image paste**         | `Cmd+V` on macOS pastes screenshots directly into Claude Code                                           |
 | **Optimized rendering** | 250fps adaptive buffering for AI streaming output                                                       |
