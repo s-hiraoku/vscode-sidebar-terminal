@@ -30,6 +30,7 @@ describe('TerminalSettingsManager', () => {
   beforeEach(() => {
     mockUIManager = {
       setActiveBorderMode: vi.fn(),
+      setTerminalHeaderEnhancementsEnabled: vi.fn(),
       updateTerminalBorders: vi.fn(),
       updateSplitTerminalBorders: vi.fn(),
       applyAllVisualSettings: vi.fn(),

@@ -101,6 +101,7 @@ export interface ExtensionTerminalConfig
     blink?: boolean;
   };
   readonly enableCliAgentIntegration?: boolean;
+  readonly enableTerminalHeaderEnhancements?: boolean;
   readonly activeBorderMode?: ActiveBorderMode;
   // Addon configuration for WebView terminal rendering
   readonly enableGpuAcceleration?: boolean;
@@ -125,6 +126,7 @@ export interface PartialTerminalSettings {
   altClickMovesCursor?: boolean;
   multiCursorModifier?: string;
   enableCliAgentIntegration?: boolean;
+  enableTerminalHeaderEnhancements?: boolean;
   activeBorderMode?: ActiveBorderMode;
   // VS Code keybinding system settings
   sendKeybindingsToShell?: boolean;
@@ -193,6 +195,7 @@ export interface WebViewSettingsPayload {
   readonly altClickMovesCursor: boolean;
   readonly multiCursorModifier: string;
   readonly enableCliAgentIntegration: boolean;
+  readonly enableTerminalHeaderEnhancements: boolean;
   readonly activeBorderMode: ActiveBorderMode;
   readonly dynamicSplitDirection: boolean;
   readonly panelLocation: 'auto' | 'sidebar' | 'panel';
@@ -402,6 +405,7 @@ export interface TerminalInfo {
   id: string;
   name: string;
   isActive: boolean;
+  indicatorColor?: string;
 }
 
 /**
@@ -463,6 +467,7 @@ export interface TerminalInstance {
   ptyProcess?: import('node-pty').IPty; // New pty reference name (for session restoration)
   process?: NodeJS.Process; // For lifecycle service compatibility
   name: string;
+  indicatorColor?: string;
   number?: number; // Terminal number (1-5)
   cwd?: string; // Current working directory
   shell?: string; // Shell path
@@ -558,6 +563,8 @@ export interface WebviewMessage {
     | 'openSettings'
     | 'openTerminalLink'
     | 'reorderTerminals'
+    | 'renameTerminal'
+    | 'updateTerminalHeader'
     | 'stateUpdate'
     | 'claudeStatusUpdate'
     | 'cliAgentStatusUpdate'
@@ -692,6 +699,8 @@ export interface WebviewMessage {
   exitCode?: number;
   terminalId?: string;
   terminalName?: string;
+  newName?: string;
+  indicatorColor?: string;
   terminalNumber?: number; // Terminal number (1-5) - For Extension to WebView communication
 
   // Shell Integration properties

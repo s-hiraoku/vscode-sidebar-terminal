@@ -241,6 +241,28 @@ describe('TerminalContainerFactory', () => {
       // Should revert to original styles
       expect(button.style.backgroundColor).toBe('transparent');
     });
+
+    it('should not trigger container activation on second click of terminal-name double click', () => {
+      const onContainerClick = vi.fn();
+      const config: TerminalContainerConfig = {
+        id: 'rename-click-test',
+        name: 'Rename Click Test',
+      };
+
+      const headerConfig: TerminalHeaderConfig = {
+        showHeader: true,
+        onContainerClick,
+      };
+
+      const elements = TerminalContainerFactory.createContainer(config, headerConfig);
+      const nameSpan = elements.header?.querySelector('.terminal-name') as HTMLElement;
+
+      nameSpan.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+      nameSpan.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 2 }));
+      nameSpan.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, detail: 2 }));
+
+      expect(onContainerClick).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('utility methods', () => {

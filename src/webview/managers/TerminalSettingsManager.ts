@@ -94,6 +94,9 @@ export class TerminalSettingsManager {
       };
 
       this.uiManager.setActiveBorderMode(activeBorderMode);
+      this.uiManager.setTerminalHeaderEnhancementsEnabled(
+        this.currentSettings.enableTerminalHeaderEnhancements !== false
+      );
 
       const activeId = this.callbacks.getActiveTerminalId();
       if (activeId) {

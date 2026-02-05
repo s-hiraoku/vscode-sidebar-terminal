@@ -81,6 +81,15 @@ describe('HeaderService', () => {
       );
     });
 
+    it('should update indicator color using factory if cached', () => {
+      const terminalId = 't1';
+      service.createTerminalHeader(terminalId, 'Old Name');
+
+      service.updateTerminalHeader(terminalId, undefined, '#FF69B4');
+
+      expect(HeaderFactory.setIndicatorColor).toHaveBeenCalledWith(mockHeaderElements, '#FF69B4');
+    });
+
     it('should try fallback DOM update if not cached', () => {
       const terminalId = 't2';
       // Create element in DOM manually

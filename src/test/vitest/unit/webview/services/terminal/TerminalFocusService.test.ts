@@ -4,6 +4,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { TerminalFocusService } from '../../../../../../webview/services/terminal/TerminalFocusService';
+import { setupCompleteTestEnvironment } from '../../../../../shared/TestSetup';
 
 // Mock logger
 vi.mock('../../../../../../webview/utils/ManagerLogger', () => ({
@@ -19,8 +20,8 @@ describe('TerminalFocusService', () => {
   let mockTerminal: any;
   let mockContainer: HTMLElement;
   let mockTextarea: HTMLTextAreaElement;
-
   beforeEach(() => {
+    setupCompleteTestEnvironment();
     vi.useFakeTimers();
     service = new TerminalFocusService();
     
@@ -88,6 +89,20 @@ describe('TerminalFocusService', () => {
       mockContainer.appendChild(btn);
       
       btn.click();
+      expect(mockTerminal.focus).not.toHaveBeenCalled();
+    });
+
+    it('should ignore clicks inside terminal header area', () => {
+      service.setupContainerFocusHandler(mockTerminal, 't1', mockContainer, mockContainer);
+
+      const header = document.createElement('div');
+      header.className = 'terminal-header';
+      const name = document.createElement('span');
+      name.className = 'terminal-name';
+      header.appendChild(name);
+      mockContainer.appendChild(header);
+
+      name.click();
       expect(mockTerminal.focus).not.toHaveBeenCalled();
     });
   });

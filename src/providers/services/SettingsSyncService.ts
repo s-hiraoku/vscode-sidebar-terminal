@@ -83,6 +83,9 @@ export class SettingsSyncService {
       multiCursorModifier: altClickSettings.multiCursorModifier,
       // CLI Agent Code integration settings
       enableCliAgentIntegration: configService.isFeatureEnabled('cliAgentIntegration'),
+      enableTerminalHeaderEnhancements: configService.isFeatureEnabled(
+        'terminalHeaderEnhancements'
+      ),
       activeBorderMode: configService.get('secondaryTerminal', 'activeBorderMode', 'multipleOnly'),
       // Dynamic split direction settings (Issue #148)
       dynamicSplitDirection: configService.isFeatureEnabled('dynamicSplitDirection'),
@@ -123,6 +126,7 @@ export class SettingsSyncService {
       },
       maxTerminals: config.maxTerminals || 5,
       enableCliAgentIntegration: config.enableCliAgentIntegration || false,
+      enableTerminalHeaderEnhancements: config.enableTerminalHeaderEnhancements ?? true,
       // 🆕 Issue #148: Dynamic split direction settings
       dynamicSplitDirection: webViewSettings.dynamicSplitDirection,
       panelLocation: webViewSettings.panelLocation || 'auto',
@@ -177,6 +181,13 @@ export class SettingsSyncService {
           'secondaryTerminal',
           'enableCliAgentIntegration',
           settings.enableCliAgentIntegration
+        );
+      }
+      if (settings.enableTerminalHeaderEnhancements !== undefined) {
+        await configService.update(
+          'secondaryTerminal',
+          'enableTerminalHeaderEnhancements',
+          settings.enableTerminalHeaderEnhancements
         );
       }
       if (settings.activeBorderMode !== undefined) {

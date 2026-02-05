@@ -44,6 +44,9 @@ export class TerminalStateDisplayManager {
       // Sync tabs
       this.syncTabs(state);
 
+      // Sync header colors
+      this.syncHeaderIndicatorColors(state);
+
       log(`🎨 [UI] Updated: ${state.terminals.length}/${state.maxTerminals} terminals`);
     } catch (error) {
       log('❌ [UI] Error updating from state:', error);
@@ -169,5 +172,13 @@ export class TerminalStateDisplayManager {
         isClosable: filteredTerminals.length > 1,
       }))
     );
+  }
+
+  private syncHeaderIndicatorColors(state: TerminalState): void {
+    state.terminals.forEach((terminal) => {
+      if (terminal.indicatorColor) {
+        this.uiManager.updateTerminalHeader(terminal.id, undefined, terminal.indicatorColor);
+      }
+    });
   }
 }

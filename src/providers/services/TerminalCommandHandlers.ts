@@ -297,6 +297,100 @@ export class TerminalCommandHandlers {
   }
 
   /**
+   * Handle rename terminal command
+   */
+  public async handleRenameTerminal(message: WebviewMessage): Promise<void> {
+    if (!hasTerminalId(message)) {
+      log('⚠️ [HANDLER] renameTerminal missing terminalId');
+      return;
+    }
+
+    const nextName = (message as any)?.newName;
+    if (typeof nextName !== 'string' || nextName.trim().length === 0) {
+      log('⚠️ [HANDLER] renameTerminal called without valid newName');
+      return;
+    }
+
+    try {
+      const renamed = this.deps.terminalManager.renameTerminal(message.terminalId, nextName.trim());
+      if (!renamed) {
+        log(`⚠️ [HANDLER] renameTerminal failed for terminalId=${message.terminalId}`);
+        return;
+      }
+
+      await this.deps.communicationService.sendMessage({
+        command: 'stateUpdate',
+        state: this.deps.terminalManager.getCurrentState(),
+      });
+
+      log(`✅ [HANDLER] Terminal renamed: ${message.terminalId} -> ${nextName.trim()}`);
+    } catch (error) {
+      log('❌ [HANDLER] Failed to rename terminal:', error);
+    }
+  }
+
+  /**
+   * Handle unified terminal header update command (name/color)
+   */
+  public async handleUpdateTerminalHeader(message: WebviewMessage): Promise<void> {
+    if (!hasTerminalId(message)) {
+      log('⚠️ [HANDLER] updateTerminalHeader missing terminalId');
+      return;
+    }
+
+    const rawName = (message as any)?.newName;
+    const nextName =
+      typeof rawName === 'string' && rawName.trim().length > 0 ? rawName.trim() : undefined;
+    const rawIndicatorColor = (message as any)?.indicatorColor;
+    const indicatorColor =
+      typeof rawIndicatorColor === 'string' &&
+      /^#[0-9A-Fa-f]{6}$/.test(rawIndicatorColor.trim())
+        ? rawIndicatorColor.trim().toUpperCase()
+        : undefined;
+
+    if (!nextName && !indicatorColor) {
+      log('⚠️ [HANDLER] updateTerminalHeader called without valid updates');
+      return;
+    }
+
+    try {
+      const manager = this.deps.terminalManager as unknown as {
+        updateTerminalHeader?: (
+          terminalId: string,
+          updates: { newName?: string; indicatorColor?: string }
+        ) => boolean;
+      };
+
+      let updated = false;
+      if (typeof manager.updateTerminalHeader === 'function') {
+        updated = manager.updateTerminalHeader(message.terminalId, {
+          ...(nextName ? { newName: nextName } : {}),
+          ...(indicatorColor ? { indicatorColor } : {}),
+        });
+      } else if (nextName) {
+        // Backward compatibility when updateTerminalHeader is unavailable
+        updated = this.deps.terminalManager.renameTerminal(message.terminalId, nextName);
+      }
+
+      if (!updated) {
+        log(`⚠️ [HANDLER] updateTerminalHeader failed for terminalId=${message.terminalId}`);
+        return;
+      }
+
+      await this.deps.communicationService.sendMessage({
+        command: 'stateUpdate',
+        state: this.deps.terminalManager.getCurrentState(),
+      });
+
+      log(
+        `✅ [HANDLER] Terminal header updated: ${message.terminalId} (name=${nextName ?? 'unchanged'}, color=${indicatorColor ?? 'unchanged'})`
+      );
+    } catch (error) {
+      log('❌ [HANDLER] Failed to update terminal header:', error);
+    }
+  }
+
+  /**
    * Handle open terminal link command
    */
   public async handleOpenTerminalLink(message: WebviewMessage): Promise<void> {

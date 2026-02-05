@@ -19,6 +19,7 @@ export class TerminalStateCoordinator {
       id: terminal.id,
       name: terminal.name,
       isActive: terminal.isActive,
+      ...(terminal.indicatorColor ? { indicatorColor: terminal.indicatorColor } : {}),
     }));
 
     return {
@@ -113,5 +114,51 @@ export class TerminalStateCoordinator {
     if (terminal) {
       terminal.cwd = cwd;
     }
+  }
+
+  public renameTerminal(terminalId: string, newName: string): boolean {
+    return this.updateTerminalHeader(terminalId, { newName });
+  }
+
+  public updateTerminalHeader(
+    terminalId: string,
+    updates: { newName?: string; indicatorColor?: string }
+  ): boolean {
+    const terminal = this._terminals.get(terminalId);
+    if (!terminal) {
+      return false;
+    }
+
+    const hasName = typeof updates.newName === 'string' && updates.newName.trim().length > 0;
+    const hasColor =
+      typeof updates.indicatorColor === 'string' && updates.indicatorColor.trim().length > 0;
+
+    if (!hasName && !hasColor) {
+      return false;
+    }
+
+    let changed = false;
+
+    if (hasName) {
+      const trimmedName = updates.newName!.trim();
+      if (terminal.name !== trimmedName) {
+        terminal.name = trimmedName;
+        changed = true;
+      }
+    }
+
+    if (hasColor) {
+      const normalizedColor = updates.indicatorColor!.trim().toUpperCase();
+      if (terminal.indicatorColor !== normalizedColor) {
+        terminal.indicatorColor = normalizedColor;
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      this.notifyStateUpdate();
+    }
+
+    return true;
   }
 }

@@ -581,6 +581,18 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         category: 'terminal' as const,
       },
       {
+        command: 'renameTerminal',
+        handler: async (msg: WebviewMessage) =>
+          await this._terminalCommandHandlers.handleRenameTerminal(msg),
+        category: 'terminal' as const,
+      },
+      {
+        command: 'updateTerminalHeader',
+        handler: async (msg: WebviewMessage) =>
+          await this._terminalCommandHandlers.handleUpdateTerminalHeader(msg),
+        category: 'terminal' as const,
+      },
+      {
         command: 'requestInitialTerminal',
         handler: async (msg: WebviewMessage) =>
           await this._terminalCommandHandlers.handleRequestInitialTerminal(msg),
@@ -1189,6 +1201,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       event.affectsConfiguration('secondaryTerminal.theme') ||
       event.affectsConfiguration('secondaryTerminal.cursorBlink') ||
       event.affectsConfiguration('secondaryTerminal.enableCliAgentIntegration') ||
+      event.affectsConfiguration('secondaryTerminal.enableTerminalHeaderEnhancements') ||
       event.affectsConfiguration('secondaryTerminal.dynamicSplitDirection') ||
       event.affectsConfiguration('secondaryTerminal.panelLocation') ||
       event.affectsConfiguration('editor.multiCursorModifier') ||

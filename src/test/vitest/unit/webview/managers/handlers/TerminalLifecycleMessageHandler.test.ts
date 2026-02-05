@@ -16,8 +16,13 @@ describe('TerminalLifecycleMessageHandler', () => {
   let handler: TerminalLifecycleMessageHandler;
   let mockCoordinator: IManagerCoordinator;
   let mockLogger: ManagerLogger;
+  let mockUiManager: { setTerminalProcessingIndicator: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
+    mockUiManager = {
+      setTerminalProcessingIndicator: vi.fn(),
+    };
+
     // Create mock logger
     mockLogger = {
       info: vi.fn(),
@@ -53,7 +58,7 @@ describe('TerminalLifecycleMessageHandler', () => {
           bufferedWrite: vi.fn(),
         } as any,
         input: {} as any,
-        ui: {} as any,
+        ui: mockUiManager as any,
         config: {} as any,
         message: {} as any,
         notification: {} as any,
@@ -151,6 +156,64 @@ describe('TerminalLifecycleMessageHandler', () => {
 
       handler.handleMessage(message, mockCoordinator);
       // Should not throw error
+    });
+
+    it('should toggle processing indicator around output activity', async () => {
+      vi.useFakeTimers();
+
+      const message: MessageCommand = {
+        command: 'output',
+        terminalId: 'terminal-1',
+        data: 'processing...',
+      };
+
+      await handler.handleMessage({ command: 'startOutput', terminalId: 'terminal-1' }, mockCoordinator);
+      await handler.handleMessage(message, mockCoordinator);
+
+      expect(mockUiManager.setTerminalProcessingIndicator).toHaveBeenCalledWith(
+        'terminal-1',
+        true
+      );
+
+      vi.advanceTimersByTime(1200);
+
+      expect(mockUiManager.setTerminalProcessingIndicator).toHaveBeenCalledWith(
+        'terminal-1',
+        false
+      );
+    });
+
+    it('should not enable processing indicator when header enhancements are disabled', async () => {
+      vi.useFakeTimers();
+
+      mockCoordinator.getManagers = () => ({
+        performance: {
+          scheduleOutputBuffer: vi.fn(),
+          bufferedWrite: vi.fn(),
+        } as any,
+        input: {} as any,
+        ui: mockUiManager as any,
+        config: {
+          getCurrentSettings: () => ({ enableTerminalHeaderEnhancements: false }),
+        } as any,
+        message: {} as any,
+        notification: {} as any,
+      });
+
+      await handler.handleMessage({ command: 'startOutput', terminalId: 'terminal-1' }, mockCoordinator);
+      await handler.handleMessage(
+        {
+          command: 'output',
+          terminalId: 'terminal-1',
+          data: 'processing...',
+        },
+        mockCoordinator
+      );
+
+      expect(mockUiManager.setTerminalProcessingIndicator).not.toHaveBeenCalledWith(
+        'terminal-1',
+        true
+      );
     });
   });
 

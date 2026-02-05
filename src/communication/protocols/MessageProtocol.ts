@@ -79,6 +79,8 @@ export type WebViewToExtensionCommand =
   | 'openSettings'
   | 'openTerminalLink'
   | 'reorderTerminals'
+  | 'renameTerminal'
+  | 'updateTerminalHeader'
   | 'killTerminal'
   | 'deleteTerminal'
   | 'getSettings'

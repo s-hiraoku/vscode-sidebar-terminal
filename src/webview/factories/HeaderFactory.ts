@@ -11,6 +11,8 @@ export interface TerminalHeaderElements {
   titleSection: HTMLElement;
   nameSpan: HTMLElement;
   idSpan: HTMLElement;
+  headerEnhancementsEnabled: boolean;
+  processingIndicator: HTMLElement | null;
   statusSection: HTMLElement;
   statusSpan: HTMLElement | null;
   indicator: HTMLElement | null;
@@ -25,14 +27,38 @@ export interface HeaderConfig {
   terminalName: string;
   customClasses?: string[];
   showSplitButton?: boolean;
+  onRenameSubmit?: (terminalId: string, newName: string) => void;
+  onHeaderUpdate?: (
+    terminalId: string,
+    updates: { newName?: string; indicatorColor?: string }
+  ) => void;
   onHeaderClick?: (terminalId: string) => void;
   onCloseClick?: (terminalId: string) => void;
   onSplitClick?: (terminalId: string) => void;
   onAiAgentToggleClick?: (terminalId: string) => void;
+  indicatorColor?: string;
+  headerEnhancementsEnabled?: boolean;
   // Theme colors (optional - defaults to VS Code CSS variables)
   backgroundColor?: string;
   foregroundColor?: string;
 }
+
+export const HEADER_INDICATOR_COLOR_PALETTE = [
+  '#FF0000',
+  '#FF7F00',
+  '#FFFF00',
+  '#00FF00',
+  '#00FFFF',
+  '#0000FF',
+  '#8B00FF',
+  '#FF00FF',
+  '#FF69B4',
+  '#008080',
+  '#4B0082',
+  '#FFD700',
+  '#00BFA6',
+  '#FFFFFF',
+] as const;
 
 /**
  * シンプルなヘッダー構造:
@@ -59,6 +85,8 @@ export class HeaderFactory {
     // Use provided colors or fall back to VS Code CSS variables
     const bgColor = config.backgroundColor || 'var(--vscode-tab-activeBackground)';
     const fgColor = config.foregroundColor || 'var(--vscode-tab-activeForeground)';
+    const indicatorColor = config.indicatorColor || '#00FFFF';
+    const headerEnhancementsEnabled = config.headerEnhancementsEnabled !== false;
 
     // メインコンテナ
     const container = DOMUtils.createElement(
@@ -77,12 +105,52 @@ export class HeaderFactory {
         userSelect: 'none',
         minHeight: '32px',
         boxSizing: 'border-box',
+        position: 'relative',
+        overflow: 'hidden',
       },
       {
         'data-terminal-id': terminalId,
         className: ['terminal-header', ...customClasses].join(' '),
       }
     );
+    container.style.setProperty('--terminal-indicator-color', indicatorColor);
+    container.dataset.headerEnhancementsEnabled = String(headerEnhancementsEnabled);
+
+    HeaderFactory.ensureProcessingIndicatorStyles();
+
+    const processingIndicator = DOMUtils.createElement(
+      'div',
+      {
+        position: 'absolute',
+        top: '0',
+        left: '0',
+        right: '0',
+        height: '2px',
+        overflow: 'hidden',
+        pointerEvents: 'none',
+        opacity: '0',
+        transition: 'opacity 0.12s ease',
+      },
+      {
+        className: 'terminal-processing-indicator',
+      }
+    );
+
+    const processingIndicatorFlow = DOMUtils.createElement(
+      'div',
+      {
+        width: '42%',
+        height: '100%',
+        background:
+          'linear-gradient(90deg, transparent 0%, var(--terminal-indicator-color) 22%, var(--terminal-indicator-color) 78%, transparent 100%)',
+        transform: 'translateX(-130%)',
+        animation: 'terminal-processing-flow 1.1s linear infinite',
+      },
+      {
+        className: 'terminal-processing-indicator-flow',
+      }
+    );
+    processingIndicator.appendChild(processingIndicatorFlow);
 
     // タイトルセクション
     const titleSection = DOMUtils.createElement(
@@ -114,6 +182,7 @@ export class HeaderFactory {
       {
         textContent: terminalName,
         className: 'terminal-name',
+        title: terminalName,
       }
     );
 
@@ -329,9 +398,19 @@ export class HeaderFactory {
     // Add header click handler for terminal activation
     if (config.onHeaderClick) {
       container.addEventListener('click', (event: MouseEvent) => {
-        // Prevent click if clicking on buttons
+        // Prevent click if clicking on controls, rename input, or second click of double-click.
+        // Keep single-click activation behavior intact.
         const target = event.target as HTMLElement;
         if (target.closest('.terminal-control')) {
+          return;
+        }
+        if (target.closest('.terminal-name-edit-input')) {
+          return;
+        }
+        if (target.closest('.terminal-header-editor')) {
+          return;
+        }
+        if (event.detail >= 2) {
           return;
         }
 
@@ -341,6 +420,19 @@ export class HeaderFactory {
 
       // Add visual feedback for clickable header
       container.style.cursor = 'pointer';
+    }
+
+    if (config.onRenameSubmit || config.onHeaderUpdate) {
+      HeaderFactory.setupHeaderEditor({
+        terminalId,
+        container,
+        titleSection,
+        nameSpan,
+        initialIndicatorColor: indicatorColor,
+        headerEnhancementsEnabled,
+        onRenameSubmit: config.onRenameSubmit,
+        onHeaderUpdate: config.onHeaderUpdate,
+      });
     }
 
     // 要素を組み立て
@@ -353,7 +445,7 @@ export class HeaderFactory {
       DOMUtils.appendChildren(controlsSection, aiAgentToggleButton, closeButton);
     }
 
-    DOMUtils.appendChildren(container, titleSection, statusSection, controlsSection);
+    DOMUtils.appendChildren(container, processingIndicator, titleSection, statusSection, controlsSection);
 
     log(`🏗️ [HeaderFactory] Created unified header for terminal: ${terminalId}`);
 
@@ -362,6 +454,8 @@ export class HeaderFactory {
       titleSection,
       nameSpan,
       idSpan,
+      headerEnhancementsEnabled,
+      processingIndicator,
       statusSection,
       statusSpan: null, // CLI Agent status要素はまだ作成されていない
       indicator: null, // CLI Agent indicator要素はまだ作成されていない
@@ -370,6 +464,187 @@ export class HeaderFactory {
       closeButton,
       splitButton,
     };
+  }
+
+  private static setupHeaderEditor(params: {
+    terminalId: string;
+    container: HTMLElement;
+    titleSection: HTMLElement;
+    nameSpan: HTMLElement;
+    initialIndicatorColor: string;
+    headerEnhancementsEnabled: boolean;
+    onRenameSubmit?: (terminalId: string, newName: string) => void;
+    onHeaderUpdate?: (
+      terminalId: string,
+      updates: { newName?: string; indicatorColor?: string }
+    ) => void;
+  }): void {
+    const { terminalId, container, titleSection, nameSpan, onRenameSubmit, onHeaderUpdate } = params;
+    let isEditing = false;
+    let currentIndicatorColor = params.initialIndicatorColor;
+
+    const openEditor = (event: MouseEvent): void => {
+      const target = event.target as HTMLElement;
+      if (target.closest('.terminal-control')) {
+        return;
+      }
+      if (target.closest('.terminal-header-color-option')) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (isEditing) {
+        return;
+      }
+      isEditing = true;
+
+      const originalName = nameSpan.textContent?.trim() || '';
+
+      const editor = document.createElement('div');
+      editor.className = 'terminal-header-editor';
+      editor.style.display = 'flex';
+      editor.style.flexDirection = 'column';
+      editor.style.gap = '6px';
+      editor.style.width = '100%';
+      editor.style.minWidth = '0';
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'terminal-name-edit-input';
+      input.value = originalName;
+      input.title = originalName;
+      input.style.background = 'var(--vscode-input-background)';
+      input.style.color = 'var(--vscode-input-foreground)';
+      input.style.border = '1px solid var(--vscode-input-border)';
+      input.style.borderRadius = '3px';
+      input.style.padding = '2px 6px';
+      input.style.fontSize = '11px';
+      input.style.lineHeight = '1.4';
+      input.style.width = '100%';
+      input.style.minWidth = '0';
+      input.style.boxSizing = 'border-box';
+      input.style.userSelect = 'text';
+
+      const palette = document.createElement('div');
+      palette.className = 'terminal-header-color-palette';
+      palette.style.display = 'flex';
+      palette.style.flexWrap = 'wrap';
+      palette.style.gap = '4px';
+
+      const refreshSelection = (): void => {
+        const options = palette.querySelectorAll<HTMLButtonElement>('.terminal-header-color-option');
+        options.forEach((option) => {
+          const isSelected = option.dataset.indicatorColor === currentIndicatorColor;
+          option.style.outline = isSelected ? '1px solid var(--vscode-focusBorder)' : '1px solid transparent';
+          option.style.opacity = isSelected ? '1' : '0.78';
+        });
+      };
+
+      const enhancementsEnabled = container.dataset.headerEnhancementsEnabled !== 'false';
+      if (enhancementsEnabled) {
+        HEADER_INDICATOR_COLOR_PALETTE.forEach((color) => {
+          const colorButton = document.createElement('button');
+          colorButton.type = 'button';
+          colorButton.className = 'terminal-header-color-option';
+          colorButton.dataset.indicatorColor = color;
+          colorButton.title = color;
+          colorButton.style.width = '14px';
+          colorButton.style.height = '14px';
+          colorButton.style.borderRadius = '50%';
+          colorButton.style.border = '1px solid rgba(127, 127, 127, 0.6)';
+          colorButton.style.padding = '0';
+          colorButton.style.cursor = 'pointer';
+          colorButton.style.backgroundColor = color;
+          colorButton.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          });
+          colorButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            currentIndicatorColor = color;
+            container.style.setProperty('--terminal-indicator-color', color);
+            refreshSelection();
+            onHeaderUpdate?.(terminalId, { indicatorColor: color });
+            log(`🎨 [HeaderFactory] Indicator color updated: ${terminalId} -> ${color}`);
+          });
+          palette.appendChild(colorButton);
+        });
+        refreshSelection();
+      }
+
+      const finalizeRename = (commit: boolean): void => {
+        if (!isEditing) {
+          return;
+        }
+        isEditing = false;
+
+        const nextName = input.value.trim();
+        const shouldCommit = commit && nextName.length > 0 && nextName !== originalName;
+
+        if (editor.parentElement === titleSection) {
+          titleSection.replaceChild(nameSpan, editor);
+        } else if (!nameSpan.parentElement) {
+          titleSection.appendChild(nameSpan);
+        }
+
+        if (shouldCommit) {
+          nameSpan.textContent = nextName;
+          nameSpan.setAttribute('title', nextName);
+          onRenameSubmit?.(terminalId, nextName);
+          onHeaderUpdate?.(terminalId, { newName: nextName });
+          log(`✏️ [HeaderFactory] Terminal renamed via header: ${terminalId} -> ${nextName}`);
+        } else {
+          nameSpan.textContent = originalName;
+          nameSpan.setAttribute('title', originalName);
+        }
+      };
+
+      input.addEventListener('click', (e) => e.stopPropagation());
+      input.addEventListener('dblclick', (e) => e.stopPropagation());
+      input.addEventListener('mousedown', (e) => e.stopPropagation());
+      input.addEventListener('keydown', (e: KeyboardEvent) => {
+        e.stopPropagation();
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          finalizeRename(true);
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          finalizeRename(false);
+        }
+      });
+      input.addEventListener('blur', () => finalizeRename(true));
+
+      editor.appendChild(input);
+      if (enhancementsEnabled) {
+        editor.appendChild(palette);
+      }
+
+      if (nameSpan.parentElement === titleSection) {
+        titleSection.replaceChild(editor, nameSpan);
+      } else {
+        titleSection.appendChild(editor);
+      }
+
+      input.focus();
+      input.select();
+      // Header single-click activation can enqueue terminal focus.
+      // Re-assert focus on the rename input so double-click rename remains usable.
+      window.setTimeout(() => {
+        if (!isEditing) {
+          return;
+        }
+        if (document.activeElement !== input) {
+          input.focus();
+          input.select();
+        }
+      }, 24);
+    };
+
+    nameSpan.addEventListener('dblclick', openEditor);
+    container.addEventListener('dblclick', openEditor);
   }
 
   /**
@@ -492,7 +767,38 @@ export class HeaderFactory {
    */
   public static updateTerminalName(elements: TerminalHeaderElements, newName: string): void {
     elements.nameSpan.textContent = newName;
+    elements.nameSpan.setAttribute('title', newName);
     log(`🔄 [HeaderFactory] Updated terminal name: ${newName}`);
+  }
+
+  public static setIndicatorColor(elements: TerminalHeaderElements, color: string): void {
+    elements.container.style.setProperty('--terminal-indicator-color', color);
+    log(`🎨 [HeaderFactory] Updated indicator color: ${color}`);
+  }
+
+  public static setProcessingIndicatorActive(
+    elements: TerminalHeaderElements,
+    isActive: boolean
+  ): void {
+    if (!elements.processingIndicator) {
+      return;
+    }
+    if (!HeaderFactory.areHeaderEnhancementsEnabled(elements)) {
+      elements.processingIndicator.style.opacity = '0';
+      return;
+    }
+    elements.processingIndicator.style.opacity = isActive ? '1' : '0';
+  }
+
+  public static setHeaderEnhancementsEnabled(
+    elements: TerminalHeaderElements,
+    enabled: boolean
+  ): void {
+    elements.headerEnhancementsEnabled = enabled;
+    elements.container.dataset.headerEnhancementsEnabled = String(enabled);
+    if (!enabled && elements.processingIndicator) {
+      elements.processingIndicator.style.opacity = '0';
+    }
   }
 
   /**
@@ -534,5 +840,28 @@ export class HeaderFactory {
         `🔄 [HeaderFactory] AI Agent toggle button visibility: ${visible} (status: ${agentStatus || 'none'})`
       );
     }
+  }
+
+  private static ensureProcessingIndicatorStyles(): void {
+    if (document.getElementById('terminal-processing-indicator-style')) {
+      return;
+    }
+
+    const style = document.createElement('style');
+    style.id = 'terminal-processing-indicator-style';
+    style.textContent = `
+      @keyframes terminal-processing-flow {
+        0% { transform: translateX(-130%); }
+        100% { transform: translateX(250%); }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  private static areHeaderEnhancementsEnabled(elements: TerminalHeaderElements): boolean {
+    if (elements.container.dataset.headerEnhancementsEnabled === 'false') {
+      return false;
+    }
+    return elements.headerEnhancementsEnabled !== false;
   }
 }

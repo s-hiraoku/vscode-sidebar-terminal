@@ -240,6 +240,52 @@ export class TerminalManager {
     this._stateCoordinator.updateTerminalCwd(terminalId, cwd);
   }
 
+  public renameTerminal(terminalId: string, newName: string): boolean {
+    const trimmedName = newName.trim();
+    if (!trimmedName) {
+      return false;
+    }
+
+    const terminal = this._terminals.get(terminalId);
+    if (!terminal) {
+      return false;
+    }
+
+    if (terminal.name === trimmedName) {
+      return true;
+    }
+
+    return this._stateCoordinator.updateTerminalHeader(terminalId, { newName: trimmedName });
+  }
+
+  public updateTerminalHeader(
+    terminalId: string,
+    updates: { newName?: string; indicatorColor?: string }
+  ): boolean {
+    const terminal = this._terminals.get(terminalId);
+    if (!terminal) {
+      return false;
+    }
+
+    const nextName = updates.newName?.trim();
+    const hasName = typeof nextName === 'string' && nextName.length > 0;
+    const hasColor =
+      typeof updates.indicatorColor === 'string' && updates.indicatorColor.trim().length > 0;
+
+    if (!hasName && !hasColor) {
+      return false;
+    }
+
+    if (hasName && terminal.name === nextName && !hasColor) {
+      return true;
+    }
+
+    return this._stateCoordinator.updateTerminalHeader(terminalId, {
+      ...(hasName ? { newName: nextName } : {}),
+      ...(hasColor ? { indicatorColor: updates.indicatorColor!.trim().toUpperCase() } : {}),
+    });
+  }
+
   // === I/O Operations ===
 
   public sendInput(data: string, terminalId?: string): void {

@@ -88,7 +88,12 @@ export class TerminalIOCoordinator {
     if (!terminal) {
       return undefined;
     }
-    return { id: terminal.id, name: terminal.name, isActive: terminal.isActive };
+    return {
+      id: terminal.id,
+      name: terminal.name,
+      isActive: terminal.isActive,
+      ...(terminal.indicatorColor ? { indicatorColor: terminal.indicatorColor } : {}),
+    };
   }
 
   public writeToTerminal(terminalId: string, data: string): boolean {

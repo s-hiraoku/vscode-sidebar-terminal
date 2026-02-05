@@ -24,11 +24,18 @@ export interface TerminalHeaderConfig {
   showCloseButton?: boolean;
   showSplitButton?: boolean;
   customTitle?: string;
+  onRenameSubmit?: (terminalId: string, newName: string) => void;
+  onHeaderUpdate?: (
+    terminalId: string,
+    updates: { newName?: string; indicatorColor?: string }
+  ) => void;
   onHeaderClick?: (terminalId: string) => void;
   onContainerClick?: (terminalId: string) => void;
   onCloseClick?: (terminalId: string) => void;
   onSplitClick?: (terminalId: string) => void;
   onAiAgentToggleClick?: (terminalId: string) => void;
+  indicatorColor?: string;
+  headerEnhancementsEnabled?: boolean;
 }
 
 export interface ContainerElements {
@@ -116,10 +123,14 @@ export class TerminalContainerFactory {
           terminalId: config.id,
           terminalName: headerConfig.customTitle || config.name,
           showSplitButton: headerConfig.showSplitButton,
+          onRenameSubmit: headerConfig.onRenameSubmit,
+          onHeaderUpdate: headerConfig.onHeaderUpdate,
           onHeaderClick: headerConfig.onHeaderClick,
           onCloseClick: headerConfig.onCloseClick,
           onSplitClick: headerConfig.onSplitClick,
           onAiAgentToggleClick: headerConfig.onAiAgentToggleClick,
+          indicatorColor: headerConfig.indicatorColor,
+          headerEnhancementsEnabled: headerConfig.headerEnhancementsEnabled,
         });
         header = headerElements.container;
         closeButton = headerElements.closeButton;
@@ -137,9 +148,16 @@ export class TerminalContainerFactory {
         if (header) {
           // For terminals with headers: only activate on header clicks
           header.addEventListener('click', (event: MouseEvent) => {
-            // Only activate if clicking on the header itself, not buttons
+            // Only activate if clicking on the header itself.
+            // Skip controls, rename input interactions, and second click of double-click.
             const target = event.target as HTMLElement;
             if (target.closest('.terminal-control')) {
+              return;
+            }
+            if (target.closest('.terminal-name-edit-input')) {
+              return;
+            }
+            if (event.detail >= 2) {
               return;
             }
 

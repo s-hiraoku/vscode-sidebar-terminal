@@ -296,7 +296,9 @@ export interface IUIManager {
     terminalName: string,
     onAiAgentToggleClick?: (terminalId: string) => void
   ): HTMLElement;
-  updateTerminalHeader(terminalId: string, newName: string): void;
+  updateTerminalHeader(terminalId: string, newName?: string, indicatorColor?: string): void;
+  setTerminalHeaderEnhancementsEnabled(enabled: boolean): void;
+  setTerminalProcessingIndicator(terminalId: string, isProcessing: boolean): void;
   updateCliAgentStatusDisplay(
     activeTerminalName: string | null,
     status: 'connected' | 'disconnected' | 'none',

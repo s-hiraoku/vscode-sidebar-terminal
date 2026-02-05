@@ -345,12 +345,43 @@ export class TerminalCreationService implements Disposable {
           showCloseButton: true,
           showSplitButton: false,
           customTitle: terminalName,
+          indicatorColor: (config as { indicatorColor?: string } | undefined)?.indicatorColor,
+          headerEnhancementsEnabled: currentSettings?.enableTerminalHeaderEnhancements !== false,
+          onHeaderUpdate: (clickedTerminalId, updates) => {
+            if (updates.newName) {
+              terminalLogger.info(
+                `✏️ Header rename submitted: ${clickedTerminalId} -> ${updates.newName}`
+              );
+
+              const terminalContainer = document.querySelector(
+                `[data-terminal-id="${clickedTerminalId}"]`
+              ) as HTMLElement | null;
+              if (terminalContainer) {
+                terminalContainer.setAttribute('data-terminal-name', updates.newName);
+              }
+
+              const tabManager = this.coordinator.getManagers?.()?.tabs;
+              if (tabManager) {
+                const extendedTabManager = tabManager as unknown as {
+                  handleTerminalRenamed?: (terminalId: string, updatedName: string) => void;
+                };
+                if (typeof extendedTabManager.handleTerminalRenamed === 'function') {
+                  extendedTabManager.handleTerminalRenamed(clickedTerminalId, updates.newName);
+                } else {
+                  tabManager.addTab(clickedTerminalId, updates.newName);
+                }
+              }
+            }
+
+            this.coordinator.postMessageToExtension({
+              command: 'updateTerminalHeader',
+              terminalId: clickedTerminalId,
+              ...(updates.newName ? { newName: updates.newName } : {}),
+              ...(updates.indicatorColor ? { indicatorColor: updates.indicatorColor } : {}),
+            });
+          },
           onHeaderClick: (clickedTerminalId) => {
             terminalLogger.info(`🎯 Header clicked for terminal: ${clickedTerminalId}`);
-            this.coordinator?.setActiveTerminalId(clickedTerminalId);
-          },
-          onContainerClick: (clickedTerminalId) => {
-            terminalLogger.info(`🎯 Container clicked for terminal: ${clickedTerminalId}`);
             this.coordinator?.setActiveTerminalId(clickedTerminalId);
           },
           onCloseClick: (clickedTerminalId) => {

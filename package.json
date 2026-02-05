@@ -2,7 +2,7 @@
   "name": "vscode-sidebar-terminal",
   "displayName": "Secondary Terminal",
   "description": "Production-ready VS Code extension with TypeScript-compliant terminal in sidebar, ProcessState/InteractionState management, and comprehensive session management.",
-  "version": "0.2.12",
+  "version": "0.2.13",
   "publisher": "s-hiraoku",
   "sideEffects": false,
   "engines": {
@@ -462,6 +462,11 @@
           "type": "boolean",
           "default": true,
           "description": "Enable file reference shortcuts: Use Cmd+Option+L (Mac) or Alt+Ctrl+L (Linux/Windows) to insert file references"
+        },
+        "secondaryTerminal.enableTerminalHeaderEnhancements": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable enhanced terminal header UI (processing indicator and color palette editor)."
         },
         "secondaryTerminal.enableGitHubCopilotIntegration": {
           "type": "boolean",
