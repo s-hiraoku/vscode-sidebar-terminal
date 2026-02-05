@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Terminal Rename from Header**: Double-click the terminal name in the header to rename it inline
+  - Supports Enter to confirm and Escape to cancel
+  - Name changes propagate to tab labels and terminal state
+  - New `renameTerminal` and `updateTerminalHeader` WebView-to-Extension commands
+
+- **Terminal Header Flow Indicator**: Visual processing status indicator in terminal headers
+  - Shows animated flow indicator when terminal is actively processing output
+  - Color palette editor for customizing terminal header accent colors
+
+- **Terminal Header Enhancements Toggle**: New `secondaryTerminal.enableTerminalHeaderEnhancements` setting
+  - Allows users to enable/disable enhanced header UI features (processing indicator and color editor)
+  - Enabled by default
+
+- **Multilingual README**: Added README translations for 5 additional languages
+  - Chinese Simplified (README.zh-CN.md), Korean (README.ko.md), Spanish (README.es.md), French (README.fr.md), German (README.de.md)
+  - Updated README.ja.md to match latest English README content
+  - Added language switcher links across all README files
+
+### Changed
+
+- **README Rewrite**: Comprehensive rewrite of README.md and README.ja.md with accurate default values and improved structure
+
+### Removed
+
+- Removed outdated `docs/README_ja.md` (superseded by root-level `README.ja.md`)
+
 ## [0.2.12] - 2026-02-05
 
 ### Fixed
