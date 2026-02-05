@@ -107,7 +107,7 @@ npm run tdd:comprehensive-check
 
 ```bash
 # 修正版のパッチリリース
-npm run release:patch:safe
+npm run release:patch
 ```
 
 ## 📞 緊急連絡先・エスカレーション
