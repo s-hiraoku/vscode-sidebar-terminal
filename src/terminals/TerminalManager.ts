@@ -240,6 +240,24 @@ export class TerminalManager {
     this._stateCoordinator.updateTerminalCwd(terminalId, cwd);
   }
 
+  public renameTerminal(terminalId: string, newName: string): boolean {
+    const trimmedName = newName.trim();
+    if (!trimmedName) {
+      return false;
+    }
+
+    const terminal = this._terminals.get(terminalId);
+    if (!terminal) {
+      return false;
+    }
+
+    if (terminal.name === trimmedName) {
+      return true;
+    }
+
+    return this._stateCoordinator.renameTerminal(terminalId, trimmedName);
+  }
+
   // === I/O Operations ===
 
   public sendInput(data: string, terminalId?: string): void {

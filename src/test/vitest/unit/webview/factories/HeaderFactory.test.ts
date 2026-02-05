@@ -145,4 +145,116 @@ describe('HeaderFactory', () => {
       expect(elements.aiAgentToggleButton?.title).toContain('Connected');
     });
   });
+
+  describe('Terminal Name Editing', () => {
+    it('should not trigger header activation on second click of terminal-name double click', () => {
+      const onRenameSubmit = vi.fn();
+      const onHeaderClick = vi.fn();
+      const elements = HeaderFactory.createTerminalHeader({
+        terminalId: 't1',
+        terminalName: 'Original',
+        onRenameSubmit,
+        onHeaderClick,
+      });
+
+      elements.nameSpan.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+      elements.nameSpan.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 2 }));
+      elements.nameSpan.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, detail: 2 }));
+
+      const input = elements.titleSection.querySelector('.terminal-name-edit-input');
+      expect(onHeaderClick).toHaveBeenCalledTimes(1);
+      expect(input).toBeTruthy();
+    });
+
+    it('should enter rename mode on terminal name double click', () => {
+      const onRenameSubmit = vi.fn();
+      const elements = HeaderFactory.createTerminalHeader({
+        terminalId: 't1',
+        terminalName: 'Original',
+        onRenameSubmit,
+      });
+
+      elements.nameSpan.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+
+      const input = elements.titleSection.querySelector('.terminal-name-edit-input');
+      expect(input).toBeTruthy();
+      expect(onRenameSubmit).not.toHaveBeenCalled();
+    });
+
+    it('should submit rename on Enter', () => {
+      const onRenameSubmit = vi.fn();
+      const elements = HeaderFactory.createTerminalHeader({
+        terminalId: 't1',
+        terminalName: 'Original',
+        onRenameSubmit,
+      });
+
+      elements.nameSpan.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+      const input = elements.titleSection.querySelector(
+        '.terminal-name-edit-input'
+      ) as HTMLInputElement;
+      input.value = 'Renamed';
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+      expect(onRenameSubmit).toHaveBeenCalledWith('t1', 'Renamed');
+      expect(elements.nameSpan.textContent).toBe('Renamed');
+    });
+
+    it('should cancel rename on Escape', () => {
+      const onRenameSubmit = vi.fn();
+      const elements = HeaderFactory.createTerminalHeader({
+        terminalId: 't1',
+        terminalName: 'Original',
+        onRenameSubmit,
+      });
+
+      elements.nameSpan.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+      const input = elements.titleSection.querySelector(
+        '.terminal-name-edit-input'
+      ) as HTMLInputElement;
+      input.value = 'Renamed';
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+      expect(onRenameSubmit).not.toHaveBeenCalled();
+      expect(elements.nameSpan.textContent).toBe('Original');
+    });
+
+    it('should submit rename on blur', () => {
+      const onRenameSubmit = vi.fn();
+      const elements = HeaderFactory.createTerminalHeader({
+        terminalId: 't1',
+        terminalName: 'Original',
+        onRenameSubmit,
+      });
+
+      elements.nameSpan.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+      const input = elements.titleSection.querySelector(
+        '.terminal-name-edit-input'
+      ) as HTMLInputElement;
+      input.value = 'Renamed By Blur';
+      input.dispatchEvent(new Event('blur', { bubbles: true }));
+
+      expect(onRenameSubmit).toHaveBeenCalledWith('t1', 'Renamed By Blur');
+      expect(elements.nameSpan.textContent).toBe('Renamed By Blur');
+    });
+
+    it('should keep original name when submitting empty value', () => {
+      const onRenameSubmit = vi.fn();
+      const elements = HeaderFactory.createTerminalHeader({
+        terminalId: 't1',
+        terminalName: 'Original',
+        onRenameSubmit,
+      });
+
+      elements.nameSpan.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+      const input = elements.titleSection.querySelector(
+        '.terminal-name-edit-input'
+      ) as HTMLInputElement;
+      input.value = '   ';
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+      expect(onRenameSubmit).not.toHaveBeenCalled();
+      expect(elements.nameSpan.textContent).toBe('Original');
+    });
+  });
 });

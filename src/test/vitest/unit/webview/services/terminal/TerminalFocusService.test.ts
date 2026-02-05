@@ -90,5 +90,19 @@ describe('TerminalFocusService', () => {
       btn.click();
       expect(mockTerminal.focus).not.toHaveBeenCalled();
     });
+
+    it('should ignore clicks inside terminal header area', () => {
+      service.setupContainerFocusHandler(mockTerminal, 't1', mockContainer, mockContainer);
+
+      const header = document.createElement('div');
+      header.className = 'terminal-header';
+      const name = document.createElement('span');
+      name.className = 'terminal-name';
+      header.appendChild(name);
+      mockContainer.appendChild(header);
+
+      name.click();
+      expect(mockTerminal.focus).not.toHaveBeenCalled();
+    });
   });
 });

@@ -297,6 +297,39 @@ export class TerminalCommandHandlers {
   }
 
   /**
+   * Handle rename terminal command
+   */
+  public async handleRenameTerminal(message: WebviewMessage): Promise<void> {
+    if (!hasTerminalId(message)) {
+      log('⚠️ [HANDLER] renameTerminal missing terminalId');
+      return;
+    }
+
+    const nextName = (message as any)?.newName;
+    if (typeof nextName !== 'string' || nextName.trim().length === 0) {
+      log('⚠️ [HANDLER] renameTerminal called without valid newName');
+      return;
+    }
+
+    try {
+      const renamed = this.deps.terminalManager.renameTerminal(message.terminalId, nextName.trim());
+      if (!renamed) {
+        log(`⚠️ [HANDLER] renameTerminal failed for terminalId=${message.terminalId}`);
+        return;
+      }
+
+      await this.deps.communicationService.sendMessage({
+        command: 'stateUpdate',
+        state: this.deps.terminalManager.getCurrentState(),
+      });
+
+      log(`✅ [HANDLER] Terminal renamed: ${message.terminalId} -> ${nextName.trim()}`);
+    } catch (error) {
+      log('❌ [HANDLER] Failed to rename terminal:', error);
+    }
+  }
+
+  /**
    * Handle open terminal link command
    */
   public async handleOpenTerminalLink(message: WebviewMessage): Promise<void> {

@@ -558,6 +558,7 @@ export interface WebviewMessage {
     | 'openSettings'
     | 'openTerminalLink'
     | 'reorderTerminals'
+    | 'renameTerminal'
     | 'stateUpdate'
     | 'claudeStatusUpdate'
     | 'cliAgentStatusUpdate'
@@ -692,6 +693,7 @@ export interface WebviewMessage {
   exitCode?: number;
   terminalId?: string;
   terminalName?: string;
+  newName?: string;
   terminalNumber?: number; // Terminal number (1-5) - For Extension to WebView communication
 
   // Shell Integration properties

@@ -25,6 +25,7 @@ export interface HeaderConfig {
   terminalName: string;
   customClasses?: string[];
   showSplitButton?: boolean;
+  onRenameSubmit?: (terminalId: string, newName: string) => void;
   onHeaderClick?: (terminalId: string) => void;
   onCloseClick?: (terminalId: string) => void;
   onSplitClick?: (terminalId: string) => void;
@@ -114,6 +115,7 @@ export class HeaderFactory {
       {
         textContent: terminalName,
         className: 'terminal-name',
+        title: terminalName,
       }
     );
 
@@ -329,9 +331,16 @@ export class HeaderFactory {
     // Add header click handler for terminal activation
     if (config.onHeaderClick) {
       container.addEventListener('click', (event: MouseEvent) => {
-        // Prevent click if clicking on buttons
+        // Prevent click if clicking on controls, rename input, or second click of double-click.
+        // Keep single-click activation behavior intact.
         const target = event.target as HTMLElement;
         if (target.closest('.terminal-control')) {
+          return;
+        }
+        if (target.closest('.terminal-name-edit-input')) {
+          return;
+        }
+        if (event.detail >= 2) {
           return;
         }
 
@@ -341,6 +350,15 @@ export class HeaderFactory {
 
       // Add visual feedback for clickable header
       container.style.cursor = 'pointer';
+    }
+
+    if (config.onRenameSubmit) {
+      HeaderFactory.setupInlineRename({
+        terminalId,
+        titleSection,
+        nameSpan,
+        onRenameSubmit: config.onRenameSubmit,
+      });
     }
 
     // 要素を組み立て
@@ -370,6 +388,106 @@ export class HeaderFactory {
       closeButton,
       splitButton,
     };
+  }
+
+  private static setupInlineRename(params: {
+    terminalId: string;
+    titleSection: HTMLElement;
+    nameSpan: HTMLElement;
+    onRenameSubmit: (terminalId: string, newName: string) => void;
+  }): void {
+    const { terminalId, titleSection, nameSpan, onRenameSubmit } = params;
+    let isEditing = false;
+
+    nameSpan.addEventListener('dblclick', (event: MouseEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (isEditing) {
+        return;
+      }
+      isEditing = true;
+
+      const originalName = nameSpan.textContent?.trim() || '';
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'terminal-name-edit-input';
+      input.value = originalName;
+      input.title = originalName;
+      input.style.background = 'var(--vscode-input-background)';
+      input.style.color = 'var(--vscode-input-foreground)';
+      input.style.border = '1px solid var(--vscode-input-border)';
+      input.style.borderRadius = '3px';
+      input.style.padding = '2px 6px';
+      input.style.fontSize = '11px';
+      input.style.lineHeight = '1.4';
+      input.style.width = '100%';
+      input.style.minWidth = '0';
+      input.style.boxSizing = 'border-box';
+      input.style.userSelect = 'text';
+
+      const finalizeRename = (commit: boolean): void => {
+        if (!isEditing) {
+          return;
+        }
+        isEditing = false;
+
+        const nextName = input.value.trim();
+        const shouldCommit = commit && nextName.length > 0 && nextName !== originalName;
+
+        if (input.parentElement === titleSection) {
+          titleSection.replaceChild(nameSpan, input);
+        } else if (!nameSpan.parentElement) {
+          titleSection.appendChild(nameSpan);
+        }
+
+        if (shouldCommit) {
+          nameSpan.textContent = nextName;
+          nameSpan.setAttribute('title', nextName);
+          onRenameSubmit(terminalId, nextName);
+          log(`✏️ [HeaderFactory] Terminal renamed via header: ${terminalId} -> ${nextName}`);
+        } else {
+          nameSpan.textContent = originalName;
+          nameSpan.setAttribute('title', originalName);
+        }
+      };
+
+      input.addEventListener('click', (e) => e.stopPropagation());
+      input.addEventListener('dblclick', (e) => e.stopPropagation());
+      input.addEventListener('mousedown', (e) => e.stopPropagation());
+      input.addEventListener('keydown', (e: KeyboardEvent) => {
+        e.stopPropagation();
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          finalizeRename(true);
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          finalizeRename(false);
+        }
+      });
+      input.addEventListener('blur', () => finalizeRename(true));
+
+      if (nameSpan.parentElement === titleSection) {
+        titleSection.replaceChild(input, nameSpan);
+      } else {
+        titleSection.appendChild(input);
+      }
+
+      input.focus();
+      input.select();
+      // Header single-click activation can enqueue terminal focus.
+      // Re-assert focus on the rename input so double-click rename remains usable.
+      window.setTimeout(() => {
+        if (!isEditing) {
+          return;
+        }
+        if (document.activeElement !== input) {
+          input.focus();
+          input.select();
+        }
+      }, 24);
+    });
   }
 
   /**

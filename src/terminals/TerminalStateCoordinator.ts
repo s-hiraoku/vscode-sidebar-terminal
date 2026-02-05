@@ -114,4 +114,15 @@ export class TerminalStateCoordinator {
       terminal.cwd = cwd;
     }
   }
+
+  public renameTerminal(terminalId: string, newName: string): boolean {
+    const terminal = this._terminals.get(terminalId);
+    if (!terminal) {
+      return false;
+    }
+
+    terminal.name = newName;
+    this.notifyStateUpdate();
+    return true;
+  }
 }

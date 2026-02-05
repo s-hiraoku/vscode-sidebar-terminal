@@ -345,12 +345,39 @@ export class TerminalCreationService implements Disposable {
           showCloseButton: true,
           showSplitButton: false,
           customTitle: terminalName,
+          onRenameSubmit: (clickedTerminalId, newName) => {
+            terminalLogger.info(`✏️ Header rename submitted: ${clickedTerminalId} -> ${newName}`);
+
+            // Keep container metadata in sync for downstream selectors.
+            const terminalContainer = document.querySelector(
+              `[data-terminal-id="${clickedTerminalId}"]`
+            ) as HTMLElement | null;
+            if (terminalContainer) {
+              terminalContainer.setAttribute('data-terminal-name', newName);
+            }
+
+            // Update tab label immediately on WebView side.
+            const tabManager = this.coordinator.getManagers().tabs;
+            if (tabManager) {
+              const extendedTabManager = tabManager as unknown as {
+                handleTerminalRenamed?: (terminalId: string, updatedName: string) => void;
+              };
+              if (typeof extendedTabManager.handleTerminalRenamed === 'function') {
+                extendedTabManager.handleTerminalRenamed(clickedTerminalId, newName);
+              } else {
+                tabManager.addTab(clickedTerminalId, newName);
+              }
+            }
+
+            // Persist rename in extension state.
+            this.coordinator.postMessageToExtension({
+              command: 'renameTerminal',
+              terminalId: clickedTerminalId,
+              newName,
+            });
+          },
           onHeaderClick: (clickedTerminalId) => {
             terminalLogger.info(`🎯 Header clicked for terminal: ${clickedTerminalId}`);
-            this.coordinator?.setActiveTerminalId(clickedTerminalId);
-          },
-          onContainerClick: (clickedTerminalId) => {
-            terminalLogger.info(`🎯 Container clicked for terminal: ${clickedTerminalId}`);
             this.coordinator?.setActiveTerminalId(clickedTerminalId);
           },
           onCloseClick: (clickedTerminalId) => {

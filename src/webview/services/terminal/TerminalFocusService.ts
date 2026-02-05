@@ -139,10 +139,12 @@ export class TerminalFocusService {
   ): void {
     container.addEventListener('click', (event) => {
       const target = event.target as HTMLElement;
-      // Don't focus if clicking on buttons
-      if (!target.closest('.terminal-control')) {
-        this.ensureTerminalFocus(terminal, terminalId, terminalContent);
-      }
+      // Keep header interactions (rename/edit controls) from being overridden by xterm focus.
+      if (target.closest('.terminal-control')) return;
+      if (target.closest('.terminal-header')) return;
+      if (target.closest('.terminal-name-edit-input')) return;
+
+      this.ensureTerminalFocus(terminal, terminalId, terminalContent);
     });
   }
 }

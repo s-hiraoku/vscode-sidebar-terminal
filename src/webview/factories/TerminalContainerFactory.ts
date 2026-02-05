@@ -24,6 +24,7 @@ export interface TerminalHeaderConfig {
   showCloseButton?: boolean;
   showSplitButton?: boolean;
   customTitle?: string;
+  onRenameSubmit?: (terminalId: string, newName: string) => void;
   onHeaderClick?: (terminalId: string) => void;
   onContainerClick?: (terminalId: string) => void;
   onCloseClick?: (terminalId: string) => void;
@@ -116,6 +117,7 @@ export class TerminalContainerFactory {
           terminalId: config.id,
           terminalName: headerConfig.customTitle || config.name,
           showSplitButton: headerConfig.showSplitButton,
+          onRenameSubmit: headerConfig.onRenameSubmit,
           onHeaderClick: headerConfig.onHeaderClick,
           onCloseClick: headerConfig.onCloseClick,
           onSplitClick: headerConfig.onSplitClick,
@@ -137,9 +139,16 @@ export class TerminalContainerFactory {
         if (header) {
           // For terminals with headers: only activate on header clicks
           header.addEventListener('click', (event: MouseEvent) => {
-            // Only activate if clicking on the header itself, not buttons
+            // Only activate if clicking on the header itself.
+            // Skip controls, rename input interactions, and second click of double-click.
             const target = event.target as HTMLElement;
             if (target.closest('.terminal-control')) {
+              return;
+            }
+            if (target.closest('.terminal-name-edit-input')) {
+              return;
+            }
+            if (event.detail >= 2) {
               return;
             }
 

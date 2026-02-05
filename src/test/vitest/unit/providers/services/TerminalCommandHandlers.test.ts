@@ -54,6 +54,7 @@ describe('TerminalCommandHandlers', () => {
       removeTerminal: vi.fn(),
       killTerminal: vi.fn().mockResolvedValue(undefined),
       reorderTerminals: vi.fn(),
+      renameTerminal: vi.fn().mockReturnValue(true),
       getTerminal: vi.fn().mockReturnValue({ shellPath: '/bin/bash' }),
       switchAiAgentConnection: vi.fn().mockReturnValue({ success: true, newStatus: 'connected' }),
     };
@@ -118,6 +119,29 @@ describe('TerminalCommandHandlers', () => {
     it('should handle reorder', async () => {
       await handlers.handleReorderTerminals({ command: 'reorder', order: ['t2', 't1'] });
       expect(mockTerminalManager.reorderTerminals).toHaveBeenCalledWith(['t2', 't1']);
+    });
+
+    it('should handle rename terminal and send state update', async () => {
+      await handlers.handleRenameTerminal({
+        command: 'renameTerminal',
+        terminalId: 't1',
+        newName: 'Renamed Terminal',
+      } as any);
+
+      expect(mockTerminalManager.renameTerminal).toHaveBeenCalledWith('t1', 'Renamed Terminal');
+      expect(mockCommService.sendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ command: 'stateUpdate' })
+      );
+    });
+
+    it('should ignore rename terminal with empty name', async () => {
+      await handlers.handleRenameTerminal({
+        command: 'renameTerminal',
+        terminalId: 't1',
+        newName: '   ',
+      } as any);
+
+      expect(mockTerminalManager.renameTerminal).not.toHaveBeenCalled();
     });
   });
 
