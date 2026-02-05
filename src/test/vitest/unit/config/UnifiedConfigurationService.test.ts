@@ -270,6 +270,7 @@ describe('UnifiedConfigurationService', () => {
         if (key === 'scrollback') return 2000;
         if (key === 'bellSound') return true;
         if (key === 'enableCliAgentIntegration') return true;
+        if (key === 'enableTerminalHeaderEnhancements') return false;
         if (key === 'dynamicSplitDirection') return false;
         if (key === 'panelLocation') return 'sidebar';
         if (key === CONFIG_KEYS.MAX_TERMINALS) return 3;
@@ -285,6 +286,7 @@ describe('UnifiedConfigurationService', () => {
         scrollback: 2000,
         bellSound: true,
         enableCliAgentIntegration: true,
+        enableTerminalHeaderEnhancements: false,
         dynamicSplitDirection: false,
         panelLocation: 'sidebar',
         maxTerminals: 3,

@@ -588,6 +588,12 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
   }
 
   private markTerminalProcessing(terminalId: string, coordinator: IManagerCoordinator): void {
+    if (!this.isHeaderEnhancementsEnabled(coordinator)) {
+      this.clearProcessingTimer(terminalId);
+      this.setProcessingIndicator(terminalId, false, coordinator);
+      return;
+    }
+
     this.setProcessingIndicator(terminalId, true, coordinator);
     this.clearProcessingTimer(terminalId);
 
@@ -614,6 +620,10 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
     isProcessing: boolean,
     coordinator: IManagerCoordinator
   ): void {
+    if (isProcessing && !this.isHeaderEnhancementsEnabled(coordinator)) {
+      return;
+    }
+
     const managers = coordinator.getManagers?.();
     const uiManager = managers?.ui as
       | {
@@ -622,6 +632,18 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
       | undefined;
 
     uiManager?.setTerminalProcessingIndicator?.(terminalId, isProcessing);
+  }
+
+  private isHeaderEnhancementsEnabled(coordinator: IManagerCoordinator): boolean {
+    const managers = coordinator.getManagers?.();
+    const configManager = managers?.config as
+      | {
+          getCurrentSettings?: () => { enableTerminalHeaderEnhancements?: boolean };
+        }
+      | undefined;
+
+    const settings = configManager?.getCurrentSettings?.();
+    return settings?.enableTerminalHeaderEnhancements !== false;
   }
 
   private ensureOutputGate(terminalId: string): { enabled: boolean; buffer: string[] } {

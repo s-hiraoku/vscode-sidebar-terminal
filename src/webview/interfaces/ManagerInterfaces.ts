@@ -297,6 +297,7 @@ export interface IUIManager {
     onAiAgentToggleClick?: (terminalId: string) => void
   ): HTMLElement;
   updateTerminalHeader(terminalId: string, newName?: string, indicatorColor?: string): void;
+  setTerminalHeaderEnhancementsEnabled(enabled: boolean): void;
   setTerminalProcessingIndicator(terminalId: string, isProcessing: boolean): void;
   updateCliAgentStatusDisplay(
     activeTerminalName: string | null,

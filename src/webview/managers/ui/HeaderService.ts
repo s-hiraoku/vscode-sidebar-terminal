@@ -147,6 +147,12 @@ export class HeaderService {
     HeaderFactory.setProcessingIndicatorActive(headerElements, isProcessing);
   }
 
+  public setHeaderEnhancementsEnabled(enabled: boolean): void {
+    this.headerElementsCache.forEach((headerElements) => {
+      HeaderFactory.setHeaderEnhancementsEnabled(headerElements, enabled);
+    });
+  }
+
   /**
    * Remove terminal header from cache when terminal is closed
    */

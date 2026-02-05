@@ -252,6 +252,7 @@ export class TerminalEventCoordinator implements vscode.Disposable {
         event.affectsConfiguration('secondaryTerminal.altClickMovesCursor') ||
         event.affectsConfiguration('secondaryTerminal.theme') ||
         event.affectsConfiguration('secondaryTerminal.cursorBlink') ||
+        event.affectsConfiguration('secondaryTerminal.enableTerminalHeaderEnhancements') ||
         event.affectsConfiguration('secondaryTerminal.activeBorderMode')
       ) {
         this._pendingSettingsUpdate = true;
@@ -372,6 +373,9 @@ export class TerminalEventCoordinator implements vscode.Disposable {
       altClickMovesCursor: altClickSettings.altClickMovesCursor,
       multiCursorModifier: altClickSettings.multiCursorModifier,
       enableCliAgentIntegration: configService.isFeatureEnabled('cliAgentIntegration'),
+      enableTerminalHeaderEnhancements: configService.isFeatureEnabled(
+        'terminalHeaderEnhancements'
+      ),
       activeBorderMode: configService.get('sidebarTerminal', 'activeBorderMode', 'multipleOnly'),
       dynamicSplitDirection: configService.isFeatureEnabled('dynamicSplitDirection'),
       panelLocation: configService.get('sidebarTerminal', 'panelLocation', 'auto'),

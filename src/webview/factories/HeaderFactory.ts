@@ -11,6 +11,7 @@ export interface TerminalHeaderElements {
   titleSection: HTMLElement;
   nameSpan: HTMLElement;
   idSpan: HTMLElement;
+  headerEnhancementsEnabled: boolean;
   processingIndicator: HTMLElement | null;
   statusSection: HTMLElement;
   statusSpan: HTMLElement | null;
@@ -36,6 +37,7 @@ export interface HeaderConfig {
   onSplitClick?: (terminalId: string) => void;
   onAiAgentToggleClick?: (terminalId: string) => void;
   indicatorColor?: string;
+  headerEnhancementsEnabled?: boolean;
   // Theme colors (optional - defaults to VS Code CSS variables)
   backgroundColor?: string;
   foregroundColor?: string;
@@ -84,6 +86,7 @@ export class HeaderFactory {
     const bgColor = config.backgroundColor || 'var(--vscode-tab-activeBackground)';
     const fgColor = config.foregroundColor || 'var(--vscode-tab-activeForeground)';
     const indicatorColor = config.indicatorColor || '#00FFFF';
+    const headerEnhancementsEnabled = config.headerEnhancementsEnabled !== false;
 
     // メインコンテナ
     const container = DOMUtils.createElement(
@@ -111,6 +114,7 @@ export class HeaderFactory {
       }
     );
     container.style.setProperty('--terminal-indicator-color', indicatorColor);
+    container.dataset.headerEnhancementsEnabled = String(headerEnhancementsEnabled);
 
     HeaderFactory.ensureProcessingIndicatorStyles();
 
@@ -425,6 +429,7 @@ export class HeaderFactory {
         titleSection,
         nameSpan,
         initialIndicatorColor: indicatorColor,
+        headerEnhancementsEnabled,
         onRenameSubmit: config.onRenameSubmit,
         onHeaderUpdate: config.onHeaderUpdate,
       });
@@ -449,6 +454,7 @@ export class HeaderFactory {
       titleSection,
       nameSpan,
       idSpan,
+      headerEnhancementsEnabled,
       processingIndicator,
       statusSection,
       statusSpan: null, // CLI Agent status要素はまだ作成されていない
@@ -466,6 +472,7 @@ export class HeaderFactory {
     titleSection: HTMLElement;
     nameSpan: HTMLElement;
     initialIndicatorColor: string;
+    headerEnhancementsEnabled: boolean;
     onRenameSubmit?: (terminalId: string, newName: string) => void;
     onHeaderUpdate?: (
       terminalId: string,
@@ -535,35 +542,38 @@ export class HeaderFactory {
         });
       };
 
-      HEADER_INDICATOR_COLOR_PALETTE.forEach((color) => {
-        const colorButton = document.createElement('button');
-        colorButton.type = 'button';
-        colorButton.className = 'terminal-header-color-option';
-        colorButton.dataset.indicatorColor = color;
-        colorButton.title = color;
-        colorButton.style.width = '14px';
-        colorButton.style.height = '14px';
-        colorButton.style.borderRadius = '50%';
-        colorButton.style.border = '1px solid rgba(127, 127, 127, 0.6)';
-        colorButton.style.padding = '0';
-        colorButton.style.cursor = 'pointer';
-        colorButton.style.backgroundColor = color;
-        colorButton.addEventListener('mousedown', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
+      const enhancementsEnabled = container.dataset.headerEnhancementsEnabled !== 'false';
+      if (enhancementsEnabled) {
+        HEADER_INDICATOR_COLOR_PALETTE.forEach((color) => {
+          const colorButton = document.createElement('button');
+          colorButton.type = 'button';
+          colorButton.className = 'terminal-header-color-option';
+          colorButton.dataset.indicatorColor = color;
+          colorButton.title = color;
+          colorButton.style.width = '14px';
+          colorButton.style.height = '14px';
+          colorButton.style.borderRadius = '50%';
+          colorButton.style.border = '1px solid rgba(127, 127, 127, 0.6)';
+          colorButton.style.padding = '0';
+          colorButton.style.cursor = 'pointer';
+          colorButton.style.backgroundColor = color;
+          colorButton.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          });
+          colorButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            currentIndicatorColor = color;
+            container.style.setProperty('--terminal-indicator-color', color);
+            refreshSelection();
+            onHeaderUpdate?.(terminalId, { indicatorColor: color });
+            log(`🎨 [HeaderFactory] Indicator color updated: ${terminalId} -> ${color}`);
+          });
+          palette.appendChild(colorButton);
         });
-        colorButton.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          currentIndicatorColor = color;
-          container.style.setProperty('--terminal-indicator-color', color);
-          refreshSelection();
-          onHeaderUpdate?.(terminalId, { indicatorColor: color });
-          log(`🎨 [HeaderFactory] Indicator color updated: ${terminalId} -> ${color}`);
-        });
-        palette.appendChild(colorButton);
-      });
-      refreshSelection();
+        refreshSelection();
+      }
 
       const finalizeRename = (commit: boolean): void => {
         if (!isEditing) {
@@ -608,7 +618,9 @@ export class HeaderFactory {
       input.addEventListener('blur', () => finalizeRename(true));
 
       editor.appendChild(input);
-      editor.appendChild(palette);
+      if (enhancementsEnabled) {
+        editor.appendChild(palette);
+      }
 
       if (nameSpan.parentElement === titleSection) {
         titleSection.replaceChild(editor, nameSpan);
@@ -771,7 +783,22 @@ export class HeaderFactory {
     if (!elements.processingIndicator) {
       return;
     }
+    if (!HeaderFactory.areHeaderEnhancementsEnabled(elements)) {
+      elements.processingIndicator.style.opacity = '0';
+      return;
+    }
     elements.processingIndicator.style.opacity = isActive ? '1' : '0';
+  }
+
+  public static setHeaderEnhancementsEnabled(
+    elements: TerminalHeaderElements,
+    enabled: boolean
+  ): void {
+    elements.headerEnhancementsEnabled = enabled;
+    elements.container.dataset.headerEnhancementsEnabled = String(enabled);
+    if (!enabled && elements.processingIndicator) {
+      elements.processingIndicator.style.opacity = '0';
+    }
   }
 
   /**
@@ -829,5 +856,12 @@ export class HeaderFactory {
       }
     `;
     document.head.appendChild(style);
+  }
+
+  private static areHeaderEnhancementsEnabled(elements: TerminalHeaderElements): boolean {
+    if (elements.container.dataset.headerEnhancementsEnabled === 'false') {
+      return false;
+    }
+    return elements.headerEnhancementsEnabled !== false;
   }
 }

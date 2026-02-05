@@ -59,6 +59,7 @@ describe('CLI Agent Status Display Fix', () => {
       titleSection: {} as HTMLDivElement,
       nameSpan: mockNameSpan as HTMLSpanElement,
       idSpan: {} as HTMLSpanElement,
+      headerEnhancementsEnabled: true,
       processingIndicator: null,
       statusSection: mockStatusSection as HTMLDivElement,
       statusSpan: null,

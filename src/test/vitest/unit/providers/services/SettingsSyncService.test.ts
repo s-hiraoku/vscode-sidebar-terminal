@@ -139,6 +139,7 @@ describe('SettingsSyncService', () => {
       mockUnifiedConfig.isFeatureEnabled.mockImplementation((feature) => {
         if (feature === 'cliAgentIntegration') return true;
         if (feature === 'dynamicSplitDirection') return false;
+        if (feature === 'terminalHeaderEnhancements') return false;
         return false;
       });
 
@@ -151,6 +152,7 @@ describe('SettingsSyncService', () => {
         altClickMovesCursor: true,
         multiCursorModifier: 'alt',
         enableCliAgentIntegration: true,
+        enableTerminalHeaderEnhancements: false,
         activeBorderMode: 'all',
         dynamicSplitDirection: false,
         panelLocation: 'sidebar',
@@ -180,6 +182,7 @@ describe('SettingsSyncService', () => {
         cursor: { style: 'bar', blink: true },
         maxTerminals: 10,
         enableCliAgentIntegration: true,
+        enableTerminalHeaderEnhancements: true,
       });
       mockUnifiedConfig.getWebViewTerminalSettings.mockReturnValue({
         theme: 'light',
@@ -198,6 +201,7 @@ describe('SettingsSyncService', () => {
         cursor: { style: 'bar', blink: true },
         maxTerminals: 10,
         enableCliAgentIntegration: true,
+        enableTerminalHeaderEnhancements: true,
         dynamicSplitDirection: true,
         panelLocation: 'bottom',
       });
@@ -210,6 +214,7 @@ describe('SettingsSyncService', () => {
         cursorBlink: false,
         theme: 'auto',
         enableCliAgentIntegration: false,
+        enableTerminalHeaderEnhancements: false,
         activeBorderMode: 'none',
         dynamicSplitDirection: true,
         panelLocation: 'sidebar',
@@ -220,6 +225,11 @@ describe('SettingsSyncService', () => {
       expect(mockUnifiedConfig.update).toHaveBeenCalledWith('secondaryTerminal', 'cursorBlink', false);
       expect(mockUnifiedConfig.update).toHaveBeenCalledWith('secondaryTerminal', 'theme', 'auto');
       expect(mockUnifiedConfig.update).toHaveBeenCalledWith('secondaryTerminal', 'enableCliAgentIntegration', false);
+      expect(mockUnifiedConfig.update).toHaveBeenCalledWith(
+        'secondaryTerminal',
+        'enableTerminalHeaderEnhancements',
+        false
+      );
       expect(mockUnifiedConfig.update).toHaveBeenCalledWith('secondaryTerminal', 'activeBorderMode', 'none');
       expect(mockUnifiedConfig.update).toHaveBeenCalledWith('secondaryTerminal', 'dynamicSplitDirection', true);
       expect(mockUnifiedConfig.update).toHaveBeenCalledWith('secondaryTerminal', 'panelLocation', 'sidebar');

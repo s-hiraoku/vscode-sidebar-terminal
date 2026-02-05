@@ -346,6 +346,7 @@ export class TerminalCreationService implements Disposable {
           showSplitButton: false,
           customTitle: terminalName,
           indicatorColor: (config as { indicatorColor?: string } | undefined)?.indicatorColor,
+          headerEnhancementsEnabled: currentSettings?.enableTerminalHeaderEnhancements !== false,
           onHeaderUpdate: (clickedTerminalId, updates) => {
             if (updates.newName) {
               terminalLogger.info(

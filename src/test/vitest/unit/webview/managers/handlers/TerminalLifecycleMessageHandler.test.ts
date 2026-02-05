@@ -182,6 +182,39 @@ describe('TerminalLifecycleMessageHandler', () => {
         false
       );
     });
+
+    it('should not enable processing indicator when header enhancements are disabled', async () => {
+      vi.useFakeTimers();
+
+      mockCoordinator.getManagers = () => ({
+        performance: {
+          scheduleOutputBuffer: vi.fn(),
+          bufferedWrite: vi.fn(),
+        } as any,
+        input: {} as any,
+        ui: mockUiManager as any,
+        config: {
+          getCurrentSettings: () => ({ enableTerminalHeaderEnhancements: false }),
+        } as any,
+        message: {} as any,
+        notification: {} as any,
+      });
+
+      await handler.handleMessage({ command: 'startOutput', terminalId: 'terminal-1' }, mockCoordinator);
+      await handler.handleMessage(
+        {
+          command: 'output',
+          terminalId: 'terminal-1',
+          data: 'processing...',
+        },
+        mockCoordinator
+      );
+
+      expect(mockUiManager.setTerminalProcessingIndicator).not.toHaveBeenCalledWith(
+        'terminal-1',
+        true
+      );
+    });
   });
 
   describe('Terminal Creation Handling', () => {

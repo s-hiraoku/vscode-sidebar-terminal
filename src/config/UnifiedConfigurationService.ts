@@ -289,6 +289,11 @@ export class UnifiedConfigurationService implements Disposable {
         blink: this.get(section, CONFIG_KEYS.CURSOR_BLINK, true),
       },
       enableCliAgentIntegration: this.get(section, 'enableCliAgentIntegration', true),
+      enableTerminalHeaderEnhancements: this.get(
+        section,
+        'enableTerminalHeaderEnhancements',
+        true
+      ),
       activeBorderMode: this.get(section, 'activeBorderMode', 'multipleOnly'),
     };
   }
@@ -351,6 +356,7 @@ export class UnifiedConfigurationService implements Disposable {
       scrollback: this.get(section, 'scrollback', 1000),
       bellSound: this.get(section, 'bellSound', false),
       enableCliAgentIntegration: this.get(section, 'enableCliAgentIntegration', true),
+      enableTerminalHeaderEnhancements: this.get(section, 'enableTerminalHeaderEnhancements', true),
       sendKeybindingsToShell: this.get(section, 'sendKeybindingsToShell', false),
       commandsToSkipShell: this.get(section, 'commandsToSkipShell', []),
       allowChords: this.get(section, 'allowChords', true),
@@ -683,6 +689,8 @@ export class UnifiedConfigurationService implements Disposable {
     switch (featureName) {
       case 'cliAgentIntegration':
         return this.get(CONFIG_SECTIONS.SIDEBAR_TERMINAL, 'enableCliAgentIntegration', true);
+      case 'terminalHeaderEnhancements':
+        return this.get(CONFIG_SECTIONS.SIDEBAR_TERMINAL, 'enableTerminalHeaderEnhancements', true);
       case 'githubCopilotIntegration':
         return this.get(CONFIG_SECTIONS.SIDEBAR_TERMINAL, 'enableGitHubCopilotIntegration', true);
       case 'altClickMovesCursor':

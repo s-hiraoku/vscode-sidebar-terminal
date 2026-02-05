@@ -41,6 +41,7 @@ describe('ConfigManager', () => {
       expect(settings).toBeDefined();
       expect(settings.fontSize).toBe(14);
       expect(settings.theme).toBe('auto');
+      expect(settings.enableTerminalHeaderEnhancements).toBe(true);
     });
   });
 
@@ -181,6 +182,14 @@ describe('ConfigManager', () => {
       // Non-boolean should use default
       configManager.saveSettings({ cursorBlink: 'yes' as any });
       expect(configManager.getCurrentSettings().cursorBlink).toBe(true);
+    });
+
+    it('should validate enableTerminalHeaderEnhancements setting', () => {
+      configManager.saveSettings({ enableTerminalHeaderEnhancements: false });
+      expect(configManager.getCurrentSettings().enableTerminalHeaderEnhancements).toBe(false);
+
+      configManager.saveSettings({ enableTerminalHeaderEnhancements: 'no' as any });
+      expect(configManager.getCurrentSettings().enableTerminalHeaderEnhancements).toBe(true);
     });
 
     it('should validate maxTerminals range', () => {

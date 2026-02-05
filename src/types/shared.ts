@@ -101,6 +101,7 @@ export interface ExtensionTerminalConfig
     blink?: boolean;
   };
   readonly enableCliAgentIntegration?: boolean;
+  readonly enableTerminalHeaderEnhancements?: boolean;
   readonly activeBorderMode?: ActiveBorderMode;
   // Addon configuration for WebView terminal rendering
   readonly enableGpuAcceleration?: boolean;
@@ -125,6 +126,7 @@ export interface PartialTerminalSettings {
   altClickMovesCursor?: boolean;
   multiCursorModifier?: string;
   enableCliAgentIntegration?: boolean;
+  enableTerminalHeaderEnhancements?: boolean;
   activeBorderMode?: ActiveBorderMode;
   // VS Code keybinding system settings
   sendKeybindingsToShell?: boolean;
@@ -193,6 +195,7 @@ export interface WebViewSettingsPayload {
   readonly altClickMovesCursor: boolean;
   readonly multiCursorModifier: string;
   readonly enableCliAgentIntegration: boolean;
+  readonly enableTerminalHeaderEnhancements: boolean;
   readonly activeBorderMode: ActiveBorderMode;
   readonly dynamicSplitDirection: boolean;
   readonly panelLocation: 'auto' | 'sidebar' | 'panel';

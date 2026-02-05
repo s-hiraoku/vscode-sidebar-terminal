@@ -594,6 +594,10 @@ export class UIManager extends BaseManager implements IUIManager {
     this.headerService.setTerminalProcessingIndicator(terminalId, isProcessing);
   }
 
+  public setTerminalHeaderEnhancementsEnabled(enabled: boolean): void {
+    this.headerService.setHeaderEnhancementsEnabled(enabled);
+  }
+
   /**
    * Remove terminal header from cache when terminal is closed
    * Delegates to HeaderService

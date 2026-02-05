@@ -322,5 +322,40 @@ describe('HeaderFactory', () => {
       expect(HEADER_INDICATOR_COLOR_PALETTE).toContain('#FFFFFF');
       expect(HEADER_INDICATOR_COLOR_PALETTE).toHaveLength(14);
     });
+
+    it('should keep processing indicator hidden when header enhancements are disabled', () => {
+      const elements = HeaderFactory.createTerminalHeader({
+        terminalId: 't1',
+        terminalName: 'Indicator Disabled Test',
+        headerEnhancementsEnabled: false,
+      } as any);
+
+      const flow = elements.container.querySelector('.terminal-processing-indicator') as HTMLElement;
+      expect(flow).toBeTruthy();
+
+      HeaderFactory.setProcessingIndicatorActive(elements, true);
+      expect(flow.style.opacity).toBe('0');
+    });
+  });
+
+  describe('Header Enhancements Toggle', () => {
+    it('should open rename editor without color palette when header enhancements are disabled', () => {
+      const onHeaderUpdate = vi.fn();
+      const elements = HeaderFactory.createTerminalHeader({
+        terminalId: 't1',
+        terminalName: 'Original',
+        onHeaderUpdate,
+        headerEnhancementsEnabled: false,
+      } as any);
+
+      elements.container.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+
+      const input = elements.titleSection.querySelector('.terminal-name-edit-input');
+      const colorOptions = elements.titleSection.querySelectorAll('.terminal-header-color-option');
+
+      expect(input).toBeTruthy();
+      expect(colorOptions).toHaveLength(0);
+      expect(onHeaderUpdate).not.toHaveBeenCalledWith('t1', expect.objectContaining({ indicatorColor: expect.any(String) }));
+    });
   });
 });

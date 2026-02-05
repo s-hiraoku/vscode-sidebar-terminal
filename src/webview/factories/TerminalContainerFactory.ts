@@ -35,6 +35,7 @@ export interface TerminalHeaderConfig {
   onSplitClick?: (terminalId: string) => void;
   onAiAgentToggleClick?: (terminalId: string) => void;
   indicatorColor?: string;
+  headerEnhancementsEnabled?: boolean;
 }
 
 export interface ContainerElements {
@@ -129,6 +130,7 @@ export class TerminalContainerFactory {
           onSplitClick: headerConfig.onSplitClick,
           onAiAgentToggleClick: headerConfig.onAiAgentToggleClick,
           indicatorColor: headerConfig.indicatorColor,
+          headerEnhancementsEnabled: headerConfig.headerEnhancementsEnabled,
         });
         header = headerElements.container;
         closeButton = headerElements.closeButton;

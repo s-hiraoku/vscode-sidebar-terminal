@@ -463,6 +463,11 @@
           "default": true,
           "description": "Enable file reference shortcuts: Use Cmd+Option+L (Mac) or Alt+Ctrl+L (Linux/Windows) to insert file references"
         },
+        "secondaryTerminal.enableTerminalHeaderEnhancements": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable enhanced terminal header UI (processing indicator and color palette editor)."
+        },
         "secondaryTerminal.enableGitHubCopilotIntegration": {
           "type": "boolean",
           "default": true,

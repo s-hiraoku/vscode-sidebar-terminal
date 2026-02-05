@@ -1201,6 +1201,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       event.affectsConfiguration('secondaryTerminal.theme') ||
       event.affectsConfiguration('secondaryTerminal.cursorBlink') ||
       event.affectsConfiguration('secondaryTerminal.enableCliAgentIntegration') ||
+      event.affectsConfiguration('secondaryTerminal.enableTerminalHeaderEnhancements') ||
       event.affectsConfiguration('secondaryTerminal.dynamicSplitDirection') ||
       event.affectsConfiguration('secondaryTerminal.panelLocation') ||
       event.affectsConfiguration('editor.multiCursorModifier') ||
