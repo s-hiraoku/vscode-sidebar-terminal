@@ -20,10 +20,8 @@ describe('TerminalFocusService', () => {
   let mockTerminal: any;
   let mockContainer: HTMLElement;
   let mockTextarea: HTMLTextAreaElement;
-  let testEnv: ReturnType<typeof setupCompleteTestEnvironment>;
-
   beforeEach(() => {
-    testEnv = setupCompleteTestEnvironment();
+    setupCompleteTestEnvironment();
     vi.useFakeTimers();
     service = new TerminalFocusService();
     
