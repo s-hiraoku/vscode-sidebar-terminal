@@ -11,8 +11,6 @@
 
 Your sidebar, your terminal, your AI agents -- all in one place. A full-featured terminal that lives in the VS Code sidebar, with built-in AI agent detection for Claude Code, Codex CLI, Gemini CLI, GitHub Copilot CLI, and CodeRabbit CLI.
 
-![Secondary Terminal](resources/banner.png)
-
 ![Demo](resources/readme-hero.png)
 
 ## Why Secondary Terminal?
@@ -32,64 +30,65 @@ Your sidebar, your terminal, your AI agents -- all in one place. A full-featured
 
 ### For AI Agent Workflows
 
-| | |
-|---|---|
-| **Auto-detection** | Real-time status indicators for Claude Code, Codex CLI, Gemini CLI, GitHub Copilot CLI, CodeRabbit CLI |
-| **File references** | `Cmd+Alt+L` / `Ctrl+Alt+L` inserts current file path; `Cmd+Alt+A` / `Ctrl+Alt+A` inserts all open files |
-| **Image paste** | `Cmd+V` on macOS pastes screenshots directly into Claude Code |
-| **Optimized rendering** | 250fps adaptive buffering for AI streaming output |
-| **Session persistence** | Terminal state survives VS Code restarts -- pick up where you left off |
-| **Multi-agent** | Run different agents in different terminals, switch with `Cmd+Alt+1..5` / `Alt+1..5` |
+|                         |                                                                                                         |
+| ----------------------- | ------------------------------------------------------------------------------------------------------- |
+| **Auto-detection**      | Real-time status indicators for Claude Code, Codex CLI, Gemini CLI, GitHub Copilot CLI, CodeRabbit CLI  |
+| **File references**     | `Cmd+Alt+L` / `Ctrl+Alt+L` inserts current file path; `Cmd+Alt+A` / `Ctrl+Alt+A` inserts all open files |
+| **Image paste**         | `Cmd+V` on macOS pastes screenshots directly into Claude Code                                           |
+| **Optimized rendering** | 250fps adaptive buffering for AI streaming output                                                       |
+| **Session persistence** | Terminal state survives VS Code restarts -- pick up where you left off                                  |
+| **Multi-agent**         | Run different agents in different terminals, switch with `Cmd+Alt+1..5` / `Alt+1..5`                    |
 
 ### Terminal Power Features
 
-| | |
-|---|---|
-| **Multiple terminals** | Up to 5 concurrent terminals with tab management (drag & drop reordering) |
-| **Split views** | Vertical / horizontal splitting with drag-to-resize |
-| **Session persistence** | Auto-save/restore with ANSI color preservation (up to 3,000 lines of scrollback) |
-| **Shell integration** | Command status indicators, working directory display, command history |
-| **Find in terminal** | `Ctrl+F` / `Cmd+F` -- search through terminal output with regex support |
-| **Command decorations** | Visual success/error/running indicators at command boundaries |
-| **Navigation marks** | Jump between commands with `Cmd+Up/Down` / `Ctrl+Up/Down` |
-| **Scrollback compression** | Compressed storage with progressive loading for large histories |
-| **Terminal profiles** | Per-platform shell profiles (bash, zsh, fish, PowerShell, etc.) |
+|                            |                                                                                  |
+| -------------------------- | -------------------------------------------------------------------------------- |
+| **Multiple terminals**     | Up to 5 concurrent terminals with tab management (drag & drop reordering)        |
+| **Split views**            | Vertical / horizontal splitting with drag-to-resize                              |
+| **Session persistence**    | Auto-save/restore with ANSI color preservation (up to 3,000 lines of scrollback) |
+| **Shell integration**      | Command status indicators, working directory display, command history            |
+| **Find in terminal**       | `Ctrl+F` / `Cmd+F` -- search through terminal output with regex support          |
+| **Command decorations**    | Visual success/error/running indicators at command boundaries                    |
+| **Navigation marks**       | Jump between commands with `Cmd+Up/Down` / `Ctrl+Up/Down`                        |
+| **Scrollback compression** | Compressed storage with progressive loading for large histories                  |
+| **Terminal profiles**      | Per-platform shell profiles (bash, zsh, fish, PowerShell, etc.)                  |
 
 ### Developer Experience
 
-| | |
-|---|---|
-| **Full IME support** | Japanese, Chinese, Korean input with VS Code standard handling |
-| **Link detection** | File paths open in VS Code, URLs open in browser, email links detected |
-| **Alt+Click** | VS Code-standard cursor positioning |
-| **Mouse tracking** | TUI app support (vim, htop, zellij) with automatic mouse mode |
-| **Full clipboard** | Ctrl/Cmd+C/V with image paste support |
-| **Cross-platform** | Windows, macOS, Linux -- 9 platform-specific builds |
-| **Accessibility** | Screen reader support |
-| **Debug panel** | Real-time monitoring with `Ctrl+Shift+D` |
+|                      |                                                                        |
+| -------------------- | ---------------------------------------------------------------------- |
+| **Full IME support** | Japanese, Chinese, Korean input with VS Code standard handling         |
+| **Link detection**   | File paths open in VS Code, URLs open in browser, email links detected |
+| **Alt+Click**        | VS Code-standard cursor positioning                                    |
+| **Mouse tracking**   | TUI app support (vim, htop, zellij) with automatic mouse mode          |
+| **Full clipboard**   | Ctrl/Cmd+C/V with image paste support                                  |
+| **Cross-platform**   | Windows, macOS, Linux -- 9 platform-specific builds                    |
+| **Accessibility**    | Screen reader support                                                  |
+| **Debug panel**      | Real-time monitoring with `Ctrl+Shift+D`                               |
 
 ## Keyboard Shortcuts
 
-| Shortcut | Action |
-|----------|--------|
-| `Cmd+C` / `Ctrl+C` | Copy selected text (or send SIGINT if no selection) |
-| `Cmd+V` / `Ctrl+V` | Paste (text and images) |
-| `Shift+Enter` / `Option+Enter` | Insert newline (Claude Code multiline prompts) |
-| `Cmd+Alt+L` / `Ctrl+Alt+L` | Insert current file reference for AI agents |
-| `Cmd+Alt+A` / `Ctrl+Alt+A` | Insert all open files references for AI agents |
-| `Cmd+K Cmd+C` / `Ctrl+K Ctrl+C` | Activate GitHub Copilot Chat |
-| ``Ctrl+` `` | Focus Secondary Terminal view |
-| ``Ctrl+Shift+` `` | Create new terminal |
-| `Cmd+\` (Mac) / `Ctrl+Shift+5` | Split terminal vertically |
-| `Cmd+K` / `Ctrl+K` | Clear terminal |
-| `Cmd+Up/Down` (Mac) / `Ctrl+Up/Down` | Scroll to previous/next command |
-| `Alt+Cmd+Left/Right` (Mac) / `Alt+Left/Right` | Focus previous/next terminal |
-| `Cmd+Alt+1..5` (Mac) / `Alt+1..5` | Focus terminal by index |
-| `Cmd+R` / `Ctrl+R` | Run recent command |
-| `Cmd+A` / `Ctrl+A` | Select all terminal content |
-| `Ctrl+Shift+D` | Toggle debug panel |
+| Shortcut                                      | Action                                              |
+| --------------------------------------------- | --------------------------------------------------- |
+| `Cmd+C` / `Ctrl+C`                            | Copy selected text (or send SIGINT if no selection) |
+| `Cmd+V` / `Ctrl+V`                            | Paste (text and images)                             |
+| `Shift+Enter` / `Option+Enter`                | Insert newline (Claude Code multiline prompts)      |
+| `Cmd+Alt+L` / `Ctrl+Alt+L`                    | Insert current file reference for AI agents         |
+| `Cmd+Alt+A` / `Ctrl+Alt+A`                    | Insert all open files references for AI agents      |
+| `Cmd+K Cmd+C` / `Ctrl+K Ctrl+C`               | Activate GitHub Copilot Chat                        |
+| ``Ctrl+` ``                                   | Focus Secondary Terminal view                       |
+| ``Ctrl+Shift+` ``                             | Create new terminal                                 |
+| `Cmd+\` (Mac) / `Ctrl+Shift+5`                | Split terminal vertically                           |
+| `Cmd+K` / `Ctrl+K`                            | Clear terminal                                      |
+| `Cmd+Up/Down` (Mac) / `Ctrl+Up/Down`          | Scroll to previous/next command                     |
+| `Alt+Cmd+Left/Right` (Mac) / `Alt+Left/Right` | Focus previous/next terminal                        |
+| `Cmd+Alt+1..5` (Mac) / `Alt+1..5`             | Focus terminal by index                             |
+| `Cmd+R` / `Ctrl+R`                            | Run recent command                                  |
+| `Cmd+A` / `Ctrl+A`                            | Select all terminal content                         |
+| `Ctrl+Shift+D`                                | Toggle debug panel                                  |
 
 > **Claude Code tips**:
+>
 > - `Cmd+V` on macOS pastes both text and images (screenshots) into Claude Code
 > - Use `Shift+Enter` or `Option+Enter` to insert newlines for multiline prompts
 
@@ -126,33 +125,38 @@ Search `secondaryTerminal` in VS Code Settings for the full list, or see [packag
 
 ## Performance
 
-| Metric | Value |
-|--------|-------|
-| **Rendering** | WebGL with auto DOM fallback |
-| **Output buffering** | Adaptive 2-16ms intervals (up to 250fps for AI output) |
-| **Scrollback restore** | <1s for 1,000 lines with ANSI color preservation |
-| **Terminal disposal** | <100ms cleanup time |
-| **Build size** | ~790 KiB extension + ~1.5 MiB webview |
+| Metric                 | Value                                                  |
+| ---------------------- | ------------------------------------------------------ |
+| **Rendering**          | WebGL with auto DOM fallback                           |
+| **Output buffering**   | Adaptive 2-16ms intervals (up to 250fps for AI output) |
+| **Scrollback restore** | <1s for 1,000 lines with ANSI color preservation       |
+| **Terminal disposal**  | <100ms cleanup time                                    |
+| **Build size**         | ~790 KiB extension + ~1.5 MiB webview                  |
 
 ## Troubleshooting
 
 ### Terminal not starting
+
 - Check `secondaryTerminal.shell` points to a valid shell in your PATH
 - Try setting an explicit shell path
 
 ### AI agent not detected
+
 - Ensure `secondaryTerminal.enableCliAgentIntegration` is `true`
 - Check debug panel (`Ctrl+Shift+D`) for detection logs
 
 ### Performance issues
+
 - Reduce `secondaryTerminal.scrollback` value
 - Check system resources via the debug panel
 
 ### Session not restoring
+
 - Verify `secondaryTerminal.enablePersistentSessions` is `true`
 - Use "Clear Corrupted Terminal History" command if data is corrupted
 
 ### TUI display issues
+
 - Mouse tracking is automatically enabled for apps like zellij
 - If display issues occur in split mode, try switching to fullscreen mode
 
