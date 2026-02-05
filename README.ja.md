@@ -22,7 +22,7 @@
 ## クイックスタート
 
 1. **インストール**: VS Codeの拡張機能ビューで "Secondary Terminal" を検索
-   - [Open VSX](https://open-vsx.org/extension/s-hiraoku/vscode-sidebar-terminal)（VS Codium、Gitpod）や [CLI](https://marketplace.visualstudio.com/items?itemName=s-hiraoku.vscode-sidebar-terminal): `code --install-extension s-hiraoku.vscode-sidebar-terminal` からもインストール可能
+   - [Open VSX](https://open-vsx.org/extension/s-hiraoku/vscode-sidebar-terminal)（VSCodium、Gitpod）や [CLI](https://marketplace.visualstudio.com/items?itemName=s-hiraoku.vscode-sidebar-terminal): `code --install-extension s-hiraoku.vscode-sidebar-terminal` からもインストール可能
 2. **開く**: アクティビティバーのターミナルアイコン（ST）をクリック
 3. **使う**: デフォルトシェルでターミナルが起動します。`claude`、`codex`、`gemini`、`gh copilot` を実行すると、ヘッダーにAIエージェントのステータスが表示されます。
 

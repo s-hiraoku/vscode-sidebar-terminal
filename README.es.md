@@ -22,7 +22,7 @@ Tu barra lateral, tu terminal, tus agentes de IA — todo en un solo lugar. Un t
 ## Inicio Rápido
 
 1. **Instalar**: Busca "Secondary Terminal" en la vista de Extensiones de VS Code
-   - También disponible en [Open VSX](https://open-vsx.org/extension/s-hiraoku/vscode-sidebar-terminal) (VS Codium, Gitpod) y vía [CLI](https://marketplace.visualstudio.com/items?itemName=s-hiraoku.vscode-sidebar-terminal): `code --install-extension s-hiraoku.vscode-sidebar-terminal`
+   - También disponible en [Open VSX](https://open-vsx.org/extension/s-hiraoku/vscode-sidebar-terminal) (VSCodium, Gitpod) y vía [CLI](https://marketplace.visualstudio.com/items?itemName=s-hiraoku.vscode-sidebar-terminal): `code --install-extension s-hiraoku.vscode-sidebar-terminal`
 2. **Abrir**: Haz clic en el icono de terminal (ST) en la barra de actividades
 3. **Usar**: Se abre un terminal con tu shell predeterminado. Ejecuta `claude`, `codex`, `gemini` o `gh copilot` y observa cómo aparece el estado del agente de IA en el encabezado.
 

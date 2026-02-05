@@ -22,7 +22,7 @@
 ## 빠른 시작
 
 1. **설치**: VS Code 확장 뷰에서 "Secondary Terminal" 검색
-   - [Open VSX](https://open-vsx.org/extension/s-hiraoku/vscode-sidebar-terminal)(VS Codium, Gitpod) 또는 [CLI](https://marketplace.visualstudio.com/items?itemName=s-hiraoku.vscode-sidebar-terminal): `code --install-extension s-hiraoku.vscode-sidebar-terminal`로도 설치 가능
+   - [Open VSX](https://open-vsx.org/extension/s-hiraoku/vscode-sidebar-terminal)(VSCodium, Gitpod) 또는 [CLI](https://marketplace.visualstudio.com/items?itemName=s-hiraoku.vscode-sidebar-terminal): `code --install-extension s-hiraoku.vscode-sidebar-terminal`로도 설치 가능
 2. **열기**: 활동 표시줄의 터미널 아이콘(ST) 클릭
 3. **사용**: 기본 셸로 터미널이 시작됩니다. `claude`, `codex`, `gemini`, `gh copilot`을 실행하면 헤더에 AI 에이전트 상태가 표시됩니다.
 

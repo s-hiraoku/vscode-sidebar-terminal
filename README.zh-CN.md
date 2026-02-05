@@ -22,7 +22,7 @@
 ## 快速开始
 
 1. **安装**：在 VS Code 扩展视图中搜索 "Secondary Terminal"
-   - 也可从 [Open VSX](https://open-vsx.org/extension/s-hiraoku/vscode-sidebar-terminal)（VS Codium、Gitpod）或通过 [CLI](https://marketplace.visualstudio.com/items?itemName=s-hiraoku.vscode-sidebar-terminal) 安装：`code --install-extension s-hiraoku.vscode-sidebar-terminal`
+   - 也可从 [Open VSX](https://open-vsx.org/extension/s-hiraoku/vscode-sidebar-terminal)（VSCodium、Gitpod）或通过 [CLI](https://marketplace.visualstudio.com/items?itemName=s-hiraoku.vscode-sidebar-terminal) 安装：`code --install-extension s-hiraoku.vscode-sidebar-terminal`
 2. **打开**：点击活动栏中的终端图标（ST）
 3. **使用**：终端将以默认 Shell 启动。运行 `claude`、`codex`、`gemini` 或 `gh copilot`，即可在标题栏看到 AI 代理状态。
 
