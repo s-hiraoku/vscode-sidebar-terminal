@@ -32,11 +32,11 @@ import {
   TerminalInitializationStateMachine,
   TerminalInitializationState,
 } from './services/TerminalInitializationStateMachine';
-import {
-  TerminalInitializationWatchdog,
-  WatchdogOptions,
-} from './services/TerminalInitializationWatchdog';
+import { WatchdogOptions } from './services/TerminalInitializationWatchdog';
 import { TerminalCommandHandlers } from './services/TerminalCommandHandlers';
+import { TerminalKillService } from './services/TerminalKillService';
+import { ProviderSessionService } from './services/ProviderSessionService';
+import { WatchdogCoordinator } from './services/WatchdogCoordinator';
 
 export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vscode.Disposable {
   public static readonly viewType = 'secondaryTerminal';
@@ -88,15 +88,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private readonly _telemetryService?: TelemetryService;
   private readonly _terminalCommandHandlers: TerminalCommandHandlers;
   private readonly _terminalInitStateMachine = new TerminalInitializationStateMachine();
-  private readonly _terminalInitWatchdog = new TerminalInitializationWatchdog((terminalId, info) =>
-    this._handleInitializationTimeout(terminalId, info.attempt, info.isFinalAttempt)
-  );
-  private readonly _pendingWatchdogTerminals = new Set<string>();
-  private readonly _safeModeTerminals = new Set<string>();
-  private readonly _recordedInitMetrics = new Set<string>();
-  private readonly _watchdogPhases = new Map<string, 'ack' | 'prompt'>();
-  private readonly _terminalInitStartTimes = new Map<string, number>();
-  private readonly _safeModeNotified = new Set<string>();
+  private readonly _killService: TerminalKillService;
+  private readonly _sessionService: ProviderSessionService;
+  private readonly _watchdogCoordinator: WatchdogCoordinator;
   private readonly _pendingInitRetries = new Map<string, number>();
   private _pendingMessages: WebviewMessage[] = [];
 
@@ -180,6 +174,35 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       linkResolver: this._linkResolver,
       getSplitDirection: () => this._determineSplitDirection(),
     });
+
+    // Initialize extracted services (Phase 3 refactoring)
+    this._killService = new TerminalKillService({
+      getActiveTerminalId: () => this._terminalManager.getActiveTerminalId(),
+      getTerminal: (id) => this._terminalManager.getTerminal(id),
+      killTerminal: (id) => this._terminalManager.killTerminal(id),
+      getCurrentState: () => this._terminalManager.getCurrentState(),
+      sendMessage: (msg) => this._sendMessage(msg),
+    });
+
+    this._sessionService = new ProviderSessionService({
+      extensionPersistenceService: this._extensionPersistenceService ?? null,
+      getTerminals: () => this._terminalManager.getTerminals(),
+      getActiveTerminalId: () => this._terminalManager.getActiveTerminalId(),
+      createTerminal: () => this._terminalManager.createTerminal(),
+      sendMessage: (msg) => this._sendMessage(msg),
+      getCurrentFontSettings: () => this._settingsService.getCurrentFontSettings(),
+    });
+
+    this._watchdogCoordinator = new WatchdogCoordinator(
+      {
+        getTerminal: (id) => this._terminalManager.getTerminal(id),
+        initializeShellForTerminal: (id, pty, safe) =>
+          this._terminalManager.initializeShellForTerminal(id, pty as import('node-pty').IPty, safe),
+        telemetryService: this._telemetryService,
+      },
+      SecondaryTerminalProvider.ACK_WATCHDOG_OPTIONS,
+      SecondaryTerminalProvider.PROMPT_WATCHDOG_OPTIONS
+    );
 
     log('🎨 [PROVIDER] NEW Facade pattern services initialized (Issue #214)');
     log('✅ [PROVIDER] SecondaryTerminalProvider constructed with all services');
@@ -804,7 +827,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     const currentState = this._terminalInitStateMachine.getState(terminalId);
     if (currentState < TerminalInitializationState.ViewReady) {
       this._terminalInitStateMachine.markViewReady(terminalId, 'terminalReady');
-      this._startWatchdogForTerminal(terminalId, 'prompt', 'terminalReady');
+      this._watchdogCoordinator.startForTerminal(terminalId, 'prompt', 'terminalReady');
       log(`🔄 [PROVIDER] terminalReady promoted state to ViewReady for ${terminalId}`);
     }
 
@@ -845,7 +868,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         void this._communicationService.sendMessage(message);
       });
     }
-    this._startPendingWatchdogs();
+    this._watchdogCoordinator.startPendingWatchdogs(this._isInitialized);
 
     // Send version information
     void this._communicationService.sendVersionInfo();
@@ -1054,20 +1077,20 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     }
 
     const currentState = this._terminalInitStateMachine.getState(terminalId);
-    const phase = this._watchdogPhases.get(terminalId);
+    const phase = this._watchdogCoordinator.getPhase(terminalId);
     if (
       phase === 'prompt' &&
       currentState >= TerminalInitializationState.ViewReady &&
-      !this._safeModeTerminals.has(terminalId)
+      !this._watchdogCoordinator.isInSafeMode(terminalId)
     ) {
       log(`⏭️ [PROVIDER] Ignoring duplicate terminalInitializationComplete for ${terminalId}`);
       return;
     }
 
     log(`✅ [PROVIDER] Terminal ${terminalId} initialization confirmed by WebView`);
-    this._stopWatchdogForTerminal(terminalId, 'webviewAck');
+    this._watchdogCoordinator.stopForTerminal(terminalId, 'webviewAck');
     this._terminalInitStateMachine.markViewReady(terminalId, 'webviewAck');
-    this._startWatchdogForTerminal(terminalId, 'prompt', 'awaitPrompt');
+    this._watchdogCoordinator.startForTerminal(terminalId, 'prompt', 'awaitPrompt');
 
     const terminal = this._terminalManager.getTerminal(terminalId);
     if (!terminal || !terminal.ptyProcess) {
@@ -1096,7 +1119,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     } catch (error) {
       log(`❌ [PROVIDER] Shell initialization failed for ${terminalId}:`, error);
       this._terminalInitStateMachine.markFailed(terminalId, 'initializeShell');
-      this._startWatchdogForTerminal(terminalId, 'prompt', 'shellInitRetry');
+      this._watchdogCoordinator.startForTerminal(terminalId, 'prompt', 'shellInitRetry');
       return;
     }
 
@@ -1106,7 +1129,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     } catch (error) {
       log(`❌ [PROVIDER] PTY output start failed for ${terminalId}:`, error);
       this._terminalInitStateMachine.markFailed(terminalId, 'startPtyOutput');
-      this._startWatchdogForTerminal(terminalId, 'prompt', 'ptyRetry');
+      this._watchdogCoordinator.startForTerminal(terminalId, 'prompt', 'ptyRetry');
       return;
     }
 
@@ -1117,9 +1140,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     });
     this._eventCoordinator?.flushBufferedOutput(terminalId);
     this._terminalInitStateMachine.markPromptReady(terminalId, 'startOutput');
-    this._stopWatchdogForTerminal(terminalId, 'promptReady');
-    this._safeModeTerminals.delete(terminalId);
-    this._recordInitializationMetric('success', terminalId);
+    this._watchdogCoordinator.stopForTerminal(terminalId, 'promptReady');
+    this._watchdogCoordinator.clearSafeMode(terminalId);
+    this._watchdogCoordinator.markInitSuccess(terminalId);
   }
 
   private async _handleUpdateSettings(message: WebviewMessage): Promise<void> {
@@ -1301,99 +1324,11 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   public async killTerminal(): Promise<void> {
-    const activeTerminalId = this._terminalManager.getActiveTerminalId();
-    if (!activeTerminalId) {
-      log('⚠️ [PROVIDER] No active terminal to kill');
-      return;
-    }
-
-    // Check if confirmation is required before killing
-    const confirmBeforeKill = vscode.workspace
-      .getConfiguration('secondaryTerminal')
-      .get<boolean>('confirmBeforeKill', false);
-
-    if (confirmBeforeKill) {
-      const terminal = this._terminalManager.getTerminal(activeTerminalId);
-      const terminalName = terminal?.name || `Terminal ${activeTerminalId}`;
-      const result = await vscode.window.showWarningMessage(
-        `Are you sure you want to kill "${terminalName}"?`,
-        { modal: true },
-        'Kill Terminal'
-      );
-
-      if (result !== 'Kill Terminal') {
-        log('⚠️ [PROVIDER] Terminal kill cancelled by user');
-        return;
-      }
-    }
-
-    await this._performKillTerminal(activeTerminalId);
-  }
-
-  private async _performKillTerminal(terminalId: string): Promise<void> {
-    log(`🗑️ [PROVIDER] Killing terminal: ${terminalId}`);
-
-    // 🔧 FIX: await killTerminal and properly handle errors
-    // Do NOT send terminalRemoved if deletion fails (e.g., last terminal protection)
-    try {
-      await this._terminalManager.killTerminal(terminalId);
-    } catch (error) {
-      log(`❌ [PROVIDER] Error killing terminal: ${error}`);
-      // 🔧 FIX: Send failure response and do NOT continue with removal messages
-      await this._sendMessage({
-        command: 'deleteTerminalResponse',
-        terminalId: terminalId,
-        success: false,
-        reason: error instanceof Error ? error.message : 'Terminal deletion failed',
-      });
-      return; // Stop here - do not send terminalRemoved for failed deletion
-    }
-
-    // Send terminalRemoved message first (only on successful deletion)
-    await this._sendMessage({
-      command: 'terminalRemoved',
-      terminalId: terminalId,
-    });
-
-    // 🔧 FIX: Small delay to ensure WebView processes terminalRemoved before stateUpdate
-    await new Promise((resolve) => setTimeout(resolve, 50));
-
-    // Then send the updated state (now correctly excludes the deleted terminal)
-    await this._sendMessage({
-      command: 'stateUpdate',
-      state: this._terminalManager.getCurrentState(),
-    });
-
-    log(`✅ [PROVIDER] Terminal killed: ${terminalId}`);
-  }
-
-  private async _performKillSpecificTerminal(terminalId: string): Promise<void> {
-    log(`🗑️ [PROVIDER] Killing specific terminal: ${terminalId}`);
-    await this._performKillTerminal(terminalId);
+    return this._killService.killTerminal();
   }
 
   public async killSpecificTerminal(terminalId: string): Promise<void> {
-    // Check if confirmation is required before killing
-    const confirmBeforeKill = vscode.workspace
-      .getConfiguration('secondaryTerminal')
-      .get<boolean>('confirmBeforeKill', false);
-
-    if (confirmBeforeKill) {
-      const terminal = this._terminalManager.getTerminal(terminalId);
-      const terminalName = terminal?.name || `Terminal ${terminalId}`;
-      const result = await vscode.window.showWarningMessage(
-        `Are you sure you want to kill "${terminalName}"?`,
-        { modal: true },
-        'Kill Terminal'
-      );
-
-      if (result !== 'Kill Terminal') {
-        log('⚠️ [PROVIDER] Terminal kill cancelled by user');
-        return;
-      }
-    }
-
-    await this._performKillSpecificTerminal(terminalId);
+    return this._killService.killSpecificTerminal(terminalId);
   }
 
   public async _initializeTerminal(): Promise<void> {
@@ -1608,152 +1543,11 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   public async saveCurrentSession(): Promise<boolean> {
-    if (!this._extensionPersistenceService) {
-      log('⚠️ [PERSISTENCE] Persistence service not available');
-      return false;
-    }
-
-    try {
-      log('💾 [PERSISTENCE] Saving current session...');
-      const terminals = this._terminalManager.getTerminals();
-      const activeTerminalId = this._terminalManager.getActiveTerminalId();
-
-      const terminalData = terminals.map((terminal) => ({
-        id: terminal.id,
-        name: terminal.name,
-        cwd: terminal.cwd || safeProcessCwd(),
-        isActive: terminal.id === activeTerminalId,
-        scrollback: [], // Scrollback is managed by WebView
-      }));
-
-      const response = await this._extensionPersistenceService.saveCurrentSession();
-      // terminalData is used for logging purposes
-
-      if (response.success) {
-        log(`✅ [PERSISTENCE] Session saved successfully: ${terminalData.length} terminals`);
-        return true;
-      } else {
-        log(`❌ [PERSISTENCE] Session save failed: ${response.error}`);
-        return false;
-      }
-    } catch (error) {
-      log(`❌ [PERSISTENCE] Save session error: ${error}`);
-      return false;
-    }
+    return this._sessionService.saveCurrentSession();
   }
 
   public async restoreLastSession(): Promise<boolean> {
-    if (!this._extensionPersistenceService) {
-      log('⚠️ [PERSISTENCE] Persistence service not available');
-      return false;
-    }
-
-    try {
-      log('💾 [PERSISTENCE] Restoring last session...');
-      const sessionResult = await this._extensionPersistenceService.restoreSession();
-
-      if (sessionResult && sessionResult.terminals && sessionResult.terminals.length > 0) {
-        log(`📦 [PERSISTENCE] Found ${sessionResult.terminals.length} terminals to restore`);
-
-        const terminalMappings: Array<{
-          oldId: string;
-          newId: string;
-          terminalData: any;
-        }> = [];
-
-        const restoredTerminals = [];
-        for (const terminalData of sessionResult.terminals) {
-          try {
-            const newTerminalId = this._terminalManager.createTerminal();
-            restoredTerminals.push(newTerminalId);
-            terminalMappings.push({
-              oldId: terminalData.id,
-              newId: newTerminalId,
-              terminalData: terminalData,
-            });
-            log(`✅ [PERSISTENCE] Restored terminal: ${terminalData.name} (${newTerminalId})`);
-          } catch (error) {
-            log(`❌ [PERSISTENCE] Failed to restore terminal ${terminalData.name}:`, error);
-          }
-        }
-
-        if (restoredTerminals.length > 0) {
-          // 🔧 CRITICAL FIX: Include font settings in terminalCreated message for session restore
-          const fontSettings = this._settingsService.getCurrentFontSettings();
-
-          // Send terminal creation notifications
-          for (const mapping of terminalMappings) {
-            await this._sendMessage({
-              command: 'terminalCreated',
-              terminal: {
-                id: mapping.newId,
-                name: mapping.terminalData.name || `Terminal ${mapping.newId}`,
-                cwd: mapping.terminalData.cwd || safeProcessCwd(),
-                isActive: mapping.terminalData.isActive || false,
-              },
-              // 🔧 Include font settings directly in the message
-              config: {
-                fontSettings,
-              },
-            });
-          }
-
-          await new Promise((resolve) => setTimeout(resolve, 200));
-
-          // Restore scrollback
-          for (const mapping of terminalMappings) {
-            if (
-              mapping.terminalData.scrollback &&
-              Array.isArray(mapping.terminalData.scrollback) &&
-              mapping.terminalData.scrollback.length > 0
-            ) {
-              log(
-                `📜 [RESTORE-DEBUG] Restoring scrollback for ${mapping.newId}: ${mapping.terminalData.scrollback.length} lines`
-              );
-
-              await this._sendMessage({
-                command: 'restoreScrollback',
-                terminalId: mapping.newId,
-                scrollback: mapping.terminalData.scrollback,
-              });
-            }
-          }
-
-          log(
-            `✅ [PERSISTENCE] Session restored successfully: ${restoredTerminals.length}/${sessionResult.terminals.length} terminals`
-          );
-
-          // Set active terminal
-          const activeMapping = terminalMappings.find((m) => m.terminalData.isActive);
-          if (activeMapping) {
-            this._terminalManager.setActiveTerminal(activeMapping.newId);
-            await this._sendMessage({
-              command: 'setActiveTerminal',
-              terminalId: activeMapping.newId,
-            });
-          }
-
-          // Notify success
-          await this._sendMessage({
-            command: 'sessionRestored',
-            success: true,
-            restoredCount: restoredTerminals.length,
-            totalCount: sessionResult.terminals.length,
-          });
-
-          return true;
-        } else {
-          log('⚠️ [PERSISTENCE] No terminals were successfully restored');
-          return false;
-        }
-      } else {
-        log('📦 [PERSISTENCE] No session to restore');
-        return false;
-      }
-    } catch (error) {
-      log(`❌ [PERSISTENCE] Auto-restore failed: ${error}`);
-      return false;
-    }
+    return this._sessionService.restoreLastSession();
   }
 
   private _registerInitializationWatchdogs(): void {
@@ -1763,26 +1557,20 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           return;
         }
 
-        this._terminalInitStartTimes.set(terminal.id, Date.now());
+        this._watchdogCoordinator.recordInitStart(terminal.id);
         this._terminalInitStateMachine.markViewPending(terminal.id, 'terminalCreated');
         this._terminalInitStateMachine.markPtySpawned(terminal.id, 'terminalCreated');
 
         if (this._isInitialized) {
-          this._startWatchdogForTerminal(terminal.id, 'ack', 'terminalCreated');
+          this._watchdogCoordinator.startForTerminal(terminal.id, 'ack', 'terminalCreated');
         } else {
-          this._pendingWatchdogTerminals.add(terminal.id);
+          this._watchdogCoordinator.addPendingTerminal(terminal.id);
         }
       });
 
       const removedDisposable = this._terminalManager.onTerminalRemoved((terminalId) => {
-        this._stopWatchdogForTerminal(terminalId, 'terminalRemoved');
+        this._watchdogCoordinator.stopForTerminal(terminalId, 'terminalRemoved');
         this._terminalInitStateMachine.reset(terminalId);
-        this._pendingWatchdogTerminals.delete(terminalId);
-        this._safeModeTerminals.delete(terminalId);
-        this._safeModeNotified.delete(terminalId);
-        this._terminalInitStartTimes.delete(terminalId);
-        this._recordedInitMetrics.delete(`${terminalId}:success`);
-        this._recordedInitMetrics.delete(`${terminalId}:timeout`);
       });
 
       this._cleanupService.addDisposable(createdDisposable);
@@ -1794,11 +1582,11 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           continue;
         }
 
-        this._terminalInitStartTimes.set(terminal.id, Date.now());
+        this._watchdogCoordinator.recordInitStart(terminal.id);
         if (this._isInitialized) {
-          this._startWatchdogForTerminal(terminal.id, 'ack', 'existingTerminal');
+          this._watchdogCoordinator.startForTerminal(terminal.id, 'ack', 'existingTerminal');
         } else {
-          this._pendingWatchdogTerminals.add(terminal.id);
+          this._watchdogCoordinator.addPendingTerminal(terminal.id);
         }
       }
     } catch (error) {
@@ -1806,127 +1594,6 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     }
   }
 
-  private _startWatchdogForTerminal(
-    terminalId: string,
-    phase: 'ack' | 'prompt',
-    source: string,
-    overrideOptions?: Partial<WatchdogOptions>
-  ): void {
-    const baseOptions =
-      phase === 'prompt'
-        ? SecondaryTerminalProvider.PROMPT_WATCHDOG_OPTIONS
-        : SecondaryTerminalProvider.ACK_WATCHDOG_OPTIONS;
-    this._watchdogPhases.set(terminalId, phase);
-    this._terminalInitWatchdog.start(terminalId, `${phase}:${source}`, {
-      ...baseOptions,
-      ...overrideOptions,
-    });
-    log(`⏳ [WATCHDOG] Started for ${terminalId} (phase=${phase}, source=${source})`);
-  }
-
-  private _stopWatchdogForTerminal(terminalId: string, reason: string): void {
-    this._terminalInitWatchdog.stop(terminalId, reason);
-    this._watchdogPhases.delete(terminalId);
-  }
-
-  private _startPendingWatchdogs(): void {
-    if (!this._isInitialized || this._pendingWatchdogTerminals.size === 0) {
-      return;
-    }
-
-    for (const terminalId of Array.from(this._pendingWatchdogTerminals.values())) {
-      this._startWatchdogForTerminal(terminalId, 'ack', 'pendingQueue');
-      this._pendingWatchdogTerminals.delete(terminalId);
-    }
-  }
-
-  private _handleInitializationTimeout(
-    terminalId: string,
-    attempt: number,
-    isFinalAttempt: boolean
-  ): void {
-    const terminal = this._terminalManager.getTerminal(terminalId);
-    const phase = this._watchdogPhases.get(terminalId) ?? 'ack';
-    if (!terminal || !terminal.ptyProcess) {
-      this._stopWatchdogForTerminal(terminalId, 'terminalMissing');
-      return;
-    }
-
-    log(
-      `⚠️ [WATCHDOG] Terminal ${terminalId} init timeout (phase=${phase}, attempt=${attempt}, final=${isFinalAttempt})`
-    );
-
-    if (phase === 'ack') {
-      if (isFinalAttempt) {
-        this._stopWatchdogForTerminal(terminalId, 'ackTimeout');
-        this._recordInitializationMetric('timeout', terminalId);
-        void this._notifyInitializationFailure(terminalId);
-      }
-      return;
-    }
-
-    if (!this._safeModeTerminals.has(terminalId)) {
-      this._safeModeTerminals.add(terminalId);
-      log(`⚠️ Prompt timeout -> safe mode for ${terminalId}`);
-      this._notifySafeMode(terminalId);
-      try {
-        this._terminalManager.initializeShellForTerminal(terminalId, terminal.ptyProcess, true);
-        this._startWatchdogForTerminal(terminalId, 'prompt', 'safeModeMonitor');
-        return;
-      } catch (error) {
-        log(`❌ [FALLBACK] Safe mode initialization failed for ${terminalId}:`, error);
-      }
-    }
-
-    if (!isFinalAttempt) {
-      return;
-    }
-
-    this._stopWatchdogForTerminal(terminalId, 'safeModeFailed');
-    this._recordInitializationMetric('timeout', terminalId);
-    void this._notifyInitializationFailure(terminalId);
-  }
-
-  private _recordInitializationMetric(metric: 'success' | 'timeout', terminalId: string): void {
-    const key = `${terminalId}:${metric}`;
-    if (this._recordedInitMetrics.has(key)) {
-      return;
-    }
-
-    this._recordedInitMetrics.add(key);
-    const startTime = this._terminalInitStartTimes.get(terminalId);
-    const duration = startTime ? Date.now() - startTime : 0;
-    this._terminalInitStartTimes.delete(terminalId);
-    this._safeModeNotified.delete(terminalId);
-
-    log(`📊 [METRIC] terminal.init.${metric} (terminal=${terminalId}, duration=${duration}ms)`);
-    this._telemetryService?.trackPerformance({
-      operation: 'terminal.init',
-      duration,
-      success: metric === 'success',
-      metadata: {
-        result: metric,
-      },
-    });
-  }
-
-  private async _notifyInitializationFailure(terminalId: string): Promise<void> {
-    this._recordInitializationMetric('timeout', terminalId);
-    await vscode.window.showErrorMessage(
-      'Sidebar Terminal failed to initialize its shell. Close the terminal and create a new one.'
-    );
-  }
-
-  private _notifySafeMode(terminalId: string): void {
-    if (this._safeModeNotified.has(terminalId)) {
-      return;
-    }
-
-    this._safeModeNotified.add(terminalId);
-    void vscode.window.showWarningMessage(
-      'Sidebar Terminal prompt is taking longer than expected. Retrying in safe mode...'
-    );
-  }
 
   public getPerformanceMetrics() {
     return this._lifecycleManager.getPerformanceMetrics();
@@ -1948,10 +1615,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     if (this._eventCoordinator) {
       this._eventCoordinator.dispose();
     }
-    this._terminalInitWatchdog.dispose();
-    this._pendingWatchdogTerminals.clear();
-    this._safeModeTerminals.clear();
-    this._recordedInitMetrics.clear();
+    this._watchdogCoordinator.dispose();
 
     // Dispose new Facade services
     this._lifecycleManager.dispose();
