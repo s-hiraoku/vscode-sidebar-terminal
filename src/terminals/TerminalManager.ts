@@ -269,8 +269,20 @@ export class TerminalManager {
 
     const nextName = updates.newName?.trim();
     const hasName = typeof nextName === 'string' && nextName.length > 0;
-    const hasColor =
-      typeof updates.indicatorColor === 'string' && updates.indicatorColor.trim().length > 0;
+    const normalizedIndicatorColor =
+      typeof updates.indicatorColor === 'string'
+        ? (() => {
+            const value = updates.indicatorColor.trim();
+            if (/^#[0-9A-Fa-f]{6}$/.test(value)) {
+              return value.toUpperCase();
+            }
+            if (value.toLowerCase() === 'transparent') {
+              return 'transparent';
+            }
+            return undefined;
+          })()
+        : undefined;
+    const hasColor = typeof normalizedIndicatorColor === 'string';
 
     if (!hasName && !hasColor) {
       return false;
@@ -282,7 +294,7 @@ export class TerminalManager {
 
     return this._stateCoordinator.updateTerminalHeader(terminalId, {
       ...(hasName ? { newName: nextName } : {}),
-      ...(hasColor ? { indicatorColor: updates.indicatorColor!.trim().toUpperCase() } : {}),
+      ...(hasColor ? { indicatorColor: normalizedIndicatorColor } : {}),
     });
   }
 

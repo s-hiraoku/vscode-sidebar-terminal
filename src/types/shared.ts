@@ -81,7 +81,6 @@ export interface InteractionConfig {
   readonly altClickMovesCursor?: boolean;
   readonly multiCursorModifier?: string;
   readonly activeBorderMode?: ActiveBorderMode;
-  readonly showHeaderModeIndicator?: boolean;
 }
 
 // ===== Unified Type Definitions =====
@@ -104,7 +103,6 @@ export interface ExtensionTerminalConfig
   readonly enableCliAgentIntegration?: boolean;
   readonly enableTerminalHeaderEnhancements?: boolean;
   readonly activeBorderMode?: ActiveBorderMode;
-  readonly showHeaderModeIndicator?: boolean;
   // Addon configuration for WebView terminal rendering
   readonly enableGpuAcceleration?: boolean;
   readonly enableSearchAddon?: boolean;
@@ -130,7 +128,6 @@ export interface PartialTerminalSettings {
   enableCliAgentIntegration?: boolean;
   enableTerminalHeaderEnhancements?: boolean;
   activeBorderMode?: ActiveBorderMode;
-  showHeaderModeIndicator?: boolean;
   // VS Code keybinding system settings
   sendKeybindingsToShell?: boolean;
   commandsToSkipShell?: string[];
@@ -200,7 +197,6 @@ export interface WebViewSettingsPayload {
   readonly enableCliAgentIntegration: boolean;
   readonly enableTerminalHeaderEnhancements: boolean;
   readonly activeBorderMode: ActiveBorderMode;
-  readonly showHeaderModeIndicator: boolean;
   readonly dynamicSplitDirection: boolean;
   readonly panelLocation: 'auto' | 'sidebar' | 'panel';
 }

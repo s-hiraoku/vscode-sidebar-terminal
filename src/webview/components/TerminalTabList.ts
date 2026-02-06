@@ -42,7 +42,6 @@ export class TerminalTabList {
   private dropIndicator: HTMLElement;
   private dropTargetInfo: { id: string; position: 'before' | 'after' } | null = null;
   private currentMode: 'normal' | 'fullscreen' | 'split' = 'normal';
-  private modeIndicatorEnabled = true;
   // 🔧 FIX: Store current theme for use in setActiveTab
   private currentTheme: TerminalTheme | null = null;
 
@@ -709,16 +708,8 @@ export class TerminalTabList {
     this.modeIndicatorContainer.setAttribute('data-mode', mode);
     this.modeIndicatorSymbol.innerHTML = this.getModeIndicatorIconSvg(icon);
 
-    this.modeIndicatorContainer.style.display = this.modeIndicatorEnabled ? 'flex' : 'none';
-  }
-
-  public setModeIndicatorEnabled(enabled: boolean): void {
-    this.modeIndicatorEnabled = enabled;
-    if (!this.modeIndicatorContainer) {
-      return;
-    }
-
-    this.modeIndicatorContainer.style.display = enabled ? 'flex' : 'none';
+    // Always show the mode indicator
+    this.modeIndicatorContainer.style.display = 'flex';
   }
 
   /**

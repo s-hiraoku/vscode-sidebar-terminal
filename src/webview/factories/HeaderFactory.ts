@@ -58,6 +58,7 @@ export const HEADER_INDICATOR_COLOR_PALETTE = [
   '#FFD700',
   '#00BFA6',
   '#FFFFFF',
+  'transparent',
 ] as const;
 
 /**
@@ -549,14 +550,25 @@ export class HeaderFactory {
           colorButton.type = 'button';
           colorButton.className = 'terminal-header-color-option';
           colorButton.dataset.indicatorColor = color;
-          colorButton.title = color;
+          colorButton.title = color === 'transparent' ? 'OFF' : color;
           colorButton.style.width = '14px';
           colorButton.style.height = '14px';
           colorButton.style.borderRadius = '50%';
           colorButton.style.border = '1px solid rgba(127, 127, 127, 0.6)';
           colorButton.style.padding = '0';
           colorButton.style.cursor = 'pointer';
-          colorButton.style.backgroundColor = color;
+          if (color === 'transparent') {
+            colorButton.textContent = 'OFF';
+            colorButton.style.width = '26px';
+            colorButton.style.borderRadius = '10px';
+            colorButton.style.background = 'var(--vscode-button-secondaryBackground)';
+            colorButton.style.color = 'var(--vscode-button-secondaryForeground)';
+            colorButton.style.fontSize = '9px';
+            colorButton.style.fontWeight = '700';
+            colorButton.style.lineHeight = '1';
+          } else {
+            colorButton.style.backgroundColor = color;
+          }
           colorButton.addEventListener('mousedown', (e) => {
             e.preventDefault();
             e.stopPropagation();

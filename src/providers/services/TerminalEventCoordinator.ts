@@ -250,7 +250,6 @@ export class TerminalEventCoordinator implements vscode.Disposable {
         event.affectsConfiguration('secondaryTerminal.theme') ||
         event.affectsConfiguration('secondaryTerminal.cursorBlink') ||
         event.affectsConfiguration('secondaryTerminal.enableTerminalHeaderEnhancements') ||
-        event.affectsConfiguration('secondaryTerminal.showHeaderModeIndicator') ||
         event.affectsConfiguration('secondaryTerminal.activeBorderMode')
       ) {
         this._pendingSettingsUpdate = true;
@@ -373,11 +372,6 @@ export class TerminalEventCoordinator implements vscode.Disposable {
       enableCliAgentIntegration: configService.isFeatureEnabled('cliAgentIntegration'),
       enableTerminalHeaderEnhancements: configService.isFeatureEnabled(
         'terminalHeaderEnhancements'
-      ),
-      showHeaderModeIndicator: configService.get(
-        'secondaryTerminal',
-        'showHeaderModeIndicator',
-        true
       ),
       activeBorderMode: configService.get('sidebarTerminal', 'activeBorderMode', 'multipleOnly'),
       dynamicSplitDirection: configService.isFeatureEnabled('dynamicSplitDirection'),

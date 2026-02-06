@@ -40,7 +40,6 @@ export class TerminalTabManager implements TerminalTabEvents {
   private hideWhenSingleTab: boolean = true;
   private isInitialized = false;
   private currentDisplayMode: 'normal' | 'fullscreen' | 'split' = 'normal';
-  private modeIndicatorEnabled = true;
 
   // 🔧 FIX: Track tabs being deleted to prevent race conditions with syncTabs
   private pendingDeletions: Set<string> = new Set();
@@ -77,7 +76,6 @@ export class TerminalTabManager implements TerminalTabEvents {
     if (!this.tabList) {
       this.tabList = new TerminalTabList(this.tabContainer, this);
       this.tabList.setModeIndicator(this.currentDisplayMode);
-      this.tabList.setModeIndicatorEnabled(this.modeIndicatorEnabled);
     }
 
     this.isInitialized = true;
@@ -450,12 +448,6 @@ export class TerminalTabManager implements TerminalTabEvents {
     this.currentDisplayMode = mode;
     this.ensureInitialized();
     this.tabList?.setModeIndicator(mode);
-  }
-
-  public setModeIndicatorEnabled(enabled: boolean): void {
-    this.modeIndicatorEnabled = enabled;
-    this.ensureInitialized();
-    this.tabList?.setModeIndicatorEnabled(enabled);
   }
 
   /**

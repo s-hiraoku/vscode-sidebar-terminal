@@ -48,7 +48,6 @@ export class WebViewSettingsManagerService implements IWebViewSettingsManagerSer
       multiCursorModifier: altClickSettings.multiCursorModifier,
       // CLI Agent integration settings
       enableCliAgentIntegration: config.get<boolean>('enableCliAgentIntegration', true),
-      showHeaderModeIndicator: config.get<boolean>('showHeaderModeIndicator', true),
       activeBorderMode: config.get<ActiveBorderMode>('activeBorderMode', 'multipleOnly'),
       // Dynamic split direction settings (Issue #148)
       dynamicSplitDirection: config.get<boolean>('dynamicSplitDirection', true),
@@ -133,13 +132,6 @@ export class WebViewSettingsManagerService implements IWebViewSettingsManagerSer
         log(
           '🔧 [SETTINGS-MANAGER] CLI Agent integration setting updated:',
           settings.enableCliAgentIntegration
-        );
-      }
-      if (settings.showHeaderModeIndicator !== undefined) {
-        await config.update(
-          'showHeaderModeIndicator',
-          settings.showHeaderModeIndicator,
-          vscode.ConfigurationTarget.Global
         );
       }
       if (settings.dynamicSplitDirection !== undefined) {
@@ -235,7 +227,6 @@ export class WebViewSettingsManagerService implements IWebViewSettingsManagerSer
       event.affectsConfiguration('secondaryTerminal.theme') ||
       event.affectsConfiguration('secondaryTerminal.cursorBlink') ||
       event.affectsConfiguration('secondaryTerminal.enableCliAgentIntegration') ||
-      event.affectsConfiguration('secondaryTerminal.showHeaderModeIndicator') ||
       event.affectsConfiguration('secondaryTerminal.activeBorderMode')
     );
   }

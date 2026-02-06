@@ -1296,9 +1296,6 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       this.uiManager.setTerminalHeaderEnhancementsEnabled(
         this.currentSettings.enableTerminalHeaderEnhancements !== false
       );
-      this.terminalTabManager?.setModeIndicatorEnabled?.(
-        this.currentSettings.showHeaderModeIndicator !== false
-      );
 
       const activeId = this.getActiveTerminalId();
       if (activeId) {

@@ -342,11 +342,15 @@ export class TerminalCommandHandlers {
     const nextName =
       typeof rawName === 'string' && rawName.trim().length > 0 ? rawName.trim() : undefined;
     const rawIndicatorColor = (message as any)?.indicatorColor;
+    const normalizedIndicatorColor =
+      typeof rawIndicatorColor === 'string' ? rawIndicatorColor.trim() : undefined;
     const indicatorColor =
-      typeof rawIndicatorColor === 'string' &&
-      /^#[0-9A-Fa-f]{6}$/.test(rawIndicatorColor.trim())
-        ? rawIndicatorColor.trim().toUpperCase()
-        : undefined;
+      typeof normalizedIndicatorColor === 'string' &&
+      /^#[0-9A-Fa-f]{6}$/.test(normalizedIndicatorColor)
+        ? normalizedIndicatorColor.toUpperCase()
+        : normalizedIndicatorColor?.toLowerCase() === 'transparent'
+          ? 'transparent'
+          : undefined;
 
     if (!nextName && !indicatorColor) {
       log('⚠️ [HANDLER] updateTerminalHeader called without valid updates');

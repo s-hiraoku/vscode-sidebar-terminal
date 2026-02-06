@@ -468,11 +468,6 @@
           "default": true,
           "description": "Enable enhanced terminal header UI (processing indicator and color palette editor)."
         },
-        "secondaryTerminal.showHeaderModeIndicator": {
-          "type": "boolean",
-          "default": true,
-          "description": "Show the header mode indicator button for toggling split/fullscreen layout."
-        },
         "secondaryTerminal.enableGitHubCopilotIntegration": {
           "type": "boolean",
           "default": true,

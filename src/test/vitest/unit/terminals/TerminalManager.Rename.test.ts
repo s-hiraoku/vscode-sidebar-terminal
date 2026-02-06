@@ -109,4 +109,22 @@ describe('TerminalManager - renameTerminal', () => {
 
     disposable.dispose();
   });
+
+  it('accepts transparent indicator color for OFF state', () => {
+    terminalManager = new TerminalManager(createMockCliAgentService());
+
+    (terminalManager as any)._terminals.set('t1', {
+      id: 't1',
+      name: 'Terminal',
+      isActive: true,
+      indicatorColor: '#00FFFF',
+    });
+
+    const updated = terminalManager.updateTerminalHeader('t1', {
+      indicatorColor: 'transparent',
+    });
+
+    expect(updated).toBe(true);
+    expect((terminalManager as any)._terminals.get('t1').indicatorColor).toBe('transparent');
+  });
 });
