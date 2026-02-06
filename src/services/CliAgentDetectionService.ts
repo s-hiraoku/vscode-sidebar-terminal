@@ -22,6 +22,7 @@ import {
 } from '../interfaces/CliAgentService';
 import { CliAgentDetectionEngine } from './CliAgentDetectionEngine';
 import { CliAgentStateStore, AgentStatus } from './CliAgentStateStore';
+import type { AgentType } from '../types/shared';
 
 /**
  * Refactored CLI Agent Detection Service
@@ -161,7 +162,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
    */
   getConnectedAgent(): {
     terminalId: string;
-    type: 'claude' | 'gemini' | 'codex' | 'copilot' | 'opencode';
+    type: AgentType;
   } | null {
     const terminalId = this.stateStore.getConnectedAgentTerminalId();
     const type = this.stateStore.getConnectedAgentType();
@@ -178,11 +179,11 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
    */
   getDisconnectedAgents(): Map<
     string,
-    { type: 'claude' | 'gemini' | 'codex' | 'copilot' | 'opencode'; startTime: Date }
+    { type: AgentType; startTime: Date }
   > {
     return this.stateStore.getDisconnectedAgents() as Map<
       string,
-      { type: 'claude' | 'gemini' | 'codex' | 'copilot' | 'opencode'; startTime: Date }
+      { type: AgentType; startTime: Date }
     >;
   }
 
@@ -239,7 +240,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
    */
   forceReconnectAgent(
     terminalId: string,
-    agentType: 'claude' | 'gemini' | 'codex' | 'copilot' | 'opencode' = 'claude',
+    agentType: AgentType = 'claude',
     terminalName?: string
   ): boolean {
     log(`🔄 [CLI-AGENT-SERVICE] Force reconnect for terminal ${terminalId} as ${agentType}`);
@@ -307,7 +308,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
    */
   setAgentConnected(
     terminalId: string,
-    type: 'claude' | 'gemini' | 'codex' | 'copilot' | 'opencode',
+    type: AgentType,
     terminalName?: string
   ): void {
     this.stateStore.setConnectedAgent(terminalId, type, terminalName);
@@ -342,7 +343,7 @@ export { CliAgentDetectionEngine } from './CliAgentDetectionEngine';
 export { CliAgentStateStore } from './CliAgentStateStore';
 
 // Export compatible types
-export type { AgentType } from './CliAgentPatternRegistry';
+export type { AgentType } from '../types/shared';
 export type { DetectionResult, TerminationResult } from './CliAgentDetectionEngine';
 export type { AgentState, AgentStatus, StateChangeEvent } from './CliAgentStateStore';
 

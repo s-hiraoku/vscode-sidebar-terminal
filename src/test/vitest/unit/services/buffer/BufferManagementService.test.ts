@@ -87,7 +87,7 @@ describe('BufferManagementService', () => {
     });
 
     it('should flush immediately on buffer overflow', () => {
-      service.initializeBuffer(1, { maxBufferSize: 10 });
+      service.initializeBuffer(1, { maxBufferSize: 2 });
 
       let overflowEventReceived = false;
       eventBus.subscribe(BufferOverflowEvent, () => {
@@ -95,13 +95,25 @@ describe('BufferManagementService', () => {
       });
 
       service.write(1, '12345');
-      const buffered = service.write(1, '67890X'); // Exceeds maxBufferSize
+      const buffered = service.write(1, '67890X'); // Exceeds max chunk count
 
       expect(buffered).toBe(false); // Flushed immediately
       expect(overflowEventReceived).toBe(true);
 
       const stats = service.getBufferStats(1);
       expect(stats?.currentSize).toBe(0); // Buffer cleared after flush
+    });
+
+    it('should treat maxBufferSize consistently as chunk count', () => {
+      service.initializeBuffer(1, { maxBufferSize: 2 });
+
+      // First large chunk should still be buffered if maxBufferSize is chunk-based.
+      const firstBuffered = service.write(1, 'x'.repeat(100));
+      expect(firstBuffered).toBe(true);
+
+      // Second chunk reaches chunk limit and flushes.
+      const secondBuffered = service.write(1, 'y'.repeat(100));
+      expect(secondBuffered).toBe(false);
     });
   });
 

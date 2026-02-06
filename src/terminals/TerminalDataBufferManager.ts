@@ -9,7 +9,7 @@ import { PERFORMANCE_CONSTANTS } from '../constants/SystemConstants';
 
 const ENABLE_TERMINAL_DEBUG_LOGS = process.env.SECONDARY_TERMINAL_DEBUG_LOGS === 'true';
 
-/** Handles data buffering and flushing for terminal output (~125fps batch rate) */
+/** Handles data buffering and flushing for terminal output (~60fps via DATA_FLUSH_INTERVAL=16ms). */
 export class TerminalDataBufferManager {
   private readonly _dataBuffers = new Map<string, string[]>();
   private readonly _dataFlushTimers = new Map<string, NodeJS.Timeout>();
@@ -100,17 +100,18 @@ export class TerminalDataBufferManager {
       try {
         this._cliAgentService.detectFromOutput(terminalId, combinedData);
 
-        const getAgentState = (this._cliAgentService as unknown as {
+        const cliAgentService = this._cliAgentService as unknown as {
           getAgentState?: (id: string) => { status: 'connected' | 'disconnected' | 'none' } | null;
-        }).getAgentState;
-        const detectTermination = (this._cliAgentService as unknown as {
           detectTermination?: (id: string, data: string) => { isTerminated: boolean } | null;
-        }).detectTermination;
+        };
 
-        if (typeof getAgentState === 'function' && typeof detectTermination === 'function') {
-          const agentState = getAgentState(terminalId);
+        if (
+          typeof cliAgentService.getAgentState === 'function' &&
+          typeof cliAgentService.detectTermination === 'function'
+        ) {
+          const agentState = cliAgentService.getAgentState(terminalId);
           if (agentState?.status && agentState.status !== 'none') {
-            detectTermination(terminalId, combinedData);
+            cliAgentService.detectTermination(terminalId, combinedData);
           }
         }
       } catch {

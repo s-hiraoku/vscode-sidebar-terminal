@@ -112,7 +112,7 @@ export class BufferManagementService implements IBufferManagementService {
     state.buffer.push(data);
 
     // Check for overflow
-    const currentSize = state.buffer.join('').length;
+    const currentSize = state.buffer.length;
     if (currentSize >= state.config.maxBufferSize) {
       this._eventBus.publish(BufferOverflowEvent, {
         terminalId,

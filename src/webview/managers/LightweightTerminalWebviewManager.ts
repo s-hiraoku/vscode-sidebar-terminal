@@ -833,6 +833,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       this.displayModeManager?.setDisplayMode('normal');
       log(`🧭 [MODE] Forced normal mode before creating ${terminalId}`);
     } else if (shouldForceFullscreen) {
+      this.displayModeManager?.setDisplayMode('fullscreen');
       this.forceFullscreenModeForNextCreate = false;
       log(`🧭 [MODE] Forced fullscreen mode before creating ${terminalId}`);
     } else {

@@ -234,6 +234,18 @@ describe('CliAgentDetectionEngine', () => {
       expect(result.confidence).toBe(0.6); // Matches shell prompt pattern
       expect(result.reason).toBe('Shell prompt detected');
     });
+
+    it('should treat embedded agent keywords as non-keywords in timeout prompt detection', () => {
+      // Simulate previous AI activity and timeout window passage.
+      engine.detectFromOutput(terminalId, 'some output');
+      vi.advanceTimersByTime(31000);
+
+      // Contains "claude" as a substring only, not a whole word.
+      const result = engine.detectTermination(terminalId, 'xclaudex>');
+
+      expect(result.isTerminated).toBe(true);
+      expect(result.reason).toBe('Timeout-based detection');
+    });
   });
 
   describe('Cache Management', () => {

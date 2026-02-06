@@ -18,7 +18,8 @@
  */
 
 import { terminal as log } from '../utils/logger';
-import { CliAgentPatternRegistry, AgentType } from './CliAgentPatternRegistry';
+import { CliAgentPatternRegistry } from './CliAgentPatternRegistry';
+import type { AgentType } from '../types/shared';
 import { LRUCache } from '../utils/LRUCache';
 
 /**
@@ -435,15 +436,12 @@ export class CliAgentDetectionEngine {
     const timeSinceLastAIOutput = Date.now() - (lastAIOutputEntry?.timestamp || 0);
 
     if (timeSinceLastAIOutput > 30000) {
+      const agentKeywordRegex = /\b(?:claude|gemini|codex|copilot|opencode)\b/i;
       // 30 seconds timeout
       if (
         cleanLine.length <= 30 &&
         (cleanLine.includes('$') || cleanLine.includes('%') || cleanLine.includes('>')) &&
-        !cleanLine.includes('claude') &&
-        !cleanLine.includes('gemini') &&
-        !cleanLine.includes('codex') &&
-        !cleanLine.includes('copilot') &&
-        !cleanLine.includes('opencode')
+        !agentKeywordRegex.test(cleanLine)
       ) {
         log(`✅ [TERMINATION] Timeout-based detection: "${cleanLine}"`);
         return {

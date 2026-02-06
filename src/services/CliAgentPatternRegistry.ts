@@ -11,8 +11,7 @@
  * - Consistent detection behavior across all services
  * - Improved extensibility for adding new agent types
  */
-
-export type AgentType = 'claude' | 'gemini' | 'codex' | 'copilot' | 'opencode';
+import { AgentType } from '../types/shared';
 
 /**
  * Pattern definitions for a specific agent type

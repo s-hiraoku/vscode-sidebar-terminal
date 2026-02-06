@@ -19,7 +19,7 @@ describe('CliAgentPatternRegistry', () => {
       expect(registry.matchCommandInput('gemini help')).toBe('gemini');
     });
 
-    it('should match codex/opencode/coplanilot commands', () => {
+    it('should match codex/opencode/copilot commands', () => {
       expect(registry.matchCommandInput('codex')).toBe('codex');
       expect(registry.matchCommandInput('opencode')).toBe('opencode');
       expect(registry.matchCommandInput('gh copilot suggest')).toBe('copilot');

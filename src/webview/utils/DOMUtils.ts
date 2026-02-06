@@ -169,10 +169,10 @@ export namespace DOMUtils {
     if (cache.has(selector)) {
       const cached = cache.get(selector)!;
       // Validate the cached element is still in the container (prevents stale references)
-      if (cached === null || container.contains(cached)) {
+      if (cached !== null && container.contains(cached)) {
         return cached;
       }
-      // Stale — re-query
+      // Null or stale entry: re-query to handle dynamic DOM changes.
     }
     const result = container.querySelector(selector) as HTMLElement | null;
     cache.set(selector, result);

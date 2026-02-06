@@ -6,6 +6,8 @@
  * to provide specialized detection logic for input commands and output patterns.
  */
 
+import type { AgentType } from '../../types/shared';
+
 export interface AgentDetectionResult {
   isDetected: boolean;
   confidence: number;
@@ -16,7 +18,7 @@ export interface AgentDetectionStrategy {
   /**
    * The agent type this strategy handles
    */
-  readonly agentType: 'claude' | 'gemini' | 'codex' | 'copilot' | 'opencode';
+  readonly agentType: AgentType;
 
   /**
    * Detect agent from user input command

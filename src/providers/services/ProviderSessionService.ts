@@ -54,20 +54,11 @@ export class ProviderSessionService {
     try {
       log('💾 [PERSISTENCE] Saving current session...');
       const terminals = this.deps.getTerminals();
-      const activeTerminalId = this.deps.getActiveTerminalId();
-
-      const terminalData = terminals.map((terminal) => ({
-        id: terminal.id,
-        name: terminal.name,
-        cwd: terminal.cwd || safeProcessCwd(),
-        isActive: terminal.id === activeTerminalId,
-        scrollback: [],
-      }));
 
       const response = await this.deps.extensionPersistenceService.saveCurrentSession();
 
       if (response.success) {
-        log(`✅ [PERSISTENCE] Session saved successfully: ${terminalData.length} terminals`);
+        log(`✅ [PERSISTENCE] Session saved successfully: ${terminals.length} terminals`);
         return true;
       } else {
         log(`❌ [PERSISTENCE] Session save failed: ${response.error}`);

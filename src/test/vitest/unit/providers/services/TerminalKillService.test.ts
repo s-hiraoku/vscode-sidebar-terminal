@@ -1,7 +1,7 @@
 /**
  * TerminalKillService Tests
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Mock vscode
 vi.mock('vscode', () => ({
@@ -45,14 +45,44 @@ describe('TerminalKillService', () => {
     service = new TerminalKillService(deps);
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   describe('killTerminal', () => {
     it('should kill active terminal without confirmation', async () => {
-      await service.killTerminal();
+      vi.useFakeTimers();
+      const killPromise = service.killTerminal();
+      await vi.advanceTimersByTimeAsync(50);
+      await killPromise;
 
       expect(deps.killTerminal).toHaveBeenCalledWith('terminal-1');
-      expect(deps.sendMessage).toHaveBeenCalledWith(
+      expect(deps.sendMessage).toHaveBeenNthCalledWith(
+        1,
         expect.objectContaining({ command: 'terminalRemoved', terminalId: 'terminal-1' })
       );
+      expect(deps.sendMessage).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({ command: 'stateUpdate' })
+      );
+    });
+
+    it('should short-circuit duplicate kill attempts while in flight', async () => {
+      vi.useFakeTimers();
+      vi.mocked(deps.killTerminal).mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            setTimeout(resolve, 10);
+          })
+      );
+
+      const first = service.killTerminal();
+      const second = service.killTerminal();
+      await vi.advanceTimersByTimeAsync(100);
+      await Promise.all([first, second]);
+
+      expect(deps.killTerminal).toHaveBeenCalledWith('terminal-1');
+      expect(deps.killTerminal).toHaveBeenCalledTimes(1);
     });
 
     it('should not kill when no active terminal', async () => {
@@ -107,9 +137,38 @@ describe('TerminalKillService', () => {
 
   describe('killSpecificTerminal', () => {
     it('should kill the specified terminal', async () => {
-      await service.killSpecificTerminal('terminal-3');
+      vi.useFakeTimers();
+      const killPromise = service.killSpecificTerminal('terminal-3');
+      await vi.advanceTimersByTimeAsync(50);
+      await killPromise;
 
       expect(deps.killTerminal).toHaveBeenCalledWith('terminal-3');
+      expect(deps.sendMessage).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({ command: 'terminalRemoved', terminalId: 'terminal-3' })
+      );
+      expect(deps.sendMessage).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({ command: 'stateUpdate' })
+      );
+    });
+
+    it('should short-circuit duplicate killSpecificTerminal requests while in flight', async () => {
+      vi.useFakeTimers();
+      vi.mocked(deps.killTerminal).mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            setTimeout(resolve, 10);
+          })
+      );
+
+      const first = service.killSpecificTerminal('terminal-3');
+      const second = service.killSpecificTerminal('terminal-3');
+      await vi.advanceTimersByTimeAsync(100);
+      await Promise.all([first, second]);
+
+      expect(deps.killTerminal).toHaveBeenCalledWith('terminal-3');
+      expect(deps.killTerminal).toHaveBeenCalledTimes(1);
     });
   });
 });

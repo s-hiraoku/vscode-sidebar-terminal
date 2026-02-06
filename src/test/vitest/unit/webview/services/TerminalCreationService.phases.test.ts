@@ -17,6 +17,7 @@ import { JSDOM } from 'jsdom';
 import { TerminalCreationService } from '../../../../../webview/services/TerminalCreationService';
 import { SplitManager } from '../../../../../webview/managers/SplitManager';
 import { EventHandlerRegistry } from '../../../../../webview/utils/EventHandlerRegistry';
+import { ResizeManager } from '../../../../../webview/utils/ResizeManager';
 
 // Mock xterm.js and addons
 vi.mock('@xterm/xterm', () => {
@@ -504,9 +505,24 @@ describe('TerminalCreationService - Phase Decomposition', () => {
       terminalView?.parentNode?.removeChild(terminalView);
 
       const result = await service.createTerminal('terminal-1', 'Test Terminal');
-      // May return null or succeed depending on fallback to document.body
-      // The important thing is it doesn't throw
-      expect(result === null || result !== null).toBe(true);
+      expect(result).toBeDefined();
+    });
+
+    it('should always resume ResizeManager observers after final failure', async () => {
+      const pauseSpy = vi.spyOn(ResizeManager, 'pauseObservers');
+      const resumeSpy = vi.spyOn(ResizeManager, 'resumeObservers');
+
+      // Remove both terminal-body and terminal-view to force final failure path
+      const terminalBody = document.getElementById('terminal-body');
+      terminalBody?.parentNode?.removeChild(terminalBody);
+      const terminalView = document.getElementById('terminal-view');
+      terminalView?.parentNode?.removeChild(terminalView);
+
+      const result = await service.createTerminal('terminal-1', 'Test Terminal');
+
+      expect(result).toBeDefined();
+      expect(pauseSpy).toHaveBeenCalled();
+      expect(resumeSpy).toHaveBeenCalled();
     });
   });
 

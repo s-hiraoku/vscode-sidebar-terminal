@@ -141,6 +141,31 @@ describe('LightweightTerminalWebviewManager', () => {
 
       expect(displayMode.showAllTerminalsSplit).not.toHaveBeenCalled();
     });
+
+    it('should force fullscreen mode before creation when fullscreen override is set', async () => {
+      const lifecycle = (manager as any).terminalLifecycleManager;
+      const displayMode = (manager as any).displayModeManager;
+
+      lifecycle.createTerminal.mockResolvedValue({
+        textarea: { hasAttribute: () => false },
+        focus: vi.fn(),
+      });
+      displayMode.getCurrentMode.mockReturnValue('normal');
+
+      (manager as any).setForceFullscreenModeForNextCreate(true);
+
+      const createPromise = manager.createTerminal(
+        'new-fullscreen',
+        'New Fullscreen',
+        undefined,
+        undefined,
+        'extension'
+      );
+      await vi.advanceTimersByTimeAsync(500);
+      await createPromise;
+
+      expect(displayMode.setDisplayMode).toHaveBeenCalledWith('fullscreen');
+    });
   });
 
   describe('Panel Location Sync', () => {

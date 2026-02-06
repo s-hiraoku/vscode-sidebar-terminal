@@ -197,6 +197,22 @@ describe('DOMUtils', () => {
       expect(newXterm.style.width).toBe('');
     });
 
+    it('should re-query when an element appears after a cached null result', () => {
+      const container = document.createElement('div');
+
+      // First call caches misses for xterm selectors
+      DOMUtils.resetXtermInlineStyles(container, false);
+
+      const xterm = document.createElement('div');
+      xterm.className = 'xterm';
+      xterm.style.width = '500px';
+      container.appendChild(xterm);
+
+      // Must re-query instead of returning stale cached null
+      DOMUtils.resetXtermInlineStyles(container, false);
+      expect(xterm.style.width).toBe('');
+    });
+
     it('should copy background color from viewport to xterm element', () => {
       const container = document.createElement('div');
 

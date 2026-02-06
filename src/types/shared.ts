@@ -240,6 +240,11 @@ export interface CompleteExtensionConfig extends WebViewDisplayConfig, TerminalL
 
 export type TerminalTheme = 'auto' | 'dark' | 'light';
 
+/**
+ * Canonical CLI agent type shared across extension and webview.
+ */
+export type AgentType = 'claude' | 'gemini' | 'codex' | 'copilot' | 'opencode';
+
 // ===== Terminal Profile System Types =====
 
 /**

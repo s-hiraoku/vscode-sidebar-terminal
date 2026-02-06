@@ -16,9 +16,15 @@
 
 import { Terminal, ITerminalOptions } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
+import { SearchAddon } from '@xterm/addon-search';
+import { SerializeAddon } from '@xterm/addon-serialize';
 
-import { TerminalConfig } from '../../types/shared';
-import { TerminalInstance, IManagerCoordinator } from '../interfaces/ManagerInterfaces';
+import {
+  TerminalConfig,
+  PartialTerminalSettings,
+  WebViewFontSettings,
+} from '../../types/shared';
+import { TerminalInstance, IManagerCoordinator, IConfigManager } from '../interfaces/ManagerInterfaces';
 import { SplitManager } from '../managers/SplitManager';
 import { TerminalAddonManager } from '../managers/TerminalAddonManager';
 import { TerminalEventManager } from '../managers/TerminalEventManager';
@@ -47,10 +53,13 @@ import {
   MouseTrackingService,
 } from './terminal';
 import { TerminalScrollIndicatorService } from './terminal/TerminalScrollIndicatorService';
+import { WebViewTerminalConfig } from './terminal/TerminalConfigService';
 
 interface Disposable {
   dispose(): void;
 }
+
+type TerminalConfigManager = Pick<IConfigManager, 'getCurrentFontSettings' | 'getCurrentSettings'>;
 
 // ============================================================================
 // Constants
@@ -231,10 +240,10 @@ export class TerminalCreationService implements Disposable {
     let currentRetry = 0;
 
     const attemptCreation = async (): Promise<Terminal | null> => {
-      try {
-        ResizeManager.pauseObservers();
-        terminalLogger.info(`⏸️ Paused all ResizeObservers during terminal creation: ${terminalId}`);
+      ResizeManager.pauseObservers();
+      terminalLogger.info(`⏸️ Paused all ResizeObservers during terminal creation: ${terminalId}`);
 
+      try {
         performanceMonitor.startTimer(`terminal-creation-attempt-${terminalId}-${currentRetry}`);
         terminalLogger.info(
           `Creating terminal: ${terminalId} (${terminalName}) - attempt ${currentRetry + 1}/${maxRetries + 1}`
@@ -280,12 +289,6 @@ export class TerminalCreationService implements Disposable {
         );
         terminalLogger.info(`✅ Terminal creation completed: ${terminalId} in ${elapsed}ms`);
 
-        // Resume ResizeObservers after terminal creation
-        setTimeout(() => {
-          ResizeManager.resumeObservers();
-          terminalLogger.info(`▶️ Resumed all ResizeObservers after terminal creation: ${terminalId}`);
-        }, Timings.RESIZE_OBSERVER_RESUME_DELAY_MS);
-
         // Final refresh after all setup (re-apply theme after WebGL/DOM renderer setup)
         this.schedulePostRendererRefresh(terminalId, terminal, container, terminalContent, configManager, uiManager);
 
@@ -303,6 +306,9 @@ export class TerminalCreationService implements Disposable {
         }
 
         return null;
+      } finally {
+        ResizeManager.resumeObservers();
+        terminalLogger.info(`▶️ Resumed all ResizeObservers after terminal creation: ${terminalId}`);
       }
     };
 
@@ -351,11 +357,11 @@ export class TerminalCreationService implements Disposable {
    */
   private prepareTerminalConfig(
     config: TerminalConfig | undefined,
-    configManager: { getCurrentFontSettings?: () => any; getCurrentSettings?: () => any } | undefined
+    configManager: TerminalConfigManager | undefined
   ): {
-    terminalConfig: any;
-    currentSettings: any;
-    currentFontSettings: any;
+    terminalConfig: WebViewTerminalConfig;
+    currentSettings: PartialTerminalSettings | undefined;
+    currentFontSettings: WebViewFontSettings | undefined;
     linkModifier: 'alt' | 'ctrlCmd';
   } {
     const { fontSettings: currentFontSettings, fontOverrides } = this.prepareFontSettings(config, configManager);
@@ -385,15 +391,15 @@ export class TerminalCreationService implements Disposable {
    */
   private async createTerminalWithAddons(
     terminalId: string,
-    terminalConfig: any,
+    terminalConfig: WebViewTerminalConfig,
     linkModifier: 'alt' | 'ctrlCmd'
   ): Promise<{
     terminal: Terminal;
     fitAddon: FitAddon;
-    serializeAddon: any;
-    searchAddon: any;
+    serializeAddon: SerializeAddon;
+    searchAddon: SearchAddon | undefined;
   }> {
-    const terminal = new Terminal(terminalConfig as any);
+    const terminal = new Terminal(terminalConfig);
     terminalLogger.info(`✅ Terminal instance created: ${terminalId}`);
 
     const loadedAddons = await this.addonManager.loadAllAddons(terminal, terminalId, {
@@ -1320,8 +1326,8 @@ export class TerminalCreationService implements Disposable {
    * @returns Resolved settings object with theme
    */
   private resolveCurrentSettings(
-    configManager: { getCurrentSettings?: () => any } | undefined
-  ): any {
+    configManager: Pick<IConfigManager, 'getCurrentSettings'> | undefined
+  ): PartialTerminalSettings | undefined {
     let currentSettings = configManager?.getCurrentSettings?.();
 
     // If ConfigManager returns 'auto' theme, also check coordinator's currentSettings
@@ -1348,8 +1354,8 @@ export class TerminalCreationService implements Disposable {
    */
   private prepareFontSettings(
     config: TerminalConfig | undefined,
-    configManager: { getCurrentFontSettings?: () => any } | undefined
-  ): { fontSettings: any; fontOverrides: Partial<ITerminalOptions> } {
+    configManager: Pick<IConfigManager, 'getCurrentFontSettings'> | undefined
+  ): { fontSettings: WebViewFontSettings | undefined; fontOverrides: Partial<ITerminalOptions> } {
     // Check BOTH config.fontSettings AND direct config properties
     // Extension sends fontFamily/fontSize directly in config, not nested in fontSettings
     const configFontSettings = (config as any)?.fontSettings;
@@ -1357,7 +1363,7 @@ export class TerminalCreationService implements Disposable {
     const directFontSize = (config as any)?.fontSize;
 
     // Use direct config values if available, otherwise fall back to fontSettings or ConfigManager
-    let currentFontSettings: any;
+    let currentFontSettings: WebViewFontSettings | undefined;
     if (directFontFamily || directFontSize) {
       // Extension sent font settings directly in config
       currentFontSettings = {

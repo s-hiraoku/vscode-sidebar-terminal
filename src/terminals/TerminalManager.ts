@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import * as vscode from 'vscode';
-import { TerminalInstance, TerminalEvent, TerminalState, DeleteResult } from '../types/shared';
+import { AgentType, TerminalInstance, TerminalEvent, TerminalState, DeleteResult } from '../types/shared';
 import { PERFORMANCE_CONSTANTS } from '../constants';
 import { ShellIntegrationService } from '../services/ShellIntegrationService';
 import { TerminalProfileService } from '../services/TerminalProfileService';
@@ -371,7 +371,7 @@ export class TerminalManager {
   public getDisconnectedAgents(): Map<
     string,
     {
-      type: 'claude' | 'gemini' | 'codex' | 'copilot' | 'opencode';
+      type: AgentType;
       startTime: Date;
       terminalName?: string;
     }
@@ -383,26 +383,21 @@ export class TerminalManager {
     return this._cliAgentService.getConnectedAgent()?.terminalId ?? null;
   }
 
-  public getConnectedAgentType():
-    | 'claude'
-    | 'gemini'
-    | 'codex'
-    | 'copilot'
-    | 'opencode'
-    | null {
+  public getConnectedAgentType(): AgentType | null {
     const agent = this._cliAgentService.getConnectedAgent();
     if (!agent) {
       return null;
     }
     const type = agent.type;
-    if (
-      type === 'claude' ||
-      type === 'gemini' ||
-      type === 'codex' ||
-      type === 'copilot' ||
-      type === 'opencode'
-    ) {
-      return type;
+    const supportedAgentTypes: readonly AgentType[] = [
+      'claude',
+      'gemini',
+      'codex',
+      'copilot',
+      'opencode',
+    ];
+    if (supportedAgentTypes.includes(type as AgentType)) {
+      return type as AgentType;
     }
     return null;
   }
@@ -421,7 +416,7 @@ export class TerminalManager {
 
   public forceReconnectAiAgent(
     terminalId: string,
-    agentType: 'claude' | 'gemini' | 'codex' | 'copilot' | 'opencode' = 'claude'
+    agentType: AgentType = 'claude'
   ): boolean {
     const terminalName = this._terminals.get(terminalId)?.name;
     return this._cliAgentService.forceReconnectAgent(terminalId, agentType, terminalName);

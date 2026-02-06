@@ -21,6 +21,8 @@ export interface ITerminalKillDependencies {
 }
 
 export class TerminalKillService {
+  private readonly inFlightKills = new Set<string>();
+
   constructor(private readonly deps: ITerminalKillDependencies) {}
 
   /**
@@ -33,22 +35,40 @@ export class TerminalKillService {
       return;
     }
 
-    if (await this.shouldConfirmKill(activeTerminalId)) {
+    if (this.inFlightKills.has(activeTerminalId)) {
       return;
     }
 
-    await this.performKill(activeTerminalId);
+    this.inFlightKills.add(activeTerminalId);
+    try {
+      if (await this.shouldConfirmKill(activeTerminalId)) {
+        return;
+      }
+
+      await this.performKill(activeTerminalId);
+    } finally {
+      this.inFlightKills.delete(activeTerminalId);
+    }
   }
 
   /**
    * Kill a specific terminal by ID with optional confirmation
    */
   public async killSpecificTerminal(terminalId: string): Promise<void> {
-    if (await this.shouldConfirmKill(terminalId)) {
+    if (this.inFlightKills.has(terminalId)) {
       return;
     }
 
-    await this.performKill(terminalId);
+    this.inFlightKills.add(terminalId);
+    try {
+      if (await this.shouldConfirmKill(terminalId)) {
+        return;
+      }
+
+      await this.performKill(terminalId);
+    } finally {
+      this.inFlightKills.delete(terminalId);
+    }
   }
 
   /**

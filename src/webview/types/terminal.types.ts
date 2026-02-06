@@ -5,17 +5,14 @@
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { TerminalThemeData } from './theme.types';
+import type { AgentType as CoreAgentType } from '../../types/shared';
 
 // CLI Agent status types
 export type CliAgentStatusType = 'connected' | 'disconnected' | 'none';
 
 // Agent type definitions
 export type AgentType =
-  | 'claude'
-  | 'gemini'
-  | 'codex'
-  | 'copilot'
-  | 'opencode'
+  | CoreAgentType
   | 'codeium'
   | 'other'
   | null;

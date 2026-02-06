@@ -52,6 +52,11 @@ describe('WatchdogCoordinator', () => {
     coordinator = new WatchdogCoordinator(deps, ackOptions, promptOptions);
   });
 
+  afterEach(() => {
+    coordinator.dispose();
+    coordinator = null as unknown as WatchdogCoordinator;
+  });
+
   describe('startForTerminal', () => {
     it('should track the phase for the terminal', () => {
       coordinator.startForTerminal('t1', 'ack', 'test');

@@ -130,4 +130,34 @@ describe('TerminalDataBufferManager', () => {
 
     bufferManager.dispose();
   });
+
+  it('calls cli agent methods with service binding intact', () => {
+    const terminals = new Map<string, TerminalInstance>();
+    terminals.set('terminal-1', { id: 'terminal-1', name: 'Terminal 1' } as TerminalInstance);
+
+    const emitter = new vscode.EventEmitter<TerminalEvent>();
+
+    class BoundCliService {
+      public readonly detectFromOutput = vi.fn();
+      public readonly detectTermination = vi.fn();
+
+      getAgentState(id: string): { status: 'connected' | 'none'; agentType: string | null } {
+        this.detectFromOutput(id, 'state-check');
+        return { status: 'connected', agentType: 'claude' };
+      }
+    }
+
+    const cliAgentService = new BoundCliService() as any;
+    const bufferManager = new TerminalDataBufferManager(terminals, emitter, cliAgentService);
+
+    bufferManager.bufferData('terminal-1', 'user@host:~$ ');
+    bufferManager.flushBuffer('terminal-1');
+
+    expect(cliAgentService.detectTermination).toHaveBeenCalledWith(
+      'terminal-1',
+      'user@host:~$ '
+    );
+
+    bufferManager.dispose();
+  });
 });
