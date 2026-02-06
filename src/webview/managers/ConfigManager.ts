@@ -117,6 +117,7 @@ export class ConfigManager implements IConfigManager {
     cursorBlink: true,
     enableCliAgentIntegration: true,
     enableTerminalHeaderEnhancements: true,
+    showHeaderModeIndicator: true,
     // Terminal profiles (will be populated from VS Code settings)
     profilesWindows: {},
     profilesLinux: {},
@@ -418,6 +419,10 @@ export class ConfigManager implements IConfigManager {
       enableTerminalHeaderEnhancements: Validators.boolean(
         settings.enableTerminalHeaderEnhancements,
         this.DEFAULTS.enableTerminalHeaderEnhancements
+      ),
+      showHeaderModeIndicator: Validators.boolean(
+        settings.showHeaderModeIndicator,
+        this.DEFAULTS.showHeaderModeIndicator
       ),
 
       // Enumerated string settings (with restricted values)

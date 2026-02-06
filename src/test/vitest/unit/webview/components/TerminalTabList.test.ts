@@ -159,6 +159,13 @@ describe('TerminalTabList', () => {
       expect(indicator?.getAttribute('aria-label')).toBe('Show all terminals');
     });
 
+    it('should keep mode indicator hidden when disabled', () => {
+      tabList.setModeIndicatorEnabled(false);
+      tabList.setModeIndicator('fullscreen');
+      const indicator = container.querySelector('.terminal-mode-indicator') as HTMLElement;
+      expect(indicator.style.display).toBe('none');
+    });
+
     it('should apply theme styles to tabs', () => {
       tabList.addTab({ id: 't1', name: 'T1', isActive: true, isClosable: true });
       const theme = { background: '#123456', foreground: '#ffffff', cursor: '#ffffff' };

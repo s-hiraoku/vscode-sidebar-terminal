@@ -134,6 +134,7 @@ describe('SettingsSyncService', () => {
         if (key === 'scrollback') return 5000;
         if (key === 'activeBorderMode') return 'all';
         if (key === 'panelLocation') return 'sidebar';
+        if (key === 'showHeaderModeIndicator') return false;
         return def;
       });
       mockUnifiedConfig.isFeatureEnabled.mockImplementation((feature) => {
@@ -153,6 +154,7 @@ describe('SettingsSyncService', () => {
         multiCursorModifier: 'alt',
         enableCliAgentIntegration: true,
         enableTerminalHeaderEnhancements: false,
+        showHeaderModeIndicator: false,
         activeBorderMode: 'all',
         dynamicSplitDirection: false,
         panelLocation: 'sidebar',
@@ -183,6 +185,7 @@ describe('SettingsSyncService', () => {
         maxTerminals: 10,
         enableCliAgentIntegration: true,
         enableTerminalHeaderEnhancements: true,
+        showHeaderModeIndicator: false,
       });
       mockUnifiedConfig.getWebViewTerminalSettings.mockReturnValue({
         theme: 'light',
@@ -202,6 +205,7 @@ describe('SettingsSyncService', () => {
         maxTerminals: 10,
         enableCliAgentIntegration: true,
         enableTerminalHeaderEnhancements: true,
+        showHeaderModeIndicator: false,
         dynamicSplitDirection: true,
         panelLocation: 'bottom',
       });
@@ -215,10 +219,11 @@ describe('SettingsSyncService', () => {
         theme: 'auto',
         enableCliAgentIntegration: false,
         enableTerminalHeaderEnhancements: false,
+        showHeaderModeIndicator: false,
         activeBorderMode: 'none',
         dynamicSplitDirection: true,
         panelLocation: 'sidebar',
-      };
+      } as any;
 
       await service.updateSettings(settingsToUpdate);
 
@@ -228,6 +233,11 @@ describe('SettingsSyncService', () => {
       expect(mockUnifiedConfig.update).toHaveBeenCalledWith(
         'secondaryTerminal',
         'enableTerminalHeaderEnhancements',
+        false
+      );
+      expect(mockUnifiedConfig.update).toHaveBeenCalledWith(
+        'secondaryTerminal',
+        'showHeaderModeIndicator',
         false
       );
       expect(mockUnifiedConfig.update).toHaveBeenCalledWith('secondaryTerminal', 'activeBorderMode', 'none');

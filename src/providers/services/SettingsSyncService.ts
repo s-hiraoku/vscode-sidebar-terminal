@@ -86,6 +86,11 @@ export class SettingsSyncService {
       enableTerminalHeaderEnhancements: configService.isFeatureEnabled(
         'terminalHeaderEnhancements'
       ),
+      showHeaderModeIndicator: configService.get(
+        'secondaryTerminal',
+        'showHeaderModeIndicator',
+        true
+      ),
       activeBorderMode: configService.get('secondaryTerminal', 'activeBorderMode', 'multipleOnly'),
       // Dynamic split direction settings (Issue #148)
       dynamicSplitDirection: configService.isFeatureEnabled('dynamicSplitDirection'),
@@ -127,6 +132,7 @@ export class SettingsSyncService {
       maxTerminals: config.maxTerminals || 5,
       enableCliAgentIntegration: config.enableCliAgentIntegration || false,
       enableTerminalHeaderEnhancements: config.enableTerminalHeaderEnhancements ?? true,
+      showHeaderModeIndicator: config.showHeaderModeIndicator ?? true,
       // 🆕 Issue #148: Dynamic split direction settings
       dynamicSplitDirection: webViewSettings.dynamicSplitDirection,
       panelLocation: webViewSettings.panelLocation || 'auto',
@@ -188,6 +194,13 @@ export class SettingsSyncService {
           'secondaryTerminal',
           'enableTerminalHeaderEnhancements',
           settings.enableTerminalHeaderEnhancements
+        );
+      }
+      if (settings.showHeaderModeIndicator !== undefined) {
+        await configService.update(
+          'secondaryTerminal',
+          'showHeaderModeIndicator',
+          settings.showHeaderModeIndicator
         );
       }
       if (settings.activeBorderMode !== undefined) {

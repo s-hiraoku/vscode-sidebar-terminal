@@ -294,6 +294,7 @@ export class UnifiedConfigurationService implements Disposable {
         'enableTerminalHeaderEnhancements',
         true
       ),
+      showHeaderModeIndicator: this.get(section, 'showHeaderModeIndicator', true),
       activeBorderMode: this.get(section, 'activeBorderMode', 'multipleOnly'),
     };
   }
@@ -357,6 +358,7 @@ export class UnifiedConfigurationService implements Disposable {
       bellSound: this.get(section, 'bellSound', false),
       enableCliAgentIntegration: this.get(section, 'enableCliAgentIntegration', true),
       enableTerminalHeaderEnhancements: this.get(section, 'enableTerminalHeaderEnhancements', true),
+      showHeaderModeIndicator: this.get(section, 'showHeaderModeIndicator', true),
       sendKeybindingsToShell: this.get(section, 'sendKeybindingsToShell', false),
       commandsToSkipShell: this.get(section, 'commandsToSkipShell', []),
       allowChords: this.get(section, 'allowChords', true),

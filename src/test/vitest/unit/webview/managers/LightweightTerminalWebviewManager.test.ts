@@ -8,7 +8,7 @@ vi.mock('../../../../../webview/managers/SplitManager', () => ({ SplitManager: c
 vi.mock('../../../../../webview/managers/TerminalLifecycleCoordinator', () => ({ TerminalLifecycleCoordinator: class { createTerminal = vi.fn(); removeTerminal = vi.fn(); getActiveTerminalId = vi.fn().mockReturnValue('t1'); getTerminalInstance = vi.fn(); getAllTerminalInstances = vi.fn().mockReturnValue(new Map()); getAllTerminalContainers = vi.fn().mockReturnValue(new Map()); getTerminalStats = vi.fn().mockReturnValue({}); dispose = vi.fn(); setActiveTerminalId = vi.fn(); resizeAllTerminals = vi.fn(); initializeSimpleTerminal = vi.fn(); switchToTerminal = vi.fn().mockResolvedValue(true); writeToTerminal = vi.fn(); } }));
 vi.mock('../../../../../webview/managers/TerminalTabManager', () => ({ TerminalTabManager: class { setCoordinator = vi.fn(); initialize = vi.fn(); addTab = vi.fn(); removeTab = vi.fn(); setActiveTab = vi.fn(); updateTheme = vi.fn(); updateModeIndicator = vi.fn(); dispose = vi.fn(); } }));
 vi.mock('../../../../../webview/managers/ConsolidatedMessageManager', () => ({ ConsolidatedMessageManager: class { setCoordinator = vi.fn(); postMessage = vi.fn(); receiveMessage = vi.fn(); updatePanelLocationIfNeeded = vi.fn().mockReturnValue(false); getCurrentPanelLocation = vi.fn().mockReturnValue('sidebar'); getCurrentFlexDirection = vi.fn().mockReturnValue('column'); dispose = vi.fn(); } }));
-vi.mock('../../../../../webview/managers/UIManager', () => ({ UIManager: class { setActiveBorderMode = vi.fn(); updateTerminalBorders = vi.fn(); updateSplitTerminalBorders = vi.fn(); applyAllVisualSettings = vi.fn(); setTabThemeUpdater = vi.fn(); applyTheme = vi.fn(); updateCliAgentStatusByTerminalId = vi.fn(); } }));
+vi.mock('../../../../../webview/managers/UIManager', () => ({ UIManager: class { setActiveBorderMode = vi.fn(); setTerminalHeaderEnhancementsEnabled = vi.fn(); updateTerminalBorders = vi.fn(); updateSplitTerminalBorders = vi.fn(); applyAllVisualSettings = vi.fn(); setTabThemeUpdater = vi.fn(); applyTheme = vi.fn(); updateCliAgentStatusByTerminalId = vi.fn(); } }));
 vi.mock('../../../../../webview/managers/ConfigManager', () => ({ ConfigManager: class { setFontSettingsService = vi.fn(); applySettings = vi.fn(); getCurrentSettings = vi.fn().mockReturnValue({}); } }));
 vi.mock('../../../../../webview/services/WebViewPersistenceService', () => ({ WebViewPersistenceService: class { addTerminal = vi.fn(); removeTerminal = vi.fn(); saveSession = vi.fn().mockResolvedValue(true); dispose = vi.fn(); } }));
 vi.mock('../../../../../webview/managers/DisplayModeManager', () => ({ DisplayModeManager: class { initialize = vi.fn(); getCurrentMode = vi.fn().mockReturnValue('normal'); setDisplayMode = vi.fn(); showAllTerminalsSplit = vi.fn(); showTerminalFullscreen = vi.fn(); dispose = vi.fn(); } }));
@@ -286,6 +286,15 @@ describe('LightweightTerminalWebviewManager', () => {
 
       expect(config.applySettings).toHaveBeenCalled();
       expect(ui.setActiveBorderMode).toHaveBeenCalled();
+    });
+
+    it('should toggle header mode indicator visibility from settings', () => {
+      const tabs = (manager as any).terminalTabManager;
+      tabs.setModeIndicatorEnabled = vi.fn();
+
+      manager.applySettings({ showHeaderModeIndicator: false } as any);
+
+      expect(tabs.setModeIndicatorEnabled).toHaveBeenCalledWith(false);
     });
 
     it('should update all terminal themes', () => {

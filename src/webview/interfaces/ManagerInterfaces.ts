@@ -46,6 +46,7 @@ export interface ITerminalTabManager {
     tabInfos: Array<{ id: string; name: string; isActive: boolean; isClosable?: boolean }>
   ): void;
   updateModeIndicator(mode: 'normal' | 'fullscreen' | 'split'): void;
+  setModeIndicatorEnabled?(enabled: boolean): void;
   /** Check if a terminal ID is pending deletion (prevents race conditions in state sync) */
   hasPendingDeletion(terminalId: string): boolean;
   /** Get all terminal IDs currently pending deletion */
