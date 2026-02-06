@@ -84,6 +84,7 @@ describe('CliAgentPatternRegistry', () => {
 
     it('should match powerline/starship style prompts', () => {
       expect(registry.isShellPrompt('❯ [main] ')).toBe(true);
+      expect(registry.isShellPrompt('➜ myproject git:(main) ✗ ')).toBe(true);
     });
 
     it('should return false for long output lines', () => {

@@ -243,6 +243,8 @@ export class CliAgentPatternRegistry {
         /^\[\d{1,2}:\d{2}(:\d{2})?\]\s*[~\/]?[\w\/.~-]*[$%#]\s*$/,
         // Git-aware prompts
         /^[\w.-]+\s+git:\([^)]+\)\s*[~\/]?[\w\/.~-]*\$\s*$/,
+        // Powerlevel/oh-my-zsh decorated prompts (e.g. "➜ project git:(main) ✗")
+        /^[➜▶⚡❯]\s+(?:[~\/]?[\w\/.-]+)(?:\s+git:\([^)]+\))?(?:\s+[✗✘✔✱✚●•±!?])?\s*$/,
         // Flexible patterns
         /^\w+\$\s*$/,
         /^\w+%\s*$/,
