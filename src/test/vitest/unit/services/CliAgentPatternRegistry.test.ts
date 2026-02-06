@@ -19,6 +19,20 @@ describe('CliAgentPatternRegistry', () => {
       expect(registry.matchCommandInput('gemini help')).toBe('gemini');
     });
 
+    it('should match codex/opencode/coplanilot commands', () => {
+      expect(registry.matchCommandInput('codex')).toBe('codex');
+      expect(registry.matchCommandInput('opencode')).toBe('opencode');
+      expect(registry.matchCommandInput('gh copilot suggest')).toBe('copilot');
+    });
+
+    it('should match wrapper commands and env-prefixed commands', () => {
+      expect(registry.matchCommandInput('FOO=1 codex --help')).toBe('codex');
+      expect(registry.matchCommandInput('npx @openai/codex@latest')).toBe('codex');
+      expect(registry.matchCommandInput('pnpm dlx @google/gemini-cli')).toBe('gemini');
+      expect(registry.matchCommandInput('yarn dlx @anthropic-ai/claude-code')).toBe('claude');
+      expect(registry.matchCommandInput('bunx opencode')).toBe('opencode');
+    });
+
     it('should return null for normal shell commands', () => {
       expect(registry.matchCommandInput('ls -la')).toBeNull();
       expect(registry.matchCommandInput('cat file.txt')).toBeNull();
@@ -34,6 +48,26 @@ describe('CliAgentPatternRegistry', () => {
     it('should match Gemini startup messages', () => {
       expect(registry.matchStartupOutput('Welcome to Gemini')).toBe('gemini');
       expect(registry.matchStartupOutput('Gemini model initialized')).toBe('gemini');
+    });
+
+    it('should not match plain agent command text as startup output', () => {
+      expect(registry.matchStartupOutput('opencode')).toBeNull();
+      expect(registry.matchStartupOutput('copilot')).toBeNull();
+    });
+  });
+
+  describe('isAgentActivity', () => {
+    it('should detect activity by known agent keywords', () => {
+      expect(registry.isAgentActivity('Claude is thinking about the fix')).toBe(true);
+      expect(registry.isAgentActivity('Gemini generated a response')).toBe(true);
+    });
+
+    it('should not treat generic long text as agent activity', () => {
+      expect(
+        registry.isAgentActivity(
+          'This output is very long but does not include any known agent keywords and should not count as agent activity'
+        )
+      ).toBe(false);
     });
   });
 
@@ -96,6 +130,9 @@ describe('CliAgentPatternRegistry', () => {
       const types = registry.getAllAgentTypes();
       expect(types).toContain('claude');
       expect(types).toContain('gemini');
+      expect(types).toContain('codex');
+      expect(types).toContain('copilot');
+      expect(types).toContain('opencode');
     });
 
     it('should provide shell prompt patterns', () => {

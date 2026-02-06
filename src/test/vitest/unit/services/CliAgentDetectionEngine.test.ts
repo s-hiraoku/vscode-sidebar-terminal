@@ -67,6 +67,25 @@ describe('CliAgentDetectionEngine', () => {
   });
 
   describe('detectFromOutput', () => {
+    it('should detect agent startup from shell integration command execution', () => {
+      const output = '\x1b]633;B;gh copilot suggest "fix bug"\x07';
+      const result = engine.detectFromOutput(terminalId, output);
+
+      expect(result.isDetected).toBe(true);
+      expect(result.agentType).toBe('copilot');
+      expect(result.source).toBe('output');
+      expect(result.reason).toContain('Shell integration');
+    });
+
+    it('should detect opencode startup from shell integration command execution', () => {
+      const output = '\x1b]633;B;opencode\x07';
+      const result = engine.detectFromOutput(terminalId, output);
+
+      expect(result.isDetected).toBe(true);
+      expect(result.agentType).toBe('opencode');
+      expect(result.source).toBe('output');
+    });
+
     it('should detect startup patterns in multi-line output', () => {
       const output = 'Some unrelated text\nWelcome to Claude Code\nMore text';
       const result = engine.detectFromOutput(terminalId, output);
@@ -99,6 +118,15 @@ describe('CliAgentDetectionEngine', () => {
   });
 
   describe('detectTermination', () => {
+    it('should detect termination from shell integration command completion', () => {
+      engine.detectFromOutput(terminalId, '\x1b]633;B;claude\x07');
+      const result = engine.detectTermination(terminalId, '\x1b]633;C;0\x07', 'claude');
+
+      expect(result.isTerminated).toBe(true);
+      expect(result.confidence).toBeGreaterThanOrEqual(0.9);
+      expect(result.reason).toContain('Shell integration');
+    });
+
     it('should detect explicit termination pattern', () => {
       const result = engine.detectTermination(terminalId, 'Goodbye!', 'claude');
       expect(result.isTerminated).toBe(true);
@@ -116,6 +144,16 @@ describe('CliAgentDetectionEngine', () => {
       engine.detectFromOutput(terminalId, 'Claude is thinking...');
       const result = engine.detectTermination(terminalId, 'user@host:~$ ');
       expect(result.isTerminated).toBe(false);
+    });
+
+    it('should not treat generic long output as AI activity', () => {
+      engine.detectFromOutput(
+        terminalId,
+        'This is a very long plain output line without any agent related keywords to simulate normal command output'
+      );
+      const result = engine.detectTermination(terminalId, 'user@host:~$ ');
+
+      expect(result.isTerminated).toBe(true);
     });
 
     it('should handle error in termination detection', () => {
