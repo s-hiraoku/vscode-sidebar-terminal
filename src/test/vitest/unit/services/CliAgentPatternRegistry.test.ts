@@ -54,6 +54,11 @@ describe('CliAgentPatternRegistry', () => {
       expect(registry.matchStartupOutput('opencode')).toBeNull();
       expect(registry.matchStartupOutput('copilot')).toBeNull();
     });
+
+    it('should not detect legacy OpenCode welcome banners as startup output', () => {
+      expect(registry.matchStartupOutput('Welcome to OpenCode')).toBeNull();
+      expect(registry.matchStartupOutput('OpenCode CLI')).toBeNull();
+    });
   });
 
   describe('isAgentActivity', () => {

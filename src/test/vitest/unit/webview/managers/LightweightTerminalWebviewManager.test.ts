@@ -166,6 +166,30 @@ describe('LightweightTerminalWebviewManager', () => {
 
       expect(displayMode.setDisplayMode).toHaveBeenCalledWith('fullscreen');
     });
+
+    it('should catch and log saveSession rejection after terminal creation', async () => {
+      const lifecycle = (manager as any).terminalLifecycleManager;
+      const persistence = (manager as any).webViewPersistenceService;
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      lifecycle.createTerminal.mockResolvedValue({
+        textarea: { hasAttribute: () => false },
+        focus: vi.fn(),
+      });
+      persistence.saveSession.mockRejectedValue(new Error('save failed'));
+
+      const createPromise = manager.createTerminal('new-reject', 'Reject Test');
+      await vi.advanceTimersByTimeAsync(500);
+      await createPromise;
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to save session after terminal creation'),
+        expect.objectContaining({ terminalId: 'new-reject' }),
+        expect.any(Error)
+      );
+
+      consoleErrorSpy.mockRestore();
+    });
   });
 
   describe('Panel Location Sync', () => {

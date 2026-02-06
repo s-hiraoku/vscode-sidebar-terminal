@@ -658,11 +658,20 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       // 🆕 SIMPLE: Save session when active terminal changes
       if (this.webViewPersistenceService) {
         setTimeout(() => {
-          this.webViewPersistenceService.saveSession().then((success) => {
-            if (success) {
-              log(`💾 [SIMPLE-PERSISTENCE] Session saved after active terminal change`);
-            }
-          });
+          this.webViewPersistenceService
+            .saveSession()
+            .then((success) => {
+              if (success) {
+                log(`💾 [SIMPLE-PERSISTENCE] Session saved after active terminal change`);
+              }
+            })
+            .catch((error) => {
+              console.error(
+                'Failed to save session after active terminal change',
+                { terminalId },
+                error
+              );
+            });
         }, 200); // Small delay to avoid frequent saves
       }
 
@@ -893,13 +902,22 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     setTimeout(() => {
       if (this.webViewPersistenceService) {
         log(`💾 [SIMPLE-PERSISTENCE] Saving session after terminal ${terminalId} creation`);
-        this.webViewPersistenceService.saveSession().then((success) => {
-          if (success) {
-            log(`✅ [SIMPLE-PERSISTENCE] Session saved successfully`);
-          } else {
-            console.warn(`⚠️ [SIMPLE-PERSISTENCE] Failed to save session`);
-          }
-        });
+        this.webViewPersistenceService
+          .saveSession()
+          .then((success) => {
+            if (success) {
+              log(`✅ [SIMPLE-PERSISTENCE] Session saved successfully`);
+            } else {
+              console.warn(`⚠️ [SIMPLE-PERSISTENCE] Failed to save session`);
+            }
+          })
+          .catch((error) => {
+            console.error(
+              'Failed to save session after terminal creation',
+              { terminalId },
+              error
+            );
+          });
       }
     }, 100);
 
@@ -1100,11 +1118,16 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     setTimeout(() => {
       if (this.webViewPersistenceService) {
         log(`💾 [SIMPLE-PERSISTENCE] Updating session after terminal ${terminalId} removal`);
-        this.webViewPersistenceService.saveSession().then((success) => {
-          if (success) {
-            log(`✅ [SIMPLE-PERSISTENCE] Session updated after removal`);
-          }
-        });
+        this.webViewPersistenceService
+          .saveSession()
+          .then((success) => {
+            if (success) {
+              log(`✅ [SIMPLE-PERSISTENCE] Session updated after removal`);
+            }
+          })
+          .catch((error) => {
+            console.error('Failed to save session after terminal removal', { terminalId }, error);
+          });
       }
     }, 100); // Delay for DOM cleanup
 

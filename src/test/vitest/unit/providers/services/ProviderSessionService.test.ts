@@ -6,6 +6,7 @@ import {
   ProviderSessionService,
   IProviderSessionDependencies,
 } from '../../../../../providers/services/ProviderSessionService';
+import { TIMING_CONSTANTS } from '../../../../../constants/TimingConstants';
 
 function createMockDeps(): IProviderSessionDependencies {
   return {
@@ -113,6 +114,50 @@ describe('ProviderSessionService', () => {
       expect(deps.sendMessage).toHaveBeenCalledWith(
         expect.objectContaining({ command: 'restoreScrollback' })
       );
+    });
+
+    it('should send fontSettings at top level for terminalCreated messages', async () => {
+      vi.mocked(deps.extensionPersistenceService!.restoreSession).mockResolvedValue({
+        terminals: [{ id: 'old-1', name: 'Terminal 1' }],
+      });
+      vi.mocked(deps.createTerminal).mockReturnValue('terminal-1');
+
+      await service.restoreLastSession();
+
+      expect(deps.sendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          command: 'terminalCreated',
+          fontSettings: { fontSize: 14 },
+        })
+      );
+
+      const terminalCreatedCalls = vi
+        .mocked(deps.sendMessage)
+        .mock.calls.filter((call) => call[0]?.command === 'terminalCreated');
+      expect(terminalCreatedCalls).toHaveLength(1);
+      expect((terminalCreatedCalls[0][0] as { config?: unknown }).config).toBeUndefined();
+    });
+
+    it('should wait using TIMING_CONSTANTS.WEBVIEW_INIT_DELAY_MS before restoring scrollback', async () => {
+      vi.useFakeTimers();
+      const setTimeoutSpy = vi.spyOn(global, 'setTimeout');
+      const originalDelay = TIMING_CONSTANTS.WEBVIEW_INIT_DELAY_MS;
+      try {
+        (TIMING_CONSTANTS as { WEBVIEW_INIT_DELAY_MS: number }).WEBVIEW_INIT_DELAY_MS = 321;
+        vi.mocked(deps.extensionPersistenceService!.restoreSession).mockResolvedValue({
+          terminals: [{ id: 'old-1', name: 'Terminal 1', scrollback: ['line1'] }],
+        });
+        vi.mocked(deps.createTerminal).mockReturnValue('terminal-1');
+
+        const restorePromise = service.restoreLastSession();
+        await vi.runAllTimersAsync();
+        await restorePromise;
+
+        expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 321);
+      } finally {
+        (TIMING_CONSTANTS as { WEBVIEW_INIT_DELAY_MS: number }).WEBVIEW_INIT_DELAY_MS = originalDelay;
+        vi.useRealTimers();
+      }
     });
 
     it('should handle individual terminal restore failure gracefully', async () => {

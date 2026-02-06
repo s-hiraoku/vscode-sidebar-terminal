@@ -8,6 +8,7 @@
 import { provider as log } from '../../utils/logger';
 import { safeProcessCwd } from '../../utils/common';
 import { WebviewMessage } from '../../types/common';
+import { TIMING_CONSTANTS } from '../../constants/TimingConstants';
 
 /**
  * Dependencies required by ProviderSessionService
@@ -125,11 +126,13 @@ export class ProviderSessionService {
               cwd: mapping.terminalData.cwd || safeProcessCwd(),
               isActive: mapping.terminalData.isActive || false,
             },
-            config: { fontSettings },
+            fontSettings,
           });
         }
 
-        await new Promise((resolve) => setTimeout(resolve, 200));
+        await new Promise((resolve) =>
+          setTimeout(resolve, TIMING_CONSTANTS.WEBVIEW_INIT_DELAY_MS)
+        );
 
         // Restore scrollback
         for (const mapping of terminalMappings) {

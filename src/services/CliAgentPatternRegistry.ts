@@ -24,10 +24,10 @@ export interface AgentPatternDefinition {
   commandPrefixes: string[];
 
   /** String patterns that indicate agent startup */
-  startupPatterns: string[];
+  startupPatterns?: string[];
 
   /** Regex patterns for startup detection (case-insensitive) */
-  startupRegexPatterns: RegExp[];
+  startupRegexPatterns?: RegExp[];
 
   /** Keywords that indicate agent activity */
   activityKeywords: string[];
@@ -189,8 +189,6 @@ export class CliAgentPatternRegistry {
     patterns.set('opencode', {
       type: 'opencode',
       commandPrefixes: ['opencode ', 'opencode'],
-      startupPatterns: ['Welcome to OpenCode', 'OpenCode CLI'],
-      startupRegexPatterns: [/welcome\s+to\s+open\s*code/i, /open\s*code\s+cli/i],
       activityKeywords: ['opencode', 'open code'],
       terminationPatterns: [
         'session ended',
@@ -519,14 +517,14 @@ export class CliAgentPatternRegistry {
   public matchStartupOutput(output: string): AgentType | null {
     for (const [agentType, patterns] of this.agentPatterns.entries()) {
       // Check string patterns
-      for (const pattern of patterns.startupPatterns) {
+      for (const pattern of patterns.startupPatterns ?? []) {
         if (output.includes(pattern)) {
           return agentType;
         }
       }
 
       // Check regex patterns
-      for (const regex of patterns.startupRegexPatterns) {
+      for (const regex of patterns.startupRegexPatterns ?? []) {
         if (regex.test(output)) {
           return agentType;
         }
