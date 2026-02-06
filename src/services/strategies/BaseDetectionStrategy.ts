@@ -8,7 +8,7 @@
 import { AgentDetectionStrategy, AgentDetectionResult } from './AgentDetectionStrategy';
 
 export abstract class BaseDetectionStrategy implements AgentDetectionStrategy {
-  abstract readonly agentType: 'claude' | 'gemini' | 'codex' | 'copilot';
+  abstract readonly agentType: 'claude' | 'gemini' | 'codex' | 'copilot' | 'opencode';
 
   /**
    * Command prefixes that trigger this agent

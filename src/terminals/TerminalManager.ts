@@ -370,7 +370,11 @@ export class TerminalManager {
 
   public getDisconnectedAgents(): Map<
     string,
-    { type: 'claude' | 'gemini' | 'codex' | 'copilot'; startTime: Date; terminalName?: string }
+    {
+      type: 'claude' | 'gemini' | 'codex' | 'copilot' | 'opencode';
+      startTime: Date;
+      terminalName?: string;
+    }
   > {
     return this._cliAgentService.getDisconnectedAgents();
   }
@@ -379,13 +383,25 @@ export class TerminalManager {
     return this._cliAgentService.getConnectedAgent()?.terminalId ?? null;
   }
 
-  public getConnectedAgentType(): 'claude' | 'gemini' | 'codex' | 'copilot' | null {
+  public getConnectedAgentType():
+    | 'claude'
+    | 'gemini'
+    | 'codex'
+    | 'copilot'
+    | 'opencode'
+    | null {
     const agent = this._cliAgentService.getConnectedAgent();
     if (!agent) {
       return null;
     }
     const type = agent.type;
-    if (type === 'claude' || type === 'gemini' || type === 'codex' || type === 'copilot') {
+    if (
+      type === 'claude' ||
+      type === 'gemini' ||
+      type === 'codex' ||
+      type === 'copilot' ||
+      type === 'opencode'
+    ) {
       return type;
     }
     return null;
@@ -405,7 +421,7 @@ export class TerminalManager {
 
   public forceReconnectAiAgent(
     terminalId: string,
-    agentType: 'claude' | 'gemini' | 'codex' = 'claude'
+    agentType: 'claude' | 'gemini' | 'codex' | 'copilot' | 'opencode' = 'claude'
   ): boolean {
     const terminalName = this._terminals.get(terminalId)?.name;
     return this._cliAgentService.forceReconnectAgent(terminalId, agentType, terminalName);

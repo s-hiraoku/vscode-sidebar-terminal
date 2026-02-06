@@ -311,6 +311,25 @@ describe('TerminalCliAgentIntegrationService', () => {
       expect(result.has('terminal1')).toBe(true);
     });
 
+    it('should preserve copilot and opencode in disconnected agents', () => {
+      const disconnectedMap = new Map([
+        [
+          'terminal-copilot',
+          { type: 'copilot' as const, startTime: new Date(), terminalName: 'Terminal Copilot' },
+        ],
+        [
+          'terminal-opencode',
+          { type: 'opencode' as const, startTime: new Date(), terminalName: 'Terminal OpenCode' },
+        ],
+      ]);
+      mockCliAgentService.getDisconnectedAgents.mockReturnValue(disconnectedMap);
+
+      const result = service.getDisconnectedAgents();
+
+      expect(result.get('terminal-copilot')?.type).toBe('copilot');
+      expect(result.get('terminal-opencode')?.type).toBe('opencode');
+    });
+
     it('should return empty map when no disconnected agents', () => {
       mockCliAgentService.getDisconnectedAgents.mockReturnValue(new Map());
 
@@ -385,6 +404,20 @@ describe('TerminalCliAgentIntegrationService', () => {
       const result = service.getConnectedAgentType();
 
       expect(result).toBeNull();
+    });
+
+    it('should return copilot and opencode types', () => {
+      mockCliAgentService.getConnectedAgent.mockReturnValue({
+        terminalId: 'terminal1',
+        type: 'copilot',
+      });
+      expect(service.getConnectedAgentType()).toBe('copilot');
+
+      mockCliAgentService.getConnectedAgent.mockReturnValue({
+        terminalId: 'terminal2',
+        type: 'opencode',
+      });
+      expect(service.getConnectedAgentType()).toBe('opencode');
     });
   });
 

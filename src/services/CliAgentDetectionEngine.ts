@@ -74,6 +74,7 @@ interface TerminalSignalState {
   lastInputAt: number;
   shellExecutingAgent: AgentType | null;
   lastShellSignalAt: number;
+  lastInterruptAt: number;
 }
 
 /**
@@ -90,6 +91,7 @@ export class CliAgentDetectionEngine {
   private readonly TERMINATION_GRACE_PERIOD_MS = 2000; // 2 seconds
   private readonly RECENT_INPUT_WINDOW_MS = 15000; // 15 seconds
   private readonly SHELL_COMPLETION_WINDOW_MS = 4000; // 4 seconds
+  private readonly INTERRUPT_PROMPT_WINDOW_MS = 5000; // 5 seconds
 
   constructor() {
     this.patternRegistry = new CliAgentPatternRegistry();
@@ -105,6 +107,10 @@ export class CliAgentDetectionEngine {
   public detectFromInput(terminalId: string, input: string): DetectionResult {
     const trimmedInput = input.trim();
     const terminalSignals = this.getTerminalSignalState(terminalId);
+
+    if (input.includes('\x03')) {
+      terminalSignals.lastInterruptAt = Date.now();
+    }
 
     if (!trimmedInput) {
       return this.createNegativeResult('input', 'Empty input');
@@ -307,6 +313,19 @@ export class CliAgentDetectionEngine {
     cleanLine: string,
     agentType?: AgentType
   ): TerminationResult {
+    const terminalSignals = this.getTerminalSignalState(terminalId);
+    const normalizedLine = cleanLine.trim();
+
+    if (normalizedLine === '^C' || normalizedLine.toLowerCase() === 'keyboardinterrupt') {
+      terminalSignals.lastInterruptAt = Date.now();
+      return {
+        isTerminated: false,
+        confidence: 0,
+        detectedLine: cleanLine,
+        reason: 'Interrupt signal observed',
+      };
+    }
+
     // 1. Check explicit termination patterns (highest confidence)
     if (this.patternRegistry.isTerminationPattern(cleanLine, agentType)) {
       log(`✅ [TERMINATION] Explicit termination detected: "${cleanLine}"`);
@@ -320,6 +339,20 @@ export class CliAgentDetectionEngine {
 
     // 2. Check shell prompt patterns
     if (this.patternRegistry.isShellPrompt(cleanLine)) {
+      const recentInterrupt =
+        terminalSignals.lastInterruptAt > 0 &&
+        Date.now() - terminalSignals.lastInterruptAt <= this.INTERRUPT_PROMPT_WINDOW_MS;
+
+      if (recentInterrupt) {
+        log(`✅ [TERMINATION] Interrupt followed by shell prompt: "${cleanLine}"`);
+        return {
+          isTerminated: true,
+          confidence: 0.95,
+          detectedLine: cleanLine,
+          reason: 'Interrupt followed by shell prompt',
+        };
+      }
+
       const lowerLine = cleanLine.toLowerCase();
 
       // Check if this looks like AI output (reduce false positives)
@@ -439,6 +472,7 @@ export class CliAgentDetectionEngine {
       lastInputAt: 0,
       shellExecutingAgent: null,
       lastShellSignalAt: 0,
+      lastInterruptAt: 0,
     };
     this.terminalSignalState.set(terminalId, created);
     return created;
@@ -494,6 +528,7 @@ export class CliAgentDetectionEngine {
 
     let candidateAgent: AgentType | null = terminalSignals.shellExecutingAgent;
     const now = Date.now();
+    const exitCode = match[1] ? Number(match[1]) : undefined;
     if (!candidateAgent && currentAgentType) {
       const recentInputForCurrentAgent =
         terminalSignals.lastInputAgent === currentAgentType &&
@@ -503,8 +538,15 @@ export class CliAgentDetectionEngine {
       }
     }
 
+    if (!candidateAgent && currentAgentType && exitCode === 130) {
+      candidateAgent = currentAgentType;
+    }
+
     terminalSignals.lastShellSignalAt = now;
     terminalSignals.shellExecutingAgent = null;
+    if (exitCode === 130) {
+      terminalSignals.lastInterruptAt = now;
+    }
 
     if (
       !candidateAgent ||

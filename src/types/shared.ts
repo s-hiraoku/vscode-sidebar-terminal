@@ -968,7 +968,7 @@ export interface VsCodeMessage {
   // AI agent switching related properties
   action?: string; // Action for switchAiAgent command
   forceReconnect?: boolean; // Manual reset functionality
-  agentType?: 'claude' | 'gemini' | 'codex'; // Agent type for force reconnect
+  agentType?: 'claude' | 'gemini' | 'codex' | 'copilot' | 'opencode'; // Agent type for force reconnect
   isForceReconnect?: boolean; // Alternative property name for compatibility
 }
 

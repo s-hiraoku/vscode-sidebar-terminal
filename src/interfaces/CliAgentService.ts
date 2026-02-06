@@ -11,7 +11,7 @@ import * as vscode from 'vscode';
 // =================== Detection Result Types ===================
 
 export interface CliAgentDetectionResult {
-  type: 'claude' | 'gemini' | 'codex' | 'copilot';
+  type: 'claude' | 'gemini' | 'codex' | 'copilot' | 'opencode';
   confidence: number;
   source: 'input' | 'output' | 'startup' | 'termination';
   detectedLine?: string;
@@ -28,11 +28,11 @@ export interface TerminationDetectionResult {
 
 export interface CliAgentState {
   status: 'connected' | 'disconnected' | 'none';
-  agentType: 'claude' | 'gemini' | 'codex' | 'copilot' | null;
+  agentType: 'claude' | 'gemini' | 'codex' | 'copilot' | 'opencode' | null;
 }
 
 export interface DisconnectedAgentInfo {
-  type: 'claude' | 'gemini' | 'codex' | 'copilot';
+  type: 'claude' | 'gemini' | 'codex' | 'copilot' | 'opencode';
   startTime: Date;
   terminalName?: string;
 }
@@ -167,7 +167,7 @@ export interface ICliAgentDetectionService {
    */
   forceReconnectAgent(
     terminalId: string,
-    agentType?: 'claude' | 'gemini' | 'codex' | 'copilot',
+    agentType?: 'claude' | 'gemini' | 'codex' | 'copilot' | 'opencode',
     terminalName?: string
   ): boolean;
 
@@ -187,7 +187,7 @@ export interface ICliAgentDetectionService {
    */
   setAgentConnected(
     terminalId: string,
-    type: 'claude' | 'gemini' | 'codex' | 'copilot',
+    type: 'claude' | 'gemini' | 'codex' | 'copilot' | 'opencode',
     terminalName?: string
   ): void;
 }
@@ -252,7 +252,7 @@ export interface ICliAgentStateManager {
    */
   setConnectedAgent(
     terminalId: string,
-    type: 'claude' | 'gemini' | 'codex' | 'copilot',
+    type: 'claude' | 'gemini' | 'codex' | 'copilot' | 'opencode',
     terminalName?: string
   ): void;
 
@@ -282,7 +282,7 @@ export interface ICliAgentStateManager {
    * Get connected agent type
    * @returns Agent type of connected agent or null
    */
-  getConnectedAgentType(): 'claude' | 'gemini' | 'codex' | 'copilot' | null;
+  getConnectedAgentType(): 'claude' | 'gemini' | 'codex' | 'copilot' | 'opencode' | null;
 
   /**
    * Check if a terminal has a connected CLI agent
@@ -344,7 +344,7 @@ export interface ICliAgentStateManager {
    */
   forceReconnectAgent(
     terminalId: string,
-    agentType: 'claude' | 'gemini' | 'codex' | 'copilot',
+    agentType: 'claude' | 'gemini' | 'codex' | 'copilot' | 'opencode',
     terminalName?: string
   ): boolean;
 

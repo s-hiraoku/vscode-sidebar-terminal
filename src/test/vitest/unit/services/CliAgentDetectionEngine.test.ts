@@ -127,6 +127,14 @@ describe('CliAgentDetectionEngine', () => {
       expect(result.reason).toContain('Shell integration');
     });
 
+    it('should detect termination from shell integration SIGINT completion', () => {
+      const result = engine.detectTermination(terminalId, '\x1b]633;C;130\x07', 'claude');
+
+      expect(result.isTerminated).toBe(true);
+      expect(result.confidence).toBeGreaterThanOrEqual(0.9);
+      expect(result.reason).toContain('Shell integration');
+    });
+
     it('should detect explicit termination pattern', () => {
       const result = engine.detectTermination(terminalId, 'Goodbye!', 'claude');
       expect(result.isTerminated).toBe(true);
@@ -143,6 +151,31 @@ describe('CliAgentDetectionEngine', () => {
     it('should ignore shell prompt if there is very recent AI activity', () => {
       engine.detectFromOutput(terminalId, 'Claude is thinking...');
       const result = engine.detectTermination(terminalId, 'user@host:~$ ');
+      expect(result.isTerminated).toBe(false);
+    });
+
+    it('should detect termination when Ctrl+C is followed by shell prompt', () => {
+      engine.detectFromInput(terminalId, '\x03');
+      engine.detectFromOutput(terminalId, 'Claude is thinking...');
+      const result = engine.detectTermination(terminalId, '^C\nuser@host:~$ ', 'claude');
+
+      expect(result.isTerminated).toBe(true);
+      expect(result.reason).toContain('Interrupt');
+    });
+
+    it('should detect termination when Ctrl+C is followed by decorated zsh prompt', () => {
+      engine.detectFromInput(terminalId, '\x03');
+      engine.detectFromOutput(terminalId, 'Claude is thinking...');
+      const result = engine.detectTermination(terminalId, '^C\n➜ myproject git:(main) ✗ ', 'claude');
+
+      expect(result.isTerminated).toBe(true);
+      expect(result.reason).toContain('Interrupt');
+    });
+
+    it('should not detect termination from Ctrl+C without shell prompt', () => {
+      engine.detectFromInput(terminalId, '\x03');
+      const result = engine.detectTermination(terminalId, '^C', 'claude');
+
       expect(result.isTerminated).toBe(false);
     });
 

@@ -138,38 +138,64 @@ export namespace DOMUtils {
   }
 
   /**
-   * xterm.js internal element selectors that need style reset
-   * These elements get fixed pixel widths set by xterm.js which prevents expansion
-   *
-   * 🔧 CRITICAL: xterm.js sets inline styles on these elements:
-   * - .xterm: width and height in pixels
-   * - .xterm-viewport: width and height in pixels
-   * - .xterm-screen: width and height in pixels
-   * - canvas elements: width and height attributes AND inline styles
+   * Clear width/height/maxWidth/minWidth inline styles from an element.
    */
-  const XTERM_STYLE_RESET_SELECTORS = [
-    '.terminal-content',
-    '.xterm',
-    '.xterm-viewport',
-    '.xterm-screen',
-  ] as const;
+  function clearDimensionStyles(el: HTMLElement): void {
+    el.style.width = '';
+    el.style.height = '';
+    el.style.maxWidth = '';
+    el.style.minWidth = '';
+  }
 
   /**
-   * Reset xterm.js internal element inline styles
+   * Selector cache: avoids repeated querySelector calls on the same container.
+   * Uses WeakMap so entries are automatically GC'd when the container is removed from DOM.
+   */
+  const selectorCache = new WeakMap<
+    HTMLElement,
+    Map<string, HTMLElement | null>
+  >();
+
+  /**
+   * Query a selector within a container, using a WeakMap cache to avoid repeated DOM queries.
+   * Cache is per-container so it's automatically cleaned up when the container is GC'd.
+   */
+  function cachedQuery(container: HTMLElement, selector: string): HTMLElement | null {
+    let cache = selectorCache.get(container);
+    if (!cache) {
+      cache = new Map();
+      selectorCache.set(container, cache);
+    }
+    if (cache.has(selector)) {
+      const cached = cache.get(selector)!;
+      // Validate the cached element is still in the container (prevents stale references)
+      if (cached === null || container.contains(cached)) {
+        return cached;
+      }
+      // Stale — re-query
+    }
+    const result = container.querySelector(selector) as HTMLElement | null;
+    cache.set(selector, result);
+    return result;
+  }
+
+  /**
+   * Invalidate the selector cache for a container.
+   * Call this when the container's DOM structure changes (e.g., terminal removal).
+   */
+  export function invalidateSelectorCache(container: HTMLElement): void {
+    selectorCache.delete(container);
+  }
+
+  /**
+   * Reset xterm.js internal element inline styles (optimized).
+   *
+   * Consolidates all DOM queries into cached single-pass operations and
+   * reduces forced browser reflows from 2 to 1.
    *
    * xterm.js sets fixed pixel widths on internal elements which prevents
    * the terminal from expanding beyond its initial size. This function
    * clears those inline styles to allow CSS flex/100% to work properly.
-   *
-   * 🔧 CRITICAL: This is called BEFORE fitAddon.fit() to allow terminal expansion.
-   * xterm.js sets these inline styles which override CSS:
-   * - .xterm: style="width: Xpx; height: Ypx"
-   * - .xterm-viewport: style="width: Xpx; height: Ypx"
-   * - .xterm-screen: style="width: Xpx; height: Ypx"
-   * - canvas elements: width/height attributes AND inline styles
-   *
-   * By clearing these, we allow CSS (width: 100%, flex: 1) to determine size,
-   * then fit() will recalculate based on new container dimensions.
    *
    * @param container - The terminal container element
    * @param forceReflow - Whether to force a browser layout reflow (default: true)
@@ -183,121 +209,88 @@ export namespace DOMUtils {
       return false;
     }
 
-    // 🔧 CRITICAL FIX: Reset the container itself first
-    // The container (.terminal-container) may have fixed width from previous fit()
+    // Reset container itself
     container.style.width = '';
     container.style.maxWidth = '';
     container.style.minWidth = '';
 
-    // Reset inline styles on known xterm.js elements
-    for (const selector of XTERM_STYLE_RESET_SELECTORS) {
-      const element = container.querySelector(selector) as HTMLElement;
-      if (element) {
-        element.style.width = '';
-        element.style.height = '';
-        element.style.maxWidth = '';
-        element.style.minWidth = '';
-      }
-    }
+    // Batch all child element queries using cache
+    const xtermEl = cachedQuery(container, '.xterm');
+    const viewport = cachedQuery(container, '.xterm-viewport');
+    const screen = cachedQuery(container, '.xterm-screen');
+    const terminalContent = cachedQuery(container, '.terminal-content');
+    const xtermRows = cachedQuery(container, '.xterm-rows');
+    const xtermHelpers = cachedQuery(container, '.xterm-helpers');
 
-    // 🔧 CRITICAL FIX: Also reset the container's own max-width if set
-    // Some parent containers may have max-width constraints
-    const terminalContent = container.querySelector('.terminal-content') as HTMLElement;
-    if (terminalContent) {
-      terminalContent.style.maxWidth = '';
-      terminalContent.style.width = '';
-    }
-
-    // 🔧 FIX: Reset the xterm element's maxWidth as well
-    const xtermElement = container.querySelector('.xterm') as HTMLElement;
-    if (xtermElement) {
-      xtermElement.style.maxWidth = '';
-      xtermElement.style.minWidth = '';
-      xtermElement.style.width = '';
-      xtermElement.style.height = '';
-      // 🔧 FIX: Set background color from viewport to eliminate visible gap
-      const viewport = container.querySelector('.xterm-viewport') as HTMLElement;
+    // Reset dimension styles on all xterm internal elements in one pass
+    if (terminalContent) { clearDimensionStyles(terminalContent); }
+    if (xtermEl) {
+      clearDimensionStyles(xtermEl);
+      // Copy background color from viewport to eliminate visible gap
       if (viewport && viewport.style.backgroundColor) {
-        xtermElement.style.backgroundColor = viewport.style.backgroundColor;
+        xtermEl.style.backgroundColor = viewport.style.backgroundColor;
       }
     }
+    if (viewport) { clearDimensionStyles(viewport); }
+    if (screen) { clearDimensionStyles(screen); }
+    if (xtermRows) { xtermRows.style.width = ''; }
+    if (xtermHelpers) { xtermHelpers.style.width = ''; }
 
-    // 🔧 CRITICAL FIX: Reset xterm-viewport - this is the scrollable container
-    // FitAddon uses this element's dimensions for calculation
-    const xtermViewport = container.querySelector('.xterm-viewport') as HTMLElement;
-    if (xtermViewport) {
-      xtermViewport.style.width = '';
-      xtermViewport.style.height = '';
-      xtermViewport.style.maxWidth = '';
-      xtermViewport.style.minWidth = '';
+    // Reset canvas elements (not cached — NodeList changes with addons)
+    const canvasElements = screen?.querySelectorAll('canvas');
+    if (canvasElements) {
+      canvasElements.forEach((canvas) => {
+        (canvas as HTMLCanvasElement).style.width = '100%';
+      });
     }
 
-    // 🔧 CRITICAL FIX: Reset xterm-screen - this contains the canvas layers
-    const xtermScreen = container.querySelector('.xterm-screen') as HTMLElement;
-    if (xtermScreen) {
-      xtermScreen.style.width = '';
-      xtermScreen.style.height = '';
-      xtermScreen.style.maxWidth = '';
-      xtermScreen.style.minWidth = '';
-    }
-
-    // 🔧 FIX: Reset canvas inline styles to allow CSS width: 100% to take effect
-    // This forces canvas to use parent width instead of fixed pixel value
-    const canvasElements = container.querySelectorAll('.xterm-screen canvas');
-    canvasElements.forEach((canvas) => {
-      const canvasEl = canvas as HTMLCanvasElement;
-      canvasEl.style.width = '100%';
-    });
-
-    // 🔧 FIX: Also reset xterm-rows element which contains the actual rendered text
-    const xtermRows = container.querySelector('.xterm-rows') as HTMLElement;
-    if (xtermRows) {
-      xtermRows.style.width = '';
-    }
-
-    // 🔧 FIX: Reset parent elements that may have fixed widths
-    // terminals-wrapper may have been set with fixed dimensions
+    // Reset parent/wrapper elements (outside container — not cached in WeakMap)
     const terminalsWrapper = document.getElementById('terminals-wrapper');
     if (terminalsWrapper) {
       terminalsWrapper.style.width = '';
       terminalsWrapper.style.maxWidth = '';
     }
 
-    // 🔧 CRITICAL FIX: Reset .xterm-helpers as well
-    // This element may also have fixed dimensions set by xterm.js
-    const xtermHelpers = container.querySelector('.xterm-helpers') as HTMLElement;
-    if (xtermHelpers) {
-      xtermHelpers.style.width = '';
-    }
-
-    // 🔧 CRITICAL FIX: Reset terminal-split-wrapper parent if it exists
-    // Split layout may have fixed widths
     const splitWrapper = container.closest('.terminal-split-wrapper') as HTMLElement;
     if (splitWrapper) {
-      splitWrapper.style.width = '';
-      splitWrapper.style.maxWidth = '';
-      splitWrapper.style.minWidth = '';
+      clearDimensionStyles(splitWrapper);
     }
 
-    // 🔧 CRITICAL FIX: Reset terminal-area wrapper if it exists (in split layout)
-    // This element wraps the terminal container and may have fixed dimensions
     const terminalArea = container.closest('[data-terminal-area-id]') as HTMLElement;
     if (terminalArea) {
-      terminalArea.style.width = '';
-      terminalArea.style.maxWidth = '';
-      terminalArea.style.minWidth = '';
-      terminalArea.style.height = '';
+      clearDimensionStyles(terminalArea);
     }
 
-    // Force browser layout reflow to ensure new sizes are calculated
+    // Single forced reflow (reduced from 2 reads to 1)
     if (forceReflow) {
       // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       container.offsetHeight;
-      // Also read clientWidth to force horizontal reflow
-      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-      container.clientWidth;
     }
 
+    return true;
+  }
+
+  /**
+   * Schedule an xterm style reset on the next animation frame.
+   * Coalesces multiple calls for the same container within a single frame.
+   *
+   * @param container - The terminal container element
+   * @returns true if scheduled, false if container is null
+   */
+  const pendingResets = new WeakSet<HTMLElement>();
+
+  export function scheduleXtermStyleReset(container: HTMLElement | null): boolean {
+    if (!container) {
+      return false;
+    }
+    if (pendingResets.has(container)) {
+      return true; // Already scheduled for this frame
+    }
+    pendingResets.add(container);
+    requestAnimationFrame(() => {
+      pendingResets.delete(container);
+      resetXtermInlineStyles(container, true);
+    });
     return true;
   }
 

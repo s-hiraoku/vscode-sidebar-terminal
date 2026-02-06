@@ -35,13 +35,7 @@ export class PerformanceManager extends BaseManager {
     }
   }
 
-  private readonly bufferEntries = new Map<
-    Terminal,
-    {
-      data: string[];
-      timer: number | null;
-    }
-  >();
+  private readonly bufferEntries = new Map<Terminal, BufferEntry>();
   private readonly BUFFER_FLUSH_INTERVAL = SPLIT_CONSTANTS.BUFFER_FLUSH_INTERVAL;
   private readonly MAX_BUFFER_SIZE = SPLIT_CONSTANTS.MAX_BUFFER_SIZE;
   private readonly debugLoggingEnabled = ENABLE_WEBVIEW_DEBUG_LOGS;
@@ -108,10 +102,10 @@ export class PerformanceManager extends BaseManager {
     }
   }
 
-  private getOrCreateBufferEntry(terminal: Terminal): { data: string[]; timer: number | null } {
+  private getOrCreateBufferEntry(terminal: Terminal): BufferEntry {
     let entry = this.bufferEntries.get(terminal);
     if (!entry) {
-      entry = { data: [], timer: null };
+      entry = { data: [], timer: null, timerType: null };
       this.bufferEntries.set(terminal, entry);
     }
     return entry;
@@ -119,38 +113,60 @@ export class PerformanceManager extends BaseManager {
 
   private scheduleEntryFlush(
     terminal: Terminal,
-    entry: { data: string[]; timer: number | null }
+    entry: BufferEntry
   ): void {
     if (entry.timer === null) {
-      // Dynamic flush interval based on CLI Agent state and output frequency
-      let flushInterval: number = this.BUFFER_FLUSH_INTERVAL; // Default 16ms (optimized for performance)
+      // Use requestAnimationFrame for display-synchronized flushing.
+      // For CLI Agent mode with very low latency needs, use setTimeout fallback.
+      const useRAF = !this.isCliAgentMode;
 
-      if (this.isCliAgentMode) {
-        flushInterval = Math.max(8, this.BUFFER_FLUSH_INTERVAL / 2); // 8ms when CLI agent active
-      } else if (entry.data.length > 3) {
-        flushInterval = Math.max(12, this.BUFFER_FLUSH_INTERVAL * 0.75); // 12ms for high-frequency output
+      if (useRAF) {
+        // requestAnimationFrame syncs with display refresh (typically ~16ms at 60Hz)
+        entry.timer = requestAnimationFrame(() => {
+          try {
+            this.flushEntryByTerminal(terminal);
+          } catch (error) {
+            if (this.debugLoggingEnabled) {
+              this.logger(`Error during rAF buffer flush: ${error}`);
+            } else {
+              console.error('[PerformanceManager] Error during rAF buffer flush:', error);
+            }
+            const currentEntry = this.bufferEntries.get(terminal);
+            if (currentEntry) {
+              currentEntry.timer = null;
+              currentEntry.timerType = null;
+              currentEntry.data.length = 0;
+            }
+          }
+        });
+        entry.timerType = 'raf';
+      } else {
+        // CLI Agent mode: use setTimeout with fast interval for lower latency
+        const flushInterval = SPLIT_CONSTANTS.CLI_AGENT_FLUSH_INTERVAL ?? Math.max(8, this.BUFFER_FLUSH_INTERVAL / 2);
+
+        entry.timer = window.setTimeout(() => {
+          try {
+            this.flushEntryByTerminal(terminal);
+          } catch (error) {
+            if (this.debugLoggingEnabled) {
+              this.logger(`Error during buffer flush: ${error}`);
+            } else {
+              console.error('[PerformanceManager] Error during buffer flush:', error);
+            }
+            const currentEntry = this.bufferEntries.get(terminal);
+            if (currentEntry) {
+              currentEntry.timer = null;
+              currentEntry.timerType = null;
+              currentEntry.data.length = 0;
+            }
+          }
+        }, flushInterval);
+        entry.timerType = 'timeout';
       }
-
-      entry.timer = window.setTimeout(() => {
-        try {
-          this.flushEntryByTerminal(terminal);
-        } catch (error) {
-          if (this.debugLoggingEnabled) {
-            this.logger(`Error during buffer flush: ${error}`);
-          } else {
-            console.error('[PerformanceManager] Error during buffer flush:', error);
-          }
-          const currentEntry = this.bufferEntries.get(terminal);
-          if (currentEntry) {
-            currentEntry.timer = null;
-            currentEntry.data.length = 0;
-          }
-        }
-      }, flushInterval);
 
       if (this.debugLoggingEnabled) {
         this.logger(
-          `Scheduled flush in ${flushInterval}ms (CLI Agent: ${this.isCliAgentMode}, buffer size: ${entry.data.length})`
+          `Scheduled flush via ${useRAF ? 'rAF' : 'setTimeout'} (CLI Agent: ${this.isCliAgentMode}, buffer size: ${entry.data.length})`
         );
       }
     }
@@ -163,11 +179,8 @@ export class PerformanceManager extends BaseManager {
     }
   }
 
-  private flushEntry(terminal: Terminal, entry: { data: string[]; timer: number | null }): void {
-    if (entry.timer !== null) {
-      window.clearTimeout(entry.timer);
-      entry.timer = null;
-    }
+  private flushEntry(terminal: Terminal, entry: BufferEntry): void {
+    this.clearEntryTimer(entry);
 
     if (entry.data.length === 0) {
       return;
@@ -260,10 +273,7 @@ export class PerformanceManager extends BaseManager {
     }
 
     this.bufferEntries.forEach((entry) => {
-      if (entry.timer) {
-        clearTimeout(entry.timer);
-        entry.timer = null;
-      }
+      this.clearEntryTimer(entry);
       entry.data.length = 0;
     });
     this.bufferEntries.clear();
@@ -379,10 +389,7 @@ export class PerformanceManager extends BaseManager {
     }
     this.bufferEntries.forEach((entry) => {
       entry.data.length = 0;
-      if (entry.timer !== null) {
-        window.clearTimeout(entry.timer);
-        entry.timer = null;
-      }
+      this.clearEntryTimer(entry);
     });
   }
 
@@ -409,4 +416,25 @@ export class PerformanceManager extends BaseManager {
       this.logger('PerformanceManager', 'completed');
     }
   }
+
+  private clearEntryTimer(entry: BufferEntry): void {
+    if (entry.timer === null) {
+      return;
+    }
+
+    if (entry.timerType === 'raf') {
+      cancelAnimationFrame(entry.timer);
+    } else {
+      window.clearTimeout(entry.timer);
+    }
+
+    entry.timer = null;
+    entry.timerType = null;
+  }
 }
+
+type BufferEntry = {
+  data: string[];
+  timer: number | null;
+  timerType: 'raf' | 'timeout' | null;
+};

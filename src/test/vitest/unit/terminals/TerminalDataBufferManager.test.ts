@@ -83,4 +83,51 @@ describe('TerminalDataBufferManager', () => {
     sub.dispose();
     bufferManager.dispose();
   });
+
+  it('runs termination detection when an agent is active', () => {
+    const terminals = new Map<string, TerminalInstance>();
+    terminals.set('terminal-1', { id: 'terminal-1', name: 'Terminal 1' } as TerminalInstance);
+
+    const emitter = new vscode.EventEmitter<TerminalEvent>();
+    const cliAgentService = {
+      detectFromOutput: vi.fn(),
+      detectTermination: vi.fn(),
+      getAgentState: vi.fn().mockReturnValue({ status: 'connected', agentType: 'claude' }),
+    } as any;
+
+    const bufferManager = new TerminalDataBufferManager(terminals, emitter, cliAgentService);
+
+    bufferManager.bufferData('terminal-1', 'user@host:~$ ');
+    bufferManager.flushBuffer('terminal-1');
+
+    expect(cliAgentService.detectFromOutput).toHaveBeenCalledWith('terminal-1', 'user@host:~$ ');
+    expect(cliAgentService.detectTermination).toHaveBeenCalledWith(
+      'terminal-1',
+      'user@host:~$ '
+    );
+
+    bufferManager.dispose();
+  });
+
+  it('skips termination detection when no agent is active', () => {
+    const terminals = new Map<string, TerminalInstance>();
+    terminals.set('terminal-1', { id: 'terminal-1', name: 'Terminal 1' } as TerminalInstance);
+
+    const emitter = new vscode.EventEmitter<TerminalEvent>();
+    const cliAgentService = {
+      detectFromOutput: vi.fn(),
+      detectTermination: vi.fn(),
+      getAgentState: vi.fn().mockReturnValue({ status: 'none', agentType: null }),
+    } as any;
+
+    const bufferManager = new TerminalDataBufferManager(terminals, emitter, cliAgentService);
+
+    bufferManager.bufferData('terminal-1', 'plain shell output');
+    bufferManager.flushBuffer('terminal-1');
+
+    expect(cliAgentService.detectFromOutput).toHaveBeenCalledWith('terminal-1', 'plain shell output');
+    expect(cliAgentService.detectTermination).not.toHaveBeenCalled();
+
+    bufferManager.dispose();
+  });
 });

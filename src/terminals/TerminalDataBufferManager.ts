@@ -5,6 +5,7 @@ import * as vscode from 'vscode';
 import { TerminalEvent, TerminalInstance } from '../types/shared';
 import { terminal as log } from '../utils/logger';
 import { ICliAgentDetectionService } from '../interfaces/CliAgentService';
+import { PERFORMANCE_CONSTANTS } from '../constants/SystemConstants';
 
 const ENABLE_TERMINAL_DEBUG_LOGS = process.env.SECONDARY_TERMINAL_DEBUG_LOGS === 'true';
 
@@ -12,7 +13,7 @@ const ENABLE_TERMINAL_DEBUG_LOGS = process.env.SECONDARY_TERMINAL_DEBUG_LOGS ===
 export class TerminalDataBufferManager {
   private readonly _dataBuffers = new Map<string, string[]>();
   private readonly _dataFlushTimers = new Map<string, NodeJS.Timeout>();
-  private readonly DATA_FLUSH_INTERVAL = 8; // ~125fps for improved responsiveness
+  private readonly DATA_FLUSH_INTERVAL = PERFORMANCE_CONSTANTS.OUTPUT_BUFFER_FLUSH_INTERVAL_MS; // 16ms (60fps) - unified via PerformanceConstants
   private readonly MAX_BUFFER_SIZE = 50;
   private readonly _debugLoggingEnabled = ENABLE_TERMINAL_DEBUG_LOGS;
   private readonly _ansiFilterState = new Map<
@@ -98,6 +99,20 @@ export class TerminalDataBufferManager {
 
       try {
         this._cliAgentService.detectFromOutput(terminalId, combinedData);
+
+        const getAgentState = (this._cliAgentService as unknown as {
+          getAgentState?: (id: string) => { status: 'connected' | 'disconnected' | 'none' } | null;
+        }).getAgentState;
+        const detectTermination = (this._cliAgentService as unknown as {
+          detectTermination?: (id: string, data: string) => { isTerminated: boolean } | null;
+        }).detectTermination;
+
+        if (typeof getAgentState === 'function' && typeof detectTermination === 'function') {
+          const agentState = getAgentState(terminalId);
+          if (agentState?.status && agentState.status !== 'none') {
+            detectTermination(terminalId, combinedData);
+          }
+        }
       } catch {
         // Ignore CLI Agent detection errors
       }
