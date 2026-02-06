@@ -75,6 +75,8 @@ interface TerminalSignalState {
   shellExecutingAgent: AgentType | null;
   lastShellSignalAt: number;
   lastInterruptAt: number;
+  interruptCount: number;
+  lastInterruptSource: 'input' | 'output' | null;
 }
 
 /**
@@ -92,6 +94,8 @@ export class CliAgentDetectionEngine {
   private readonly RECENT_INPUT_WINDOW_MS = 15000; // 15 seconds
   private readonly SHELL_COMPLETION_WINDOW_MS = 4000; // 4 seconds
   private readonly INTERRUPT_PROMPT_WINDOW_MS = 5000; // 5 seconds
+  private readonly DOUBLE_INTERRUPT_WINDOW_MS = 3000; // 3 seconds
+  private readonly INTERRUPT_ECHO_DEDUP_MS = 250; // 250ms
 
   constructor() {
     this.patternRegistry = new CliAgentPatternRegistry();
@@ -109,7 +113,7 @@ export class CliAgentDetectionEngine {
     const terminalSignals = this.getTerminalSignalState(terminalId);
 
     if (input.includes('\x03')) {
-      terminalSignals.lastInterruptAt = Date.now();
+      this.registerInterruptSignal(terminalSignals, 'input');
     }
 
     if (!trimmedInput) {
@@ -302,6 +306,38 @@ export class CliAgentDetectionEngine {
   }
 
   /**
+   * Detect immediate termination from rapid interrupt signals (Ctrl+C x2)
+   * @param terminalId Terminal ID
+   * @param currentAgentType Current connected agent type (optional)
+   * @returns Termination result if detected, otherwise null
+   */
+  public detectImmediateInterruptTermination(
+    terminalId: string,
+    currentAgentType?: AgentType
+  ): TerminationResult | null {
+    if (!currentAgentType) {
+      return null;
+    }
+
+    const terminalSignals = this.getTerminalSignalState(terminalId);
+    const recentInterrupt =
+      terminalSignals.lastInterruptAt > 0 &&
+      Date.now() - terminalSignals.lastInterruptAt <= this.DOUBLE_INTERRUPT_WINDOW_MS;
+
+    if (!recentInterrupt || terminalSignals.interruptCount < 2) {
+      return null;
+    }
+
+    this.resetInterruptTracking(terminalSignals);
+    return {
+      isTerminated: true,
+      confidence: 0.98,
+      detectedLine: '^C',
+      reason: 'Double interrupt detected',
+    };
+  }
+
+  /**
    * Strict termination detection with validation
    * @param terminalId Terminal ID
    * @param cleanLine Cleaned output line
@@ -317,7 +353,17 @@ export class CliAgentDetectionEngine {
     const normalizedLine = cleanLine.trim();
 
     if (normalizedLine === '^C' || normalizedLine.toLowerCase() === 'keyboardinterrupt') {
-      terminalSignals.lastInterruptAt = Date.now();
+      const interruptState = this.registerInterruptSignal(terminalSignals, 'output');
+      if (interruptState.isDoubleInterrupt) {
+        this.resetInterruptTracking(terminalSignals);
+        return {
+          isTerminated: true,
+          confidence: 0.98,
+          detectedLine: cleanLine,
+          reason: 'Double interrupt detected',
+        };
+      }
+
       return {
         isTerminated: false,
         confidence: 0,
@@ -328,6 +374,7 @@ export class CliAgentDetectionEngine {
 
     // 1. Check explicit termination patterns (highest confidence)
     if (this.patternRegistry.isTerminationPattern(cleanLine, agentType)) {
+      this.resetInterruptTracking(terminalSignals);
       log(`✅ [TERMINATION] Explicit termination detected: "${cleanLine}"`);
       return {
         isTerminated: true,
@@ -344,6 +391,7 @@ export class CliAgentDetectionEngine {
         Date.now() - terminalSignals.lastInterruptAt <= this.INTERRUPT_PROMPT_WINDOW_MS;
 
       if (recentInterrupt) {
+        this.resetInterruptTracking(terminalSignals);
         log(`✅ [TERMINATION] Interrupt followed by shell prompt: "${cleanLine}"`);
         return {
           isTerminated: true,
@@ -368,6 +416,7 @@ export class CliAgentDetectionEngine {
         const isValid = this.validateTerminationSignal(terminalId, 0.6);
 
         if (isValid) {
+          this.resetInterruptTracking(terminalSignals);
           log(`✅ [TERMINATION] Shell prompt detected: "${cleanLine}"`);
           return {
             isTerminated: true,
@@ -473,6 +522,8 @@ export class CliAgentDetectionEngine {
       shellExecutingAgent: null,
       lastShellSignalAt: 0,
       lastInterruptAt: 0,
+      interruptCount: 0,
+      lastInterruptSource: null,
     };
     this.terminalSignalState.set(terminalId, created);
     return created;
@@ -545,7 +596,7 @@ export class CliAgentDetectionEngine {
     terminalSignals.lastShellSignalAt = now;
     terminalSignals.shellExecutingAgent = null;
     if (exitCode === 130) {
-      terminalSignals.lastInterruptAt = now;
+      this.resetInterruptTracking(terminalSignals);
     }
 
     if (
@@ -564,6 +615,40 @@ export class CliAgentDetectionEngine {
       detectedLine: match[0],
       reason: 'Shell integration command finished',
     };
+  }
+
+  private registerInterruptSignal(
+    terminalSignals: TerminalSignalState,
+    source: 'input' | 'output'
+  ): { isDoubleInterrupt: boolean } {
+    const now = Date.now();
+    const timeSinceLastInterrupt = now - terminalSignals.lastInterruptAt;
+    const withinDoubleInterruptWindow =
+      terminalSignals.lastInterruptAt > 0 && timeSinceLastInterrupt <= this.DOUBLE_INTERRUPT_WINDOW_MS;
+
+    if (withinDoubleInterruptWindow) {
+      const isLikelyEchoFromInput =
+        source === 'output' &&
+        terminalSignals.lastInterruptSource === 'input' &&
+        timeSinceLastInterrupt <= this.INTERRUPT_ECHO_DEDUP_MS;
+
+      if (!isLikelyEchoFromInput) {
+        terminalSignals.interruptCount += 1;
+      }
+    } else {
+      terminalSignals.interruptCount = 1;
+    }
+
+    terminalSignals.lastInterruptAt = now;
+    terminalSignals.lastInterruptSource = source;
+
+    return { isDoubleInterrupt: terminalSignals.interruptCount >= 2 };
+  }
+
+  private resetInterruptTracking(terminalSignals: TerminalSignalState): void {
+    terminalSignals.interruptCount = 0;
+    terminalSignals.lastInterruptAt = 0;
+    terminalSignals.lastInterruptSource = null;
   }
 
   /**

@@ -841,6 +841,17 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
       expect(detectionService.getAgentState('term1').status).toBe('none');
     });
 
+    it('should terminate connected agent when Ctrl+C is pressed twice quickly', () => {
+      detectionService.detectFromOutput('term1', 'Welcome to Claude Code!');
+
+      detectionService.detectFromInput('term1', '\x03');
+      expect(detectionService.getAgentState('term1').status).toBe('connected');
+
+      vi.advanceTimersByTime(500);
+      detectionService.detectFromInput('term1', '\x03');
+      expect(detectionService.getAgentState('term1').status).toBe('none');
+    });
+
     it('should terminate connected agent when Ctrl+C is followed by decorated zsh prompt', () => {
       detectionService.detectFromOutput('term1', 'Welcome to Claude Code!');
       detectionService.detectFromOutput('term1', 'Claude is thinking...');

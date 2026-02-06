@@ -46,6 +46,20 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     try {
       const result = this.detectionEngine.detectFromInput(terminalId, input);
 
+      if (input.includes('\x03')) {
+        const terminalState = this.stateStore.getAgentState(terminalId);
+        if (terminalState && terminalState.status !== 'none') {
+          const immediateTermination = this.detectionEngine.detectImmediateInterruptTermination(
+            terminalId,
+            terminalState.agentType ?? undefined
+          );
+          if (immediateTermination?.isTerminated) {
+            this.stateStore.setAgentTerminated(terminalId);
+            return null;
+          }
+        }
+      }
+
       if (result.isDetected && result.agentType) {
         // Update state store
         this.stateStore.setConnectedAgent(terminalId, result.agentType);

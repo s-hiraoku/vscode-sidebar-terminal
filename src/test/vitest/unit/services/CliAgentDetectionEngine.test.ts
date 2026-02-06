@@ -179,6 +179,28 @@ describe('CliAgentDetectionEngine', () => {
       expect(result.isTerminated).toBe(false);
     });
 
+    it('should detect termination from double Ctrl+C input without shell prompt', () => {
+      engine.detectFromInput(terminalId, '\x03');
+      const first = engine.detectImmediateInterruptTermination(terminalId, 'claude');
+      expect(first).toBeNull();
+
+      vi.advanceTimersByTime(500);
+      engine.detectFromInput(terminalId, '\x03');
+      const second = engine.detectImmediateInterruptTermination(terminalId, 'claude');
+
+      expect(second?.isTerminated).toBe(true);
+      expect(second?.reason).toBe('Double interrupt detected');
+    });
+
+    it('should not detect double Ctrl+C termination when outside window', () => {
+      engine.detectFromInput(terminalId, '\x03');
+      vi.advanceTimersByTime(4000);
+      engine.detectFromInput(terminalId, '\x03');
+
+      const result = engine.detectImmediateInterruptTermination(terminalId, 'claude');
+      expect(result).toBeNull();
+    });
+
     it('should not treat generic long output as AI activity', () => {
       engine.detectFromOutput(
         terminalId,
