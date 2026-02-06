@@ -15,7 +15,7 @@
 
 import * as vscode from 'vscode';
 import { terminal as log } from '../utils/logger';
-import { AgentType } from './CliAgentPatternRegistry';
+import type { AgentType } from '../types/shared';
 
 /**
  * Agent state status

@@ -398,6 +398,36 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
       expect(detectionService.getAgentState('term2').status).toBe('disconnected');
     });
 
+    it('should reconnect disconnected terminal with its own detected agent type', () => {
+      detectionService.detectFromInput('term1', 'codex\r');
+      detectionService.detectFromInput('term2', 'gemini\r');
+
+      expect(detectionService.getAgentState('term1').status).toBe('disconnected');
+      expect(detectionService.getAgentState('term1').agentType).toBe('codex');
+      expect(detectionService.getAgentState('term2').status).toBe('connected');
+      expect(detectionService.getAgentState('term2').agentType).toBe('gemini');
+
+      vi.advanceTimersByTime(3000);
+
+      const switchResult = detectionService.switchAgentConnection('term1');
+
+      expect(switchResult.success).toBe(true);
+      expect(switchResult.newStatus).toBe('connected');
+      expect(switchResult.agentType).toBe('codex');
+      expect(detectionService.getAgentState('term1').status).toBe('connected');
+      expect(detectionService.getAgentState('term1').agentType).toBe('codex');
+      expect(detectionService.getAgentState('term2').status).toBe('disconnected');
+    });
+
+    it('should not switch when terminal has no detected AI agent', () => {
+      const switchResult = detectionService.switchAgentConnection('term-not-detected');
+
+      expect(switchResult.success).toBe(false);
+      expect(switchResult.newStatus).toBe('none');
+      expect(switchResult.agentType).toBeNull();
+      expect(switchResult.reason).toContain('No detected AI agent');
+    });
+
     it('should prevent promotion of disconnected agents via output re-processing', () => {
       // ARRANGE: Start Claude, then Gemini (Claude becomes disconnected)
       detectionService.detectFromOutput('term1', 'Welcome to Claude Code!');
@@ -642,6 +672,23 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
         expect(result).toBeNull();
       });
     });
+
+    it('should detect wrapped and prefixed launcher commands', () => {
+      expect(detectionService.detectFromInput('term1', 'FOO=1 codex\r')?.type).toBe('codex');
+      expect(detectionService.detectFromInput('term1', 'npx @openai/codex@latest\r')?.type).toBe(
+        'codex'
+      );
+      expect(
+        detectionService.detectFromInput('term1', 'pnpm dlx @google/gemini-cli\r')?.type
+      ).toBe('gemini');
+      expect(
+        detectionService.detectFromInput('term1', 'yarn dlx @anthropic-ai/claude-code\r')?.type
+      ).toBe('claude');
+      expect(detectionService.detectFromInput('term1', 'bunx opencode\r')?.type).toBe('opencode');
+      expect(detectionService.detectFromInput('term1', 'gh copilot suggest\r')?.type).toBe(
+        'copilot'
+      );
+    });
   });
 
   // =================== PERFORMANCE AND CACHING TESTS ===================
@@ -780,6 +827,54 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
 
       // Should have no additional status change events
       expect(statusChangeEvents).toHaveLength(0); // BUG DETECTED: Unexpected status change events fired during normal output
+    });
+
+    it('should terminate connected agent when Ctrl+C is followed by shell prompt', () => {
+      detectionService.detectFromOutput('term1', 'Welcome to Claude Code!');
+      detectionService.detectFromOutput('term1', 'Claude is thinking...');
+      detectionService.detectFromInput('term1', '\x03');
+
+      const terminationResult = detectionService.detectTermination('term1', '^C\nuser@host:~$ ');
+
+      expect(terminationResult.isTerminated).toBe(true);
+      expect(terminationResult.reason).toBe('Interrupt followed by shell prompt');
+      expect(detectionService.getAgentState('term1').status).toBe('none');
+    });
+
+    it('should terminate connected agent when Ctrl+C is pressed twice quickly', () => {
+      detectionService.detectFromOutput('term1', 'Welcome to Claude Code!');
+
+      detectionService.detectFromInput('term1', '\x03');
+      expect(detectionService.getAgentState('term1').status).toBe('connected');
+
+      vi.advanceTimersByTime(500);
+      detectionService.detectFromInput('term1', '\x03');
+      expect(detectionService.getAgentState('term1').status).toBe('none');
+    });
+
+    it('should terminate connected agent when Ctrl+C is followed by decorated zsh prompt', () => {
+      detectionService.detectFromOutput('term1', 'Welcome to Claude Code!');
+      detectionService.detectFromOutput('term1', 'Claude is thinking...');
+      detectionService.detectFromInput('term1', '\x03');
+
+      const terminationResult = detectionService.detectTermination(
+        'term1',
+        '^C\n➜ myproject git:(main) ✗ '
+      );
+
+      expect(terminationResult.isTerminated).toBe(true);
+      expect(terminationResult.reason).toBe('Interrupt followed by shell prompt');
+      expect(detectionService.getAgentState('term1').status).toBe('none');
+    });
+
+    it('should terminate connected agent on shell integration SIGINT completion', () => {
+      detectionService.detectFromOutput('term1', 'Welcome to Claude Code!');
+
+      const terminationResult = detectionService.detectTermination('term1', '\x1b]633;C;130\x07');
+
+      expect(terminationResult.isTerminated).toBe(true);
+      expect(terminationResult.reason).toBe('Shell integration command finished');
+      expect(detectionService.getAgentState('term1').status).toBe('none');
     });
   });
 

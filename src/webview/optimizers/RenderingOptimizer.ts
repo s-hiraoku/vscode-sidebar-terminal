@@ -120,12 +120,7 @@ export class RenderingOptimizer implements Disposable {
    * Check if running in a potentially problematic WebGL environment
    * (e.g., x86 Node.js on ARM macOS via Rosetta, or Volta with x86 Node)
    *
-   * @internal Currently unreachable when WebGL is disabled due to macOS Tahoe GPU issues.
-   * Preserved for future use when WebGL is re-enabled.
    * @see https://github.com/electron/electron/issues/45574
-   *
-   * TODO: Re-enable WebGL testing when macOS 26.2+ and Electron 38.2.0+ are available
-   * to validate this detection logic still works correctly.
    */
   private isProblematicWebGLEnvironment(): boolean {
     try {
@@ -183,24 +178,14 @@ export class RenderingOptimizer implements Disposable {
   }
 
   /**
-   * Enable WebGL rendering with auto-fallback
+   * Enable WebGL rendering with auto-fallback.
    *
-   * 🔧 TEMPORARILY DISABLED: WebGL causes rendering issues where text/cursor
-   * disappear after initial render, especially on macOS. The DOM renderer
-   * works correctly. This should be re-enabled once the WebGL timing issue
-   * is resolved.
+   * Waits for the terminal's theme to be applied (background color set)
+   * before loading WebGL to prevent black background / invisible text issues.
    */
   public async enableWebGL(terminal: Terminal, terminalId: string): Promise<boolean> {
-    // 🔧 FIX: Temporarily disable WebGL to fix text/cursor visibility issues
-    // WebGL loads AFTER theme is applied and overwrites the terminal rendering
-    // causing black backgrounds and invisible text
-    terminalLogger.info(`🔧 WebGL disabled for terminal ${terminalId} (DOM renderer used for stability)`);
-    return false;
-
-    // Original code below - re-enable when WebGL timing is fixed
-    /*
     if (!this.options.enableWebGL) {
-      terminalLogger.info(`WebGL disabled for terminal: ${terminalId}`);
+      terminalLogger.info(`WebGL disabled by option for terminal: ${terminalId}`);
       return false;
     }
 
@@ -209,7 +194,15 @@ export class RenderingOptimizer implements Disposable {
       terminalLogger.info(`🔧 Skipping WebGL for terminal ${terminalId} due to problematic environment`);
       return false;
     }
-    */
+
+    // Wait for theme to be applied before loading WebGL.
+    // The root cause of the previous black-background issue was WebGL loading
+    // before theme colors were set, causing it to render with default black.
+    const themeReady = await this.waitForThemeReady(terminal, terminalId);
+    if (!themeReady) {
+      terminalLogger.warn(`⚠️ Theme not ready for ${terminalId}, skipping WebGL`);
+      return false;
+    }
 
     try {
       // Lazy load WebglAddon
@@ -223,7 +216,6 @@ export class RenderingOptimizer implements Disposable {
           `⚠️ WebGL context lost for terminal ${terminalId}, falling back to DOM renderer`
         );
         this.fallbackToDOMRenderer(terminal, terminalId);
-        // Force refresh after fallback to ensure cursor is visible
         terminal.refresh(0, terminal.rows - 1);
       });
 
@@ -231,22 +223,10 @@ export class RenderingOptimizer implements Disposable {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       terminal.loadAddon(addon as any);
 
-      // 🔧 CRITICAL FIX: Verify WebGL is actually working after loading
-      // Some environments silently fail and need a refresh to trigger DOM fallback
+      // Verify WebGL is actually working after loading
       await this.verifyWebGLRendering(terminal, terminalId);
 
       terminalLogger.info(`✅ WebGL renderer enabled for terminal: ${terminalId}`);
-
-      // Verify WebGL is actually working after a short delay
-      setTimeout(() => {
-        if (!this.verifyWebGLRendering(terminal, terminalId)) {
-          terminalLogger.warn(`⚠️ WebGL verification failed for ${terminalId}, switching to DOM renderer`);
-          this.fallbackToDOMRenderer(terminal, terminalId);
-          // Force a terminal refresh to ensure DOM renderer redraws properly
-          terminal.refresh(0, terminal.rows - 1);
-        }
-      }, 100);
-
       return true;
     } catch (error) {
       terminalLogger.warn(
@@ -259,15 +239,41 @@ export class RenderingOptimizer implements Disposable {
   }
 
   /**
-   * Verify WebGL is actually rendering correctly
-   * Force a refresh and check if canvas layers are properly initialized
-   *
-   * @internal Called only when WebGL is enabled. Currently WebGL is disabled
-   * due to macOS Tahoe GPU issues, so this method may not be exercised in production.
-   *
-   * TODO: Re-enable WebGL and verify this method when macOS Tahoe GPU issues are resolved.
-   * Prerequisites: macOS 26.2+ and Electron 38.2.0+ with fixed GPU rendering.
-   * @see TerminalAddonManager.ts for WebGL addon loading (currently disabled)
+   * Wait for the terminal's theme to be applied before enabling WebGL.
+   * Checks that the terminal element has a non-default background color set.
+   * Times out after 500ms to avoid blocking terminal creation.
+   */
+  private async waitForThemeReady(terminal: Terminal, terminalId: string): Promise<boolean> {
+    const maxWaitMs = 500;
+    const checkIntervalMs = 50;
+    let elapsed = 0;
+
+    while (elapsed < maxWaitMs) {
+      // Check if terminal element exists and has theme applied
+      const element = terminal.element;
+      if (element) {
+        const viewport = element.querySelector('.xterm-viewport') as HTMLElement;
+        if (viewport) {
+          const bg = viewport.style.backgroundColor || '';
+          // Theme is ready if viewport has a non-empty, non-default background
+          if (bg && bg !== 'rgb(0, 0, 0)' && bg !== '#000000' && bg !== 'black') {
+            terminalLogger.debug(`🎨 Theme ready for ${terminalId} after ${elapsed}ms (bg: ${bg})`);
+            return true;
+          }
+        }
+      }
+      await new Promise(resolve => setTimeout(resolve, checkIntervalMs));
+      elapsed += checkIntervalMs;
+    }
+
+    // Theme didn't apply in time — still allow WebGL with a warning
+    terminalLogger.warn(`⚠️ Theme wait timed out for ${terminalId} after ${maxWaitMs}ms, proceeding with WebGL`);
+    return true;
+  }
+
+  /**
+   * Verify WebGL is actually rendering correctly.
+   * Waits two frames for WebGL to initialize and forces a terminal refresh.
    */
   private async verifyWebGLRendering(terminal: Terminal, terminalId: string): Promise<void> {
     // Wait a frame for WebGL to initialize

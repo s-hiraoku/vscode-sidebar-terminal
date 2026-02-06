@@ -11,13 +11,14 @@ import type {
   BufferConfig,
   BufferStats,
 } from './IBufferManagementService';
+import { PERFORMANCE_CONSTANTS } from '../../constants/SystemConstants';
 
 /**
  * Default buffer configuration
  */
 const DEFAULT_BUFFER_CONFIG: BufferConfig = {
-  flushInterval: 16, // 60fps for normal output
-  maxBufferSize: 50, // characters
+  flushInterval: PERFORMANCE_CONSTANTS.OUTPUT_BUFFER_FLUSH_INTERVAL_MS, // 16ms (60fps)
+  maxBufferSize: PERFORMANCE_CONSTANTS.MAX_BUFFER_CHUNK_COUNT, // 50 chunks
   adaptiveBuffering: true,
 };
 
@@ -25,7 +26,7 @@ const DEFAULT_BUFFER_CONFIG: BufferConfig = {
  * CLI Agent mode configuration
  */
 const CLI_AGENT_BUFFER_CONFIG: Partial<BufferConfig> = {
-  flushInterval: 4, // 250fps for CLI agents
+  flushInterval: PERFORMANCE_CONSTANTS.CLI_AGENT_FAST_FLUSH_INTERVAL_MS, // 4ms (250fps)
 };
 
 /**
@@ -111,7 +112,7 @@ export class BufferManagementService implements IBufferManagementService {
     state.buffer.push(data);
 
     // Check for overflow
-    const currentSize = state.buffer.join('').length;
+    const currentSize = state.buffer.length;
     if (currentSize >= state.config.maxBufferSize) {
       this._eventBus.publish(BufferOverflowEvent, {
         terminalId,

@@ -22,7 +22,7 @@ import {
 } from '../interfaces/CliAgentService';
 import { CliAgentDetectionEngine } from './CliAgentDetectionEngine';
 import { CliAgentStateStore, AgentStatus } from './CliAgentStateStore';
-import { AgentType } from './CliAgentPatternRegistry';
+import type { AgentType } from '../types/shared';
 
 /**
  * Refactored CLI Agent Detection Service
@@ -46,6 +46,20 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
   detectFromInput(terminalId: string, input: string): CliAgentDetectionResult | null {
     try {
       const result = this.detectionEngine.detectFromInput(terminalId, input);
+
+      if (input.includes('\x03')) {
+        const terminalState = this.stateStore.getAgentState(terminalId);
+        if (terminalState && terminalState.status !== 'none') {
+          const immediateTermination = this.detectionEngine.detectImmediateInterruptTermination(
+            terminalId,
+            terminalState.agentType ?? undefined
+          );
+          if (immediateTermination?.isTerminated) {
+            this.stateStore.setAgentTerminated(terminalId);
+            return null;
+          }
+        }
+      }
 
       if (result.isDetected && result.agentType) {
         // Update state store
@@ -97,13 +111,13 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
    */
   detectTermination(terminalId: string, data: string): TerminationDetectionResult {
     try {
-      // Get current agent type for context
-      const currentAgentType = this.stateStore.getConnectedAgentType();
+      const terminalState = this.stateStore.getAgentState(terminalId);
+      const currentAgentType = terminalState?.agentType || undefined;
 
       const result = this.detectionEngine.detectTermination(
         terminalId,
         data,
-        currentAgentType || undefined
+        currentAgentType
       );
 
       if (result.isTerminated) {
@@ -148,7 +162,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
    */
   getConnectedAgent(): {
     terminalId: string;
-    type: 'claude' | 'gemini' | 'codex' | 'copilot';
+    type: AgentType;
   } | null {
     const terminalId = this.stateStore.getConnectedAgentTerminalId();
     const type = this.stateStore.getConnectedAgentType();
@@ -165,11 +179,11 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
    */
   getDisconnectedAgents(): Map<
     string,
-    { type: 'claude' | 'gemini' | 'codex' | 'copilot'; startTime: Date }
+    { type: AgentType; startTime: Date }
   > {
     return this.stateStore.getDisconnectedAgents() as Map<
       string,
-      { type: 'claude' | 'gemini' | 'codex' | 'copilot'; startTime: Date }
+      { type: AgentType; startTime: Date }
     >;
   }
 
@@ -183,10 +197,18 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     agentType: string | null;
   } {
     try {
-      const agentType: AgentType = 'claude'; // Default
+      const existingState = this.stateStore.getAgentState(terminalId);
+      const agentType = existingState?.agentType;
+      if (!existingState || existingState.status === 'none' || !agentType) {
+        return {
+          success: false,
+          reason: 'No detected AI agent found for this terminal',
+          newStatus: 'none',
+          agentType: null,
+        };
+      }
 
-      this.stateStore.setConnectedAgent(terminalId, agentType);
-
+      this.stateStore.setConnectedAgent(terminalId, agentType, existingState.terminalName);
       log(`✅ [CLI-AGENT-SERVICE] Agent connection activated for terminal ${terminalId}`);
 
       return {
@@ -218,7 +240,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
    */
   forceReconnectAgent(
     terminalId: string,
-    agentType: 'claude' | 'gemini' | 'codex' | 'copilot' = 'claude',
+    agentType: AgentType = 'claude',
     terminalName?: string
   ): boolean {
     log(`🔄 [CLI-AGENT-SERVICE] Force reconnect for terminal ${terminalId} as ${agentType}`);
@@ -286,7 +308,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
    */
   setAgentConnected(
     terminalId: string,
-    type: 'claude' | 'gemini' | 'codex' | 'copilot',
+    type: AgentType,
     terminalName?: string
   ): void {
     this.stateStore.setConnectedAgent(terminalId, type, terminalName);
@@ -321,7 +343,7 @@ export { CliAgentDetectionEngine } from './CliAgentDetectionEngine';
 export { CliAgentStateStore } from './CliAgentStateStore';
 
 // Export compatible types
-export type { AgentType } from './CliAgentPatternRegistry';
+export type { AgentType } from '../types/shared';
 export type { DetectionResult, TerminationResult } from './CliAgentDetectionEngine';
 export type { AgentState, AgentStatus, StateChangeEvent } from './CliAgentStateStore';
 

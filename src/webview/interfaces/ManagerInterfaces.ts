@@ -177,6 +177,9 @@ export interface IManagerCoordinator {
     status: 'connected' | 'disconnected' | 'none',
     agentType: string | null
   ): void;
+  getCliAgentState?(
+    terminalId: string
+  ): { status: 'connected' | 'disconnected' | 'none'; agentType: string | null } | null;
   ensureTerminalFocus(terminalId: string): void;
   /** Force a full refit of all terminal instances (layout mode changes, etc.) */
   refitAllTerminals?(): void;

@@ -35,6 +35,7 @@ describe('TerminalLifecycleMessageHandler', () => {
     // Create minimal mock coordinator
     mockCoordinator = {
       getActiveTerminalId: () => 'terminal-1',
+      getCliAgentState: vi.fn().mockReturnValue({ status: 'connected', agentType: 'claude' }),
       setActiveTerminalId: vi.fn(),
       setForceNormalModeForNextCreate: vi.fn(),
       getTerminalInstance: () => undefined,
@@ -180,6 +181,75 @@ describe('TerminalLifecycleMessageHandler', () => {
       expect(mockUiManager.setTerminalProcessingIndicator).toHaveBeenCalledWith(
         'terminal-1',
         false
+      );
+    });
+
+    it('should not enable processing indicator when CLI agent status is none', async () => {
+      vi.useFakeTimers();
+      (mockCoordinator.getCliAgentState as ReturnType<typeof vi.fn>).mockReturnValue({
+        status: 'none',
+        agentType: null,
+      });
+
+      await handler.handleMessage({ command: 'startOutput', terminalId: 'terminal-1' }, mockCoordinator);
+      await handler.handleMessage(
+        {
+          command: 'output',
+          terminalId: 'terminal-1',
+          data: 'processing...',
+        },
+        mockCoordinator
+      );
+
+      expect(mockUiManager.setTerminalProcessingIndicator).not.toHaveBeenCalledWith(
+        'terminal-1',
+        true
+      );
+    });
+
+    it('should enable processing indicator for disconnected supported agent', async () => {
+      vi.useFakeTimers();
+      (mockCoordinator.getCliAgentState as ReturnType<typeof vi.fn>).mockReturnValue({
+        status: 'disconnected',
+        agentType: 'copilot',
+      });
+
+      await handler.handleMessage({ command: 'startOutput', terminalId: 'terminal-1' }, mockCoordinator);
+      await handler.handleMessage(
+        {
+          command: 'output',
+          terminalId: 'terminal-1',
+          data: 'processing...',
+        },
+        mockCoordinator
+      );
+
+      expect(mockUiManager.setTerminalProcessingIndicator).toHaveBeenCalledWith(
+        'terminal-1',
+        true
+      );
+    });
+
+    it('should not enable processing indicator for unsupported agent type', async () => {
+      vi.useFakeTimers();
+      (mockCoordinator.getCliAgentState as ReturnType<typeof vi.fn>).mockReturnValue({
+        status: 'connected',
+        agentType: 'other',
+      });
+
+      await handler.handleMessage({ command: 'startOutput', terminalId: 'terminal-1' }, mockCoordinator);
+      await handler.handleMessage(
+        {
+          command: 'output',
+          terminalId: 'terminal-1',
+          data: 'processing...',
+        },
+        mockCoordinator
+      );
+
+      expect(mockUiManager.setTerminalProcessingIndicator).not.toHaveBeenCalledWith(
+        'terminal-1',
+        true
       );
     });
 

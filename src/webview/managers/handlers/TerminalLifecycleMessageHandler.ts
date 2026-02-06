@@ -48,6 +48,13 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
   private static readonly ACK_INITIAL_DELAY_MS = 200;
   private static readonly ACK_MAX_ATTEMPTS = 4;
   private static readonly PROCESSING_IDLE_TIMEOUT_MS = 1000;
+  private static readonly SUPPORTED_AGENT_TYPES = new Set([
+    'claude',
+    'gemini',
+    'codex',
+    'copilot',
+    'opencode',
+  ]);
 
   constructor(
     private readonly messageQueue: MessageQueue,
@@ -588,7 +595,7 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
   }
 
   private markTerminalProcessing(terminalId: string, coordinator: IManagerCoordinator): void {
-    if (!this.isHeaderEnhancementsEnabled(coordinator)) {
+    if (!this.canShowProcessingIndicator(terminalId, coordinator)) {
       this.clearProcessingTimer(terminalId);
       this.setProcessingIndicator(terminalId, false, coordinator);
       return;
@@ -620,7 +627,7 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
     isProcessing: boolean,
     coordinator: IManagerCoordinator
   ): void {
-    if (isProcessing && !this.isHeaderEnhancementsEnabled(coordinator)) {
+    if (isProcessing && !this.canShowProcessingIndicator(terminalId, coordinator)) {
       return;
     }
 
@@ -644,6 +651,20 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
 
     const settings = configManager?.getCurrentSettings?.();
     return settings?.enableTerminalHeaderEnhancements !== false;
+  }
+
+  private canShowProcessingIndicator(terminalId: string, coordinator: IManagerCoordinator): boolean {
+    if (!this.isHeaderEnhancementsEnabled(coordinator)) {
+      return false;
+    }
+
+    const state = coordinator.getCliAgentState?.(terminalId);
+    if (!state || state.status === 'none') {
+      return false;
+    }
+
+    const agentType = state.agentType?.toLowerCase() || '';
+    return TerminalLifecycleMessageHandler.SUPPORTED_AGENT_TYPES.has(agentType);
   }
 
   private ensureOutputGate(terminalId: string): { enabled: boolean; buffer: string[] } {

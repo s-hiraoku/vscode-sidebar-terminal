@@ -177,6 +177,16 @@ describe('PerformanceManager', () => {
           
           expect(mockTerminal.write).not.toHaveBeenCalled();
       });
+
+      it('should clear CLI mode timeout buffers without throwing', () => {
+          manager.setCliAgentMode(true);
+          const data = 'a'.repeat(40);
+          manager.bufferedWrite(data, mockTerminal, 'term-1');
+
+          expect(() => manager.clearBuffers()).not.toThrow();
+          vi.advanceTimersByTime(100);
+          expect(mockTerminal.write).not.toHaveBeenCalled();
+      });
   });
 
   describe('getBufferStats', () => {

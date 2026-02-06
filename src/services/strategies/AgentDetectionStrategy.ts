@@ -2,9 +2,11 @@
  * Agent Detection Strategy Interface
  *
  * Defines the contract for agent-specific detection strategies.
- * Each CLI agent (Claude, Gemini, Codex, GitHub Copilot) implements this interface
+ * Each CLI agent (Claude, Gemini, Codex, GitHub Copilot, OpenCode) implements this interface
  * to provide specialized detection logic for input commands and output patterns.
  */
+
+import type { AgentType } from '../../types/shared';
 
 export interface AgentDetectionResult {
   isDetected: boolean;
@@ -16,7 +18,7 @@ export interface AgentDetectionStrategy {
   /**
    * The agent type this strategy handles
    */
-  readonly agentType: 'claude' | 'gemini' | 'codex' | 'copilot';
+  readonly agentType: AgentType;
 
   /**
    * Detect agent from user input command

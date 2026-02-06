@@ -5,14 +5,15 @@ import * as vscode from 'vscode';
 import { TerminalEvent, TerminalInstance } from '../types/shared';
 import { terminal as log } from '../utils/logger';
 import { ICliAgentDetectionService } from '../interfaces/CliAgentService';
+import { PERFORMANCE_CONSTANTS } from '../constants/SystemConstants';
 
 const ENABLE_TERMINAL_DEBUG_LOGS = process.env.SECONDARY_TERMINAL_DEBUG_LOGS === 'true';
 
-/** Handles data buffering and flushing for terminal output (~125fps batch rate) */
+/** Handles data buffering and flushing for terminal output (~60fps via DATA_FLUSH_INTERVAL=16ms). */
 export class TerminalDataBufferManager {
   private readonly _dataBuffers = new Map<string, string[]>();
   private readonly _dataFlushTimers = new Map<string, NodeJS.Timeout>();
-  private readonly DATA_FLUSH_INTERVAL = 8; // ~125fps for improved responsiveness
+  private readonly DATA_FLUSH_INTERVAL = PERFORMANCE_CONSTANTS.OUTPUT_BUFFER_FLUSH_INTERVAL_MS; // 16ms (60fps) - unified via PerformanceConstants
   private readonly MAX_BUFFER_SIZE = 50;
   private readonly _debugLoggingEnabled = ENABLE_TERMINAL_DEBUG_LOGS;
   private readonly _ansiFilterState = new Map<
@@ -98,6 +99,21 @@ export class TerminalDataBufferManager {
 
       try {
         this._cliAgentService.detectFromOutput(terminalId, combinedData);
+
+        const cliAgentService = this._cliAgentService as unknown as {
+          getAgentState?: (id: string) => { status: 'connected' | 'disconnected' | 'none' } | null;
+          detectTermination?: (id: string, data: string) => { isTerminated: boolean } | null;
+        };
+
+        if (
+          typeof cliAgentService.getAgentState === 'function' &&
+          typeof cliAgentService.detectTermination === 'function'
+        ) {
+          const agentState = cliAgentService.getAgentState(terminalId);
+          if (agentState?.status && agentState.status !== 'none') {
+            cliAgentService.detectTermination(terminalId, combinedData);
+          }
+        }
       } catch {
         // Ignore CLI Agent detection errors
       }

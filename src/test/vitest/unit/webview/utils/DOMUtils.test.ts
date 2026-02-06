@@ -110,12 +110,12 @@ describe('DOMUtils', () => {
       const container = document.createElement('div');
       container.className = 'terminal-container';
       container.style.width = '500px';
-      
+
       const xterm = document.createElement('div');
       xterm.className = 'xterm';
       xterm.style.height = '300px';
       container.appendChild(xterm);
-      
+
       const canvas = document.createElement('canvas');
       const screen = document.createElement('div');
       screen.className = 'xterm-screen';
@@ -127,6 +127,117 @@ describe('DOMUtils', () => {
       expect(container.style.width).toBe('');
       expect(xterm.style.height).toBe('');
       expect(canvas.style.width).toBe('100%');
+    });
+
+    it('should return false for null container', () => {
+      expect(DOMUtils.resetXtermInlineStyles(null, false)).toBe(false);
+    });
+
+    it('should clear all dimension styles on xterm internal elements', () => {
+      const container = document.createElement('div');
+
+      const viewport = document.createElement('div');
+      viewport.className = 'xterm-viewport';
+      viewport.style.width = '800px';
+      viewport.style.height = '600px';
+      viewport.style.maxWidth = '1000px';
+      viewport.style.minWidth = '100px';
+      container.appendChild(viewport);
+
+      const helpers = document.createElement('div');
+      helpers.className = 'xterm-helpers';
+      helpers.style.width = '800px';
+      container.appendChild(helpers);
+
+      DOMUtils.resetXtermInlineStyles(container, false);
+
+      expect(viewport.style.width).toBe('');
+      expect(viewport.style.height).toBe('');
+      expect(viewport.style.maxWidth).toBe('');
+      expect(viewport.style.minWidth).toBe('');
+      expect(helpers.style.width).toBe('');
+    });
+
+    it('should use selector cache for repeated calls', () => {
+      const container = document.createElement('div');
+      const xterm = document.createElement('div');
+      xterm.className = 'xterm';
+      container.appendChild(xterm);
+
+      // First call populates cache
+      DOMUtils.resetXtermInlineStyles(container, false);
+
+      // Set styles again
+      xterm.style.width = '500px';
+
+      // Second call should still find element via cache
+      DOMUtils.resetXtermInlineStyles(container, false);
+      expect(xterm.style.width).toBe('');
+    });
+
+    it('should invalidate selector cache', () => {
+      const container = document.createElement('div');
+      const xterm = document.createElement('div');
+      xterm.className = 'xterm';
+      container.appendChild(xterm);
+
+      // Populate cache
+      DOMUtils.resetXtermInlineStyles(container, false);
+
+      // Remove old element, add new one
+      container.removeChild(xterm);
+      const newXterm = document.createElement('div');
+      newXterm.className = 'xterm';
+      newXterm.style.width = '999px';
+      container.appendChild(newXterm);
+
+      // Invalidate and re-query
+      DOMUtils.invalidateSelectorCache(container);
+      DOMUtils.resetXtermInlineStyles(container, false);
+      expect(newXterm.style.width).toBe('');
+    });
+
+    it('should re-query when an element appears after a cached null result', () => {
+      const container = document.createElement('div');
+
+      // First call caches misses for xterm selectors
+      DOMUtils.resetXtermInlineStyles(container, false);
+
+      const xterm = document.createElement('div');
+      xterm.className = 'xterm';
+      xterm.style.width = '500px';
+      container.appendChild(xterm);
+
+      // Must re-query instead of returning stale cached null
+      DOMUtils.resetXtermInlineStyles(container, false);
+      expect(xterm.style.width).toBe('');
+    });
+
+    it('should copy background color from viewport to xterm element', () => {
+      const container = document.createElement('div');
+
+      const xterm = document.createElement('div');
+      xterm.className = 'xterm';
+      container.appendChild(xterm);
+
+      const viewport = document.createElement('div');
+      viewport.className = 'xterm-viewport';
+      viewport.style.backgroundColor = 'rgb(30, 30, 30)';
+      container.appendChild(viewport);
+
+      DOMUtils.resetXtermInlineStyles(container, false);
+      expect(xterm.style.backgroundColor).toBe('rgb(30, 30, 30)');
+    });
+  });
+
+  describe('scheduleXtermStyleReset', () => {
+    it('should return false for null container', () => {
+      expect(DOMUtils.scheduleXtermStyleReset(null)).toBe(false);
+    });
+
+    it('should return true for valid container', () => {
+      const container = document.createElement('div');
+      expect(DOMUtils.scheduleXtermStyleReset(container)).toBe(true);
     });
   });
 });

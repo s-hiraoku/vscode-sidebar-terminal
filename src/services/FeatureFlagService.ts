@@ -4,6 +4,7 @@
  */
 
 import * as vscode from 'vscode';
+import { DisposableStore } from '../utils/DisposableStore';
 
 /**
  * Feature flag configuration for VS Code standard terminal features
@@ -49,11 +50,11 @@ const FEATURE_FLAG_SECTION = 'secondaryTerminal.features';
  */
 export class FeatureFlagService implements vscode.Disposable {
   private flagCache: Map<string, boolean | number> = new Map();
-  private disposables: vscode.Disposable[] = [];
+  private readonly _disposables = new DisposableStore();
 
   constructor() {
     // Listen for configuration changes and invalidate cache
-    this.disposables.push(
+    this._disposables.add(
       vscode.workspace.onDidChangeConfiguration((e) => {
         if (e.affectsConfiguration(FEATURE_FLAG_SECTION)) {
           this.invalidateCache();
@@ -204,8 +205,7 @@ export class FeatureFlagService implements vscode.Disposable {
    * Dispose service and clean up listeners
    */
   public dispose(): void {
-    this.disposables.forEach((d) => d.dispose());
-    this.disposables = [];
+    this._disposables.dispose();
     this.flagCache.clear();
   }
 }

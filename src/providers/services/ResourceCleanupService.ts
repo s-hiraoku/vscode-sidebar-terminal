@@ -1,24 +1,24 @@
 import * as vscode from 'vscode';
 import { provider as log } from '../../utils/logger';
 import { WebviewMessage } from '../../types/common';
+import { DisposableStore } from '../../utils/DisposableStore';
 
 /**
  * ResourceCleanupService
  *
  * Manages the lifecycle of disposable resources in the SecondaryTerminalProvider.
- * This service implements the Disposable pattern and ensures proper cleanup
- * of all resources when the provider is disposed.
+ * Uses DisposableStore internally for consistent LIFO disposal.
  *
  * Responsibilities:
  * - Track all disposable resources
- * - Dispose of resources in proper order
+ * - Dispose of resources in proper order (LIFO via DisposableStore)
  * - Clear references to prevent memory leaks
  * - Send cleanup notifications to WebView
  *
  * Part of Issue #214 refactoring to apply Facade pattern
  */
 export class ResourceCleanupService implements vscode.Disposable {
-  private _disposables: vscode.Disposable[] = [];
+  private readonly _store = new DisposableStore();
   private _isDisposed = false;
 
   /**
@@ -37,7 +37,7 @@ export class ResourceCleanupService implements vscode.Disposable {
       disposable.dispose();
       return;
     }
-    this._disposables.push(disposable);
+    this._store.add(disposable);
   }
 
   /**
@@ -69,7 +69,7 @@ export class ResourceCleanupService implements vscode.Disposable {
    * Get the number of tracked disposables
    */
   public getDisposableCount(): number {
-    return this._disposables.length;
+    return this._store.size;
   }
 
   /**
@@ -83,8 +83,8 @@ export class ResourceCleanupService implements vscode.Disposable {
    * Dispose of all tracked resources
    *
    * This method:
-   * 1. Executes all registered cleanup callbacks
-   * 2. Disposes all tracked disposable resources
+   * 1. Executes all registered cleanup callbacks (LIFO)
+   * 2. Disposes all tracked disposable resources (LIFO via DisposableStore)
    * 3. Clears all references
    * 4. Marks the service as disposed
    */
@@ -95,7 +95,7 @@ export class ResourceCleanupService implements vscode.Disposable {
     }
 
     log('🔧 [CLEANUP] ResourceCleanupService disposing resources...');
-    log(`🔧 [CLEANUP] Disposing ${this._disposables.length} disposables`);
+    log(`🔧 [CLEANUP] Disposing ${this._store.size} disposables`);
     log(`🔧 [CLEANUP] Executing ${this._cleanupCallbacks.length} cleanup callbacks`);
 
     // Execute cleanup callbacks in LIFO order
@@ -112,17 +112,10 @@ export class ResourceCleanupService implements vscode.Disposable {
       }
     }
 
-    // Dispose all tracked disposables
-    for (const disposable of this._disposables) {
-      try {
-        disposable.dispose();
-      } catch (error) {
-        log(`⚠️ [CLEANUP] Failed to dispose resource: ${error}`);
-      }
-    }
+    // Dispose all tracked disposables via DisposableStore (LIFO order)
+    this._store.dispose();
 
-    // Clear all arrays
-    this._disposables.length = 0;
+    // Clear cleanup callbacks
     this._cleanupCallbacks.length = 0;
 
     // Mark as disposed

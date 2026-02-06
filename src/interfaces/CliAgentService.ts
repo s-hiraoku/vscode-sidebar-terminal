@@ -7,11 +7,12 @@
  */
 
 import * as vscode from 'vscode';
+import type { AgentType } from '../types/shared';
 
 // =================== Detection Result Types ===================
 
 export interface CliAgentDetectionResult {
-  type: 'claude' | 'gemini' | 'codex' | 'copilot';
+  type: AgentType;
   confidence: number;
   source: 'input' | 'output' | 'startup' | 'termination';
   detectedLine?: string;
@@ -28,11 +29,11 @@ export interface TerminationDetectionResult {
 
 export interface CliAgentState {
   status: 'connected' | 'disconnected' | 'none';
-  agentType: 'claude' | 'gemini' | 'codex' | 'copilot' | null;
+  agentType: AgentType | null;
 }
 
 export interface DisconnectedAgentInfo {
-  type: 'claude' | 'gemini' | 'codex' | 'copilot';
+  type: AgentType;
   startTime: Date;
   terminalName?: string;
 }
@@ -167,7 +168,7 @@ export interface ICliAgentDetectionService {
    */
   forceReconnectAgent(
     terminalId: string,
-    agentType?: 'claude' | 'gemini' | 'codex' | 'copilot',
+    agentType?: AgentType,
     terminalName?: string
   ): boolean;
 
@@ -187,7 +188,7 @@ export interface ICliAgentDetectionService {
    */
   setAgentConnected(
     terminalId: string,
-    type: 'claude' | 'gemini' | 'codex' | 'copilot',
+    type: AgentType,
     terminalName?: string
   ): void;
 }
@@ -252,7 +253,7 @@ export interface ICliAgentStateManager {
    */
   setConnectedAgent(
     terminalId: string,
-    type: 'claude' | 'gemini' | 'codex' | 'copilot',
+    type: AgentType,
     terminalName?: string
   ): void;
 
@@ -282,7 +283,7 @@ export interface ICliAgentStateManager {
    * Get connected agent type
    * @returns Agent type of connected agent or null
    */
-  getConnectedAgentType(): 'claude' | 'gemini' | 'codex' | 'copilot' | null;
+  getConnectedAgentType(): AgentType | null;
 
   /**
    * Check if a terminal has a connected CLI agent
@@ -344,7 +345,7 @@ export interface ICliAgentStateManager {
    */
   forceReconnectAgent(
     terminalId: string,
-    agentType: 'claude' | 'gemini' | 'codex' | 'copilot',
+    agentType: AgentType,
     terminalName?: string
   ): boolean;
 

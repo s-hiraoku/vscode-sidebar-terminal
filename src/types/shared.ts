@@ -240,6 +240,11 @@ export interface CompleteExtensionConfig extends WebViewDisplayConfig, TerminalL
 
 export type TerminalTheme = 'auto' | 'dark' | 'light';
 
+/**
+ * Canonical CLI agent type shared across extension and webview.
+ */
+export type AgentType = 'claude' | 'gemini' | 'codex' | 'copilot' | 'opencode';
+
 // ===== Terminal Profile System Types =====
 
 /**
@@ -968,7 +973,7 @@ export interface VsCodeMessage {
   // AI agent switching related properties
   action?: string; // Action for switchAiAgent command
   forceReconnect?: boolean; // Manual reset functionality
-  agentType?: 'claude' | 'gemini' | 'codex'; // Agent type for force reconnect
+  agentType?: 'claude' | 'gemini' | 'codex' | 'copilot' | 'opencode'; // Agent type for force reconnect
   isForceReconnect?: boolean; // Alternative property name for compatibility
 }
 

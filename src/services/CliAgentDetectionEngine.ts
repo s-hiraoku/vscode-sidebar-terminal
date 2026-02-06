@@ -18,7 +18,8 @@
  */
 
 import { terminal as log } from '../utils/logger';
-import { CliAgentPatternRegistry, AgentType } from './CliAgentPatternRegistry';
+import { CliAgentPatternRegistry } from './CliAgentPatternRegistry';
+import type { AgentType } from '../types/shared';
 import { LRUCache } from '../utils/LRUCache';
 
 /**
@@ -69,17 +70,33 @@ interface DetectionCacheEntry {
   timestamp: number;
 }
 
+interface TerminalSignalState {
+  lastInputAgent: AgentType | null;
+  lastInputAt: number;
+  shellExecutingAgent: AgentType | null;
+  lastShellSignalAt: number;
+  lastInterruptAt: number;
+  interruptCount: number;
+  lastInterruptSource: 'input' | 'output' | null;
+}
+
 /**
  * Unified CLI Agent Detection Engine
  */
 export class CliAgentDetectionEngine {
   private readonly patternRegistry: CliAgentPatternRegistry;
   private readonly detectionCache: LRUCache<string, DetectionCacheEntry>;
+  private readonly terminalSignalState = new Map<string, TerminalSignalState>();
 
   // Configuration
   private readonly CACHE_TTL_MS = 5000; // 5 seconds
   private readonly AI_ACTIVITY_TIMEOUT_MS = 10000; // 10 seconds
   private readonly TERMINATION_GRACE_PERIOD_MS = 2000; // 2 seconds
+  private readonly RECENT_INPUT_WINDOW_MS = 15000; // 15 seconds
+  private readonly SHELL_COMPLETION_WINDOW_MS = 4000; // 4 seconds
+  private readonly INTERRUPT_PROMPT_WINDOW_MS = 5000; // 5 seconds
+  private readonly DOUBLE_INTERRUPT_WINDOW_MS = 3000; // 3 seconds
+  private readonly INTERRUPT_ECHO_DEDUP_MS = 250; // 250ms
 
   constructor() {
     this.patternRegistry = new CliAgentPatternRegistry();
@@ -94,6 +111,11 @@ export class CliAgentDetectionEngine {
    */
   public detectFromInput(terminalId: string, input: string): DetectionResult {
     const trimmedInput = input.trim();
+    const terminalSignals = this.getTerminalSignalState(terminalId);
+
+    if (input.includes('\x03')) {
+      this.registerInterruptSignal(terminalSignals, 'input');
+    }
 
     if (!trimmedInput) {
       return this.createNegativeResult('input', 'Empty input');
@@ -114,6 +136,9 @@ export class CliAgentDetectionEngine {
     const agentType = this.patternRegistry.matchCommandInput(trimmedInput);
 
     if (agentType) {
+      terminalSignals.lastInputAgent = agentType;
+      terminalSignals.lastInputAt = Date.now();
+
       const result: DetectionResult = {
         agentType,
         isDetected: true,
@@ -152,6 +177,11 @@ export class CliAgentDetectionEngine {
    */
   public detectFromOutput(terminalId: string, data: string): DetectionResult {
     try {
+      const shellSignalResult = this.detectShellCommandStart(terminalId, data);
+      if (shellSignalResult) {
+        return shellSignalResult;
+      }
+
       const lines = data.split(/\r?\n/);
 
       for (const line of lines) {
@@ -195,12 +225,21 @@ export class CliAgentDetectionEngine {
     const agentType = this.patternRegistry.matchStartupOutput(fullyCleanLine);
 
     if (agentType) {
+      const now = Date.now();
+      const terminalSignals = this.getTerminalSignalState(terminalId);
+      const hasRecentInputContext =
+        terminalSignals.lastInputAgent === agentType &&
+        now - terminalSignals.lastInputAt <= this.RECENT_INPUT_WINDOW_MS;
+      const hasRecentShellContext =
+        terminalSignals.shellExecutingAgent === agentType &&
+        now - terminalSignals.lastShellSignalAt <= this.RECENT_INPUT_WINDOW_MS;
+
       log(`🚀 [OUTPUT-DETECTION] Detected ${agentType} startup: "${fullyCleanLine}"`);
 
       return {
         agentType,
         isDetected: true,
-        confidence: 0.9,
+        confidence: hasRecentInputContext || hasRecentShellContext ? 0.95 : 0.85,
         source: 'output',
         detectedLine: fullyCleanLine,
         reason: `Startup pattern matched for ${agentType}`,
@@ -223,6 +262,15 @@ export class CliAgentDetectionEngine {
     currentAgentType?: AgentType
   ): TerminationResult {
     try {
+      const shellTermination = this.detectShellCommandCompletion(
+        terminalId,
+        data,
+        currentAgentType
+      );
+      if (shellTermination) {
+        return shellTermination;
+      }
+
       const lines = data.split(/\r?\n/);
       let maxConfidence = 0;
       let bestResult: TerminationResult | null = null;
@@ -259,6 +307,38 @@ export class CliAgentDetectionEngine {
   }
 
   /**
+   * Detect immediate termination from rapid interrupt signals (Ctrl+C x2)
+   * @param terminalId Terminal ID
+   * @param currentAgentType Current connected agent type (optional)
+   * @returns Termination result if detected, otherwise null
+   */
+  public detectImmediateInterruptTermination(
+    terminalId: string,
+    currentAgentType?: AgentType
+  ): TerminationResult | null {
+    if (!currentAgentType) {
+      return null;
+    }
+
+    const terminalSignals = this.getTerminalSignalState(terminalId);
+    const recentInterrupt =
+      terminalSignals.lastInterruptAt > 0 &&
+      Date.now() - terminalSignals.lastInterruptAt <= this.DOUBLE_INTERRUPT_WINDOW_MS;
+
+    if (!recentInterrupt || terminalSignals.interruptCount < 2) {
+      return null;
+    }
+
+    this.resetInterruptTracking(terminalSignals);
+    return {
+      isTerminated: true,
+      confidence: 0.98,
+      detectedLine: '^C',
+      reason: 'Double interrupt detected',
+    };
+  }
+
+  /**
    * Strict termination detection with validation
    * @param terminalId Terminal ID
    * @param cleanLine Cleaned output line
@@ -270,8 +350,32 @@ export class CliAgentDetectionEngine {
     cleanLine: string,
     agentType?: AgentType
   ): TerminationResult {
+    const terminalSignals = this.getTerminalSignalState(terminalId);
+    const normalizedLine = cleanLine.trim();
+
+    if (normalizedLine === '^C' || normalizedLine.toLowerCase() === 'keyboardinterrupt') {
+      const interruptState = this.registerInterruptSignal(terminalSignals, 'output');
+      if (interruptState.isDoubleInterrupt) {
+        this.resetInterruptTracking(terminalSignals);
+        return {
+          isTerminated: true,
+          confidence: 0.98,
+          detectedLine: cleanLine,
+          reason: 'Double interrupt detected',
+        };
+      }
+
+      return {
+        isTerminated: false,
+        confidence: 0,
+        detectedLine: cleanLine,
+        reason: 'Interrupt signal observed',
+      };
+    }
+
     // 1. Check explicit termination patterns (highest confidence)
     if (this.patternRegistry.isTerminationPattern(cleanLine, agentType)) {
+      this.resetInterruptTracking(terminalSignals);
       log(`✅ [TERMINATION] Explicit termination detected: "${cleanLine}"`);
       return {
         isTerminated: true,
@@ -283,6 +387,21 @@ export class CliAgentDetectionEngine {
 
     // 2. Check shell prompt patterns
     if (this.patternRegistry.isShellPrompt(cleanLine)) {
+      const recentInterrupt =
+        terminalSignals.lastInterruptAt > 0 &&
+        Date.now() - terminalSignals.lastInterruptAt <= this.INTERRUPT_PROMPT_WINDOW_MS;
+
+      if (recentInterrupt) {
+        this.resetInterruptTracking(terminalSignals);
+        log(`✅ [TERMINATION] Interrupt followed by shell prompt: "${cleanLine}"`);
+        return {
+          isTerminated: true,
+          confidence: 0.95,
+          detectedLine: cleanLine,
+          reason: 'Interrupt followed by shell prompt',
+        };
+      }
+
       const lowerLine = cleanLine.toLowerCase();
 
       // Check if this looks like AI output (reduce false positives)
@@ -298,6 +417,7 @@ export class CliAgentDetectionEngine {
         const isValid = this.validateTerminationSignal(terminalId, 0.6);
 
         if (isValid) {
+          this.resetInterruptTracking(terminalSignals);
           log(`✅ [TERMINATION] Shell prompt detected: "${cleanLine}"`);
           return {
             isTerminated: true,
@@ -316,12 +436,12 @@ export class CliAgentDetectionEngine {
     const timeSinceLastAIOutput = Date.now() - (lastAIOutputEntry?.timestamp || 0);
 
     if (timeSinceLastAIOutput > 30000) {
+      const agentKeywordRegex = /\b(?:claude|gemini|codex|copilot|opencode)\b/i;
       // 30 seconds timeout
       if (
         cleanLine.length <= 30 &&
         (cleanLine.includes('$') || cleanLine.includes('%') || cleanLine.includes('>')) &&
-        !cleanLine.includes('claude') &&
-        !cleanLine.includes('gemini')
+        !agentKeywordRegex.test(cleanLine)
       ) {
         log(`✅ [TERMINATION] Timeout-based detection: "${cleanLine}"`);
         return {
@@ -380,12 +500,153 @@ export class CliAgentDetectionEngine {
    * @param line Output line
    */
   private updateAIActivityTimestamp(terminalId: string, line: string): void {
-    if (this.patternRegistry.isAgentActivity(line) || line.length > 50) {
+    if (this.patternRegistry.isAgentActivity(line)) {
       this.detectionCache.set(`${terminalId}_lastAIOutput`, {
         result: null,
         timestamp: Date.now(),
       });
     }
+  }
+
+  private getTerminalSignalState(terminalId: string): TerminalSignalState {
+    const existing = this.terminalSignalState.get(terminalId);
+    if (existing) {
+      return existing;
+    }
+
+    const created: TerminalSignalState = {
+      lastInputAgent: null,
+      lastInputAt: 0,
+      shellExecutingAgent: null,
+      lastShellSignalAt: 0,
+      lastInterruptAt: 0,
+      interruptCount: 0,
+      lastInterruptSource: null,
+    };
+    this.terminalSignalState.set(terminalId, created);
+    return created;
+  }
+
+  private detectShellCommandStart(terminalId: string, data: string): DetectionResult | null {
+    const commandExecutedPattern = /\x1b\]633;B;([^\x07]*)\x07/g;
+    const terminalSignals = this.getTerminalSignalState(terminalId);
+    let detectedResult: DetectionResult | null = null;
+    let match: RegExpExecArray | null = commandExecutedPattern.exec(data);
+
+    while (match) {
+      const command = (match[1] || '').trim();
+      const agentType = this.patternRegistry.matchCommandInput(command);
+
+      terminalSignals.lastShellSignalAt = Date.now();
+      if (agentType) {
+        terminalSignals.shellExecutingAgent = agentType;
+        terminalSignals.lastInputAgent = agentType;
+        terminalSignals.lastInputAt = Date.now();
+
+        if (!detectedResult) {
+          detectedResult = {
+            agentType,
+            isDetected: true,
+            confidence: 0.98,
+            source: 'output',
+            detectedLine: command,
+            reason: `Shell integration command executed for ${agentType}`,
+          };
+        }
+      } else {
+        terminalSignals.shellExecutingAgent = null;
+      }
+
+      match = commandExecutedPattern.exec(data);
+    }
+
+    return detectedResult;
+  }
+
+  private detectShellCommandCompletion(
+    terminalId: string,
+    data: string,
+    currentAgentType?: AgentType
+  ): TerminationResult | null {
+    const commandFinishedPattern = /\x1b\]633;C(?:;(-?\d+))?\x07/g;
+    const terminalSignals = this.getTerminalSignalState(terminalId);
+    let match: RegExpExecArray | null = commandFinishedPattern.exec(data);
+    if (!match) {
+      return null;
+    }
+
+    let candidateAgent: AgentType | null = terminalSignals.shellExecutingAgent;
+    const now = Date.now();
+    const exitCode = match[1] ? Number(match[1]) : undefined;
+    if (!candidateAgent && currentAgentType) {
+      const recentInputForCurrentAgent =
+        terminalSignals.lastInputAgent === currentAgentType &&
+        now - terminalSignals.lastInputAt <= this.RECENT_INPUT_WINDOW_MS;
+      if (recentInputForCurrentAgent) {
+        candidateAgent = currentAgentType;
+      }
+    }
+
+    if (!candidateAgent && currentAgentType && exitCode === 130) {
+      candidateAgent = currentAgentType;
+    }
+
+    terminalSignals.lastShellSignalAt = now;
+    terminalSignals.shellExecutingAgent = null;
+    if (exitCode === 130) {
+      this.resetInterruptTracking(terminalSignals);
+    }
+
+    if (
+      !candidateAgent ||
+      (currentAgentType && candidateAgent !== currentAgentType)
+    ) {
+      return null;
+    }
+
+    const shellConfidence =
+      now - terminalSignals.lastInputAt <= this.SHELL_COMPLETION_WINDOW_MS ? 1.0 : 0.95;
+
+    return {
+      isTerminated: true,
+      confidence: shellConfidence,
+      detectedLine: match[0],
+      reason: 'Shell integration command finished',
+    };
+  }
+
+  private registerInterruptSignal(
+    terminalSignals: TerminalSignalState,
+    source: 'input' | 'output'
+  ): { isDoubleInterrupt: boolean } {
+    const now = Date.now();
+    const timeSinceLastInterrupt = now - terminalSignals.lastInterruptAt;
+    const withinDoubleInterruptWindow =
+      terminalSignals.lastInterruptAt > 0 && timeSinceLastInterrupt <= this.DOUBLE_INTERRUPT_WINDOW_MS;
+
+    if (withinDoubleInterruptWindow) {
+      const isLikelyEchoFromInput =
+        source === 'output' &&
+        terminalSignals.lastInterruptSource === 'input' &&
+        timeSinceLastInterrupt <= this.INTERRUPT_ECHO_DEDUP_MS;
+
+      if (!isLikelyEchoFromInput) {
+        terminalSignals.interruptCount += 1;
+      }
+    } else {
+      terminalSignals.interruptCount = 1;
+    }
+
+    terminalSignals.lastInterruptAt = now;
+    terminalSignals.lastInterruptSource = source;
+
+    return { isDoubleInterrupt: terminalSignals.interruptCount >= 2 };
+  }
+
+  private resetInterruptTracking(terminalSignals: TerminalSignalState): void {
+    terminalSignals.interruptCount = 0;
+    terminalSignals.lastInterruptAt = 0;
+    terminalSignals.lastInterruptSource = null;
   }
 
   /**
@@ -421,6 +682,8 @@ export class CliAgentDetectionEngine {
    * @param terminalId Terminal ID
    */
   public clearTerminalCache(terminalId: string): void {
+    this.terminalSignalState.delete(terminalId);
+
     const keysToDelete: string[] = [];
 
     // Collect all keys related to this terminal

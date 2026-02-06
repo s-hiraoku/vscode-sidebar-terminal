@@ -40,6 +40,8 @@ import {
 // Coordinators (リファクタリングで抽出)
 import { TerminalOperationsCoordinator } from '../coordinators/TerminalOperationsCoordinator';
 import { ResizeCoordinator } from '../coordinators/ResizeCoordinator';
+import { CliAgentCoordinator } from '../coordinators/CliAgentCoordinator';
+import { DebugCoordinator } from '../coordinators/DebugCoordinator';
 
 // Managers (リファクタリングで抽出)
 import { SessionRestoreManager, SessionData } from './SessionRestoreManager';
@@ -109,6 +111,8 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   // ========================================
   private terminalOperations!: TerminalOperationsCoordinator;
   private resizeCoordinator!: ResizeCoordinator;
+  private cliAgentCoordinator!: CliAgentCoordinator;
+  private debugCoordinator!: DebugCoordinator;
 
   // ========================================
   // 専門マネージャー
@@ -336,6 +340,34 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       removeTab: (id) => this.terminalTabManager?.removeTab(id),
       saveSession: () => this.webViewPersistenceService?.saveSession() ?? Promise.resolve(false),
       removeCliAgentState: (id) => this.cliAgentStateManager.removeTerminalState(id),
+    });
+
+    // CliAgentCoordinator
+    this.cliAgentCoordinator = new CliAgentCoordinator({
+      getAgentState: (id) => this.cliAgentStateManager.getAgentState(id),
+      setAgentConnected: (id, agentType, terminalName) =>
+        this.cliAgentStateManager.setAgentConnected(id, agentType, terminalName),
+      setAgentDisconnected: (id) => this.cliAgentStateManager.setAgentDisconnected(id),
+      setAgentState: (id, state) => this.cliAgentStateManager.setAgentState(id, state),
+      removeTerminalState: (id) => this.cliAgentStateManager.removeTerminalState(id),
+      getActiveTerminalId: () => this.getActiveTerminalId(),
+      getAllTerminalInstances: () => this.getAllTerminalInstances(),
+      postMessageToExtension: (msg) => this.postMessageToExtension(msg),
+      updateCliAgentStatusUI: (id, status, agentType) =>
+        this.uiManager.updateCliAgentStatusByTerminalId(id, status, agentType),
+    });
+
+    // DebugCoordinator
+    this.debugCoordinator = new DebugCoordinator({
+      debugPanelManager: this.debugPanelManager,
+      getSystemStatus: () => this.getSystemStatus(),
+      requestLatestState: () => this.requestLatestState(),
+      getTerminalStats: () => this.terminalLifecycleManager.getTerminalStats(),
+      getAgentStats: () => this.cliAgentStateManager.getAgentStats(),
+      getEventStats: () => this.eventHandlerManager.getEventStats(),
+      getApiDiagnostics: () => this.webViewApiManager.getDiagnostics(),
+      showWarning: (msg) => this.notificationManager?.showWarning(msg),
+      notificationManager: this.notificationManager,
     });
 
     log('✅ Coordinators initialized');
@@ -626,11 +658,20 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       // 🆕 SIMPLE: Save session when active terminal changes
       if (this.webViewPersistenceService) {
         setTimeout(() => {
-          this.webViewPersistenceService.saveSession().then((success) => {
-            if (success) {
-              log(`💾 [SIMPLE-PERSISTENCE] Session saved after active terminal change`);
-            }
-          });
+          this.webViewPersistenceService
+            .saveSession()
+            .then((success) => {
+              if (success) {
+                log(`💾 [SIMPLE-PERSISTENCE] Session saved after active terminal change`);
+              }
+            })
+            .catch((error) => {
+              console.error(
+                'Failed to save session after active terminal change',
+                { terminalId },
+                error
+              );
+            });
         }, 200); // Small delay to avoid frequent saves
       }
 
@@ -759,102 +800,215 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
   // Terminal management delegation
 
+  /**
+   * Pre-creation checks: duplicate detection, display mode, capacity validation
+   * Returns null to continue, or a Terminal to short-circuit (existing terminal reuse)
+   */
+  private async preTerminalCreationChecks(
+    terminalId: string,
+    terminalName: string,
+    config: TerminalConfig | undefined,
+    terminalNumber: number | undefined,
+    requestSource: 'webview' | 'extension'
+  ): Promise<{ action: 'skip'; terminal: Terminal | null } | { action: 'continue'; shouldForceNormal: boolean; shouldForceFullscreen: boolean }> {
+    // Duplicate creation prevention
+    if (this.terminalOperations.isTerminalCreationPending(terminalId)) {
+      log(`⏳ [DEBUG] Terminal ${terminalId} creation already pending (source: ${requestSource}), skipping duplicate request`);
+      return { action: 'skip', terminal: this.getTerminalInstance(terminalId)?.terminal ?? null };
+    }
+
+    // Existing instance reuse
+    const existingInstance = this.getTerminalInstance(terminalId);
+    if (existingInstance) {
+      log(`🔁 [DEBUG] Terminal ${terminalId} already exists, reusing existing instance (source: ${requestSource})`);
+      this.terminalTabManager?.setActiveTab(terminalId);
+      return { action: 'skip', terminal: existingInstance.terminal ?? null };
+    }
+
+    // Display mode resolution
+    const displayModeOverride = (config as { displayModeOverride?: string } | undefined)?.displayModeOverride;
+    const shouldForceNormal = this.forceNormalModeForNextCreate || displayModeOverride === 'normal';
+    const shouldForceFullscreen = this.forceFullscreenModeForNextCreate || displayModeOverride === 'fullscreen';
+
+    log(`🔍 [MODE-DEBUG] createTerminal mode check:`, {
+      terminalId, displayModeOverride,
+      forceFullscreenModeForNextCreate: this.forceFullscreenModeForNextCreate,
+      shouldForceFullscreen, shouldForceNormal,
+      currentMode: this.displayModeManager?.getCurrentMode?.() ?? 'unknown',
+    });
+
+    if (shouldForceNormal) {
+      this.forceNormalModeForNextCreate = false;
+      this.displayModeManager?.setDisplayMode('normal');
+      log(`🧭 [MODE] Forced normal mode before creating ${terminalId}`);
+    } else if (shouldForceFullscreen) {
+      this.displayModeManager?.setDisplayMode('fullscreen');
+      this.forceFullscreenModeForNextCreate = false;
+      log(`🧭 [MODE] Forced fullscreen mode before creating ${terminalId}`);
+    } else {
+      await this.ensureSplitModeBeforeTerminalCreation();
+    }
+
+    // Capacity check
+    const canCreate = this.canCreateTerminal();
+    if (!canCreate && requestSource !== 'extension') {
+      const localCount = this.splitManager?.getTerminals()?.size ?? 0;
+      const maxCount = this.currentTerminalState?.maxTerminals ?? SPLIT_CONSTANTS.MAX_TERMINALS ?? 5;
+      log(`❌ [STATE] Terminal creation blocked (local count=${localCount}, max=${maxCount})`);
+      this.showTerminalLimitMessage(localCount, maxCount);
+      return { action: 'skip', terminal: null };
+    }
+
+    // State validation
+    if (this.currentTerminalState) {
+      const availableSlots = this.currentTerminalState.availableSlots;
+      log(`🎯 [STATE] Terminal creation check: canCreate=${canCreate}, availableSlots=[${availableSlots.join(',')}]`);
+      if (terminalNumber && !availableSlots.includes(terminalNumber)) {
+        log(`⚠️ [STATE] Terminal number ${terminalNumber} not in available slots [${availableSlots.join(',')}]`);
+        this.requestLatestState();
+      }
+    } else {
+      log(`⚠️ [STATE] No cached state available, requesting from Extension...`);
+      this.requestLatestState();
+    }
+
+    return { action: 'continue', shouldForceNormal, shouldForceFullscreen };
+  }
+
+  /**
+   * Post-creation: register, activate, persist, layout refresh
+   */
+  private postTerminalCreation(
+    terminalId: string,
+    terminalName: string,
+    terminal: Terminal,
+    requestSource: 'webview' | 'extension',
+    shouldForceNormal: boolean,
+    shouldForceFullscreen: boolean
+  ): void {
+    // Tab management
+    if (this.terminalTabManager) {
+      this.terminalTabManager.addTab(terminalId, terminalName, terminal);
+      this.terminalTabManager.setActiveTab(terminalId);
+    }
+
+    // Persistence registration
+    if (this.webViewPersistenceService) {
+      this.webViewPersistenceService.addTerminal(terminalId, terminal, { autoSave: true });
+      log(`✅ [PERSISTENCE] Terminal ${terminalId} registered with persistence service`);
+    }
+
+    // Delayed session save
+    setTimeout(() => {
+      if (this.webViewPersistenceService) {
+        log(`💾 [SIMPLE-PERSISTENCE] Saving session after terminal ${terminalId} creation`);
+        this.webViewPersistenceService
+          .saveSession()
+          .then((success) => {
+            if (success) {
+              log(`✅ [SIMPLE-PERSISTENCE] Session saved successfully`);
+            } else {
+              console.warn(`⚠️ [SIMPLE-PERSISTENCE] Failed to save session`);
+            }
+          })
+          .catch((error) => {
+            console.error(
+              'Failed to save session after terminal creation',
+              { terminalId },
+              error
+            );
+          });
+      }
+    }, 100);
+
+    // Active state and borders
+    this.setActiveTerminalId(terminalId);
+    const allContainers = this.splitManager.getTerminalContainers();
+    if (this.uiManager) {
+      this.uiManager.updateTerminalBorders(terminalId, allContainers);
+      log(`🎯 [FIX] Applied active border immediately after creation: ${terminalId}`);
+    }
+
+    // Terminal focus
+    if (terminal && terminal.textarea) {
+      setTimeout(() => {
+        terminal.focus();
+        log(`🎯 [FIX] Focused new terminal: ${terminalId}`);
+      }, 25);
+    }
+
+    // Extension notification
+    if (requestSource === 'webview') {
+      this.postMessageToExtension({
+        command: 'createTerminal',
+        terminalId,
+        terminalName,
+        timestamp: Date.now(),
+      });
+    }
+
+    log(`✅ Terminal creation completed: ${terminalId}`);
+
+    // Split layout maintenance
+    const currentMode = this.displayModeManager?.getCurrentMode?.() ?? 'normal';
+    const splitManagerActive = typeof this.splitManager?.getIsSplitMode === 'function' && this.splitManager.getIsSplitMode();
+    const shouldMaintainSplitLayout = !shouldForceNormal && !shouldForceFullscreen && (currentMode === 'split' || splitManagerActive);
+
+    if (shouldMaintainSplitLayout) {
+      try {
+        log(`🔄 [SPLIT] Immediately refreshing split layout after creating ${terminalId}`);
+        this.displayModeManager?.showAllTerminalsSplit();
+      } catch (layoutError) {
+        log(`⚠️ [SPLIT] Failed to refresh split layout immediately: ${layoutError}`);
+      }
+    }
+
+    // Delayed resize and layout confirmation
+    setTimeout(() => {
+      this.terminalLifecycleManager.resizeAllTerminals();
+
+      if (this.uiManager) {
+        this.uiManager.updateTerminalBorders(terminalId, allContainers);
+      }
+
+      const currentModeNow = this.displayModeManager?.getCurrentMode?.() ?? 'normal';
+      if (shouldMaintainSplitLayout && currentModeNow === 'split') {
+        try {
+          this.displayModeManager?.showAllTerminalsSplit();
+        } catch (layoutError) {
+          log(`⚠️ [SPLIT] Failed to refresh split layout after resize: ${layoutError}`);
+        }
+      }
+    }, 150);
+  }
+
   public async createTerminal(
     terminalId: string,
     terminalName: string,
     config?: TerminalConfig,
-    terminalNumber?: number, // Optional terminal number from Extension
+    terminalNumber?: number,
     requestSource: 'webview' | 'extension' = 'webview'
   ): Promise<Terminal | null> {
     try {
       log(`🔍 [DEBUG] RefactoredTerminalWebviewManager.createTerminal called:`, {
-        terminalId,
-        terminalName,
-        terminalNumber, // Log the terminal number
-        hasConfig: !!config,
-        timestamp: Date.now(),
+        terminalId, terminalName, terminalNumber, hasConfig: !!config, timestamp: Date.now(),
       });
 
-      if (this.terminalOperations.isTerminalCreationPending(terminalId)) {
-        log(
-          `⏳ [DEBUG] Terminal ${terminalId} creation already pending (source: ${requestSource}), skipping duplicate request`
-        );
-        return this.getTerminalInstance(terminalId)?.terminal ?? null;
+      // Phase 1: Pre-creation checks
+      const checkResult = await this.preTerminalCreationChecks(
+        terminalId, terminalName, config, terminalNumber, requestSource
+      );
+      if (checkResult.action === 'skip') {
+        return checkResult.terminal;
       }
-
-      const existingInstance = this.getTerminalInstance(terminalId);
-      if (existingInstance) {
-        log(
-          `🔁 [DEBUG] Terminal ${terminalId} already exists, reusing existing instance (source: ${requestSource})`
-        );
-        this.terminalTabManager?.setActiveTab(terminalId);
-        return existingInstance.terminal ?? null;
-      }
-
-      const displayModeOverride = (config as { displayModeOverride?: string } | undefined)
-        ?.displayModeOverride;
-      const shouldForceNormal =
-        this.forceNormalModeForNextCreate || displayModeOverride === 'normal';
-      const shouldForceFullscreen =
-        this.forceFullscreenModeForNextCreate || displayModeOverride === 'fullscreen';
-
-      log(`🔍 [MODE-DEBUG] createTerminal mode check:`, {
-        terminalId,
-        displayModeOverride,
-        forceFullscreenModeForNextCreate: this.forceFullscreenModeForNextCreate,
-        shouldForceFullscreen,
-        shouldForceNormal,
-        currentMode: this.displayModeManager?.getCurrentMode?.() ?? 'unknown',
-      });
-
-      if (shouldForceNormal) {
-        this.forceNormalModeForNextCreate = false;
-        this.displayModeManager?.setDisplayMode('normal');
-        log(`🧭 [MODE] Forced normal mode before creating ${terminalId}`);
-      } else if (shouldForceFullscreen) {
-        this.forceFullscreenModeForNextCreate = false;
-        log(`🧭 [MODE] Forced fullscreen mode before creating ${terminalId}`);
-      } else {
-        await this.ensureSplitModeBeforeTerminalCreation();
-      }
-
-      const canCreate = this.canCreateTerminal();
-      if (!canCreate && requestSource !== 'extension') {
-        const localCount = this.splitManager?.getTerminals()?.size ?? 0;
-        const maxCount =
-          this.currentTerminalState?.maxTerminals ?? SPLIT_CONSTANTS.MAX_TERMINALS ?? 5;
-        log(`❌ [STATE] Terminal creation blocked (local count=${localCount}, max=${maxCount})`);
-        this.showTerminalLimitMessage(localCount, maxCount);
-        return null;
-      }
-
-      if (this.currentTerminalState) {
-        const availableSlots = this.currentTerminalState.availableSlots;
-        log(
-          `🎯 [STATE] Terminal creation check: canCreate=${canCreate}, availableSlots=[${availableSlots.join(',')}]`
-        );
-
-        if (terminalNumber && !availableSlots.includes(terminalNumber)) {
-          log(
-            `⚠️ [STATE] Terminal number ${terminalNumber} not in available slots [${availableSlots.join(',')}]`
-          );
-          this.requestLatestState();
-        }
-      } else {
-        log(`⚠️ [STATE] No cached state available, requesting from Extension...`);
-        this.requestLatestState();
-      }
+      const { shouldForceNormal, shouldForceFullscreen } = checkResult;
 
       log(`🚀 Creating terminal with header: ${terminalId} (${terminalName}) #${terminalNumber}`);
-
       this.terminalOperations.markTerminalCreationPending(terminalId);
 
-      // 1. ターミナルインスタンスを作成
+      // Phase 2: Create terminal instance
       const terminal = await this.terminalLifecycleManager.createTerminal(
-        terminalId,
-        terminalName,
-        config,
-        terminalNumber // Pass terminal number to TerminalLifecycleCoordinator
+        terminalId, terminalName, config, terminalNumber
       );
 
       if (!terminal) {
@@ -862,126 +1016,11 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
         return null;
       }
 
-      // 2. ヘッダーはTerminalContainerFactoryで既に作成済み（重複作成を削除）
-      log(`✅ Terminal header already created by TerminalContainerFactory: ${terminalId}`);
-
-      // 3. 入力イベントハンドラーの設定
-      // Get terminal container for potential future use
-      // const terminalContainer = this.terminalLifecycleManager.getTerminalElement(terminalId);
-      if (this.terminalTabManager) {
-        this.terminalTabManager.addTab(terminalId, terminalName, terminal);
-        this.terminalTabManager.setActiveTab(terminalId);
-      }
-
-      // 🔧 FIX #188: Register terminal with persistence service for scrollback saving
-      // This was missing - terminals were never registered, so saveSession() saved nothing
-      if (this.webViewPersistenceService) {
-        this.webViewPersistenceService.addTerminal(terminalId, terminal, { autoSave: true });
-        log(`✅ [PERSISTENCE] Terminal ${terminalId} registered with persistence service`);
-      }
-
-      // 🆕 SIMPLE: Save current session state after terminal creation
-      // No complex serialization - just session metadata
-      setTimeout(() => {
-        if (this.webViewPersistenceService) {
-          log(`💾 [SIMPLE-PERSISTENCE] Saving session after terminal ${terminalId} creation`);
-          this.webViewPersistenceService.saveSession().then((success) => {
-            if (success) {
-              log(`✅ [SIMPLE-PERSISTENCE] Session saved successfully`);
-            } else {
-              console.warn(`⚠️ [SIMPLE-PERSISTENCE] Failed to save session`);
-            }
-          });
-        }
-      }, 100); // Minimal delay for DOM updates
-
-      // 4. 🎯 FIX: 新規作成時のアクティブ設定強化
-      // 確実にアクティブ状態を設定し、太い青枠を表示
-      this.setActiveTerminalId(terminalId);
-
-      // 即座にボーダー更新を実行（UIManager経由）
-      const allContainers = this.splitManager.getTerminalContainers();
-      if (this.uiManager) {
-        // Terminal count is auto-updated inside updateTerminalBorders
-        this.uiManager.updateTerminalBorders(terminalId, allContainers);
-        log(`🎯 [FIX] Applied active border immediately after creation: ${terminalId}`);
-      }
-
-      // ターミナルフォーカスも確実に設定
-      if (terminal && terminal.textarea) {
-        setTimeout(() => {
-          terminal.focus();
-          log(`🎯 [FIX] Focused new terminal: ${terminalId}`);
-        }, 25);
-      }
-
-      // 5. ExtensionにRegular のターミナル作成をリクエスト
-      if (requestSource === 'webview') {
-        this.postMessageToExtension({
-          command: 'createTerminal',
-          terminalId: terminalId,
-          terminalName: terminalName,
-          timestamp: Date.now(),
-        });
-      }
-
-      log(`✅ Terminal creation completed: ${terminalId}`);
-
-      // 🔧 FIX: Capture current mode before async operations
-      const currentMode = this.displayModeManager?.getCurrentMode?.() ?? 'normal';
-      const splitManager = this.splitManager;
-      const splitManagerActive =
-        typeof splitManager?.getIsSplitMode === 'function' && splitManager.getIsSplitMode();
-      const shouldMaintainSplitLayout =
-        !shouldForceNormal &&
-        !shouldForceFullscreen &&
-        (currentMode === 'split' || splitManagerActive);
-
-      log(
-        `🔍 [SPLIT-DEBUG] Current mode: ${currentMode}, displayModeSplit: ${currentMode === 'split'}, splitManagerActive: ${splitManagerActive}, shouldMaintainSplitLayout: ${shouldMaintainSplitLayout}`
+      // Phase 3: Post-creation setup
+      this.postTerminalCreation(
+        terminalId, terminalName, terminal, requestSource,
+        shouldForceNormal, shouldForceFullscreen
       );
-
-      // 🔧 FIX: Immediately refresh split layout if split mode is active via display manager or split manager
-      // This prevents the terminal from showing in fullscreen mode temporarily
-      if (shouldMaintainSplitLayout) {
-        try {
-          log(`🔄 [SPLIT] Immediately refreshing split layout after creating ${terminalId}`);
-          this.displayModeManager?.showAllTerminalsSplit();
-          log(`🔄 [SPLIT] ✅ Split layout refreshed successfully`);
-        } catch (layoutError) {
-          log(`⚠️ [SPLIT] Failed to refresh split layout immediately: ${layoutError}`);
-        }
-      }
-
-      // 🔍 SAFE: Single delayed resize for reliability
-      log(`🔍 [DEBUG] Scheduling delayed resize for: ${terminalId}`);
-
-      setTimeout(() => {
-        log(`🔍 [DEBUG] Delayed resize (150ms) for: ${terminalId}`);
-        this.terminalLifecycleManager.resizeAllTerminals();
-
-        // 🎯 FIX: リサイズ後もボーダーを再確認
-        if (this.uiManager) {
-          this.uiManager.updateTerminalBorders(terminalId, allContainers);
-          log(`🎯 [FIX] Re-confirmed active border after resize: ${terminalId}`);
-        }
-
-        // 🔧 FIX: Refresh split layout again after resize (保険)
-        // 🔧 CRITICAL: Re-check current mode to avoid overriding fullscreen mode
-        // The mode may have changed to fullscreen after terminal creation
-        const currentModeNow = this.displayModeManager?.getCurrentMode?.() ?? 'normal';
-        const stillNeedsSplit = shouldMaintainSplitLayout && currentModeNow === 'split';
-        if (stillNeedsSplit) {
-          try {
-            this.displayModeManager?.showAllTerminalsSplit();
-            log(`🔄 [SPLIT] Refreshed split layout after resize`);
-          } catch (layoutError) {
-            log(`⚠️ [SPLIT] Failed to refresh split layout after resize: ${layoutError}`);
-          }
-        } else if (shouldMaintainSplitLayout && currentModeNow !== 'split') {
-          log(`🔄 [SPLIT] Skipping split refresh - mode changed to ${currentModeNow}`);
-        }
-      }, 150);
 
       return terminal;
     } catch (error) {
@@ -1079,11 +1118,16 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     setTimeout(() => {
       if (this.webViewPersistenceService) {
         log(`💾 [SIMPLE-PERSISTENCE] Updating session after terminal ${terminalId} removal`);
-        this.webViewPersistenceService.saveSession().then((success) => {
-          if (success) {
-            log(`✅ [SIMPLE-PERSISTENCE] Session updated after removal`);
-          }
-        });
+        this.webViewPersistenceService
+          .saveSession()
+          .then((success) => {
+            if (success) {
+              log(`✅ [SIMPLE-PERSISTENCE] Session updated after removal`);
+            }
+          })
+          .catch((error) => {
+            console.error('Failed to save session after terminal removal', { terminalId }, error);
+          });
       }
     }, 100); // Delay for DOM cleanup
 
@@ -1203,72 +1247,26 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     }
   }
 
-  // CLI Agent state management delegation
+  // CLI Agent state management delegation (via CliAgentCoordinator)
 
   public getCliAgentState(terminalId: string) {
-    return this.cliAgentStateManager.getAgentState(terminalId);
+    return this.cliAgentCoordinator.getCliAgentState(terminalId);
   }
 
   public setCliAgentConnected(terminalId: string, agentType: string, terminalName?: string): void {
-    this.cliAgentStateManager.setAgentConnected(terminalId, agentType, terminalName);
+    this.cliAgentCoordinator.setCliAgentConnected(terminalId, agentType, terminalName);
   }
 
   public setCliAgentDisconnected(terminalId: string): void {
-    this.cliAgentStateManager.setAgentDisconnected(terminalId);
+    this.cliAgentCoordinator.setCliAgentDisconnected(terminalId);
   }
 
   /**
    * Handle AI Agent toggle button click
-   * 🎯 IMPROVED: Properly switches connected agents and moves previous connected to disconnected
+   * Delegates to CliAgentCoordinator
    */
   public handleAiAgentToggle(terminalId: string): void {
-    log(`📎 AI Agent toggle clicked for terminal: ${terminalId}`);
-
-    try {
-      // Get current CLI Agent state for the terminal
-      const agentState = this.cliAgentStateManager.getAgentState(terminalId);
-      const currentStatus = agentState?.status || 'none';
-
-      log(`📎 Current AI Agent state: ${currentStatus} for terminal: ${terminalId}`);
-
-      if (currentStatus === 'connected') {
-        // 🔄 If already connected, treat as manual reset request
-        log(
-          `🔄 [MANUAL-RESET] Agent already connected, treating as manual reset for terminal: ${terminalId}`
-        );
-        this.postMessageToExtension({
-          command: 'switchAiAgent',
-          terminalId,
-          action: 'force-reconnect',
-          forceReconnect: true,
-          agentType: agentState?.agentType || 'claude',
-          timestamp: Date.now(),
-        });
-      } else {
-        // 🎯 For disconnected or none state, use normal activation
-        // This will properly handle moving previous connected agent to disconnected
-        this.postMessageToExtension({
-          command: 'switchAiAgent',
-          terminalId,
-          action: 'activate',
-          timestamp: Date.now(),
-        });
-
-        log(
-          `✅ Sent AI Agent activation request for terminal: ${terminalId} (status: ${currentStatus})`
-        );
-      }
-    } catch (error) {
-      log(`❌ Error handling AI Agent toggle for terminal ${terminalId}:`, error);
-
-      // Try fallback activation
-      this.postMessageToExtension({
-        command: 'switchAiAgent',
-        terminalId,
-        action: 'activate',
-        timestamp: Date.now(),
-      });
-    }
+    this.cliAgentCoordinator.handleAiAgentToggle(terminalId);
   }
 
   // Settings management
@@ -1658,29 +1656,21 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
   /**
    * Update debug display with current state information
+   * Delegates to DebugCoordinator
    */
   private updateDebugDisplay(state: TerminalState): void {
-    // Use the extended version with operation tracking
-    this.updateDebugDisplayExtended(state, 'state-update');
+    this.debugCoordinator.updateDebugDisplay(state, 'state-update');
   }
-
-  // Note: updateTerminalCountDisplay, updateAvailableSlotsDisplay, highlightActiveTerminal,
-  // setCreateButtonEnabled, clearTerminalLimitMessage moved to TerminalStateDisplayManager
 
   /**
    * Show terminal limit reached message
-   * Kept as wrapper for backward compatibility
+   * Delegates to DebugCoordinator
    */
   private showTerminalLimitMessage(current: number, max: number): void {
-    // Create a temporary state for the display manager
     if (this.currentTerminalState) {
       this.terminalStateDisplayManager.updateCreationState(this.currentTerminalState);
     } else {
-      // Fallback: show notification directly
-      const message = `Terminal limit reached (${current}/${max}). Delete a terminal to create new ones.`;
-      if (this.notificationManager) {
-        this.notificationManager.showWarning(message);
-      }
+      this.debugCoordinator.showTerminalLimitMessage(current, max);
     }
   }
 
@@ -1712,39 +1702,21 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   // Note: updatePerformanceCounters and getSystemUptime moved to DebugPanelManager
 
   /**
-   * Enhanced updateDebugDisplay with operation tracking
-   * Delegates to DebugPanelManager
-   */
-  private updateDebugDisplayExtended(state: TerminalState, operation?: string): void {
-    if (operation) {
-      log(`🔍 [DEBUG] Display update triggered by: ${operation}`);
-    }
-    this.debugPanelManager.updateDisplay(state, operation);
-  }
-
-  /**
    * Real-time debug panel toggle
-   * Delegates to DebugPanelManager
+   * Delegates to DebugCoordinator
    */
   public toggleDebugPanel(): void {
-    this.debugPanelManager.toggle(this.currentTerminalState || undefined);
-    // Request state if not available and panel is now active
-    if (this.debugPanelManager.isActive() && !this.currentTerminalState) {
-      this.requestLatestState();
-    }
+    this.debugCoordinator.toggleDebugPanel(this.currentTerminalState || undefined);
   }
 
   /**
    * Export system diagnostics for troubleshooting
-   * Delegates to DebugPanelManager
+   * Delegates to DebugCoordinator
    */
   public exportSystemDiagnostics(): SystemDiagnostics {
-    const diagnostics = this.debugPanelManager.exportDiagnostics(
-      this.getSystemStatus(),
+    return this.debugCoordinator.exportSystemDiagnostics(
       this.currentTerminalState?.maxTerminals || 'unknown'
     );
-    log('🔧 [DIAGNOSTICS] System diagnostics exported:', diagnostics);
-    return diagnostics;
   }
 
   /**
@@ -1884,45 +1856,13 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     }
   }
 
-  // CLI Agent状態管理（レガシー互換）
+  // CLI Agent状態管理（レガシー互換 - CliAgentCoordinator経由）
   public updateClaudeStatus(
     activeTerminalName: string | null,
     status: 'connected' | 'disconnected' | 'none',
     agentType: string | null
   ): void {
-    log(
-      `🔄 [REFACTORED] UpdateClaudeStatus called: ${activeTerminalName}, ${status}, ${agentType}`
-    );
-
-    // Terminal名からターミナルIDを特定
-    let targetTerminalId = this.getActiveTerminalId();
-
-    if (activeTerminalName) {
-      // Terminal名からIDを逆引き
-      const allInstances = this.terminalLifecycleManager.getAllTerminalInstances();
-      for (const [terminalId, instance] of allInstances) {
-        if (instance.name === activeTerminalName) {
-          targetTerminalId = terminalId;
-          break;
-        }
-      }
-    }
-
-    if (targetTerminalId) {
-      // CLI Agent状態を更新
-      this.cliAgentStateManager.setAgentState(targetTerminalId, {
-        status,
-        terminalName: activeTerminalName || `Terminal ${targetTerminalId}`,
-        agentType,
-      });
-
-      // UI表示を更新
-      this.uiManager.updateCliAgentStatusByTerminalId(targetTerminalId, status, agentType);
-
-      log(`✅ [REFACTORED] Claude status updated for terminal: ${targetTerminalId}`);
-    } else {
-      log(`❌ [REFACTORED] Could not find terminal for: ${activeTerminalName}`);
-    }
+    this.cliAgentCoordinator.updateClaudeStatus(activeTerminalName, status, agentType);
   }
 
   public updateCliAgentStatus(
@@ -1930,18 +1870,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     status: 'connected' | 'disconnected' | 'none',
     agentType: string | null
   ): void {
-    log(`🔄 [REFACTORED] UpdateCliAgentStatus called: ${terminalId}, ${status}, ${agentType}`);
-
-    // CLI Agent状態を更新
-    this.cliAgentStateManager.setAgentState(terminalId, {
-      status,
-      agentType,
-    });
-
-    // UI表示を更新
-    this.uiManager.updateCliAgentStatusByTerminalId(terminalId, status, agentType);
-
-    log(`✅ [REFACTORED] CLI Agent status updated for terminal: ${terminalId}`);
+    this.cliAgentCoordinator.updateCliAgentStatus(terminalId, status, agentType);
   }
 
   /**
@@ -1975,18 +1904,8 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
   // Statistics and diagnostics
 
-  public getManagerStats(): {
-    terminals: ReturnType<TerminalLifecycleCoordinator['getTerminalStats']>;
-    cliAgents: ReturnType<CliAgentStateManager['getAgentStats']>;
-    events: ReturnType<EventHandlerManager['getEventStats']>;
-    api: ReturnType<WebViewApiManager['getDiagnostics']>;
-  } {
-    return {
-      terminals: this.terminalLifecycleManager.getTerminalStats(),
-      cliAgents: this.cliAgentStateManager.getAgentStats(),
-      events: this.eventHandlerManager.getEventStats(),
-      api: this.webViewApiManager.getDiagnostics(),
-    };
+  public getManagerStats() {
+    return this.debugCoordinator.getManagerStats();
   }
 
   // Lifecycle management
@@ -2028,6 +1947,8 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       // Coordinators のクリーンアップ
       this.terminalOperations.dispose();
       this.resizeCoordinator.dispose();
+      // Note: cliAgentCoordinator and debugCoordinator are lightweight wrappers
+      // and don't own resources to dispose
 
       this.isInitialized = false;
       log('✅ RefactoredTerminalWebviewManager disposed');

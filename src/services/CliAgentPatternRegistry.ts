@@ -3,7 +3,7 @@
  *
  * Centralized registry for all CLI Agent detection patterns.
  * This eliminates code duplication by providing a single source of truth
- * for pattern definitions across Claude, Gemini, Codex, and Copilot agents.
+ * for pattern definitions across Claude, Gemini, Codex, Copilot, and OpenCode agents.
  *
  * Benefits:
  * - ~80% code reduction by eliminating duplicated pattern definitions
@@ -11,8 +11,7 @@
  * - Consistent detection behavior across all services
  * - Improved extensibility for adding new agent types
  */
-
-export type AgentType = 'claude' | 'gemini' | 'codex' | 'copilot';
+import { AgentType } from '../types/shared';
 
 /**
  * Pattern definitions for a specific agent type
@@ -25,10 +24,10 @@ export interface AgentPatternDefinition {
   commandPrefixes: string[];
 
   /** String patterns that indicate agent startup */
-  startupPatterns: string[];
+  startupPatterns?: string[];
 
   /** Regex patterns for startup detection (case-insensitive) */
-  startupRegexPatterns: RegExp[];
+  startupRegexPatterns?: RegExp[];
 
   /** Keywords that indicate agent activity */
   activityKeywords: string[];
@@ -186,6 +185,25 @@ export class CliAgentPatternRegistry {
       terminationRegexPatterns: [/session terminated/i, /connection closed/i, /process exited/i],
     });
 
+    // OpenCode patterns
+    patterns.set('opencode', {
+      type: 'opencode',
+      commandPrefixes: ['opencode ', 'opencode'],
+      activityKeywords: ['opencode', 'open code'],
+      terminationPatterns: [
+        'session ended',
+        'goodbye opencode',
+        'opencode session terminated',
+        'exiting opencode',
+        'opencode exited',
+        'exit',
+        'quit',
+        'goodbye',
+        'bye',
+      ],
+      terminationRegexPatterns: [/session terminated/i, /connection closed/i, /process exited/i],
+    });
+
     return patterns;
   }
 
@@ -222,6 +240,8 @@ export class CliAgentPatternRegistry {
         /^\[\d{1,2}:\d{2}(:\d{2})?\]\s*[~\/]?[\w\/.~-]*[$%#]\s*$/,
         // Git-aware prompts
         /^[\w.-]+\s+git:\([^)]+\)\s*[~\/]?[\w\/.~-]*\$\s*$/,
+        // Powerlevel/oh-my-zsh decorated prompts (e.g. "➜ project git:(main) ✗")
+        /^[➜▶⚡❯]\s+(?:[~\/]?[\w\/.-]+)(?:\s+git:\([^)]+\))?(?:\s+[✗✘✔✱✚●•±!?])?\s*$/,
         // Flexible patterns
         /^\w+\$\s*$/,
         /^\w+%\s*$/,
@@ -253,6 +273,9 @@ export class CliAgentPatternRegistry {
         'gemini session ended',
         'command not found: claude',
         'command not found: gemini',
+        'command not found: codex',
+        'command not found: copilot',
+        'command not found: opencode',
       ],
       crashIndicators: [
         'segmentation fault',
@@ -306,6 +329,15 @@ export class CliAgentPatternRegistry {
    */
   public matchCommandInput(input: string): AgentType | null {
     const lowerInput = input.toLowerCase().trim();
+    if (!lowerInput) {
+      return null;
+    }
+
+    const tokens = this.extractCommandTokens(lowerInput);
+    const tokenMatch = this.matchCommandTokens(tokens);
+    if (tokenMatch) {
+      return tokenMatch;
+    }
 
     for (const [agentType, patterns] of this.agentPatterns.entries()) {
       for (const prefix of patterns.commandPrefixes) {
@@ -318,6 +350,165 @@ export class CliAgentPatternRegistry {
     return null;
   }
 
+  private extractCommandTokens(input: string): string[] {
+    const tokens = (input.match(/[^\s]+/g) || []).map((token) => this.stripTokenQuotes(token));
+    if (tokens.length === 0) {
+      return [];
+    }
+
+    let index = 0;
+
+    while (index < tokens.length && this.isEnvironmentAssignment(tokens[index])) {
+      index++;
+    }
+
+    if (tokens[index] === 'env') {
+      index++;
+      while (
+        index < tokens.length &&
+        (this.isEnvironmentAssignment(tokens[index]) || tokens[index].startsWith('-'))
+      ) {
+        index++;
+      }
+    }
+
+    return tokens.slice(index);
+  }
+
+  private isEnvironmentAssignment(token: string | undefined): boolean {
+    return !!token && /^[a-z_][a-z0-9_]*=/.test(token);
+  }
+
+  private stripTokenQuotes(token: string): string {
+    return token.replace(/^['"]+|['"]+$/g, '');
+  }
+
+  private matchCommandTokens(tokens: string[]): AgentType | null {
+    if (tokens.length === 0) {
+      return null;
+    }
+
+    const directMatch = this.matchDirectCommand(tokens);
+    if (directMatch) {
+      return directMatch;
+    }
+
+    return this.matchWrappedCommand(tokens);
+  }
+
+  private matchDirectCommand(tokens: string[]): AgentType | null {
+    const first = tokens[0];
+    const second = tokens[1];
+    if (!first) {
+      return null;
+    }
+
+    if (first === 'gh' && second === 'copilot') {
+      return 'copilot';
+    }
+
+    return this.matchAgentAlias(this.normalizeCommandToken(first));
+  }
+
+  private matchWrappedCommand(tokens: string[]): AgentType | null {
+    const wrapper = tokens[0];
+    if (!wrapper) {
+      return null;
+    }
+
+    let targetIndex = -1;
+    if (wrapper === 'npx' || wrapper === 'bunx') {
+      targetIndex = 1;
+    } else if ((wrapper === 'pnpm' || wrapper === 'yarn') && tokens[1] === 'dlx') {
+      targetIndex = 2;
+    } else if (wrapper === 'npm' && tokens[1] === 'exec') {
+      targetIndex = 2;
+    }
+
+    if (targetIndex === -1) {
+      return null;
+    }
+
+    const target = this.extractWrapperTarget(tokens, targetIndex);
+    if (!target) {
+      return null;
+    }
+
+    return this.matchAgentAlias(this.normalizePackageToken(target));
+  }
+
+  private extractWrapperTarget(tokens: string[], startIndex: number): string | null {
+    for (let i = startIndex; i < tokens.length; i++) {
+      const token = tokens[i];
+      if (!token || token === '--') {
+        continue;
+      }
+      if (token.startsWith('-')) {
+        continue;
+      }
+      return token;
+    }
+    return null;
+  }
+
+  private normalizeCommandToken(token: string): string {
+    const normalized = this.stripVersionSuffix(this.stripShellDelimiters(token));
+    const pathSplit = normalized.split(/[\\/]/);
+    return pathSplit[pathSplit.length - 1] || normalized;
+  }
+
+  private normalizePackageToken(token: string): string {
+    const normalized = this.stripShellDelimiters(token);
+    return this.stripVersionSuffix(normalized);
+  }
+
+  private stripShellDelimiters(token: string): string {
+    return token.replace(/[;|&]+$/g, '');
+  }
+
+  private stripVersionSuffix(token: string): string {
+    if (!token.includes('@')) {
+      return token;
+    }
+
+    if (token.startsWith('@')) {
+      const secondAt = token.indexOf('@', 1);
+      return secondAt > 0 ? token.slice(0, secondAt) : token;
+    }
+
+    return token.split('@')[0];
+  }
+
+  private matchAgentAlias(token: string): AgentType | null {
+    const normalized = token.toLowerCase();
+    switch (normalized) {
+      case 'claude':
+      case 'claude-code':
+      case '@anthropic-ai/claude-code':
+        return 'claude';
+      case 'gemini':
+      case 'gemini-cli':
+      case '@google/gemini-cli':
+        return 'gemini';
+      case 'codex':
+      case 'openai-codex':
+      case '@openai/codex':
+        return 'codex';
+      case 'copilot':
+      case '@github/copilot':
+      case 'github/copilot':
+      case 'gh-copilot':
+        return 'copilot';
+      case 'opencode':
+      case '@opencode-ai/opencode':
+      case '@sst/opencode':
+      case 'sst/opencode':
+        return 'opencode';
+      default:
+        return null;
+    }
+  }
+
   /**
    * Check if output matches any agent startup pattern
    * @param output Terminal output
@@ -326,14 +517,14 @@ export class CliAgentPatternRegistry {
   public matchStartupOutput(output: string): AgentType | null {
     for (const [agentType, patterns] of this.agentPatterns.entries()) {
       // Check string patterns
-      for (const pattern of patterns.startupPatterns) {
+      for (const pattern of patterns.startupPatterns ?? []) {
         if (output.includes(pattern)) {
           return agentType;
         }
       }
 
       // Check regex patterns
-      for (const regex of patterns.startupRegexPatterns) {
+      for (const regex of patterns.startupRegexPatterns ?? []) {
         if (regex.test(output)) {
           return agentType;
         }
@@ -350,27 +541,18 @@ export class CliAgentPatternRegistry {
    * @returns True if output indicates agent activity
    */
   public isAgentActivity(output: string, agentType?: AgentType): boolean {
-    const lowerOutput = output.toLowerCase();
-
-    // Long output is usually agent activity
-    if (output.length > 50) {
-      return true;
-    }
-
     // Check specific agent type if provided
     if (agentType) {
       const patterns = this.agentPatterns.get(agentType);
       if (patterns) {
-        return patterns.activityKeywords.some((keyword) =>
-          lowerOutput.includes(keyword.toLowerCase())
-        );
+        return patterns.activityKeywords.some((keyword) => this.containsKeyword(output, keyword));
       }
     }
 
     // Check all agent types
     for (const patterns of this.agentPatterns.values()) {
       const hasKeyword = patterns.activityKeywords.some((keyword) =>
-        lowerOutput.includes(keyword.toLowerCase())
+        this.containsKeyword(output, keyword)
       );
       if (hasKeyword) {
         return true;
@@ -378,6 +560,12 @@ export class CliAgentPatternRegistry {
     }
 
     return false;
+  }
+
+  private containsKeyword(output: string, keyword: string): boolean {
+    const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const pattern = new RegExp(`\\b${escapedKeyword}\\b`, 'i');
+    return pattern.test(output);
   }
 
   /**

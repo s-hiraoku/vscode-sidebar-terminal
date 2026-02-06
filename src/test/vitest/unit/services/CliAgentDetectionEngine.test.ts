@@ -67,6 +67,25 @@ describe('CliAgentDetectionEngine', () => {
   });
 
   describe('detectFromOutput', () => {
+    it('should detect agent startup from shell integration command execution', () => {
+      const output = '\x1b]633;B;gh copilot suggest "fix bug"\x07';
+      const result = engine.detectFromOutput(terminalId, output);
+
+      expect(result.isDetected).toBe(true);
+      expect(result.agentType).toBe('copilot');
+      expect(result.source).toBe('output');
+      expect(result.reason).toContain('Shell integration');
+    });
+
+    it('should detect opencode startup from shell integration command execution', () => {
+      const output = '\x1b]633;B;opencode\x07';
+      const result = engine.detectFromOutput(terminalId, output);
+
+      expect(result.isDetected).toBe(true);
+      expect(result.agentType).toBe('opencode');
+      expect(result.source).toBe('output');
+    });
+
     it('should detect startup patterns in multi-line output', () => {
       const output = 'Some unrelated text\nWelcome to Claude Code\nMore text';
       const result = engine.detectFromOutput(terminalId, output);
@@ -99,6 +118,23 @@ describe('CliAgentDetectionEngine', () => {
   });
 
   describe('detectTermination', () => {
+    it('should detect termination from shell integration command completion', () => {
+      engine.detectFromOutput(terminalId, '\x1b]633;B;claude\x07');
+      const result = engine.detectTermination(terminalId, '\x1b]633;C;0\x07', 'claude');
+
+      expect(result.isTerminated).toBe(true);
+      expect(result.confidence).toBeGreaterThanOrEqual(0.9);
+      expect(result.reason).toContain('Shell integration');
+    });
+
+    it('should detect termination from shell integration SIGINT completion', () => {
+      const result = engine.detectTermination(terminalId, '\x1b]633;C;130\x07', 'claude');
+
+      expect(result.isTerminated).toBe(true);
+      expect(result.confidence).toBeGreaterThanOrEqual(0.9);
+      expect(result.reason).toContain('Shell integration');
+    });
+
     it('should detect explicit termination pattern', () => {
       const result = engine.detectTermination(terminalId, 'Goodbye!', 'claude');
       expect(result.isTerminated).toBe(true);
@@ -116,6 +152,63 @@ describe('CliAgentDetectionEngine', () => {
       engine.detectFromOutput(terminalId, 'Claude is thinking...');
       const result = engine.detectTermination(terminalId, 'user@host:~$ ');
       expect(result.isTerminated).toBe(false);
+    });
+
+    it('should detect termination when Ctrl+C is followed by shell prompt', () => {
+      engine.detectFromInput(terminalId, '\x03');
+      engine.detectFromOutput(terminalId, 'Claude is thinking...');
+      const result = engine.detectTermination(terminalId, '^C\nuser@host:~$ ', 'claude');
+
+      expect(result.isTerminated).toBe(true);
+      expect(result.reason).toContain('Interrupt');
+    });
+
+    it('should detect termination when Ctrl+C is followed by decorated zsh prompt', () => {
+      engine.detectFromInput(terminalId, '\x03');
+      engine.detectFromOutput(terminalId, 'Claude is thinking...');
+      const result = engine.detectTermination(terminalId, '^C\n➜ myproject git:(main) ✗ ', 'claude');
+
+      expect(result.isTerminated).toBe(true);
+      expect(result.reason).toContain('Interrupt');
+    });
+
+    it('should not detect termination from Ctrl+C without shell prompt', () => {
+      engine.detectFromInput(terminalId, '\x03');
+      const result = engine.detectTermination(terminalId, '^C', 'claude');
+
+      expect(result.isTerminated).toBe(false);
+    });
+
+    it('should detect termination from double Ctrl+C input without shell prompt', () => {
+      engine.detectFromInput(terminalId, '\x03');
+      const first = engine.detectImmediateInterruptTermination(terminalId, 'claude');
+      expect(first).toBeNull();
+
+      vi.advanceTimersByTime(500);
+      engine.detectFromInput(terminalId, '\x03');
+      const second = engine.detectImmediateInterruptTermination(terminalId, 'claude');
+
+      expect(second?.isTerminated).toBe(true);
+      expect(second?.reason).toBe('Double interrupt detected');
+    });
+
+    it('should not detect double Ctrl+C termination when outside window', () => {
+      engine.detectFromInput(terminalId, '\x03');
+      vi.advanceTimersByTime(4000);
+      engine.detectFromInput(terminalId, '\x03');
+
+      const result = engine.detectImmediateInterruptTermination(terminalId, 'claude');
+      expect(result).toBeNull();
+    });
+
+    it('should not treat generic long output as AI activity', () => {
+      engine.detectFromOutput(
+        terminalId,
+        'This is a very long plain output line without any agent related keywords to simulate normal command output'
+      );
+      const result = engine.detectTermination(terminalId, 'user@host:~$ ');
+
+      expect(result.isTerminated).toBe(true);
     });
 
     it('should handle error in termination detection', () => {
@@ -140,6 +233,18 @@ describe('CliAgentDetectionEngine', () => {
       expect(result.isTerminated).toBe(true);
       expect(result.confidence).toBe(0.6); // Matches shell prompt pattern
       expect(result.reason).toBe('Shell prompt detected');
+    });
+
+    it('should treat embedded agent keywords as non-keywords in timeout prompt detection', () => {
+      // Simulate previous AI activity and timeout window passage.
+      engine.detectFromOutput(terminalId, 'some output');
+      vi.advanceTimersByTime(31000);
+
+      // Contains "claude" as a substring only, not a whole word.
+      const result = engine.detectTermination(terminalId, 'xclaudex>');
+
+      expect(result.isTerminated).toBe(true);
+      expect(result.reason).toBe('Timeout-based detection');
     });
   });
 
