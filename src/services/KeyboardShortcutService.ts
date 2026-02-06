@@ -7,9 +7,10 @@ import * as vscode from 'vscode';
 import { TerminalManager } from '../terminals/TerminalManager';
 import { SecondaryTerminalProvider } from '../providers/SecondaryTerminalProvider';
 import { terminal as log } from '../utils/logger';
+import { DisposableStore } from '../utils/DisposableStore';
 
 export class KeyboardShortcutService {
-  private readonly _disposables: vscode.Disposable[] = [];
+  private readonly _disposables = new DisposableStore();
   private readonly _terminalManager: TerminalManager;
   private _commandHistory: string[] = [];
   private _currentHistoryIndex: number = -1;
@@ -25,64 +26,64 @@ export class KeyboardShortcutService {
    */
   private registerCommands(): void {
     // Terminal Focus & Creation
-    this._disposables.push(
+    this._disposables.add(
       vscode.commands.registerCommand('secondaryTerminal.focusTerminal', () => {
         this.focusTerminal();
       })
     );
 
-    this._disposables.push(
+    this._disposables.add(
       vscode.commands.registerCommand('secondaryTerminal.createTerminal', () => {
         this.createTerminal();
       })
     );
 
     // Terminal Navigation
-    this._disposables.push(
+    this._disposables.add(
       vscode.commands.registerCommand('secondaryTerminal.focusNextTerminal', () => {
         this.focusNextTerminal();
       })
     );
 
-    this._disposables.push(
+    this._disposables.add(
       vscode.commands.registerCommand('secondaryTerminal.focusPreviousTerminal', () => {
         this.focusPreviousTerminal();
       })
     );
 
     // Terminal Operations
-    this._disposables.push(
+    this._disposables.add(
       vscode.commands.registerCommand('secondaryTerminal.clearTerminal', () => {
         this.clearTerminal();
       })
     );
 
-    this._disposables.push(
+    this._disposables.add(
       vscode.commands.registerCommand('secondaryTerminal.scrollToPreviousCommand', () => {
         this.scrollToPreviousCommand();
       })
     );
 
-    this._disposables.push(
+    this._disposables.add(
       vscode.commands.registerCommand('secondaryTerminal.scrollToNextCommand', () => {
         this.scrollToNextCommand();
       })
     );
 
     // Text Operations
-    this._disposables.push(
+    this._disposables.add(
       vscode.commands.registerCommand('secondaryTerminal.selectAll', () => {
         this.selectAll();
       })
     );
 
-    this._disposables.push(
+    this._disposables.add(
       vscode.commands.registerCommand('secondaryTerminal.copy', () => {
         this.copy();
       })
     );
 
-    this._disposables.push(
+    this._disposables.add(
       vscode.commands.registerCommand('secondaryTerminal.paste', () => {
         this.paste();
       })
@@ -90,7 +91,7 @@ export class KeyboardShortcutService {
 
     // Search Operations - Note: 'secondaryTerminal.find' is registered in ExtensionLifecycle.ts
 
-    this._disposables.push(
+    this._disposables.add(
       vscode.commands.registerCommand('secondaryTerminal.runRecentCommand', () => {
         this.runRecentCommand();
       })
@@ -98,7 +99,7 @@ export class KeyboardShortcutService {
 
     // Terminal Number Direct Focus (Alt+1~5)
     for (let i = 1; i <= 5; i++) {
-      this._disposables.push(
+      this._disposables.add(
         vscode.commands.registerCommand(`secondaryTerminal.focusTerminal${i}`, () => {
           this.focusTerminalByNumber(i);
         })
@@ -429,8 +430,7 @@ export class KeyboardShortcutService {
    * Dispose of resources
    */
   public dispose(): void {
-    this._disposables.forEach((d) => d.dispose());
-    this._disposables.length = 0;
+    this._disposables.dispose();
     this._searchBox?.dispose();
     log('🧹 [KEYBOARD] Service disposed');
   }

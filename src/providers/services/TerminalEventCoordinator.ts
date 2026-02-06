@@ -14,6 +14,7 @@ import { WebviewMessage } from '../../types/common';
 import { WebViewFontSettings, WebViewSettingsPayload } from '../../types/shared';
 import { TerminalInitializationStateMachine } from './TerminalInitializationStateMachine';
 import { getUnifiedConfigurationService } from '../../config/UnifiedConfigurationService';
+import { DisposableStore } from '../../utils/DisposableStore';
 
 /**
  * Terminal Event Coordinator
@@ -26,8 +27,8 @@ import { getUnifiedConfigurationService } from '../../config/UnifiedConfiguratio
  * - Cleanup of event listeners
  */
 export class TerminalEventCoordinator implements vscode.Disposable {
-  private readonly _terminalEventDisposables: vscode.Disposable[] = [];
-  private readonly _disposables: vscode.Disposable[] = [];
+  private _terminalEventStore = new DisposableStore();
+  private readonly _disposables = new DisposableStore();
   private readonly _outputBuffers = new Map<string, string[]>();
 
   constructor(
@@ -145,14 +146,12 @@ export class TerminalEventCoordinator implements vscode.Disposable {
     });
 
     // Store disposables for cleanup
-    this._terminalEventDisposables.push(
-      dataDisposable,
-      exitDisposable,
-      createdDisposable,
-      removedDisposable,
-      stateUpdateDisposable,
-      focusDisposable
-    );
+    this._terminalEventStore.add(dataDisposable);
+    this._terminalEventStore.add(exitDisposable);
+    this._terminalEventStore.add(createdDisposable);
+    this._terminalEventStore.add(removedDisposable);
+    this._terminalEventStore.add(stateUpdateDisposable);
+    this._terminalEventStore.add(focusDisposable);
 
     log('✅ [EVENT-COORDINATOR] Terminal event listeners setup complete');
   }
@@ -161,10 +160,8 @@ export class TerminalEventCoordinator implements vscode.Disposable {
    * Clear terminal event listeners
    */
   public clearTerminalEventListeners(): void {
-    this._terminalEventDisposables.forEach((disposable) => {
-      disposable.dispose();
-    });
-    this._terminalEventDisposables.length = 0;
+    this._terminalEventStore.dispose();
+    this._terminalEventStore = new DisposableStore();
     this._outputBuffers.clear();
     log('🧹 [EVENT-COORDINATOR] Terminal event listeners cleared');
   }
@@ -221,7 +218,7 @@ export class TerminalEventCoordinator implements vscode.Disposable {
       }
     });
 
-    this._disposables.push(claudeStatusDisposable);
+    this._disposables.add(claudeStatusDisposable);
     log('✅ [EVENT-COORDINATOR] CLI Agent status listeners setup complete');
   }
 
@@ -346,7 +343,7 @@ export class TerminalEventCoordinator implements vscode.Disposable {
       }
     });
 
-    this._disposables.push(configChangeDisposable);
+    this._disposables.add(configChangeDisposable);
     log('✅ [EVENT-COORDINATOR] Configuration change listeners setup complete');
   }
 
@@ -402,7 +399,7 @@ export class TerminalEventCoordinator implements vscode.Disposable {
     }
 
     this.clearTerminalEventListeners();
-    this._disposables.forEach((d) => d.dispose());
+    this._disposables.dispose();
     log('🧹 [EVENT-COORDINATOR] Disposed');
   }
 }
