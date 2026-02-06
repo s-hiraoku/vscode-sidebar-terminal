@@ -5,7 +5,7 @@ Secondary Terminal is a production-ready VS Code extension providing advanced te
 
 **Key Goals:**
 - Provide VS Code-standard compliant terminal management with full ProcessState/InteractionState tracking
-- Enable seamless integration with CLI coding agents (Claude Code, Codex, Gemini, GitHub Copilot, CodeRabbit)
+- Enable seamless integration with CLI coding agents (Claude Code, Codex, Gemini, GitHub Copilot)
 - Support efficient multi-agent workflows with smart file reference sharing
 - Maintain production-grade quality with zero TypeScript compilation errors
 - Ensure persistent session restoration across VS Code restarts
@@ -72,7 +72,7 @@ TerminalWebviewManager (Coordinator)
 - **Unified Provider Coordinator**: Reduced complexity by 33% through service extraction
 
 #### AI Agent Detection System
-- **Strategy Pattern**: Agent-specific detection logic (Claude, Copilot, Codex, Gemini, CodeRabbit)
+- **Strategy Pattern**: Agent-specific detection logic (Claude, Copilot, Codex, Gemini)
 - **Pattern Matching**: Regex patterns with word boundaries (NOT includes() for security)
 - **Real-time Detection**: Debounced output monitoring with status indicators
 - **Security**: URL substring sanitization using regex patterns
@@ -207,7 +207,7 @@ npm run test:watch          # Watch mode for development
 - **Codex CLI**: `codex` command, OpenAI-powered development assistance
 - **GitHub Copilot**: `copilot` or `gh copilot`, detects "Welcome to GitHub Copilot CLI"
 - **Gemini CLI**: `gemini code`, detects ASCII art GEMINI graphics
-- **CodeRabbit CLI**: `/coderabbit` slash command integration (requires OpenSpec)
+
 
 ### Build & Deployment
 - **VS Code Marketplace**: Publishing via vsce tool with VSCE_PAT token

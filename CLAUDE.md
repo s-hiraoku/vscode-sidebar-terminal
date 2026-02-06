@@ -281,7 +281,7 @@ lifecycleController.disposeTerminal(terminalId);
 
 Real-time detection of CLI agents with visual status indicators:
 
-- **Supported Agents**: Claude Code, GitHub Copilot, Gemini CLI, CodeRabbit CLI, Codex CLI
+- **Supported Agents**: Claude Code, GitHub Copilot, Gemini CLI, Codex CLI
 - **Detection Method**: Pattern matching on terminal output with debouncing
 - **Security**: URL substring sanitization using regex patterns (not includes())
 - **Visual Feedback**: Color-coded status indicators in terminal headers

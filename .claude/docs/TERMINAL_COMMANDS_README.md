@@ -326,13 +326,7 @@ npm run lint          # Code quality
 # Verify performance
 ```
 
-### 5. Code Review
-```bash
-/coderabbit           # Get AI code review
-# Address feedback
-```
-
-### 6. Commit
+### 5. Commit
 ```bash
 git add .
 git commit -m "feat: <feature description>"

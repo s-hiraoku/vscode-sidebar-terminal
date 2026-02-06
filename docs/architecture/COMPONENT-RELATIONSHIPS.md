@@ -429,7 +429,7 @@ terminal.onData((data) => {
 - Claude Code
 - GitHub Copilot
 - Gemini CLI
-- CodeRabbit CLI
+
 - Codex CLI
 
 **機能**:

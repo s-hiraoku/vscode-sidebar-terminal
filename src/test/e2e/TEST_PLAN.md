@@ -25,7 +25,7 @@ This test plan provides comprehensive test scenarios for the VS Code Sidebar Ter
    - Active terminal restoration
 
 3. **AI Agent Detection**
-   - Real-time detection: Claude Code, GitHub Copilot, Gemini CLI, Codex CLI, CodeRabbit CLI
+   - Real-time detection: Claude Code, GitHub Copilot, Gemini CLI, Codex CLI
    - Visual status indicators in terminal headers
    - State transitions: None → Connected → Active → Disconnected
    - Security: Regex-based pattern matching (no substring vulnerabilities)
