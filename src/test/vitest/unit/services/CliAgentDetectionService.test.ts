@@ -285,10 +285,10 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
       expect(state.status).toBe('connected');
       expect(state.agentType).toBe('gemini');
 
-      // ACT 2: Termination via exit command
+      // ACT 2: Termination via agent farewell message
       const terminationResult = detectionService.detectTermination(
         'term1',
-        '/exit\nuser@hostname:~/project$ '
+        'Agent powering down. Goodbye!\nuser@hostname:~/project$ '
       );
 
       // ASSERT 2: Termination detected
@@ -511,19 +511,30 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
       });
     });
 
+    // Exit command text alone should NOT trigger termination detection.
+    // Termination is detected by the agent's output (e.g., [Process completed]),
+    // not by the user's input command text.
     realExitCommands.forEach((command, index) => {
-      // Skip failing commands
-      if (['/stop', 'q', ':q'].includes(command)) {
-        return;
-      }
-      it(`should detect termination from exit command #${index + 1}: "${command}"`, () => {
+      it(`should NOT detect termination from bare exit command #${index + 1}: "${command}"`, () => {
         // ACT
         const result = detectionService.detectTermination('term1', command);
 
-        // ASSERT
-        expect(result.isTerminated).toBe(true);
-        expect(result.reason).toBe('Explicit termination pattern');
+        // ASSERT - bare exit commands should not trigger termination
+        expect(result.isTerminated).toBe(false);
       });
+    });
+
+    // Real agent termination output SHOULD be detected
+    it('should detect termination from real agent output: [Process completed]', () => {
+      const result = detectionService.detectTermination('term1', '[Process completed]');
+      expect(result.isTerminated).toBe(true);
+      expect(result.reason).toBe('Explicit termination pattern');
+    });
+
+    it('should detect termination from real agent output: Agent powering down. Goodbye!', () => {
+      const result = detectionService.detectTermination('term1', 'Agent powering down. Goodbye!');
+      expect(result.isTerminated).toBe(true);
+      expect(result.reason).toBe('Explicit termination pattern');
     });
 
     it('should handle agent termination and state cleanup', () => {
@@ -774,10 +785,10 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
       expect(detectionService.getAgentState('term1').status).toBe('connected');
       expect(detectionService.getAgentState('term2').status).toBe('disconnected');
 
-      // PHASE 4: User exits Claude
+      // PHASE 4: Claude exits with process completion message
       const terminationResult = detectionService.detectTermination(
         'term1',
-        '/exit\nuser@hostname:~$ '
+        '[Process completed]\nuser@hostname:~$ '
       );
       expect(terminationResult.isTerminated).toBe(true);
 

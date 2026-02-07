@@ -136,10 +136,30 @@ describe('CliAgentDetectionEngine', () => {
     });
 
     it('should detect explicit termination pattern', () => {
-      const result = engine.detectTermination(terminalId, 'Goodbye!', 'claude');
+      const result = engine.detectTermination(terminalId, '[Process completed]', 'claude');
       expect(result.isTerminated).toBe(true);
       expect(result.confidence).toBe(1.0);
       expect(result.reason).toBe('Explicit termination pattern');
+    });
+
+    it('should detect Gemini farewell as termination', () => {
+      const result = engine.detectTermination(terminalId, 'Agent powering down. Goodbye!', 'gemini');
+      expect(result.isTerminated).toBe(true);
+      expect(result.confidence).toBe(1.0);
+      expect(result.reason).toBe('Explicit termination pattern');
+    });
+
+    it('should not detect bare exit/quit as termination', () => {
+      const exitResult = engine.detectTermination(terminalId, 'exit', 'claude');
+      expect(exitResult.isTerminated).toBe(false);
+
+      const quitResult = engine.detectTermination(terminalId, 'quit', 'gemini');
+      expect(quitResult.isTerminated).toBe(false);
+    });
+
+    it('should not detect conversational Goodbye as termination', () => {
+      const result = engine.detectTermination(terminalId, 'Goodbye! Have a great day!', 'gemini');
+      expect(result.isTerminated).toBe(false);
     });
 
     it('should detect shell prompt as termination if no recent AI activity', () => {

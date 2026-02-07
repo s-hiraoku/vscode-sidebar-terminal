@@ -98,19 +98,102 @@ describe('CliAgentPatternRegistry', () => {
   });
 
   describe('isTerminationPattern', () => {
-    it('should match explicit goodbye messages', () => {
-      expect(registry.isTerminationPattern('Goodbye!')).toBe(true);
-      expect(registry.isTerminationPattern('session ended')).toBe(true);
+    describe('should detect real agent termination output', () => {
+      it('should detect Claude process completion', () => {
+        expect(registry.isTerminationPattern('[Process completed]')).toBe(true);
+      });
+
+      it('should detect process exit with code', () => {
+        expect(registry.isTerminationPattern('[process exited with code 0]')).toBe(true);
+        expect(registry.isTerminationPattern('[process exited with code 130]')).toBe(true);
+      });
+
+      it('should detect Gemini farewell message', () => {
+        expect(registry.isTerminationPattern('Agent powering down. Goodbye!')).toBe(true);
+      });
+
+      it('should detect command not found errors', () => {
+        expect(registry.isTerminationPattern('command not found: claude')).toBe(true);
+        expect(registry.isTerminationPattern('command not found: gemini')).toBe(true);
+        expect(registry.isTerminationPattern('command not found: codex')).toBe(true);
+        expect(registry.isTerminationPattern('command not found: copilot')).toBe(true);
+        expect(registry.isTerminationPattern('command not found: opencode')).toBe(true);
+      });
     });
 
-    it('should match crash indicators', () => {
-      expect(registry.isTerminationPattern('segmentation fault')).toBe(true);
-      expect(registry.isTerminationPattern('FATAL ERROR: out of memory')).toBe(true);
+    describe('should NOT false-positive on generic words', () => {
+      it('should not detect bare exit/quit/goodbye/bye', () => {
+        expect(registry.isTerminationPattern('exit')).toBe(false);
+        expect(registry.isTerminationPattern('quit')).toBe(false);
+        expect(registry.isTerminationPattern('goodbye')).toBe(false);
+        expect(registry.isTerminationPattern('bye')).toBe(false);
+      });
+
+      it('should not detect conversational goodbye messages', () => {
+        expect(registry.isTerminationPattern('Goodbye! Have a great day!')).toBe(false);
+      });
+
+      it('should not detect exit in explanatory text', () => {
+        expect(registry.isTerminationPattern('You can exit the program by...')).toBe(false);
+      });
+
+      it('should not detect fictional session-ended patterns', () => {
+        expect(registry.isTerminationPattern('session ended')).toBe(false);
+        expect(registry.isTerminationPattern('goodbye claude')).toBe(false);
+        expect(registry.isTerminationPattern('goodbye gemini')).toBe(false);
+        expect(registry.isTerminationPattern('exiting claude')).toBe(false);
+        expect(registry.isTerminationPattern('claude exited')).toBe(false);
+      });
     });
 
-    it('should match agent-specific patterns', () => {
-      expect(registry.isTerminationPattern('goodbye claude', 'claude')).toBe(true);
-      expect(registry.isTerminationPattern('exiting gemini', 'gemini')).toBe(true);
+    describe('should still detect crash indicators', () => {
+      it('should detect segmentation fault', () => {
+        expect(registry.isTerminationPattern('segmentation fault')).toBe(true);
+      });
+
+      it('should detect fatal error out of memory', () => {
+        expect(registry.isTerminationPattern('FATAL ERROR: out of memory')).toBe(true);
+      });
+
+      it('should detect core dumped', () => {
+        expect(registry.isTerminationPattern('core dumped')).toBe(true);
+      });
+
+      it('should detect panic', () => {
+        expect(registry.isTerminationPattern('panic: runtime error')).toBe(true);
+      });
+    });
+
+    describe('should not false-positive on broad crash indicators', () => {
+      it('should not detect killed in normal output', () => {
+        expect(registry.isTerminationPattern('The process killed the zombie')).toBe(false);
+      });
+
+      it('should not detect signal in normal output', () => {
+        expect(registry.isTerminationPattern('The signal was received')).toBe(false);
+      });
+
+      it('should not detect exception in normal output', () => {
+        expect(registry.isTerminationPattern('Handle the exception gracefully')).toBe(false);
+      });
+
+      it('should not detect abort in normal output', () => {
+        expect(registry.isTerminationPattern('abort the mission')).toBe(false);
+      });
+    });
+
+    describe('should detect agent-specific termination patterns', () => {
+      it('should detect Claude termination with agent type', () => {
+        expect(registry.isTerminationPattern('[Process completed]', 'claude')).toBe(true);
+      });
+
+      it('should detect Gemini termination with agent type', () => {
+        expect(registry.isTerminationPattern('Agent powering down. Goodbye!', 'gemini')).toBe(true);
+      });
+
+      it('should detect process exit code for codex', () => {
+        expect(registry.isTerminationPattern('[process exited with code 0]', 'codex')).toBe(true);
+      });
     });
   });
 

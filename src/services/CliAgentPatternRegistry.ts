@@ -81,18 +81,8 @@ export class CliAgentPatternRegistry {
       startupPatterns: ['Welcome to Claude Code!'],
       startupRegexPatterns: [/Claude\s+Code/],
       activityKeywords: ['claude', 'anthropic'],
-      terminationPatterns: [
-        'session ended',
-        'goodbye claude',
-        'claude session terminated',
-        'exiting claude',
-        'claude exited',
-        'exit',
-        'quit',
-        'goodbye',
-        'bye',
-      ],
-      terminationRegexPatterns: [/session terminated/i, /connection closed/i, /process exited/i],
+      terminationPatterns: ['[Process completed]'],
+      terminationRegexPatterns: [/\[Process completed\]/i, /\[process exited with code \d+\]/i],
     });
 
     // Gemini CLI patterns
@@ -129,18 +119,8 @@ export class CliAgentPatternRegistry {
         /google.*gemini.*chat/i,
       ],
       activityKeywords: ['gemini', 'google', 'google ai'],
-      terminationPatterns: [
-        'session ended',
-        'goodbye gemini',
-        'gemini session terminated',
-        'exiting gemini',
-        'gemini exited',
-        'exit',
-        'quit',
-        'goodbye',
-        'bye',
-      ],
-      terminationRegexPatterns: [/session terminated/i, /connection closed/i, /process exited/i],
+      terminationPatterns: ['Agent powering down. Goodbye!'],
+      terminationRegexPatterns: [/Agent powering down\.\s*Goodbye!/i],
     });
 
     // OpenAI Codex patterns
@@ -150,18 +130,8 @@ export class CliAgentPatternRegistry {
       startupPatterns: ['OpenAI Codex'],
       startupRegexPatterns: [/OpenAI\s+Codex/i],
       activityKeywords: ['codex', 'openai'],
-      terminationPatterns: [
-        'session ended',
-        'goodbye codex',
-        'codex session terminated',
-        'exiting codex',
-        'codex exited',
-        'exit',
-        'quit',
-        'goodbye',
-        'bye',
-      ],
-      terminationRegexPatterns: [/session terminated/i, /connection closed/i, /process exited/i],
+      terminationPatterns: [],
+      terminationRegexPatterns: [/\[process exited with code \d+\]/i],
     });
 
     // GitHub Copilot CLI patterns
@@ -171,18 +141,8 @@ export class CliAgentPatternRegistry {
       startupPatterns: ['Welcome to GitHub Copilot CLI'],
       startupRegexPatterns: [/GitHub\s+Copilot\s+CLI/i],
       activityKeywords: ['copilot', 'github'],
-      terminationPatterns: [
-        'session ended',
-        'goodbye copilot',
-        'copilot session terminated',
-        'exiting copilot',
-        'copilot exited',
-        'exit',
-        'quit',
-        'goodbye',
-        'bye',
-      ],
-      terminationRegexPatterns: [/session terminated/i, /connection closed/i, /process exited/i],
+      terminationPatterns: [],
+      terminationRegexPatterns: [/\[process exited with code \d+\]/i],
     });
 
     // OpenCode patterns
@@ -190,18 +150,8 @@ export class CliAgentPatternRegistry {
       type: 'opencode',
       commandPrefixes: ['opencode ', 'opencode'],
       activityKeywords: ['opencode', 'open code'],
-      terminationPatterns: [
-        'session ended',
-        'goodbye opencode',
-        'opencode session terminated',
-        'exiting opencode',
-        'opencode exited',
-        'exit',
-        'quit',
-        'goodbye',
-        'bye',
-      ],
-      terminationRegexPatterns: [/session terminated/i, /connection closed/i, /process exited/i],
+      terminationPatterns: [],
+      terminationRegexPatterns: [/\[process exited with code \d+\]/i],
     });
 
     return patterns;
@@ -256,21 +206,11 @@ export class CliAgentPatternRegistry {
         /^Connection to .* closed\.$/,
         /^Session terminated\.$/i,
       ],
-      processCompletion: ['[done]', '[finished]', 'done', 'finished', 'complete', 'completed'],
+      processCompletion: [],
       explicitTermination: [
-        'session ended',
-        'connection closed',
-        'session terminated',
-        'session completed',
-        'process finished',
-        'goodbye claude',
-        'goodbye gemini',
-        'exiting claude',
-        'exiting gemini',
-        'claude exited',
-        'gemini exited',
-        'claude session ended',
-        'gemini session ended',
+        '[process completed]',
+        '[process exited',
+        'agent powering down',
         'command not found: claude',
         'command not found: gemini',
         'command not found: codex',
@@ -282,14 +222,10 @@ export class CliAgentPatternRegistry {
         'core dumped',
         'fatal error',
         'panic:',
-        'killed',
-        'abort',
-        'crashed',
-        'exception',
         'stack overflow',
         'out of memory',
-        'signal',
         'terminated unexpectedly',
+        'crashed',
       ],
     };
   }
