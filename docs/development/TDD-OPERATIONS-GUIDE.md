@@ -140,7 +140,7 @@ touch src/test/unit/components/NewFeaturePanel.test.ts
 
 # 2. 失敗テストを作成
 cat > src/test/unit/components/NewFeaturePanel.test.ts << 'EOF'
-import { expect } from 'chai';
+import { describe, it, expect } from 'vitest';
 import { NewFeaturePanel } from '../../../webview/components/NewFeaturePanel';
 
 describe('NewFeaturePanel', () => {
@@ -199,7 +199,7 @@ npm test
 
 # 特定コンポーネントのテスト
 npm run compile-tests
-./node_modules/.bin/mocha --require out/test/shared/TestSetup.js 'out/test/unit/components/SettingsPanel.test.js'
+npx vitest run src/test/vitest/unit/components/SettingsPanel.test.ts
 
 # カバレッジ付きテスト
 npm run test:coverage

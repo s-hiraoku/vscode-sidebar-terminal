@@ -281,7 +281,7 @@ lifecycleController.disposeTerminal(terminalId);
 
 Real-time detection of CLI agents with visual status indicators:
 
-- **Supported Agents**: Claude Code, GitHub Copilot, Gemini CLI, CodeRabbit CLI, Codex CLI
+- **Supported Agents**: Claude Code, GitHub Copilot, Gemini CLI, Codex CLI
 - **Detection Method**: Pattern matching on terminal output with debouncing
 - **Security**: URL substring sanitization using regex patterns (not includes())
 - **Visual Feedback**: Color-coded status indicators in terminal headers
@@ -418,7 +418,7 @@ mcp__chrome-devtools__take_snapshot({})
 
 - **Ubuntu tests timeout (30min)**: Known issue with test runner. Tests pass on Windows/macOS
 - **CodeQL false positives**: May report substring sanitization issues - use regex patterns with word boundaries
-- **ES Module errors**: chai-as-promised requires dynamic imports in test setup
+- **ES Module errors**: Vitest handles ESM natively; legacy Mocha/chai-as-promised issues no longer apply
 
 ### Terminal Issues
 

@@ -29,7 +29,7 @@ npm run tdd:comprehensive-check # Coverage + quality + gate
 describe('NewFeature', () => {
   it('should handle new functionality', () => {
     const result = newFeature();
-    expect(result).to.equal(expectedValue); // Fails - not implemented yet
+    expect(result).toBe(expectedValue); // Fails - not implemented yet
   });
 });
 
@@ -73,8 +73,8 @@ describe('UnifiedSessionManager', () => {
 
     // Then: Restored accurately
     const restored = await sessionManager.restoreSession();
-    expect(restored).to.have.length(3);
-    expect(restored[0].scrollback).to.equal(terminals[0].scrollback);
+    expect(restored).toHaveLength(3);
+    expect(restored[0].scrollback).toBe(terminals[0].scrollback);
   });
 });
 ```
@@ -100,7 +100,7 @@ describe('MessageManager', () => {
     messageManager.postMessage({ command: 'test', data: 'data' });
 
     // Then: Saved to queue
-    expect(messageManager.getQueueSize()).to.equal(1);
+    expect(messageManager.getQueueSize()).toBe(1);
   });
 });
 ```
@@ -130,7 +130,7 @@ describe('TerminalManager', () => {
     // Then: Only one succeeds
     const results = await Promise.all(deletePromises);
     const successCount = results.filter((r) => r.success).length;
-    expect(successCount).to.equal(1);
+    expect(successCount).toBe(1);
   });
 });
 ```
@@ -174,8 +174,8 @@ export class TestDataFactory {
         subscriptions: [],
       },
       workspace: {
-        getConfiguration: sinon.stub().returns({
-          get: sinon.stub(),
+        getConfiguration: vi.fn().mockReturnValue({
+          get: vi.fn(),
         }),
       },
     };
@@ -198,7 +198,7 @@ describe('Performance Tests', () => {
     }
 
     const duration = Date.now() - startTime;
-    expect(duration).to.be.lessThan(1000); // Under 1 second
+    expect(duration).toBeLessThan(1000); // Under 1 second
   });
 
   it('should prevent memory leaks', () => {
@@ -216,7 +216,7 @@ describe('Performance Tests', () => {
     const finalMemory = process.memoryUsage().heapUsed;
     const memoryIncrease = finalMemory - initialMemory;
 
-    expect(memoryIncrease).to.be.lessThan(1024 * 1024); // Under 1MB
+    expect(memoryIncrease).toBeLessThan(1024 * 1024); // Under 1MB
   });
 });
 ```
@@ -279,15 +279,14 @@ const setupMocks = () => {
 ```typescript
 // Wait for Promise resolution
 it('should handle async operations', async () => {
-  const promise = asyncOperation();
-  await expect(promise).to.eventually.equal(expectedValue);
+  const result = await asyncOperation();
+  expect(result).toBe(expectedValue);
 });
 
 // Set timeout
-it('should complete within time limit', function (this: any) {
-  this.timeout(5000);
-  return longRunningTest();
-});
+it('should complete within time limit', async () => {
+  await longRunningTest();
+}, 5000);
 ```
 
 #### 3. Memory Leak Detection

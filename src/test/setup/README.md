@@ -1,48 +1,38 @@
 # Test Setup Files
 
-This directory contains the test environment setup files that run before any tests.
-Files are executed in numerical order.
+This directory contains the test environment setup files for legacy E2E tests.
 
-## Execution Order
+> **Note**: For unit and integration tests, use **Vitest** setup at `src/test/vitest/setup.ts`.
+> This directory is only relevant for E2E tests via `@vscode/test-electron`.
+
+## Execution Order (Legacy E2E)
 
 1. **00-global-setup.js** - Global environment setup (process, Node.js APIs)
-2. **01-vscode-mock.js** - VS Code API mock initialization (from mocha-setup.ts)
+2. **01-vscode-mock.js** - VS Code API mock initialization (legacy E2E setup)
 3. **02-xterm-mock.js** - xterm.js mock setup
-4. **03-mocha-patches.js** - Mocha Runner patches (from setup-exit-handler.js)
+4. **03-mocha-patches.js** - Mocha Runner patches (required by @vscode/test-electron E2E tests)
 
-## Guidelines
+## Guidelines for New Tests
 
-- **DO NOT** create VS Code mocks in individual test files
-- **DO** use `VSCodeMockFactory` from `test/fixtures/vscode-mocks.ts`
-- **DO** reset stubs in `beforeEach` hooks
-- **DO** restore sandboxes in `afterEach` hooks
+- **New tests should use Vitest** in `src/test/vitest/`
+- Use `vi.fn()`, `vi.spyOn()`, `vi.mock()` for mocking
+- Use `expect()` from Vitest for assertions
+- See `src/test/vitest/` for current test patterns
 
-## Usage Example
+## Usage Example (Vitest - Recommended)
 
 ```typescript
-import { VSCodeMockFactory } from '../../fixtures/vscode-mocks';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 describe('MyService', () => {
-  let sandbox: sinon.SinonSandbox;
-  let vscode: ReturnType<typeof VSCodeMockFactory.setupGlobalMock>;
-
   beforeEach(() => {
-    sandbox = sinon.createSandbox();
-    vscode = VSCodeMockFactory.setupGlobalMock(sandbox);
-
-    // Configure defaults
-    VSCodeMockFactory.configureDefaults(vscode.configuration, {
-      fontSize: 14,
-      fontFamily: 'monospace',
-    });
-  });
-
-  afterEach(() => {
-    sandbox.restore();
+    vi.restoreAllMocks();
   });
 
   it('should work with mocks', () => {
-    // Test code here
+    const mockFn = vi.fn().mockReturnValue('result');
+    expect(mockFn()).toBe('result');
+    expect(mockFn).toHaveBeenCalledTimes(1);
   });
 });
 ```

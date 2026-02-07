@@ -288,7 +288,7 @@ it('should handle stress test', async () => {
 To enable garbage collection in tests, run with the `--expose-gc` flag:
 
 ```bash
-mocha --require ts-node/register --expose-gc test/**/*.test.ts
+npx vitest run --expose-gc test/**/*.test.ts
 ```
 
 ## Best Practices

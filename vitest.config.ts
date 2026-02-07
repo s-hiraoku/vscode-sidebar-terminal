@@ -13,7 +13,7 @@ export default defineConfig({
     setupFiles: ['./src/test/vitest/setup.ts'],
 
     // Test file patterns - only include vitest-specific tests
-    // Mocha tests remain in src/test/unit, src/test/integration, etc.
+    // Legacy tests remain in src/test/unit, src/test/integration, etc.
     include: ['src/test/vitest/**/*.{test,spec}.ts'],
     exclude: ['**/node_modules/**', '**/dist/**', '**/out/**'],
 

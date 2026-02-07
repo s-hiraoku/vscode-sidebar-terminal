@@ -75,7 +75,7 @@ it('should specify WebView communication timeout behavior', async () => {
 
   // Test fails until proper implementation
   const result = await communicator.sendMessageWithTimeout({ command: 'test' }, 1000);
-  expect(result.success).to.be.false; // Expected to fail initially
+  expect(result.success).toBe(false); // Expected to fail initially
 });
 ```
 
@@ -121,7 +121,7 @@ class OptimizedWebViewCommunicator {
 
 ### Current Coverage Status
 
-- **Total Tests**: 275+ (with new TDD tests: ~350+)
+- **Total Tests**: 3,900+
 - **TDD Compliance**: Target 85% (from 50%)
 - **Success Rate**: Target 95% (from 93%)
 - **Critical Path Coverage**: 100% for session management and message handling
@@ -174,17 +174,16 @@ npm run tdd:quality-gate
 
 ```bash
 # Session Manager TDD Tests
-npm run compile-tests
-./node_modules/.bin/mocha --require out/test/shared/TestSetup.js --timeout 30000 'out/test/unit/sessions/StandardTerminalSessionManager.TDD.test.js'
+npx vitest run --testTimeout 30000 'src/test/vitest/unit/sessions/StandardTerminalSessionManager.TDD.test.ts'
 
 # Message Handling TDD Tests
-./node_modules/.bin/mocha --require out/test/shared/TestSetup.js --timeout 30000 'out/test/unit/providers/SecondaryTerminalProvider.MessageHandling.TDD.test.js'
+npx vitest run --testTimeout 30000 'src/test/vitest/unit/providers/SecondaryTerminalProvider.MessageHandling.TDD.test.ts'
 
 # Regression Tests
-./node_modules/.bin/mocha --require out/test/shared/TestSetup.js --timeout 30000 'out/test/unit/regression/TerminalHistoryManagement.Regression.test.js'
+npx vitest run --testTimeout 30000 'src/test/vitest/unit/regression/TerminalHistoryManagement.Regression.test.ts'
 
 # Async Strategy Tests
-./node_modules/.bin/mocha --require out/test/shared/TestSetup.js --timeout 30000 'out/test/unit/async/AsyncOperationsStrategy.TDD.test.js'
+npx vitest run --testTimeout 30000 'src/test/vitest/unit/async/AsyncOperationsStrategy.TDD.test.ts'
 ```
 
 ## 🎯 Quality Gates

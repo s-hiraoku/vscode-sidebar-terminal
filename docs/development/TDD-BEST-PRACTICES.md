@@ -14,21 +14,21 @@ VS Code Sidebar Terminal プロジェクトでの経験を基に、効果的なT
 // ❌ 悪い例: 実装を意識したテスト
 it('should call updateSettings method', () => {
   const panel = new SettingsPanel();
-  const spy = sinon.spy(panel, 'updateSettings');
+  const spy = vi.spyOn(panel, 'updateSettings');
   panel.handleApplyClick();
-  expect(spy).to.have.been.called;
+  expect(spy).toHaveBeenCalled();
 });
 
 // ✅ 良い例: 振る舞いを確認するテスト
 it('should apply font size setting when apply button is clicked', () => {
   const panel = new SettingsPanel();
   panel.show({ fontSize: 16 });
-  
+
   // Apply button click simulation
   panel.handleApplyClick();
-  
+
   const appliedSettings = panel.getAppliedSettings();
-  expect(appliedSettings.fontSize).to.equal(16);
+  expect(appliedSettings.fontSize).toBe(16);
 });
 ```
 
@@ -107,13 +107,13 @@ describe('SettingsPanel', () => {
     // Arrange（準備）
     const panel = new SettingsPanel();
     const mockSlider = { value: '18' };
-    document.getElementById = sinon.stub().returns(mockSlider);
-    
+    document.getElementById = vi.fn().mockReturnValue(mockSlider);
+
     // Act（実行）
     panel.handleFontSizeChange();
-    
+
     // Assert（検証）
-    expect(panel.getFontSize()).to.equal(18);
+    expect(panel.getFontSize()).toBe(18);
   });
 });
 ```
@@ -134,7 +134,7 @@ describe('Font size validation', () => {
     it(`should handle ${description}`, () => {
       const panel = new SettingsPanel();
       panel.setFontSize(input);
-      expect(panel.getFontSize()).to.equal(expected);
+      expect(panel.getFontSize()).toBe(expected);
     });
   });
 });
@@ -146,23 +146,23 @@ describe('Font size validation', () => {
 describe('Error handling', () => {
   it('should handle missing DOM elements gracefully', () => {
     // DOM要素が存在しない場合のテスト
-    document.getElementById = sinon.stub().returns(null);
-    
+    document.getElementById = vi.fn().mockReturnValue(null);
+
     const panel = new SettingsPanel();
-    
+
     // エラーが投げられないことを確認
-    expect(() => panel.handleFontSizeChange()).to.not.throw();
+    expect(() => panel.handleFontSizeChange()).not.toThrow();
   });
-  
+
   it('should handle invalid slider values', () => {
     const mockSlider = { value: 'invalid' };
-    document.getElementById = sinon.stub().returns(mockSlider);
-    
+    document.getElementById = vi.fn().mockReturnValue(mockSlider);
+
     const panel = new SettingsPanel();
     panel.handleFontSizeChange();
-    
+
     // デフォルト値が設定されることを確認
-    expect(panel.getFontSize()).to.equal(14); // default value
+    expect(panel.getFontSize()).toBe(14); // default value
   });
 });
 ```
@@ -175,16 +175,16 @@ describe('Error handling', () => {
 // テストセットアップファイル
 export const mockVSCodeAPI = {
   workspace: {
-    getConfiguration: sinon.stub().returns({
-      get: sinon.stub().returns(true)
+    getConfiguration: vi.fn().mockReturnValue({
+      get: vi.fn().mockReturnValue(true)
     })
   },
   window: {
-    showInformationMessage: sinon.stub(),
-    showErrorMessage: sinon.stub()
+    showInformationMessage: vi.fn(),
+    showErrorMessage: vi.fn()
   },
   commands: {
-    executeCommand: sinon.stub().resolves()
+    executeCommand: vi.fn().mockResolvedValue(undefined)
   }
 };
 
@@ -199,15 +199,15 @@ beforeEach(() => {
 ```typescript
 describe('Webview communication', () => {
   it('should send settings update message to extension', () => {
-    const mockPostMessage = sinon.spy();
+    const mockPostMessage = vi.fn();
     (global as any).acquireVsCodeApi = () => ({
       postMessage: mockPostMessage
     });
-    
+
     const panel = new SettingsPanel();
     panel.sendSettingsUpdate({ fontSize: 16 });
-    
-    expect(mockPostMessage).to.have.been.calledWith({
+
+    expect(mockPostMessage).toHaveBeenCalledWith({
       command: 'updateSettings',
       settings: { fontSize: 16 }
     });
@@ -220,23 +220,23 @@ describe('Webview communication', () => {
 ```typescript
 describe('Async operations', () => {
   it('should handle command execution asynchronously', async () => {
-    const commandStub = sinon.stub().resolves('success');
+    const commandStub = vi.fn().mockResolvedValue('success');
     (global as any).vscode.commands.executeCommand = commandStub;
-    
+
     const command = new CopilotIntegrationCommand();
     await command.handleActivateCopilot();
-    
-    expect(commandStub).to.have.been.calledWith('workbench.action.chat.open');
+
+    expect(commandStub).toHaveBeenCalledWith('workbench.action.chat.open');
   });
-  
+
   it('should handle command execution errors', async () => {
-    const commandStub = sinon.stub().rejects(new Error('Command failed'));
+    const commandStub = vi.fn().mockRejectedValue(new Error('Command failed'));
     (global as any).vscode.commands.executeCommand = commandStub;
-    
+
     const command = new CopilotIntegrationCommand();
-    
+
     // エラーが適切にハンドリングされることを確認
-    await expect(command.handleActivateCopilot()).to.not.be.rejected;
+    await expect(command.handleActivateCopilot()).resolves.not.toThrow();
   });
 });
 ```
@@ -290,7 +290,7 @@ describe('Current behavior protection', () => {
     const originalBehavior = panel.getAllSettings();
     
     // リファクタリング前の状態を記録
-    expect(originalBehavior).to.deep.equal({
+    expect(originalBehavior).toEqual({
       fontSize: 14,
       theme: 'auto'
     });
@@ -360,24 +360,24 @@ it('should debug failing behavior', () => {
   panel.performAction();
   
   console.log('After action:', panel.getState());
-  expect(panel.getState()).to.equal('expected');
+  expect(panel.getState()).toBe('expected');
 });
 
 // 3. ステップバイステップ検証
 it('should verify each step', () => {
   const panel = new SettingsPanel();
-  
+
   // Step 1
   panel.initialize();
-  expect(panel.isInitialized()).to.be.true;
-  
+  expect(panel.isInitialized()).toBe(true);
+
   // Step 2
   panel.loadSettings();
-  expect(panel.hasSettings()).to.be.true;
-  
+  expect(panel.hasSettings()).toBe(true);
+
   // Step 3
   panel.render();
-  expect(panel.isVisible()).to.be.true;
+  expect(panel.isVisible()).toBe(true);
 });
 ```
 
@@ -386,21 +386,20 @@ it('should verify each step', () => {
 ```typescript
 // ❌ 悪い例: 過度なモック
 it('should test with excessive mocking', () => {
-  const mockDOM = sinon.createStubInstance(Document);
-  const mockWindow = sinon.createStubInstance(Window);
-  const mockElement = sinon.createStubInstance(HTMLElement);
+  vi.spyOn(document, 'createElement');
+  vi.spyOn(window, 'getComputedStyle');
+  vi.spyOn(document, 'querySelector');
   // ... 過度なモック設定
 });
 
 // ✅ 良い例: 必要最小限のモック
 it('should test with minimal mocking', () => {
-  const mockGetElementById = sinon.stub(document, 'getElementById');
-  mockGetElementById.withArgs('font-size-slider').returns({ value: '16' });
-  
+  vi.spyOn(document, 'getElementById').mockReturnValue({ value: '16' } as any);
+
   const panel = new SettingsPanel();
   panel.handleFontSizeChange();
-  
-  expect(panel.getFontSize()).to.equal(16);
+
+  expect(panel.getFontSize()).toBe(16);
 });
 ```
 

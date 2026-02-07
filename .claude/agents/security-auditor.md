@@ -649,7 +649,7 @@ if (/(^|\s)claude(\s+code)?(\s|$)/i.test(output)) {
 - Claude Code: `/(^|\s)claude(\s+code)?(\s|$)/i`
 - GitHub Copilot: `/(^|\s)github\s+copilot(\s|$)/i`
 - Gemini CLI: `/(^|\s)gemini(\s+cli)?(\s|$)/i`
-- CodeRabbit CLI: `/(^|\s)coderabbit(\s+cli)?(\s|$)/i`
+
 - Codex CLI: `/(^|\s)codex(\s+cli)?(\s|$)/i`
 
 ### Shell Execution

@@ -38,10 +38,12 @@
 
 ## Testing Conventions
 - **TDD Mandatory**: Write tests first
-- **Test Organization**: Mirror source structure in test/unit/
+- **Test Framework**: Vitest (unit/integration tests)
+- **Test Organization**: Tests in src/test/vitest/ directory
 - **Naming**: describe blocks use class/module name, it blocks describe behavior
-- **Mocking**: Use Sinon for stubs/spies
-- **Assertions**: Use Chai with expect style
+- **Mocking**: Use vi.fn(), vi.spyOn(), vi.mock() from Vitest
+- **Assertions**: Use expect() from Vitest
+- **E2E Tests**: Mocha via @vscode/test-electron (required by VS Code)
 
 ## Documentation
 - **JSDoc**: Required for public methods

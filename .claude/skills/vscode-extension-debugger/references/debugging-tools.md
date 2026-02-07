@@ -332,10 +332,10 @@ done();
   "name": "Debug Tests",
   "type": "node",
   "request": "launch",
-  "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+  "program": "${workspaceFolder}/node_modules/vitest/vitest.mjs",
   "args": [
-    "--timeout", "999999",
-    "${workspaceFolder}/out/test/**/*.test.js"
+    "run",
+    "--reporter", "verbose"
   ],
   "internalConsoleOptions": "openOnSessionStart"
 }

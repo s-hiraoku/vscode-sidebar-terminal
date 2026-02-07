@@ -135,7 +135,7 @@ npm run test:coverage
 
 # 特定テストファイル実行
 npm run compile-tests
-./node_modules/.bin/mocha --require out/test/shared/TestSetup.js 'out/test/unit/specific/*.test.js'
+npx vitest run src/test/vitest/unit/specific
 
 # ウォッチモード
 npm run watch-tests
@@ -339,10 +339,10 @@ class TerminalSplitter {
 
 ```typescript
 describe('MessageManager', () => {
-  let mockWebview: sinon.SinonStubbedInstance<vscode.Webview>;
+  let mockWebview: any;
   
   beforeEach(() => {
-    mockWebview = sinon.createStubInstance(vscode.Webview);
+    mockWebview = { postMessage: vi.fn(), onDidReceiveMessage: vi.fn() };
   });
   
   it('should send message to webview', () => {

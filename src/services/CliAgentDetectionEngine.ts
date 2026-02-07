@@ -655,7 +655,7 @@ export class CliAgentDetectionEngine {
    * @returns Cleaned line
    */
   private removeBoxCharacters(line: string): string {
-    return line.replace(/[\u2502\u256d\u2570\u2500\u256f]/g, '').trim();
+    return line.replace(/[\u2500-\u257F]/g, '').trim();
   }
 
   /**

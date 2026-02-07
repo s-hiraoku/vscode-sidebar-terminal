@@ -32,13 +32,12 @@ VS Code Sidebar Terminal拡張機能のパフォーマンステストでは、�
 
 ```typescript
 // src/test/performance/memory/TerminalMemoryLeak.test.ts
-import { expect } from 'chai';
+import { describe, it, expect } from 'vitest';
 import { TerminalManager } from '../../../terminal/TerminalManager';
 
 describe('Performance: Memory Leak Detection', () => {
   describe('Terminal Lifecycle', () => {
-    it('should not leak memory on terminal creation and deletion', function() {
-      this.timeout(30000); // 30秒
+    it('should not leak memory on terminal creation and deletion', async () => {
 
       const manager = new TerminalManager();
       const iterations = 100;
@@ -77,23 +76,16 @@ describe('Performance: Memory Leak Detection', () => {
 
       // メモリ増加が許容範囲内か確認（例: 10MB以下）
       const maxAllowedIncrease = 10 * 1024 * 1024; // 10MB
-      expect(memoryIncrease).to.be.lessThan(
-        maxAllowedIncrease,
-        `Memory leak detected: ${(memoryIncrease / 1024 / 1024).toFixed(2)}MB increase`
-      );
+      expect(memoryIncrease).toBeLessThan(maxAllowedIncrease);
 
       // メモリ使用量の推移を確認（線形増加していないか）
       const trend = calculateTrend(measurements);
-      expect(Math.abs(trend)).to.be.lessThan(
-        1000,
-        'Memory usage should not show linear growth'
-      );
-    });
+      expect(Math.abs(trend)).toBeLessThan(1000);
+    }, 30000); // 30秒タイムアウト
   });
 
   describe('Event Listener Cleanup', () => {
-    it('should remove all event listeners on dispose', function() {
-      this.timeout(10000);
+    it('should remove all event listeners on dispose', async () => {
 
       const manager = new TerminalManager();
       const terminal = manager.createTerminal();
@@ -119,8 +111,8 @@ describe('Performance: Memory Leak Detection', () => {
 
       // メモリが解放されたことを確認
       const freed = beforeDispose - afterDispose;
-      expect(freed).to.be.greaterThan(0, 'Memory should be freed after dispose');
-    });
+      expect(freed).toBeGreaterThan(0);
+    }, 10000); // 10秒タイムアウト
   });
 });
 
@@ -140,13 +132,13 @@ function calculateTrend(values: number[]): number {
 
 ```bash
 # GCを有効にしてテスト実行
-node --expose-gc --max-old-space-size=4096 ./node_modules/mocha/bin/_mocha \
-  'out/test/performance/memory/**/*.test.js' \
-  --timeout 60000
+node --expose-gc ./node_modules/vitest/vitest.mjs run \
+  src/test/vitest/unit/performance/memory \
+  --testTimeout 60000
 
 # ヒープスナップショットを取得
-node --inspect-brk --expose-gc ./node_modules/mocha/bin/_mocha \
-  'out/test/performance/memory/**/*.test.js'
+node --inspect-brk --expose-gc ./node_modules/vitest/vitest.mjs run \
+  src/test/vitest/unit/performance/memory
 # Chrome DevTools で chrome://inspect にアクセスして解析
 ```
 
@@ -158,13 +150,12 @@ node --inspect-brk --expose-gc ./node_modules/mocha/bin/_mocha \
 
 ```typescript
 // src/test/performance/buffer/ScrollbackPerformance.test.ts
-import { expect } from 'chai';
+import { describe, it, expect } from 'vitest';
 import { ScrollbackBuffer } from '../../../buffer/ScrollbackBuffer';
 
 describe('Performance: Scrollback Buffer', () => {
   describe('Write Performance', () => {
-    it('should handle rapid writes efficiently', function() {
-      this.timeout(10000);
+    it('should handle rapid writes efficiently', async () => {
 
       const buffer = new ScrollbackBuffer({ maxLines: 10000 });
       const iterations = 10000;
@@ -197,15 +188,14 @@ describe('Performance: Scrollback Buffer', () => {
       console.log(`    Memory: ${memoryUsedMB.toFixed(2)}MB`);
 
       // パフォーマンス基準をチェック
-      expect(durationMs).to.be.lessThan(1000, 'Should write 10k lines in < 1s');
-      expect(throughput).to.be.greaterThan(5000, 'Should write > 5k lines/sec');
-      expect(memoryUsedMB).to.be.lessThan(50, 'Should use < 50MB for 10k lines');
+      expect(durationMs).toBeLessThan(1000); // Should write 10k lines in < 1s
+      expect(throughput).toBeGreaterThan(5000); // Should write > 5k lines/sec
+      expect(memoryUsedMB).toBeLessThan(50); // Should use < 50MB for 10k lines
 
       buffer.dispose();
-    });
+    }, 10000); // 10秒タイムアウト
 
-    it('should handle line wrapping efficiently', function() {
-      this.timeout(10000);
+    it('should handle line wrapping efficiently', async () => {
 
       const buffer = new ScrollbackBuffer({
         maxLines: 5000,
@@ -226,15 +216,14 @@ describe('Performance: Scrollback Buffer', () => {
 
       console.log(`  Line Wrapping Performance: ${durationMs.toFixed(2)}ms`);
 
-      expect(durationMs).to.be.lessThan(2000, 'Line wrapping should be fast');
+      expect(durationMs).toBeLessThan(2000); // Line wrapping should be fast
 
       buffer.dispose();
-    });
+    }, 10000); // 10秒タイムアウト
   });
 
   describe('Read Performance', () => {
-    it('should retrieve lines efficiently', function() {
-      this.timeout(5000);
+    it('should retrieve lines efficiently', async () => {
 
       const buffer = new ScrollbackBuffer({ maxLines: 10000 });
 
@@ -256,15 +245,14 @@ describe('Performance: Scrollback Buffer', () => {
 
       console.log(`  Read Performance: ${durationMs.toFixed(2)}ms for 1000 reads`);
 
-      expect(durationMs).to.be.lessThan(100, 'Should read 1000 lines in < 100ms');
+      expect(durationMs).toBeLessThan(100); // Should read 1000 lines in < 100ms
 
       buffer.dispose();
-    });
+    }, 5000); // 5秒タイムアウト
   });
 
   describe('Search Performance', () => {
-    it('should search through buffer efficiently', function() {
-      this.timeout(10000);
+    it('should search through buffer efficiently', async () => {
 
       const buffer = new ScrollbackBuffer({ maxLines: 10000 });
 
@@ -286,10 +274,10 @@ describe('Performance: Scrollback Buffer', () => {
 
       console.log(`  Search Performance: ${durationMs.toFixed(2)}ms`);
 
-      expect(durationMs).to.be.lessThan(500, 'Search should be fast');
+      expect(durationMs).toBeLessThan(500); // Search should be fast
 
       buffer.dispose();
-    });
+    }, 10000); // 10秒タイムアウト
   });
 });
 ```
@@ -302,13 +290,12 @@ describe('Performance: Scrollback Buffer', () => {
 
 ```typescript
 // src/test/performance/load/ConcurrentTerminals.test.ts
-import { expect } from 'chai';
+import { describe, it, expect } from 'vitest';
 import { TerminalManager } from '../../../terminal/TerminalManager';
 
 describe('Performance: Load Testing', () => {
   describe('Concurrent Terminals', () => {
-    it('should handle multiple terminals simultaneously', async function() {
-      this.timeout(60000); // 60秒
+    it('should handle multiple terminals simultaneously', async () => {
 
       const manager = new TerminalManager();
       const terminalCount = 50;
@@ -351,15 +338,14 @@ describe('Performance: Load Testing', () => {
       console.log(`  Per terminal: ${(memoryIncreaseMB / terminalCount).toFixed(2)}MB`);
 
       // パフォーマンス基準
-      expect(durationMs).to.be.lessThan(30000, 'Should handle load in < 30s');
-      expect(memoryIncreaseMB).to.be.lessThan(500, 'Should use < 500MB total');
+      expect(durationMs).toBeLessThan(30000); // Should handle load in < 30s
+      expect(memoryIncreaseMB).toBeLessThan(500); // Should use < 500MB total
 
       // クリーンアップ
       manager.dispose();
-    });
+    }, 60000); // 60秒タイムアウト
 
-    it('should handle rapid terminal creation and deletion', async function() {
-      this.timeout(30000);
+    it('should handle rapid terminal creation and deletion', async () => {
 
       const manager = new TerminalManager();
       const iterations = 100;
@@ -384,10 +370,10 @@ describe('Performance: Load Testing', () => {
       console.log(`  Duration: ${durationMs.toFixed(2)}ms`);
       console.log(`  Operations/sec: ${opsPerSec.toFixed(0)}`);
 
-      expect(durationMs).to.be.lessThan(10000, 'Should complete in < 10s');
+      expect(durationMs).toBeLessThan(10000); // Should complete in < 10s
 
       manager.dispose();
-    });
+    }, 30000); // 30秒タイムアウト
   });
 });
 ```
@@ -396,8 +382,7 @@ describe('Performance: Load Testing', () => {
 
 ```typescript
 describe('Performance: Message Throughput', () => {
-  it('should handle high message rate', async function() {
-    this.timeout(20000);
+  it('should handle high message rate', async () => {
 
     const messageHandler = new MessageHandler();
     const messageCount = 10000;
@@ -423,10 +408,10 @@ describe('Performance: Message Throughput', () => {
 
     console.log(`  Message throughput: ${throughput.toFixed(0)} msg/sec`);
 
-    expect(throughput).to.be.greaterThan(1000, 'Should handle > 1k msg/sec');
+    expect(throughput).toBeGreaterThan(1000); // Should handle > 1k msg/sec
 
     messageHandler.dispose();
-  });
+  }, 20000); // 20秒タイムアウト
 });
 ```
 
@@ -438,7 +423,7 @@ describe('Performance: Message Throughput', () => {
 
 ```typescript
 // src/test/performance/benchmark/RelativePerformance.test.ts
-import { expect } from 'chai';
+import { describe, it, expect } from 'vitest';
 
 describe('Performance: Benchmarks', () => {
   describe('String Operations', () => {
@@ -467,13 +452,12 @@ describe('Performance: Benchmarks', () => {
       console.log(`  Speedup: ${(duration1 / duration2).toFixed(2)}x`);
 
       // Array.joinの方が速いはず
-      expect(duration2).to.be.lessThan(duration1 * 2);
+      expect(duration2).toBeLessThan(duration1 * 2);
     });
   });
 
   describe('Buffer Implementations', () => {
-    it('should compare circular buffer vs array buffer', function() {
-      this.timeout(10000);
+    it('should compare circular buffer vs array buffer', async () => {
 
       const iterations = 10000;
       const maxSize = 1000;
@@ -521,8 +505,8 @@ describe('Performance: Benchmarks', () => {
       console.log(`  Speedup: ${(duration2 / duration1).toFixed(2)}x`);
 
       // Circular Bufferの方が速いはず
-      expect(duration1).to.be.lessThan(duration2);
-    });
+      expect(duration1).toBeLessThan(duration2);
+    }, 10000); // 10秒タイムアウト
   });
 });
 ```
@@ -538,8 +522,7 @@ describe('Performance: Benchmarks', () => {
 import { performance } from 'perf_hooks';
 
 describe('Performance: CPU Profiling', () => {
-  it('should profile heavy operations', function() {
-    this.timeout(10000);
+  it('should profile heavy operations', async () => {
 
     const operations = {
       parsing: 0,
@@ -569,7 +552,7 @@ describe('Performance: CPU Profiling', () => {
     console.log(`    Parsing: ${(operations.parsing / total * 100).toFixed(1)}%`);
     console.log(`    Rendering: ${(operations.rendering / total * 100).toFixed(1)}%`);
     console.log(`    Calculation: ${(operations.calculation / total * 100).toFixed(1)}%`);
-  });
+  }, 10000); // 10秒タイムアウト
 });
 ```
 

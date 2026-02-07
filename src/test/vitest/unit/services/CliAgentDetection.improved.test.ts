@@ -80,20 +80,35 @@ describe('CLI Agent Detection - Improved Patterns', () => {
 
     it('should detect explicit termination messages', () => {
       const terminationMessages = [
-        'session ended',
-        'goodbye claude',
-        'exit',
-        'quit',
-        'goodbye',
-        'process exited with code 0',
-        '[done]',
-        'completed',
+        '[Process completed]',
+        '[process exited with code 0]',
+        '[process exited with code 130]',
+        'Agent powering down. Goodbye!',
+        'command not found: claude',
+        'command not found: gemini',
       ];
 
       terminationMessages.forEach((message) => {
         const result = detectionService.detectTermination('terminal-1', message);
         expect(result.isTerminated).toBe(true);
         expect(result.confidence).toBeGreaterThan(0.6);
+      });
+    });
+
+    it('should NOT detect generic words as termination', () => {
+      const nonTerminationMessages = [
+        'session ended',
+        'goodbye claude',
+        'exit',
+        'quit',
+        'goodbye',
+        '[done]',
+        'completed',
+      ];
+
+      nonTerminationMessages.forEach((message) => {
+        const result = detectionService.detectTermination('terminal-1', message);
+        expect(result.isTerminated).toBe(false);
       });
     });
   });
@@ -111,17 +126,30 @@ describe('CLI Agent Detection - Improved Patterns', () => {
 
     it('should detect process completion messages', () => {
       const completionMessages = [
-        '[done]',
-        '[finished]',
-        'done',
-        'complete',
-        'completed',
-        'process exited with code 0',
+        '[Process completed]',
+        '[process exited with code 0]',
+        '[process exited with code 1]',
+        'Agent powering down. Goodbye!',
       ];
 
       completionMessages.forEach((message) => {
         const result = detectionService.detectTermination('terminal-1', message);
         expect(result.isTerminated).toBe(true);
+      });
+    });
+
+    it('should NOT detect fictional completion patterns', () => {
+      const nonCompletionMessages = [
+        '[done]',
+        '[finished]',
+        'done',
+        'complete',
+        'completed',
+      ];
+
+      nonCompletionMessages.forEach((message) => {
+        const result = detectionService.detectTermination('terminal-1', message);
+        expect(result.isTerminated).toBe(false);
       });
     });
 

@@ -1,11 +1,11 @@
 # コードカバレッジガイド
 
-nycとIstanbulを使用したコードカバレッジ測定のガイドです。このドキュメントでは、カバレッジの設定、測定、分析、改善方法を説明します。
+Vitest built-in v8カバレッジを使用したコードカバレッジ測定のガイドです。このドキュメントでは、カバレッジの設定、測定、分析、改善方法を説明します。
 
 ## 目次
 
 - [コードカバレッジとは](#コードカバレッジとは)
-- [nycとIstanbulのセットアップ](#nycとistanbulのセットアップ)
+- [Vitestカバレッジのセットアップ](#vitestカバレッジのセットアップ)
 - [カバレッジの測定](#カバレッジの測定)
 - [カバレッジレポートの読み方](#カバレッジレポートの読み方)
 - [カバレッジの改善](#カバレッジの改善)
@@ -48,65 +48,53 @@ nycとIstanbulを使用したコードカバレッジ測定のガイドです。
 
 ---
 
-## nycとIstanbulのセットアップ
+## Vitestカバレッジのセットアップ
 
 ### インストール
 
 ```bash
-npm install --save-dev nyc
+npm install --save-dev @vitest/coverage-v8
 ```
 
-### 設定ファイル: .nycrc.json
+### 設定ファイル: vitest.config.ts
 
-```json
-{
-  "all": true,
-  "include": [
-    "out/src/**/*.js"
-  ],
-  "exclude": [
-    "out/src/test/**",
-    "out/src/**/*.test.js",
-    "out/src/**/*.spec.js",
-    "out/src/**/test/**"
-  ],
-  "reporter": [
-    "text",
-    "html",
-    "lcov",
-    "json"
-  ],
-  "report-dir": "./coverage",
-  "temp-dir": "./.nyc_output",
-  "check-coverage": true,
-  "lines": 70,
-  "functions": 65,
-  "branches": 60,
-  "statements": 70,
-  "per-file": false,
-  "skip-full": false,
-  "watermarks": {
-    "lines": [70, 85],
-    "functions": [65, 85],
-    "branches": [60, 80],
-    "statements": [70, 85]
-  }
-}
+```typescript
+import { defineConfig } from 'vitest/config';
+
+export default defineConfig({
+  test: {
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.ts'],
+      exclude: [
+        'src/test/**',
+        'src/**/*.test.ts',
+        'src/**/*.spec.ts',
+      ],
+      reporter: ['text', 'html', 'lcov', 'json'],
+      reportsDirectory: './coverage',
+      thresholds: {
+        lines: 70,
+        functions: 65,
+        branches: 60,
+        statements: 70,
+      },
+    },
+  },
+});
 ```
 
 ### 設定オプションの詳細
 
 | オプション | 説明 | 推奨値 |
 |-----------|------|--------|
-| `all` | すべてのファイルを含める | true |
-| `include` | カバレッジ対象のパターン | out/src/**/*.js |
-| `exclude` | 除外するパターン | test/, *.test.js |
+| `provider` | カバレッジプロバイダー | v8 |
+| `include` | カバレッジ対象のパターン | src/**/*.ts |
+| `exclude` | 除外するパターン | test/, *.test.ts |
 | `reporter` | レポート形式 | text, html, lcov |
-| `check-coverage` | カバレッジチェック有効化 | true |
-| `lines` | ライン カバレッジ最小値 | 70 |
-| `functions` | 関数カバレッジ最小値 | 65 |
-| `branches` | 分岐カバレッジ最小値 | 60 |
-| `watermarks` | カバレッジの色分け閾値 | [low, high] |
+| `thresholds.lines` | ライン カバレッジ最小値 | 70 |
+| `thresholds.functions` | 関数カバレッジ最小値 | 65 |
+| `thresholds.branches` | 分岐カバレッジ最小値 | 60 |
 
 ---
 
@@ -118,21 +106,21 @@ npm install --save-dev nyc
 # カバレッジ付きでテスト実行
 npm run test:coverage
 
-# または直接nycを実行
-npx nyc mocha 'out/test/unit/**/*.test.js'
+# または直接vitestを実行
+npx vitest run --coverage
 ```
 
 ### カバレッジレポートの生成
 
 ```bash
-# すべてのレポート形式を生成
-npx nyc --reporter=text --reporter=html --reporter=lcov mocha
+# すべてのレポート形式を生成（vitest.config.tsで設定）
+npx vitest run --coverage
 
 # テキストレポートのみ
-npx nyc --reporter=text mocha
+npx vitest run --coverage --coverage.reporter=text
 
 # HTMLレポートのみ
-npx nyc --reporter=html mocha
+npx vitest run --coverage --coverage.reporter=html
 ```
 
 ### HTMLレポートの閲覧
@@ -254,9 +242,9 @@ describe('SessionManager', () => {
         .to.be.rejectedWith('Storage error');
 
       // And: エラーがログに記録される
-      expect(logger.error).to.have.been.calledWith(
+      expect(logger.error).toHaveBeenCalledWith(
         'Failed to save session',
-        sinon.match.instanceOf(Error)
+        expect.any(Error)
       );
     });
   });
@@ -340,7 +328,7 @@ describe('formatTerminalName', () => {
 ### 1. text レポーター（CLI）
 
 ```bash
-npx nyc --reporter=text mocha
+npx vitest run --coverage --coverage.reporter=text
 ```
 
 **用途**: CI/CD、クイックチェック
@@ -358,7 +346,7 @@ Lines        : 72.34% ( 456/630 )
 ### 2. html レポーター
 
 ```bash
-npx nyc --reporter=html mocha
+npx vitest run --coverage --coverage.reporter=html
 open coverage/index.html
 ```
 
@@ -372,7 +360,7 @@ open coverage/index.html
 ### 3. lcov レポーター
 
 ```bash
-npx nyc --reporter=lcov mocha
+npx vitest run --coverage --coverage.reporter=lcov
 ```
 
 **用途**: CI/CDツール連携（Codecov, Coverallsなど）
@@ -382,7 +370,7 @@ npx nyc --reporter=lcov mocha
 ### 4. json レポーター
 
 ```bash
-npx nyc --reporter=json mocha
+npx vitest run --coverage --coverage.reporter=json
 ```
 
 **用途**: プログラムでの解析、カスタムレポート生成
@@ -392,7 +380,7 @@ npx nyc --reporter=json mocha
 ### 5. cobertura レポーター
 
 ```bash
-npx nyc --reporter=cobertura mocha
+npx vitest run --coverage --coverage.reporter=cobertura
 ```
 
 **用途**: Azure DevOps, Jenkins などのCI/CD
@@ -639,11 +627,10 @@ ERROR: Coverage for lines (68.24%) does not meet threshold (70%)
 ```json
 {
   "scripts": {
-    "test:coverage": "nyc mocha 'out/test/**/*.test.js'",
-    "test:coverage:html": "nyc --reporter=html mocha && open coverage/index.html",
-    "test:coverage:text": "nyc --reporter=text mocha",
-    "test:coverage:check": "nyc check-coverage --lines 70 --functions 65 --branches 60",
-    "coverage:clean": "rm -rf .nyc_output coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:coverage:html": "vitest run --coverage --coverage.reporter=html && open coverage/index.html",
+    "test:coverage:text": "vitest run --coverage --coverage.reporter=text",
+    "coverage:clean": "rm -rf coverage"
   }
 }
 ```
@@ -652,8 +639,7 @@ ERROR: Coverage for lines (68.24%) does not meet threshold (70%)
 
 ## 参考リンク
 
-- [nyc GitHub](https://github.com/istanbuljs/nyc)
-- [Istanbul Documentation](https://istanbul.js.org/)
+- [Vitest Coverage](https://vitest.dev/guide/coverage.html)
 - [Codecov](https://about.codecov.io/)
 - [Coveralls](https://coveralls.io/)
 - [改善提案書](../../../test-environment-improvement-proposal.md)

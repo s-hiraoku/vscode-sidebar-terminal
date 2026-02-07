@@ -44,24 +44,24 @@
 
 ```typescript
 // src/test/integration/messaging/WebviewMessaging.test.ts
-import { expect } from 'chai';
-import * as sinon from 'sinon';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
 import { MessageHandler } from '../../../messaging/MessageHandler';
 import { TerminalManager } from '../../../terminal/TerminalManager';
 
 describe('Integration: Webview Messaging', () => {
-  let sandbox: sinon.SinonSandbox;
+  // Vitest mocks
   let messageHandler: MessageHandler;
   let terminalManager: TerminalManager;
   let mockWebview: any;
 
   beforeEach(() => {
-    sandbox = sinon.createSandbox();
+    // Vitest handles mock lifecycle
 
     // Webviewのモック
     mockWebview = {
-      postMessage: sandbox.stub().resolves(true),
-      onDidReceiveMessage: sandbox.stub()
+      postMessage: vi.spyOn().resolves(true),
+      onDidReceiveMessage: vi.spyOn()
     };
 
     // 実際のTerminalManagerを使用（モックではなく）
@@ -72,7 +72,7 @@ describe('Integration: Webview Messaging', () => {
   });
 
   afterEach(() => {
-    sandbox.restore();
+    vi.restoreAllMocks();
     terminalManager.dispose();
   });
 
@@ -94,9 +94,9 @@ describe('Integration: Webview Messaging', () => {
 
       // And: Webviewに通知が送られる
       expect(mockWebview.postMessage).to.have.been.calledWith(
-        sinon.match({
+        expect.objectContaining({
           command: 'terminalCreated',
-          terminal: sinon.match.object
+          terminal: expect.any(Object)
         })
       );
     });
@@ -113,9 +113,9 @@ describe('Integration: Webview Messaging', () => {
 
       // Then: エラー通知が送られる
       expect(mockWebview.postMessage).to.have.been.calledWith(
-        sinon.match({
+        expect.objectContaining({
           command: 'error',
-          message: sinon.match.string
+          message: expect.any(String)
         })
       );
     });
@@ -133,7 +133,7 @@ describe('Integration: Webview Messaging', () => {
       await new Promise(resolve => setTimeout(resolve, 50));
 
       expect(mockWebview.postMessage).to.have.been.calledWith(
-        sinon.match({
+        expect.objectContaining({
           command: 'data',
           terminalId: terminal.id,
           data: 'test output\n'
@@ -152,21 +152,21 @@ describe('Integration: Webview Messaging', () => {
 
 ```typescript
 // src/test/integration/sessions/SessionPersistence.test.ts
-import { expect } from 'chai';
-import * as sinon from 'sinon';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
 import { SessionManager } from '../../../sessions/SessionManager';
 import { TerminalManager } from '../../../terminal/TerminalManager';
 import { StorageService } from '../../../services/StorageService';
 
 describe('Integration: Session Persistence', () => {
-  let sandbox: sinon.SinonSandbox;
+  // Vitest mocks
   let sessionManager: SessionManager;
   let terminalManager: TerminalManager;
   let storageService: StorageService;
   let mockGlobalState: any;
 
   beforeEach(() => {
-    sandbox = sinon.createSandbox();
+    // Vitest handles mock lifecycle
 
     // モックストレージ
     mockGlobalState = new Map();
@@ -184,7 +184,7 @@ describe('Integration: Session Persistence', () => {
   });
 
   afterEach(() => {
-    sandbox.restore();
+    vi.restoreAllMocks();
     terminalManager.dispose();
   });
 
@@ -289,22 +289,22 @@ describe('Integration: Session Persistence', () => {
 
 ```typescript
 // src/test/integration/terminal/TerminalLifecycle.test.ts
-import { expect } from 'chai';
-import * as sinon from 'sinon';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
 import { TerminalManager } from '../../../terminal/TerminalManager';
 import { ViewManager } from '../../../views/ViewManager';
 
 describe('Integration: Terminal Lifecycle', () => {
-  let sandbox: sinon.SinonSandbox;
+  // Vitest mocks
   let terminalManager: TerminalManager;
   let viewManager: ViewManager;
   let mockWebview: any;
 
   beforeEach(() => {
-    sandbox = sinon.createSandbox();
+    // Vitest handles mock lifecycle
 
     mockWebview = {
-      postMessage: sandbox.stub().resolves(true)
+      postMessage: vi.spyOn().resolves(true)
     };
 
     terminalManager = new TerminalManager();
@@ -312,7 +312,7 @@ describe('Integration: Terminal Lifecycle', () => {
   });
 
   afterEach(() => {
-    sandbox.restore();
+    vi.restoreAllMocks();
     terminalManager.dispose();
   });
 
@@ -327,7 +327,7 @@ describe('Integration: Terminal Lifecycle', () => {
       // Then: アクティブになる
       expect(terminalManager.getActiveTerminal()?.id).to.equal(terminal1.id);
       expect(mockWebview.postMessage).to.have.been.calledWith(
-        sinon.match({ command: 'setActiveTerminal', terminalId: terminal1.id })
+        expect.objectContaining({ command: 'setActiveTerminal', terminalId: terminal1.id })
       );
 
       // When: 2つ目のターミナルを作成
@@ -388,19 +388,19 @@ describe('Integration: Terminal Lifecycle', () => {
 
 ```typescript
 // src/test/integration/storage/GlobalStateIntegration.test.ts
-import { expect } from 'chai';
-import * as sinon from 'sinon';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
 import { SettingsManager } from '../../../settings/SettingsManager';
 import { StorageService } from '../../../services/StorageService';
 
 describe('Integration: Global State Storage', () => {
-  let sandbox: sinon.SinonSandbox;
+  // Vitest mocks
   let settingsManager: SettingsManager;
   let storageService: StorageService;
   let mockGlobalState: Map<string, any>;
 
   beforeEach(() => {
-    sandbox = sinon.createSandbox();
+    // Vitest handles mock lifecycle
 
     // 実際のMapでストレージをシミュレート
     mockGlobalState = new Map();
@@ -418,7 +418,7 @@ describe('Integration: Global State Storage', () => {
   });
 
   afterEach(() => {
-    sandbox.restore();
+    vi.restoreAllMocks();
   });
 
   describe('Settings Persistence', () => {
@@ -468,21 +468,21 @@ describe('Integration: Global State Storage', () => {
 
 ```typescript
 // src/test/integration/events/EventFlow.test.ts
-import { expect } from 'chai';
-import * as sinon from 'sinon';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
 import { TerminalManager } from '../../../terminal/TerminalManager';
 import { EventBus } from '../../../events/EventBus';
 import { Logger } from '../../../utils/Logger';
 
 describe('Integration: Event Flow', () => {
-  let sandbox: sinon.SinonSandbox;
+  // Vitest mocks
   let terminalManager: TerminalManager;
   let eventBus: EventBus;
   let logger: Logger;
   let eventLog: any[];
 
   beforeEach(() => {
-    sandbox = sinon.createSandbox();
+    // Vitest handles mock lifecycle
     eventLog = [];
 
     eventBus = new EventBus();
@@ -496,7 +496,7 @@ describe('Integration: Event Flow', () => {
   });
 
   afterEach(() => {
-    sandbox.restore();
+    vi.restoreAllMocks();
     terminalManager.dispose();
   });
 
@@ -600,7 +600,7 @@ npm run test:integration
 npm run test:integration:parallel
 
 # 特定のテストファイルのみ
-npx mocha out/test/integration/messaging/**/*.test.js
+npx vitest run src/test/vitest/unit/messaging
 ```
 
 ---

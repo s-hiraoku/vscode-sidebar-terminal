@@ -1,4 +1,6 @@
-# Test Infrastructure Best Practices
+# Test Infrastructure Best Practices (Legacy Mocha Base Classes)
+
+> **Note**: These best practices apply to the legacy sinon-based Base Test Classes. For new tests, use **Vitest** (`vi.fn()`, `vi.spyOn()`, `expect().toBe()`) directly. See `src/test/vitest/` for current patterns.
 
 ## Test Organization
 
@@ -192,7 +194,7 @@ const stub = test.sandbox.stub(obj, 'method');
 const spy = test.sandbox.spy(obj, 'method');
 
 // ❌ Bad - Standalone stubs (not cleaned up)
-const stub = sinon.stub(obj, 'method'); // Manual cleanup needed
+const stub = vi.spyOn(obj, 'method'); // Use vi.restoreAllMocks() for cleanup
 ```
 
 ## Async Testing
@@ -244,13 +246,13 @@ it('should handle errors', async () => {
     await test.service.failingOp();
     expect.fail('Should have thrown');
   } catch (error) {
-    expect(error).to.be.instanceOf(Error);
+    expect(error).toBeInstanceOf(Error);
   }
 });
 
 // ✅ Also good - expect().to.be.rejected
 it('should reject', async () => {
-  await expect(test.service.failingOp()).to.be.rejected;
+  await test.service.failingOp()).rejects.toThrow(;
 });
 ```
 
@@ -297,12 +299,12 @@ describe('MyService', () => {
 // ✅ Good - Each test standalone
 it('test 1', () => {
   test.service.method(); // Independent
-  expect(result).to.equal(expected);
+  expect(result).toBe(expected);
 });
 
 it('test 2', () => {
   test.service.method(); // Independent
-  expect(result).to.equal(expected);
+  expect(result).toBe(expected);
 });
 
 // ❌ Bad - Test 2 depends on Test 1
@@ -312,7 +314,7 @@ it('test 1', () => {
 
 it('test 2', () => {
   // Assumes test 1 ran first
-  expect(test.service.getState()).to.equal('ready');
+  expect(test.service.getState()).toBe('ready');
 });
 ```
 
@@ -366,7 +368,7 @@ it('should post message', () => {
   test.assertMessagePosted('test');
   // Or
   const messages = test.getPostedMessages();
-  expect(messages).to.have.length(1);
+  expect(messages).toHaveLength(1);
 });
 
 // ❌ Bad - Manual verification
@@ -376,7 +378,7 @@ it('should post message', () => {
     called = true;
   };
   test.manager.postMessage({ command: 'test' });
-  expect(called).to.be.true; // More verbose
+  expect(called).toBe(true); // More verbose
 });
 ```
 
@@ -386,13 +388,13 @@ it('should post message', () => {
 // ✅ Good - Use clearMessageQueue
 it('test 1', () => {
   test.manager.postMessage({ command: 'test1' });
-  expect(test.getPostedMessages()).to.have.length(1);
+  expect(test.getPostedMessages()).toHaveLength(1);
 });
 
 it('test 2', () => {
   // Queue auto-cleared by beforeEach
   test.manager.postMessage({ command: 'test2' });
-  expect(test.getPostedMessages()).to.have.length(1);
+  expect(test.getPostedMessages()).toHaveLength(1);
 });
 ```
 
@@ -408,8 +410,8 @@ it('should create terminal', () => {
     name: 'Test',
   });
 
-  expect(terminal.id).to.equal(1);
-  expect(terminal.name).to.equal('Test');
+  expect(terminal.id).toBe(1);
+  expect(terminal.name).toBe('Test');
 });
 
 // ❌ Bad - Manual mock
@@ -417,7 +419,7 @@ it('should create terminal', () => {
   const terminal = {
     id: 1,
     name: 'Test',
-    write: sinon.stub(), // Missing cleanup
+    write: vi.fn(), // Missing cleanup
   };
 });
 ```
@@ -432,7 +434,7 @@ it('should handle data', () => {
   test.simulateTerminalData(1, 'hello\n');
 
   const output = test.getTerminalOutput(1);
-  expect(output).to.include('hello');
+  expect(output).toContain('hello');
 });
 ```
 
@@ -482,10 +484,10 @@ protected override setup(): void {
 
 ```typescript
 // ✅ Good - Clear error messages
-expect(result).to.equal(expected, 'Result should match expected value');
+expect(result).toBe(expected, 'Result should match expected value');
 
 // ❌ Bad - No context
-expect(result).to.equal(expected);
+expect(result).toBe(expected);
 ```
 
 ### 2. Custom Assertion Helpers
@@ -494,7 +496,7 @@ expect(result).to.equal(expected);
 // ✅ Good - Domain-specific assertions
 protected assertTerminalState(id: number, state: string): void {
   const actual = test.service.getState(id);
-  expect(actual).to.equal(state,
+  expect(actual).toBe(state,
     `Terminal ${id} should be in state ${state}, but was ${actual}`);
 }
 

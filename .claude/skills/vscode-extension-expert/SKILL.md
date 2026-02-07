@@ -438,7 +438,7 @@ module.exports = defineConfig({
   version: 'stable',
   workspaceFolder: './test-fixtures',
   mocha: {
-    timeout: 20000
+    timeout: 20000  // Note: @vscode/test-cli uses Mocha for VS Code extension host tests
   }
 });
 ```

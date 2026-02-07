@@ -40,9 +40,9 @@ VS Code拡張機能のE2Eテストには、必ず `@vscode/test-electron` を使
 {
   "devDependencies": {
     "@vscode/test-electron": "^2.4.0",
-    "@types/mocha": "^10.0.0",
+    "@types/mocha": "^10.0.0",  // Required by @vscode/test-electron
     "@types/node": "^20.0.0",
-    "mocha": "^10.0.0"
+    "mocha": "^10.0.0"  // Required by @vscode/test-electron for E2E tests
   }
 }
 ```

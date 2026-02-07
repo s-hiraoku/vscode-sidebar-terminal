@@ -39,8 +39,8 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 
 - `npm run compile` performs a webpack build; `npm run watch` rebuilds on change.
 - `npm run lint` and `npm run format` enforce ESLint plus Prettier before committing.
-- Use `npm run test:unit`, `npm run test:integration`, and `npm run test:all` as the quick-to-full Mocha ladder.
-- `npm run coverage:check` keeps NYC thresholds (70% lines/functions, 60% branches) satisfied.
+- Use `npm run test:unit`, `npm run test:integration`, and `npm run test:all` as the quick-to-full Vitest ladder.
+- `npm run test:coverage` keeps v8 coverage thresholds (70% lines/functions, 60% branches) satisfied.
 - `npm run package` emits the `.vsix` bundle.
 
 ## Coding Style & Naming Conventions
@@ -51,7 +51,7 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 
 ## Testing Guidelines
 
-- Tests run on Mocha + Chai with NYC; re-use helpers in `src/test/shared/`.
+- Tests run on Vitest with v8 coverage; re-use helpers in `src/test/shared/`.
 - Name specs after their subject, e.g. `src/test/unit/terminals/TerminalProcess.test.ts`, to surface intent in coverage reports.
 - Start with `npm run test:unit`, escalate to `npm run test:integration` when touching sessions or terminals, and finish with `npm run coverage:check`.
 

@@ -71,7 +71,7 @@ export const AI_AGENT_CONSTANTS = {
     GITHUB_COPILOT: 'GitHub Copilot',
     GEMINI_CLI: 'Gemini CLI',
     CODEX_CLI: 'Codex CLI',
-    CODERABBIT_CLI: 'CodeRabbit CLI',
+
   } as const,
 
   /** Agent status states */

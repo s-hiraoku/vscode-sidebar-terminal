@@ -19,7 +19,7 @@
 
 | 機能 | VS Code 標準ターミナル | Secondary Terminal | 差分 |
 |------|---------------------|-------------------|------|
-| **CLI Agent検出** | ❌ なし | ✅ **リアルタイム検出** | 🟢 Claude Code, Copilot, Gemini, CodeRabbit対応 |
+| **CLI Agent検出** | ❌ なし | ✅ **リアルタイム検出** | 🟢 Claude Code, Copilot, Gemini, Codex対応 |
 | **Agent状態表示** | ❌ なし | ✅ **常時表示** | 🟢 接続/切断をビジュアル表示 |
 | **パフォーマンス最適化** | 標準（60fps） | ✅ **CLI Agent時250fps** | 🟢 **4倍高速** |
 | **ファイル参照送信** | ❌ なし | ✅ **CMD+Option+L** | 🟢 @filename形式で即座に送信 |

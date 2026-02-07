@@ -88,7 +88,7 @@ Testing documentation and guides.
 - `best-practices.md` - Best practices
 - `troubleshooting.md` - Troubleshooting
 - `patterns/` - Testing patterns (unit, integration, e2e)
-- `tools/` - Tool guides (mocha, coverage)
+- `tools/` - Tool guides (vitest, coverage)
 - See [testing/README.md](testing/README.md) for full index
 
 ## Related Documentation

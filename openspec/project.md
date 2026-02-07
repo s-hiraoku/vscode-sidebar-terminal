@@ -5,7 +5,7 @@ Secondary Terminal is a production-ready VS Code extension providing advanced te
 
 **Key Goals:**
 - Provide VS Code-standard compliant terminal management with full ProcessState/InteractionState tracking
-- Enable seamless integration with CLI coding agents (Claude Code, Codex, Gemini, GitHub Copilot, CodeRabbit)
+- Enable seamless integration with CLI coding agents (Claude Code, Codex, Gemini, GitHub Copilot)
 - Support efficient multi-agent workflows with smart file reference sharing
 - Maintain production-grade quality with zero TypeScript compilation errors
 - Ensure persistent session restoration across VS Code restarts
@@ -24,10 +24,7 @@ Secondary Terminal is a production-ready VS Code extension providing advanced te
 - **xterm.js addons**: fit, search, serialize, unicode11, web-links, webgl
 
 ### Build & Testing
-- **Mocha 10.8.2**: Test framework with comprehensive test suite (275+ tests)
-- **Chai 4.5.0**: Assertion library with chai-as-promised for async testing
-- **Sinon 21.0.0**: Test doubles (stubs, spies, mocks)
-- **nyc 17.1.0**: Code coverage reporting (targeting 85%+ coverage)
+- **Vitest 3.x**: Test framework with comprehensive test suite (3,900+ tests), built-in assertions, mocking (vi.fn/vi.spyOn/vi.mock), and v8 coverage reporting (targeting 85%+ coverage)
 - **ESLint 8.56.0**: Code quality with @typescript-eslint plugins
 - **Prettier 3.1.1**: Code formatting
 
@@ -72,7 +69,7 @@ TerminalWebviewManager (Coordinator)
 - **Unified Provider Coordinator**: Reduced complexity by 33% through service extraction
 
 #### AI Agent Detection System
-- **Strategy Pattern**: Agent-specific detection logic (Claude, Copilot, Codex, Gemini, CodeRabbit)
+- **Strategy Pattern**: Agent-specific detection logic (Claude, Copilot, Codex, Gemini)
 - **Pattern Matching**: Regex patterns with word boundaries (NOT includes() for security)
 - **Real-time Detection**: Debounced output monitoring with status indicators
 - **Security**: URL substring sanitization using regex patterns
@@ -86,7 +83,7 @@ TerminalWebviewManager (Coordinator)
 4. **Quality Gate**: Verify TDD compliance (`npm run tdd:quality-gate`)
 
 #### Test Categories
-- **Unit Tests**: 275+ tests covering core functionality (fast, reliable)
+- **Unit Tests**: 3,900+ tests covering core functionality (fast, reliable)
 - **Integration Tests**: Component interaction and AI agent scenarios
 - **Performance Tests**: Buffer management, memory optimization, CPU usage
 - **Edge Cases**: Error handling, resource cleanup, concurrent operations
@@ -207,7 +204,7 @@ npm run test:watch          # Watch mode for development
 - **Codex CLI**: `codex` command, OpenAI-powered development assistance
 - **GitHub Copilot**: `copilot` or `gh copilot`, detects "Welcome to GitHub Copilot CLI"
 - **Gemini CLI**: `gemini code`, detects ASCII art GEMINI graphics
-- **CodeRabbit CLI**: `/coderabbit` slash command integration (requires OpenSpec)
+
 
 ### Build & Deployment
 - **VS Code Marketplace**: Publishing via vsce tool with VSCE_PAT token
@@ -215,7 +212,5 @@ npm run test:watch          # Watch mode for development
 - **GitHub Actions**: CI/CD workflows for testing, building, publishing
 
 ### Testing Infrastructure
-- **Mocha Test Runner**: Standard test execution
+- **Vitest**: Test framework with built-in assertion, mocking (vi.fn/vi.spyOn/vi.mock), and v8 coverage
 - **jsdom**: Browser environment simulation for WebView testing
-- **sinon**: Test doubles for PTY, VS Code API mocking
-- **nyc**: Istanbul-based coverage reporting with text, HTML, LCOV outputs

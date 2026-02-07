@@ -163,10 +163,7 @@ npm run lint
 # 3. Manual testing
 # Launch VS Code extension and test feature
 
-# 4. Code review
-/coderabbit
-
-# 5. Commit
+# 4. Commit
 git add .
 git commit -m "feat: Add terminal split view support"
 ```
@@ -297,9 +294,6 @@ Combine with other commands for complete workflows:
 ```bash
 # Implement feature
 /terminal-implement Add terminal color theme support
-
-# Review code
-/coderabbit
 
 # Run quality checks
 npm run pre-release:check

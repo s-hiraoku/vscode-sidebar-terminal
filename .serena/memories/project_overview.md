@@ -21,7 +21,7 @@ A powerful VS Code extension that displays a fully-featured terminal in the side
 - **Terminal Emulation**: xterm.js v5.3.0
 - **PTY Management**: @homebridge/node-pty-prebuilt-multiarch
 - **Build System**: Webpack 5
-- **Testing**: Mocha, Chai, Sinon, nyc (Istanbul)
+- **Testing**: Vitest (unit/integration), Mocha (E2E via @vscode/test-electron)
 - **Linting**: ESLint with TypeScript plugin
 - **Formatting**: Prettier
 - **CI/CD**: GitHub Actions

@@ -24,7 +24,7 @@ export function formatTerminalName(id: number, name?: string): string {
 }
 
 // src/test/unit/utils/StringUtils.test.ts
-import { expect } from 'chai';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { formatTerminalName } from '../../../utils/StringUtils';
 
 describe('StringUtils', () => {
@@ -38,7 +38,7 @@ describe('StringUtils', () => {
       const result = formatTerminalName(id, name);
 
       // Assert
-      expect(result).to.equal('1: My Terminal');
+      expect(result).toBe('1: My Terminal');
     });
 
     it('should format without custom name', () => {
@@ -46,7 +46,7 @@ describe('StringUtils', () => {
 
       const result = formatTerminalName(id);
 
-      expect(result).to.equal('Terminal 2');
+      expect(result).toBe('Terminal 2');
     });
 
     it('should handle empty string name', () => {
@@ -55,7 +55,7 @@ describe('StringUtils', () => {
 
       const result = formatTerminalName(id, name);
 
-      expect(result).to.equal('Terminal 3');
+      expect(result).toBe('Terminal 3');
     });
   });
 });
@@ -79,68 +79,68 @@ export class ConfigurationService {
 }
 
 // src/test/unit/services/ConfigurationService.test.ts
-import { expect } from 'chai';
-import * as sinon from 'sinon';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
 import { ConfigurationService } from '../../../services/ConfigurationService';
 
 describe('ConfigurationService', () => {
-  let sandbox: sinon.SinonSandbox;
+
   let mockConfig: any;
   let service: ConfigurationService;
 
   beforeEach(() => {
-    sandbox = sinon.createSandbox();
+
     mockConfig = {
-      get: sandbox.stub()
+      get: vi.fn()
     };
     service = new ConfigurationService(mockConfig);
   });
 
   afterEach(() => {
-    sandbox.restore();
+    vi.restoreAllMocks();
   });
 
   describe('getShell', () => {
     it('should return configured shell', () => {
-      mockConfig.get.withArgs('shell').returns('/bin/zsh');
+      mockConfig.get.mockReturnValue('/bin/zsh');
 
       const result = service.getShell();
 
-      expect(result).to.equal('/bin/zsh');
+      expect(result).toBe('/bin/zsh');
     });
 
     it('should return default shell when not configured', () => {
-      mockConfig.get.withArgs('shell').returns(undefined);
+      mockConfig.get.mockReturnValue(undefined);
 
       const result = service.getShell();
 
-      expect(result).to.equal('/bin/bash');
+      expect(result).toBe('/bin/bash');
     });
   });
 
   describe('getFontSize', () => {
     it('should return configured font size', () => {
-      mockConfig.get.withArgs('fontSize').returns(16);
+      mockConfig.get.mockReturnValue(16);
 
       const result = service.getFontSize();
 
-      expect(result).to.equal(16);
+      expect(result).toBe(16);
     });
 
     it('should return default when size is invalid', () => {
-      mockConfig.get.withArgs('fontSize').returns(0);
+      mockConfig.get.mockReturnValue(0);
 
       const result = service.getFontSize();
 
-      expect(result).to.equal(14);
+      expect(result).toBe(14);
     });
 
     it('should return default when not configured', () => {
-      mockConfig.get.withArgs('fontSize').returns(undefined);
+      mockConfig.get.mockReturnValue(undefined);
 
       const result = service.getFontSize();
 
-      expect(result).to.equal(14);
+      expect(result).toBe(14);
     });
   });
 });
@@ -158,7 +158,7 @@ import { mockVscode } from '../../shared/TestSetup';
 describe('Settings Manager', () => {
   beforeEach(() => {
     // 設定値のモック
-    mockVscode.workspace.getConfiguration.callsFake((section: string) => ({
+    mockVscode.workspace.getConfiguration.mockImplementation((section: string) => ({
       get: (key: string) => {
         if (section === 'secondaryTerminal' && key === 'shell') {
           return '/bin/bash';
@@ -168,15 +168,15 @@ describe('Settings Manager', () => {
         }
         return undefined;
       },
-      update: sinon.stub().resolves(),
+      update: vi.fn().mockResolvedValue(undefined),
       has: (key: string) => true,
-      inspect: sinon.stub()
+      inspect: vi.fn()
     }));
   });
 
   it('should read configuration', () => {
     const config = mockVscode.workspace.getConfiguration('secondaryTerminal');
-    expect(config.get('shell')).to.equal('/bin/bash');
+    expect(config.get('shell')).toBe('/bin/bash');
   });
 });
 ```
@@ -186,21 +186,21 @@ describe('Settings Manager', () => {
 ```typescript
 describe('Extension Activation', () => {
   let mockContext: vscode.ExtensionContext;
-  let sandbox: sinon.SinonSandbox;
+
 
   beforeEach(() => {
-    sandbox = sinon.createSandbox();
+
     mockContext = {
       subscriptions: [],
       globalState: {
-        get: sandbox.stub(),
-        update: sandbox.stub().resolves(),
-        keys: sandbox.stub().returns([])
+        get: vi.fn(),
+        update: vi.fn().mockResolvedValue(undefined),
+        keys: vi.fn().mockReturnValue([])
       },
       workspaceState: {
-        get: sandbox.stub(),
-        update: sandbox.stub().resolves(),
-        keys: sandbox.stub().returns([])
+        get: vi.fn(),
+        update: vi.fn().mockResolvedValue(undefined),
+        keys: vi.fn().mockReturnValue([])
       },
       extensionPath: '/mock/extension/path',
       storagePath: '/mock/storage/path',
@@ -210,13 +210,13 @@ describe('Extension Activation', () => {
   });
 
   afterEach(() => {
-    sandbox.restore();
+    vi.restoreAllMocks();
   });
 
   it('should save data to globalState', async () => {
     await mockContext.globalState.update('key', 'value');
 
-    expect(mockContext.globalState.update).to.have.been.calledWith('key', 'value');
+    expect(mockContext.globalState.update).toHaveBeenCalledWith('key', 'value');
   });
 });
 ```
@@ -241,21 +241,21 @@ export class StorageService {
 
 // テスト
 describe('StorageService', () => {
-  let sandbox: sinon.SinonSandbox;
+
   let mockStorage: any;
   let service: StorageService;
 
   beforeEach(() => {
-    sandbox = sinon.createSandbox();
+
     mockStorage = {
-      get: sandbox.stub(),
-      update: sandbox.stub().resolves()
+      get: vi.fn(),
+      update: vi.fn().mockResolvedValue(undefined)
     };
     service = new StorageService(mockStorage);
   });
 
   afterEach(() => {
-    sandbox.restore();
+    vi.restoreAllMocks();
   });
 
   describe('saveSession', () => {
@@ -264,32 +264,32 @@ describe('StorageService', () => {
 
       await service.saveSession(data);
 
-      expect(mockStorage.update).to.have.been.calledOnceWith('session', data);
+      expect(mockStorage.update).toHaveBeenCalledWith('session', data);
     });
 
     it('should handle save errors', async () => {
-      mockStorage.update.rejects(new Error('Storage error'));
+      mockStorage.update.mockRejectedValue(new Error('Storage error'));
 
-      await expect(service.saveSession({})).to.be.rejectedWith('Storage error');
+      await expect(service.saveSession({})).rejects.toThrow('Storage error');
     });
   });
 
   describe('loadSession', () => {
     it('should load session data', async () => {
       const data = { terminals: [{ id: 1 }] };
-      mockStorage.get.withArgs('session').resolves(data);
+      mockStorage.get.mockResolvedValue(data);
 
       const result = await service.loadSession();
 
-      expect(result).to.deep.equal(data);
+      expect(result).toEqual(data);
     });
 
     it('should return undefined when no data', async () => {
-      mockStorage.get.withArgs('session').resolves(undefined);
+      mockStorage.get.mockResolvedValue(undefined);
 
       const result = await service.loadSession();
 
-      expect(result).to.be.undefined;
+      expect(result).toBeUndefined();
     });
   });
 });
@@ -299,24 +299,22 @@ describe('StorageService', () => {
 
 ```typescript
 describe('Delayed Operations', () => {
-  it('should complete within timeout', async function() {
-    this.timeout(5000); // 5秒
-
+  it('should complete within timeout', async () => {
     const result = await longRunningOperation();
 
-    expect(result).to.be.ok;
-  });
+    expect(result).toBeTruthy();
+  }, 5000); // 5秒タイムアウト
 
   it('should use fake timers for time-based logic', () => {
-    const clock = sinon.useFakeTimers();
+    const clock = vi.useFakeTimers();
 
-    const callback = sinon.spy();
+    const callback = vi.fn();
     setTimeout(callback, 1000);
 
-    clock.tick(1000);
+    vi.advanceTimersByTime(1000);
 
-    expect(callback).to.have.been.calledOnce;
-    clock.restore();
+    expect(callback).toHaveBeenCalledOnce();
+    vi.useRealTimers();
   });
 });
 ```
@@ -350,35 +348,35 @@ describe('TerminalEventService', () => {
   });
 
   it('should emit data events', () => {
-    const listener = sinon.spy();
+    const listener = vi.fn();
 
     service.onData(listener);
     service.emitData('test data');
 
-    expect(listener).to.have.been.calledOnce;
-    expect(listener).to.have.been.calledWith('test data');
+    expect(listener).toHaveBeenCalledOnce();
+    expect(listener).toHaveBeenCalledWith('test data');
   });
 
   it('should handle multiple listeners', () => {
-    const listener1 = sinon.spy();
-    const listener2 = sinon.spy();
+    const listener1 = vi.fn();
+    const listener2 = vi.fn();
 
     service.onData(listener1);
     service.onData(listener2);
     service.emitData('test');
 
-    expect(listener1).to.have.been.calledOnce;
-    expect(listener2).to.have.been.calledOnce;
+    expect(listener1).toHaveBeenCalledOnce();
+    expect(listener2).toHaveBeenCalledOnce();
   });
 
   it('should dispose listeners', () => {
-    const listener = sinon.spy();
+    const listener = vi.fn();
 
     const disposable = service.onData(listener);
     disposable.dispose();
     service.emitData('test');
 
-    expect(listener).to.not.have.been.called;
+    expect(listener).not.toHaveBeenCalled();
   });
 });
 ```
@@ -394,13 +392,13 @@ describe('Error Handling', () => {
   it('should throw error for invalid input', () => {
     expect(() => {
       validateTerminalId(-1);
-    }).to.throw('Invalid terminal ID');
+    }).toThrow('Invalid terminal ID');
   });
 
   it('should throw specific error type', () => {
     expect(() => {
       processData(null);
-    }).to.throw(TypeError, 'Data cannot be null');
+    }).toThrow(TypeError);
   });
 });
 ```
@@ -412,20 +410,18 @@ describe('Async Error Handling', () => {
   it('should reject with error', async () => {
     await expect(
       service.loadInvalidData()
-    ).to.be.rejectedWith('Data not found');
+    ).rejects.toThrow('Data not found');
   });
 
   it('should handle rejection gracefully', async () => {
-    const stub = sinon.stub(service, 'load').rejects(new Error('Load failed'));
+    vi.spyOn(service, 'load').mockRejectedValue(new Error('Load failed'));
 
     try {
       await service.loadWithFallback();
       expect.fail('Should have thrown');
     } catch (error) {
-      expect(error.message).to.include('Load failed');
+      expect((error as Error).message).toContain('Load failed');
     }
-
-    stub.restore();
   });
 });
 ```
@@ -448,7 +444,7 @@ describe('DataProcessor', () => {
     const result = processor.process(input);
 
     // Then: プライベートメソッドの動作も間接的に検証される
-    expect(result).to.equal('PROCESSED: raw data');
+    expect(result).toBe('PROCESSED: raw data');
   });
 });
 ```
@@ -464,7 +460,7 @@ describe('DataProcessor - Internal Logic', () => {
     // 型アサーションでプライベートメソッドにアクセス
     const result = (processor as any).sanitize('  data  ');
 
-    expect(result).to.equal('data');
+    expect(result).toBe('data');
   });
 });
 ```
@@ -509,7 +505,7 @@ describe('TerminalManager', () => {
 
     manager.addTerminal(terminal);
 
-    expect(manager.getTerminal(terminal.id)).to.deep.equal(terminal);
+    expect(manager.getTerminal(terminal.id)).toEqual(terminal);
   });
 });
 ```

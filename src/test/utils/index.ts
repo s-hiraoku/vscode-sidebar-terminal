@@ -15,4 +15,5 @@ export { TerminalTest } from './TerminalTest';
 export * from './test-helpers';
 
 // Re-export commonly used test dependencies
-export { expect } from 'chai';
+// Note: For vitest tests, import { expect } from 'vitest' directly
+export { expect } from 'chai'; // Legacy: used by Mocha-based tests only

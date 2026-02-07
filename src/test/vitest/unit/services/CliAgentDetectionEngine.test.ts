@@ -115,6 +115,20 @@ describe('CliAgentDetectionEngine', () => {
       expect(result.isDetected).toBe(false);
       expect(result.reason).toBe('Detection error');
     });
+
+    it('should detect Claude Code from TUI output with box characters', () => {
+      const tuiLine = '\x1b[32m╭─\x1b[0m Claude Code v2.1.32 \x1b[32m───╮\x1b[0m';
+      const result = engine.detectFromOutput(terminalId, tuiLine);
+      expect(result.isDetected).toBe(true);
+      expect(result.agentType).toBe('claude');
+    });
+
+    it('should detect OpenCode from TUI output', () => {
+      const tuiLine = 'OpenCode Zen';
+      const result = engine.detectFromOutput(terminalId, tuiLine);
+      expect(result.isDetected).toBe(true);
+      expect(result.agentType).toBe('opencode');
+    });
   });
 
   describe('detectTermination', () => {
@@ -136,10 +150,30 @@ describe('CliAgentDetectionEngine', () => {
     });
 
     it('should detect explicit termination pattern', () => {
-      const result = engine.detectTermination(terminalId, 'Goodbye!', 'claude');
+      const result = engine.detectTermination(terminalId, '[Process completed]', 'claude');
       expect(result.isTerminated).toBe(true);
       expect(result.confidence).toBe(1.0);
       expect(result.reason).toBe('Explicit termination pattern');
+    });
+
+    it('should detect Gemini farewell as termination', () => {
+      const result = engine.detectTermination(terminalId, 'Agent powering down. Goodbye!', 'gemini');
+      expect(result.isTerminated).toBe(true);
+      expect(result.confidence).toBe(1.0);
+      expect(result.reason).toBe('Explicit termination pattern');
+    });
+
+    it('should not detect bare exit/quit as termination', () => {
+      const exitResult = engine.detectTermination(terminalId, 'exit', 'claude');
+      expect(exitResult.isTerminated).toBe(false);
+
+      const quitResult = engine.detectTermination(terminalId, 'quit', 'gemini');
+      expect(quitResult.isTerminated).toBe(false);
+    });
+
+    it('should not detect conversational Goodbye as termination', () => {
+      const result = engine.detectTermination(terminalId, 'Goodbye! Have a great day!', 'gemini');
+      expect(result.isTerminated).toBe(false);
     });
 
     it('should detect shell prompt as termination if no recent AI activity', () => {

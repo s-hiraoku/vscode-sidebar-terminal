@@ -1,6 +1,6 @@
 ---
 name: vscode-test-setup
-description: This skill provides comprehensive guidance for setting up and configuring test environments for VS Code extension projects. Use when initializing a new test infrastructure, configuring test runners (Mocha, Jest), setting up CI/CD test pipelines, integrating coverage tools (c8, nyc), or troubleshooting test configuration issues.
+description: This skill provides comprehensive guidance for setting up and configuring test environments for VS Code extension projects. Use when initializing a new test infrastructure, configuring test runners (Vitest), setting up CI/CD test pipelines, integrating coverage tools (v8/c8), or troubleshooting test configuration issues.
 ---
 
 # VS Code Extension Test Environment Setup
@@ -25,21 +25,12 @@ This skill enables rapid and reliable test environment setup for VS Code extensi
 ```bash
 # Core testing dependencies
 npm install --save-dev \
+  vitest \
   @vscode/test-cli \
-  @vscode/test-electron \
-  mocha \
-  chai \
-  sinon \
-  sinon-chai \
-  @types/mocha \
-  @types/chai \
-  @types/sinon
+  @vscode/test-electron
 
-# Coverage tools
-npm install --save-dev c8
-
-# Optional: Additional assertions
-npm install --save-dev chai-as-promised
+# Coverage is built into Vitest (uses v8 or c8 provider)
+# No additional coverage packages needed
 ```
 
 ### Step 2: Create Test Configuration
@@ -53,24 +44,30 @@ python scripts/setup-test-env.py --project-path /path/to/extension
 
 Or manually create the following files:
 
-#### .vscode-test.js
+#### vitest.config.ts
 
-```javascript
-const { defineConfig } = require('@vscode/test-cli');
+```typescript
+import { defineConfig } from 'vitest/config';
 
-module.exports = defineConfig({
-  files: 'out/test/**/*.test.js',
-  version: 'stable',
-  workspaceFolder: './test-fixtures',
-  launchArgs: [
-    '--disable-extensions',
-    '--disable-workspace-trust'
-  ],
-  mocha: {
-    timeout: 20000,
-    ui: 'bdd',
-    color: true,
-    retries: process.env.CI ? 2 : 0
+export default defineConfig({
+  test: {
+    globals: true,
+    environment: 'node',
+    include: ['src/test/unit/**/*.test.ts'],
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.ts'],
+      exclude: ['src/test/**', '**/*.d.ts'],
+      reporter: ['text', 'html', 'lcov'],
+      thresholds: {
+        branches: 80,
+        functions: 80,
+        lines: 80,
+        statements: 80
+      }
+    },
+    testTimeout: 20000,
+    retry: process.env.CI ? 2 : 0
   }
 });
 ```
@@ -81,10 +78,11 @@ module.exports = defineConfig({
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "module": "commonjs",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "outDir": "./out/test",
     "rootDir": "./src",
-    "types": ["mocha", "node", "chai", "sinon"]
+    "types": ["vitest/globals", "node"]
   },
   "include": [
     "src/test/**/*.ts"
@@ -102,10 +100,10 @@ module.exports = defineConfig({
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run compile:test",
     "test": "vscode-test",
-    "test:unit": "mocha out/test/unit/**/*.test.js --timeout 5000",
+    "test:unit": "vitest run",
     "test:integration": "vscode-test",
-    "test:coverage": "c8 npm run test:unit",
-    "test:watch": "mocha out/test/unit/**/*.test.js --watch --timeout 5000",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest --watch",
     "tdd:red": "npm run test:unit -- --grep 'RED:'",
     "tdd:green": "npm run test:unit",
     "tdd:refactor": "npm run lint && npm run test:unit",
@@ -143,41 +141,50 @@ test-fixtures/                   # VS Code test workspace
 
 ## Test Framework Configuration
 
-### Mocha Configuration
+### Vitest Configuration
 
-#### .mocharc.json
+#### vitest.config.ts
 
-```json
-{
-  "require": ["ts-node/register"],
-  "extension": ["ts"],
-  "spec": "src/test/unit/**/*.test.ts",
-  "timeout": 5000,
-  "ui": "bdd",
-  "color": true,
-  "reporter": "spec",
-  "exit": true
-}
+```typescript
+import { defineConfig } from 'vitest/config';
+
+export default defineConfig({
+  test: {
+    globals: true,
+    environment: 'node',
+    include: ['src/test/unit/**/*.test.ts'],
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.ts'],
+      exclude: ['src/test/**', '**/*.d.ts'],
+      reporter: ['text', 'html', 'lcov'],
+      thresholds: {
+        branches: 80,
+        functions: 80,
+        lines: 80,
+        statements: 80
+      }
+    },
+    testTimeout: 20000,
+    retry: process.env.CI ? 2 : 0
+  }
+});
 ```
 
 #### Unit Test Setup (src/test/unit/setup.ts)
 
 ```typescript
-import * as chai from 'chai';
-import * as sinonChai from 'sinon-chai';
+// Vitest provides expect, vi (mocking), and test utilities out of the box.
+// No additional setup libraries (chai, sinon) are needed.
 
-// Configure chai
-chai.use(sinonChai);
-
-// Configure chai-as-promised for async tests
-import chaiAsPromised = require('chai-as-promised');
-chai.use(chaiAsPromised);
-
-export { expect } from 'chai';
-export { default as sinon } from 'sinon';
+export { expect, vi, describe, it, beforeEach, afterEach } from 'vitest';
 ```
 
 #### Integration Test Setup (src/test/integration/setup.ts)
+
+> **Note**: Integration/E2E tests that require the VS Code API still use Mocha
+> via `@vscode/test-electron`, because the VS Code test host expects a Mocha
+> test runner. This section is intentionally kept as-is.
 
 ```typescript
 import * as path from 'path';
@@ -399,10 +406,11 @@ jobs:
         run: npm run tdd:quality-gate
 
       - name: Check coverage thresholds
-        run: npx c8 check-coverage
+        run: vitest run --coverage
+        # Vitest checks thresholds automatically via vitest.config.ts
 
       - name: Generate coverage report
-        run: npx c8 report --reporter=text
+        run: vitest run --coverage --reporter=verbose
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
@@ -444,31 +452,22 @@ jobs:
       "name": "Run Unit Tests",
       "type": "node",
       "request": "launch",
-      "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
-      "args": [
-        "--timeout",
-        "5000",
-        "out/test/unit/**/*.test.js"
-      ],
+      "program": "${workspaceFolder}/node_modules/vitest/vitest.mjs",
+      "args": ["run"],
       "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen",
-      "preLaunchTask": "npm: compile"
+      "internalConsoleOptions": "neverOpen"
     },
     {
       "name": "Debug Current Test File",
       "type": "node",
       "request": "launch",
-      "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+      "program": "${workspaceFolder}/node_modules/vitest/vitest.mjs",
       "args": [
-        "--timeout",
-        "999999",
-        "--grep",
-        "",
-        "${file}"
+        "run",
+        "${relativeFile}"
       ],
       "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen",
-      "preLaunchTask": "npm: compile"
+      "internalConsoleOptions": "neverOpen"
     }
   ]
 }
@@ -582,8 +581,8 @@ export class TestDataFactory {
 
 **Solutions**:
 1. Use `xvfb-run` for Linux headless testing
-2. Increase timeout in mocha config
-3. Add retries for flaky tests
+2. Increase timeout in vitest config (`testTimeout` in `vitest.config.ts`)
+3. Add retries for flaky tests (`retry` in vitest config)
 
 ```yaml
 # GitHub Actions
@@ -594,17 +593,14 @@ export class TestDataFactory {
 
 ### Issue: ES Module import errors
 
-**Symptoms**: `ERR_REQUIRE_ESM` when importing chai or other modules
+**Symptoms**: `ERR_REQUIRE_ESM` or similar ESM/CJS interop errors
 
 **Solutions**:
-1. Use dynamic imports for ESM modules
-2. Pin package versions to CommonJS-compatible versions
-
-```typescript
-// Use dynamic import
-const chai = await import('chai');
-const { expect } = chai;
-```
+Vitest handles ESM natively, so most ESM issues do not apply. If you encounter
+module resolution problems:
+1. Ensure `vitest.config.ts` uses `environment: 'node'`
+2. Check that `tsconfig.test.json` has `"module": "ESNext"` and `"moduleResolution": "bundler"`
+3. For stubbing ESM modules, use `vi.mock()` which supports ESM out of the box
 
 ### Issue: VS Code API not available in unit tests
 
@@ -615,10 +611,14 @@ const { expect } = chai;
 2. Use VS Code API mocks for unit tests
 
 ```typescript
-// jest.config.js
-moduleNameMapper: {
-  '^vscode$': '<rootDir>/src/test/helpers/vscode-mock.ts'
-}
+// vitest.config.ts
+export default defineConfig({
+  test: {
+    alias: {
+      vscode: path.resolve(__dirname, 'src/test/helpers/vscode-mock.ts')
+    }
+  }
+});
 ```
 
 ### Issue: Coverage not tracking TypeScript files
@@ -649,16 +649,16 @@ moduleNameMapper: {
 
 ```typescript
 // Bad
-setTimeout(() => expect(value).to.equal(1), 100);
+setTimeout(() => expect(value).toBe(1), 100);
 
 // Good
 await waitForCondition(() => value === 1);
-expect(value).to.equal(1);
+expect(value).toBe(1);
 ```
 
 ## Resources
 
 For detailed reference documentation, see:
-- `references/framework-comparison.md` - Mocha vs Jest comparison
+- `references/framework-comparison.md` - Framework comparison (Vitest, Mocha, Jest)
 - `references/ci-templates.md` - CI/CD pipeline templates
 - `scripts/setup-test-env.py` - Automated environment setup
