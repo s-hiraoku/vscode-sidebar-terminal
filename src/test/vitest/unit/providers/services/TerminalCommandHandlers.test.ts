@@ -161,6 +161,21 @@ describe('TerminalCommandHandlers', () => {
         expect.objectContaining({ command: 'stateUpdate' })
       );
     });
+
+    it('should handle update terminal header with OFF indicator color', async () => {
+      await handlers.handleUpdateTerminalHeader({
+        command: 'updateTerminalHeader',
+        terminalId: 't1',
+        indicatorColor: 'transparent',
+      } as any);
+
+      expect(mockTerminalManager.updateTerminalHeader).toHaveBeenCalledWith('t1', {
+        indicatorColor: 'transparent',
+      });
+      expect(mockCommService.sendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ command: 'stateUpdate' })
+      );
+    });
   });
 
   describe('Clipboard Commands', () => {

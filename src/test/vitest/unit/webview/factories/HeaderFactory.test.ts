@@ -298,6 +298,30 @@ describe('HeaderFactory', () => {
       expect(onHeaderUpdate).toHaveBeenCalledWith('t1', { indicatorColor: '#FF69B4' });
       expect(elements.container.style.getPropertyValue('--terminal-indicator-color')).toBe('#FF69B4');
     });
+
+    it('should provide OFF option and emit transparent indicator color', () => {
+      const onHeaderUpdate = vi.fn();
+      const elements = HeaderFactory.createTerminalHeader({
+        terminalId: 't1',
+        terminalName: 'Original',
+        onHeaderUpdate,
+      });
+
+      elements.container.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+
+      const offOption = elements.titleSection.querySelector(
+        '[data-indicator-color="transparent"]'
+      ) as HTMLButtonElement | null;
+      expect(offOption).toBeTruthy();
+      expect(offOption?.textContent).toBe('OFF');
+
+      offOption?.click();
+
+      expect(onHeaderUpdate).toHaveBeenCalledWith('t1', { indicatorColor: 'transparent' });
+      expect(elements.container.style.getPropertyValue('--terminal-indicator-color')).toBe(
+        'transparent'
+      );
+    });
   });
 
   describe('Processing Indicator', () => {
@@ -320,7 +344,8 @@ describe('HeaderFactory', () => {
 
     it('should expose agreed color palette including white', () => {
       expect(HEADER_INDICATOR_COLOR_PALETTE).toContain('#FFFFFF');
-      expect(HEADER_INDICATOR_COLOR_PALETTE).toHaveLength(14);
+      expect(HEADER_INDICATOR_COLOR_PALETTE).toContain('transparent');
+      expect(HEADER_INDICATOR_COLOR_PALETTE).toHaveLength(15);
     });
 
     it('should keep processing indicator hidden when header enhancements are disabled', () => {
