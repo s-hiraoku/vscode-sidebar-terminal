@@ -59,6 +59,30 @@ describe('CliAgentPatternRegistry', () => {
       expect(registry.matchStartupOutput('Welcome to OpenCode')).toBeNull();
       expect(registry.matchStartupOutput('OpenCode CLI')).toBeNull();
     });
+
+    it('should match Claude Code version header regardless of version', () => {
+      expect(registry.matchStartupOutput('Claude Code v2.1.32')).toBe('claude');
+      expect(registry.matchStartupOutput('Claude Code v3.0.0')).toBe('claude');
+      expect(registry.matchStartupOutput('Claude Code v99.0.0-beta')).toBe('claude');
+    });
+
+    it('should match Claude Code fixed TUI text', () => {
+      expect(registry.matchStartupOutput('Tips for getting started')).toBe('claude');
+    });
+
+    it('should not match variable user-specific text as Claude startup', () => {
+      // These are variable and should NOT be used as detection patterns
+      expect(registry.matchStartupOutput('Welcome back Hiraoku!')).toBeNull();
+      expect(registry.matchStartupOutput('Opus 4.6 · Claude Max')).toBeNull();
+    });
+
+    it('should match OpenCode Zen mode text', () => {
+      expect(registry.matchStartupOutput('OpenCode Zen')).toBe('opencode');
+    });
+
+    it('should match OpenCode Base mode text', () => {
+      expect(registry.matchStartupOutput('OpenCode Base')).toBe('opencode');
+    });
   });
 
   describe('isAgentActivity', () => {

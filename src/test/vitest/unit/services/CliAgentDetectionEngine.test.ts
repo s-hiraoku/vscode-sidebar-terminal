@@ -115,6 +115,20 @@ describe('CliAgentDetectionEngine', () => {
       expect(result.isDetected).toBe(false);
       expect(result.reason).toBe('Detection error');
     });
+
+    it('should detect Claude Code from TUI output with box characters', () => {
+      const tuiLine = '\x1b[32m╭─\x1b[0m Claude Code v2.1.32 \x1b[32m───╮\x1b[0m';
+      const result = engine.detectFromOutput(terminalId, tuiLine);
+      expect(result.isDetected).toBe(true);
+      expect(result.agentType).toBe('claude');
+    });
+
+    it('should detect OpenCode from TUI output', () => {
+      const tuiLine = 'OpenCode Zen';
+      const result = engine.detectFromOutput(terminalId, tuiLine);
+      expect(result.isDetected).toBe(true);
+      expect(result.agentType).toBe('opencode');
+    });
   });
 
   describe('detectTermination', () => {

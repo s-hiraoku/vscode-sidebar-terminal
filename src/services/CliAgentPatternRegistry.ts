@@ -78,8 +78,10 @@ export class CliAgentPatternRegistry {
     patterns.set('claude', {
       type: 'claude',
       commandPrefixes: ['claude ', 'claude'],
-      startupPatterns: ['Welcome to Claude Code!'],
-      startupRegexPatterns: [/Claude\s+Code/],
+      startupPatterns: ['Welcome to Claude Code!', 'Tips for getting started'],
+      startupRegexPatterns: [
+        /Claude\s+Code/,
+      ],
       activityKeywords: ['claude', 'anthropic'],
       terminationPatterns: ['[Process completed]'],
       terminationRegexPatterns: [/\[Process completed\]/i, /\[process exited with code \d+\]/i],
@@ -149,6 +151,10 @@ export class CliAgentPatternRegistry {
     patterns.set('opencode', {
       type: 'opencode',
       commandPrefixes: ['opencode ', 'opencode'],
+      startupPatterns: [],
+      startupRegexPatterns: [
+        /OpenCode\s+(?:Zen|Base)/i,
+      ],
       activityKeywords: ['opencode', 'open code'],
       terminationPatterns: [],
       terminationRegexPatterns: [/\[process exited with code \d+\]/i],
