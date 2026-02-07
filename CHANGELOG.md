@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.14] - 2026-02-07
+
+### Fixed
+
+- **AI Agent Termination Detection**: Replaced generic termination patterns with agent-specific detection (#432)
+  - Removed false-positive-prone patterns (`exit`, `quit`, `goodbye`, `session ended`, etc.)
+  - Added precise patterns: `[Process completed]` (Claude), `Agent powering down. Goodbye!` (Gemini), `[process exited with code N]` (all agents), `command not found: <agent>` (all agents)
+  - Removed overly broad crash indicators (`killed`, `abort`, `exception`, `signal`)
+
+- **AI Agent Startup Detection**: Improved Claude Code and OpenCode recognition on launch
+  - Added stable TUI text pattern `Tips for getting started` for Claude Code detection
+  - Added `OpenCode Zen` / `OpenCode Base` startup patterns for OpenCode detection
+  - Expanded Unicode box drawing character removal (U+2500-U+257F) for TUI output cleaning
+  - Removed variable text patterns (user names, model names) that caused inconsistent detection
+
+- **Header Indicator OFF Support**: Added OFF option in terminal header color palette (#431)
+  - Users can now disable the terminal indicator via the color palette (transparent color)
+  - Improved color input validation and normalization consistency
+
+### Changed
+
+- **Code Quality**: Critical code quality improvements and performance optimization (#430)
+
+- **Documentation**: Migrated all testing documentation from Mocha/Chai/Sinon to Vitest
+  - Updated test patterns, assertions, and mock APIs across all documentation files
+  - Fixed inconsistent test file paths and outdated test count metrics (275+ → 3,900+)
+  - Renamed `mocha-guide.md` to `vitest-guide.md` with accurate Vitest content
+
+### Dependencies
+
+- Updated `typedoc-plugin-markdown` to v4.10.0 (#429)
+- Updated `@playwright/test` to v1.58.2 (#428)
+
 ## [0.2.13]
 
 ### Added
