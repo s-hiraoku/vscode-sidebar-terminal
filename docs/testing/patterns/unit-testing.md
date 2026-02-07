@@ -24,7 +24,7 @@ export function formatTerminalName(id: number, name?: string): string {
 }
 
 // src/test/unit/utils/StringUtils.test.ts
-import { expect } from 'chai';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { formatTerminalName } from '../../../utils/StringUtils';
 
 describe('StringUtils', () => {
@@ -79,25 +79,25 @@ export class ConfigurationService {
 }
 
 // src/test/unit/services/ConfigurationService.test.ts
-import { expect } from 'chai';
-import * as sinon from 'sinon';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
 import { ConfigurationService } from '../../../services/ConfigurationService';
 
 describe('ConfigurationService', () => {
-  let sandbox: sinon.SinonSandbox;
+
   let mockConfig: any;
   let service: ConfigurationService;
 
   beforeEach(() => {
-    sandbox = sinon.createSandbox();
+
     mockConfig = {
-      get: sandbox.stub()
+      get: vi.fn()
     };
     service = new ConfigurationService(mockConfig);
   });
 
   afterEach(() => {
-    sandbox.restore();
+    vi.restoreAllMocks();
   });
 
   describe('getShell', () => {
@@ -168,9 +168,9 @@ describe('Settings Manager', () => {
         }
         return undefined;
       },
-      update: sinon.stub().resolves(),
+      update: vi.fn().mockResolvedValue(undefined),
       has: (key: string) => true,
-      inspect: sinon.stub()
+      inspect: vi.fn()
     }));
   });
 
@@ -186,21 +186,21 @@ describe('Settings Manager', () => {
 ```typescript
 describe('Extension Activation', () => {
   let mockContext: vscode.ExtensionContext;
-  let sandbox: sinon.SinonSandbox;
+
 
   beforeEach(() => {
-    sandbox = sinon.createSandbox();
+
     mockContext = {
       subscriptions: [],
       globalState: {
-        get: sandbox.stub(),
-        update: sandbox.stub().resolves(),
-        keys: sandbox.stub().returns([])
+        get: vi.fn(),
+        update: vi.fn().mockResolvedValue(undefined),
+        keys: vi.fn().mockReturnValue([])
       },
       workspaceState: {
-        get: sandbox.stub(),
-        update: sandbox.stub().resolves(),
-        keys: sandbox.stub().returns([])
+        get: vi.fn(),
+        update: vi.fn().mockResolvedValue(undefined),
+        keys: vi.fn().mockReturnValue([])
       },
       extensionPath: '/mock/extension/path',
       storagePath: '/mock/storage/path',
@@ -210,7 +210,7 @@ describe('Extension Activation', () => {
   });
 
   afterEach(() => {
-    sandbox.restore();
+    vi.restoreAllMocks();
   });
 
   it('should save data to globalState', async () => {
@@ -241,21 +241,21 @@ export class StorageService {
 
 // テスト
 describe('StorageService', () => {
-  let sandbox: sinon.SinonSandbox;
+
   let mockStorage: any;
   let service: StorageService;
 
   beforeEach(() => {
-    sandbox = sinon.createSandbox();
+
     mockStorage = {
-      get: sandbox.stub(),
-      update: sandbox.stub().resolves()
+      get: vi.fn(),
+      update: vi.fn().mockResolvedValue(undefined)
     };
     service = new StorageService(mockStorage);
   });
 
   afterEach(() => {
-    sandbox.restore();
+    vi.restoreAllMocks();
   });
 
   describe('saveSession', () => {
@@ -308,15 +308,15 @@ describe('Delayed Operations', () => {
   });
 
   it('should use fake timers for time-based logic', () => {
-    const clock = sinon.useFakeTimers();
+    const clock = vi.useFakeTimers();
 
-    const callback = sinon.spy();
+    const callback = vi.fn();
     setTimeout(callback, 1000);
 
-    clock.tick(1000);
+    vi.advanceTimersByTime(1000);
 
-    expect(callback).to.have.been.calledOnce;
-    clock.restore();
+    expect(callback).toHaveBeenCalledOnce();
+    vi.useRealTimers();
   });
 });
 ```
@@ -350,7 +350,7 @@ describe('TerminalEventService', () => {
   });
 
   it('should emit data events', () => {
-    const listener = sinon.spy();
+    const listener = vi.fn();
 
     service.onData(listener);
     service.emitData('test data');
@@ -360,8 +360,8 @@ describe('TerminalEventService', () => {
   });
 
   it('should handle multiple listeners', () => {
-    const listener1 = sinon.spy();
-    const listener2 = sinon.spy();
+    const listener1 = vi.fn();
+    const listener2 = vi.fn();
 
     service.onData(listener1);
     service.onData(listener2);
@@ -372,7 +372,7 @@ describe('TerminalEventService', () => {
   });
 
   it('should dispose listeners', () => {
-    const listener = sinon.spy();
+    const listener = vi.fn();
 
     const disposable = service.onData(listener);
     disposable.dispose();
@@ -416,16 +416,14 @@ describe('Async Error Handling', () => {
   });
 
   it('should handle rejection gracefully', async () => {
-    const stub = sinon.stub(service, 'load').rejects(new Error('Load failed'));
+    vi.spyOn(service, 'load').mockRejectedValue(new Error('Load failed'));
 
     try {
       await service.loadWithFallback();
       expect.fail('Should have thrown');
     } catch (error) {
-      expect(error.message).to.include('Load failed');
+      expect((error as Error).message).toContain('Load failed');
     }
-
-    stub.restore();
   });
 });
 ```

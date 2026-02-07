@@ -1,10 +1,10 @@
-# Mocha テストフレームワークガイド
+# Vitest テストフレームワークガイド
 
-MochaはJavaScriptのテストフレームワークで、VS Code Sidebar Terminal拡張機能のテスト実行に使用しています。このガイドでは、Mochaの設定、使用方法、高度な機能を説明します。
+VitestはViteベースの高速テストフレームワークで、VS Code Sidebar Terminal拡張機能のテスト実行に使用しています。このガイドでは、Vitestの設定、使用方法、高度な機能を説明します。
 
 ## 目次
 
-- [Mochaとは](#mochaとは)
+- [Vitestとは](#vitestとは)
 - [基本設定](#基本設定)
 - [テスト構造](#テスト構造)
 - [フック（Hooks）](#フックhooks)
@@ -15,22 +15,22 @@ MochaはJavaScriptのテストフレームワークで、VS Code Sidebar Termina
 
 ---
 
-## Mochaとは
+## Vitestとは
 
 ### 特徴
 
-- **柔軟性**: 様々なアサーションライブラリと組み合わせ可能
-- **非同期サポート**: Promise、async/await、コールバックに対応
-- **並列実行**: テストを並列実行して高速化
-- **豊富なレポーター**: テスト結果を様々な形式で出力
+- **高速**: Viteベースのホットモジュールリプレースメント（HMR）により高速実行
+- **TypeScriptネイティブ**: TypeScriptをそのまま実行可能（コンパイル不要）
+- **Jest互換**: Jest互換APIで移行が容易
+- **インラインモック**: `vi.fn()`, `vi.spyOn()`, `vi.mock()` による強力なモック機能
 
-### 代替フレームワークとの比較
+### フレームワーク比較
 
 | フレームワーク | 特徴 | VS Code拡張での使用 |
 |--------------|------|-------------------|
-| Mocha | 柔軟、成熟 | ✅ 推奨 |
-| Jest | オールインワン | ❌ VS Code APIと相性悪い |
-| Vitest | 高速、モダン | ⚠️ 実験的 |
+| Vitest | 高速、TypeScriptネイティブ | ✅ 推奨 |
+| Jest | オールインワン | ⚠️ ESM対応に課題 |
+| Mocha | 柔軟、成熟 | ⚠️ レガシー |
 | Jasmine | 古典的 | ⚠️ 機能が限定的 |
 
 ---
@@ -40,44 +40,40 @@ MochaはJavaScriptのテストフレームワークで、VS Code Sidebar Termina
 ### インストール
 
 ```bash
-npm install --save-dev mocha @types/mocha
+npm install --save-dev vitest
 ```
 
-### 設定ファイル: .mocharc.json
+### 設定ファイル: vitest.config.ts
 
-```json
-{
-  "require": [
-    "source-map-support/register",
-    "out/test/shared/TestSetup.js"
-  ],
-  "timeout": 10000,
-  "recursive": true,
-  "reporter": "spec",
-  "ui": "bdd",
-  "spec": [
-    "out/test/unit/**/*.test.js",
-    "out/test/integration/**/*.test.js"
-  ],
-  "parallel": false,
-  "jobs": 4,
-  "retries": 0
-}
+```typescript
+import { defineConfig } from 'vitest/config';
+
+export default defineConfig({
+  test: {
+    include: ['src/test/vitest/**/*.test.ts'],
+    globals: false,
+    environment: 'node',
+    testTimeout: 10000,
+    hookTimeout: 10000,
+    reporters: ['verbose'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html', 'lcov'],
+    },
+  },
+});
 ```
 
 ### 設定オプションの詳細
 
 | オプション | 説明 | 推奨値 |
 |-----------|------|--------|
-| `require` | テスト実行前にロードするモジュール | TestSetup.js |
-| `timeout` | デフォルトタイムアウト（ms） | 10000 |
-| `recursive` | サブディレクトリを再帰的に検索 | true |
-| `reporter` | レポーターの種類 | spec |
-| `ui` | テストインターフェース | bdd |
-| `spec` | テストファイルのパターン | *.test.js |
-| `parallel` | 並列実行の有効化 | false（デフォルト） |
-| `jobs` | 並列実行時のワーカー数 | 4 |
-| `retries` | 失敗時のリトライ回数 | 0 |
+| `include` | テストファイルのパターン | `['src/test/vitest/**/*.test.ts']` |
+| `globals` | グローバルAPIの有効化 | false（明示的importを推奨） |
+| `environment` | テスト環境 | node |
+| `testTimeout` | テストのタイムアウト（ms） | 10000 |
+| `reporters` | レポーターの種類 | verbose |
+| `coverage.provider` | カバレッジプロバイダー | v8 |
 
 ---
 
@@ -86,6 +82,8 @@ npm install --save-dev mocha @types/mocha
 ### BDD スタイル（推奨）
 
 ```typescript
+import { describe, it, expect } from 'vitest';
+
 describe('Feature Name', () => {
   describe('Specific Behavior', () => {
     it('should do something', () => {
@@ -105,25 +103,11 @@ describe('Feature Name', () => {
 });
 ```
 
-### TDD スタイル
-
-```typescript
-suite('Feature Name', () => {
-  test('does something', () => {
-    // テストコード
-  });
-
-  test('handles edge case', () => {
-    // テストコード
-  });
-});
-```
-
-**注**: このプロジェクトではBDDスタイルを使用します。
-
 ### describeのネスト
 
 ```typescript
+import { describe, it, expect } from 'vitest';
+
 describe('TerminalManager', () => {
   describe('Constructor', () => {
     it('should initialize with default settings', () => {});
@@ -150,14 +134,16 @@ describe('TerminalManager', () => {
 ### 基本的なフック
 
 ```typescript
+import { describe, it, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
+
 describe('Test Suite', () => {
   // すべてのテスト前に1回だけ実行
-  before(() => {
+  beforeAll(() => {
     console.log('Setting up test suite');
   });
 
   // すべてのテスト後に1回だけ実行
-  after(() => {
+  afterAll(() => {
     console.log('Cleaning up test suite');
   });
 
@@ -179,27 +165,27 @@ describe('Test Suite', () => {
 ### 実行順序
 
 ```text
-before
+beforeAll
   beforeEach
     test 1
   afterEach
   beforeEach
     test 2
   afterEach
-after
+afterAll
 ```
 
 ### 非同期フック
 
 ```typescript
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+
 describe('Async Hooks', () => {
-  before(async () => {
-    // 非同期セットアップ
+  beforeAll(async () => {
     await setupDatabase();
   });
 
-  after(async () => {
-    // 非同期クリーンアップ
+  afterAll(async () => {
     await teardownDatabase();
   });
 
@@ -209,28 +195,10 @@ describe('Async Hooks', () => {
 
   it('test with async setup', async () => {
     const result = await getData();
-    expect(result).to.exist;
+    expect(result).toBeDefined();
   });
 });
 ```
-
-### フックの名前付け
-
-```typescript
-describe('Named Hooks', () => {
-  before('database setup', async () => {
-    await setupDatabase();
-  });
-
-  after('database cleanup', async () => {
-    await teardownDatabase();
-  });
-
-  it('should query database', () => {});
-});
-```
-
-エラー時に `before "database setup"` のように表示されるため、デバッグが容易になります。
 
 ---
 
@@ -241,7 +209,7 @@ describe('Named Hooks', () => {
 ```typescript
 it('should handle async operation', async () => {
   const result = await asyncOperation();
-  expect(result).to.equal('expected');
+  expect(result).toBe('expected');
 });
 ```
 
@@ -250,19 +218,7 @@ it('should handle async operation', async () => {
 ```typescript
 it('should handle promise', () => {
   return asyncOperation().then(result => {
-    expect(result).to.equal('expected');
-  });
-});
-```
-
-### done コールバック（非推奨）
-
-```typescript
-it('should handle callback', (done) => {
-  asyncOperation((err, result) => {
-    if (err) return done(err);
-    expect(result).to.equal('expected');
-    done();
+    expect(result).toBe('expected');
   });
 });
 ```
@@ -270,26 +226,12 @@ it('should handle callback', (done) => {
 ### タイムアウトの設定
 
 ```typescript
-// テストスイート全体
-describe('Slow Tests', function() {
-  this.timeout(5000); // 5秒
-
-  it('test 1', async () => {
-    await slowOperation();
-  });
-});
-
 // 個別のテスト
-it('slow test', async function() {
-  this.timeout(10000); // 10秒
-  await verySlowOperation();
-});
+it('slow test', async () => {
+  await slowOperation();
+}, 10000); // 10秒タイムアウト
 
-// タイムアウトを無効化（非推奨）
-it('no timeout', async function() {
-  this.timeout(0);
-  await infiniteOperation();
-});
+// テストスイート全体（vitest.config.ts で設定）
 ```
 
 ---
@@ -298,65 +240,36 @@ it('no timeout', async function() {
 
 ### 並列実行の有効化
 
-```json
-// .mocharc.parallel.json
-{
-  "parallel": true,
-  "jobs": 4,
-  "retries": 1
-}
-```
-
-```bash
-# 並列実行
-npx mocha --config .mocharc.parallel.json
-```
-
-### 並列実行時の注意点
+Vitestはデフォルトでファイル単位の並列実行を行います。
 
 ```typescript
-describe('Parallel Safe Tests', () => {
-  let localState: any;
-
-  beforeEach(() => {
-    // 各テストで独立した状態を作成
-    localState = createFreshState();
+// 同一ファイル内での並列実行
+describe.concurrent('Parallel Tests', () => {
+  it('test 1', async () => {
+    await someAsyncWork();
   });
 
-  afterEach(() => {
-    // 確実にクリーンアップ
-    localState.dispose();
-  });
-
-  it('test 1', () => {
-    // localStateを使用
-  });
-
-  it('test 2', () => {
-    // 別のlocalStateを使用（並列実行でも安全）
+  it('test 2', async () => {
+    await otherAsyncWork();
   });
 });
 ```
 
-### 並列実行を無効化する場合
+### 逐次実行が必要な場合
 
 ```typescript
 describe('Sequential Tests', () => {
-  // このテストスイートは並列実行しない
-  describe.serial('Database Tests', () => {
-    it('test 1', async () => {
-      await database.write('key', 'value');
-    });
+  // describe.sequential で順序を保証
+  it('test 1', async () => {
+    await database.write('key', 'value');
+  });
 
-    it('test 2', async () => {
-      const value = await database.read('key');
-      expect(value).to.equal('value');
-    });
+  it('test 2', async () => {
+    const value = await database.read('key');
+    expect(value).toBe('value');
   });
 });
 ```
-
-**注**: Mocha 10+ では `describe.serial` は非推奨です。代わりに別の設定ファイルを使用してください。
 
 ---
 
@@ -365,79 +278,81 @@ describe('Sequential Tests', () => {
 ### 組み込みレポーター
 
 ```bash
-# Spec（デフォルト、詳細な出力）
-npx mocha --reporter spec
+# Verbose（詳細な出力）
+npx vitest --reporter=verbose
 
-# Dot（簡潔な出力）
-npx mocha --reporter dot
-
-# TAP（Test Anything Protocol）
-npx mocha --reporter tap
+# Default（簡潔な出力）
+npx vitest
 
 # JSON（機械可読）
-npx mocha --reporter json > results.json
+npx vitest --reporter=json > results.json
 
-# HTML（ブラウザで表示）
-npx mocha --reporter html > results.html
+# JUnit（CI/CD向け）
+npx vitest --reporter=junit > results.xml
 ```
 
-### レポーターの比較
+### vitest.config.ts での設定
 
-**spec レポーター（推奨）**:
-```text
-  TerminalManager
-    createTerminal
-      ✓ should create terminal with default settings
-      ✓ should create terminal with custom settings
-    deleteTerminal
-      ✓ should delete terminal by ID
-      ✓ should throw error for invalid ID
-
-  4 passing (125ms)
+```typescript
+export default defineConfig({
+  test: {
+    reporters: ['verbose'],
+    // 複数のレポーターを同時使用
+    // reporters: ['verbose', 'json'],
+  },
+});
 ```
 
-**dot レポーター**:
-```text
-  ....
+---
 
-  4 passing (125ms)
-```
+## モック
 
-**tap レポーター**:
-```text
-1..4
-ok 1 TerminalManager createTerminal should create terminal with default settings
-ok 2 TerminalManager createTerminal should create terminal with custom settings
-ok 3 TerminalManager deleteTerminal should delete terminal by ID
-ok 4 TerminalManager deleteTerminal should throw error for invalid ID
-```
+### 関数モック
 
-### カスタムレポーター
+```typescript
+import { vi, describe, it, expect } from 'vitest';
 
-```javascript
-// reporters/custom-reporter.js
-module.exports = MyReporter;
-
-function MyReporter(runner) {
-  const stats = runner.stats;
-
-  runner.on('pass', (test) => {
-    console.log(`✓ ${test.fullTitle()}`);
+describe('Mocking', () => {
+  it('should mock a function', () => {
+    const mockFn = vi.fn().mockReturnValue('mocked');
+    expect(mockFn()).toBe('mocked');
+    expect(mockFn).toHaveBeenCalledTimes(1);
   });
-
-  runner.on('fail', (test, err) => {
-    console.log(`✗ ${test.fullTitle()}`);
-    console.log(`  Error: ${err.message}`);
-  });
-
-  runner.on('end', () => {
-    console.log(`${stats.passes}/${stats.tests} passed`);
-  });
-}
+});
 ```
 
-```bash
-npx mocha --reporter ./reporters/custom-reporter.js
+### スパイ
+
+```typescript
+import { vi, describe, it, expect } from 'vitest';
+
+describe('Spying', () => {
+  it('should spy on a method', () => {
+    const obj = { method: () => 'original' };
+    const spy = vi.spyOn(obj, 'method').mockReturnValue('mocked');
+
+    expect(obj.method()).toBe('mocked');
+    expect(spy).toHaveBeenCalled();
+
+    spy.mockRestore();
+  });
+});
+```
+
+### モジュールモック
+
+```typescript
+import { vi, describe, it, expect } from 'vitest';
+
+vi.mock('../../src/module', () => ({
+  someFunction: vi.fn().mockReturnValue('mocked'),
+}));
+
+describe('Module Mocking', () => {
+  it('should use mocked module', () => {
+    // モックされたモジュールが使われる
+  });
+});
 ```
 
 ---
@@ -450,7 +365,6 @@ npx mocha --reporter ./reporters/custom-reporter.js
 describe('Test Suite', () => {
   it.only('this test will run', () => {});
   it('this test will be skipped', () => {});
-  it('this test will also be skipped', () => {});
 });
 ```
 
@@ -462,77 +376,31 @@ describe('Test Suite', () => {
 describe('Test Suite', () => {
   it('this test will run', () => {});
   it.skip('this test will be skipped', () => {});
-  it('this test will also run', () => {});
+});
+```
+
+### .todo() - 未実装テストのマーク
+
+```typescript
+describe('Test Suite', () => {
+  it.todo('should implement this later');
 });
 ```
 
 ### 条件付きテスト
 
 ```typescript
-const itOnWindows = process.platform === 'win32' ? it : it.skip;
-const itOnUnix = process.platform !== 'win32' ? it : it.skip;
+import { it, describe } from 'vitest';
 
 describe('Platform-specific Tests', () => {
-  itOnWindows('should work on Windows', () => {
-    // Windows専用のテスト
-  });
-
-  itOnUnix('should work on Unix', () => {
-    // Unix専用のテスト
-  });
+  it.skipIf(process.platform !== 'win32')('should work on Windows', () => {});
+  it.skipIf(process.platform === 'win32')('should work on Unix', () => {});
 });
 ```
-
----
-
-## リトライ設定
-
-### グローバルリトライ
-
-```json
-// .mocharc.json
-{
-  "retries": 2
-}
-```
-
-### テストスイートごとのリトライ
-
-```typescript
-describe('Flaky Tests', function() {
-  this.retries(3); // 失敗時に3回リトライ
-
-  it('might fail occasionally', () => {
-    // 不安定なテスト
-  });
-});
-```
-
-### 個別テストのリトライ
-
-```typescript
-it('specific flaky test', function() {
-  this.retries(5);
-
-  // テストコード
-});
-```
-
-**注意**: リトライは最終手段です。不安定なテストの根本原因を修正することが重要です。
 
 ---
 
 ## デバッグ
-
-### デバッグモードで実行
-
-```bash
-# Node.jsのデバッガーを使用
-node --inspect-brk ./node_modules/.bin/mocha 'out/test/**/*.test.js'
-
-# Chrome DevToolsでデバッグ
-# chrome://inspect にアクセスしてデバッグ
-```
 
 ### VS Code でのデバッグ
 
@@ -544,14 +412,9 @@ node --inspect-brk ./node_modules/.bin/mocha 'out/test/**/*.test.js'
     {
       "type": "node",
       "request": "launch",
-      "name": "Mocha Tests",
-      "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
-      "args": [
-        "--require", "out/test/shared/TestSetup.js",
-        "--timeout", "999999",
-        "--colors",
-        "${workspaceFolder}/out/test/unit/**/*.test.js"
-      ],
+      "name": "Vitest Tests",
+      "program": "${workspaceFolder}/node_modules/vitest/vitest.mjs",
+      "args": ["run", "--reporter=verbose"],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen"
     }
@@ -559,70 +422,48 @@ node --inspect-brk ./node_modules/.bin/mocha 'out/test/**/*.test.js'
 }
 ```
 
-### デバッグログの出力
+### コマンドラインデバッグ
 
-```typescript
-describe('Debug Tests', () => {
-  it('should log debug info', () => {
-    console.log('Debug: Variable value is', someVariable);
+```bash
+# UIモード（ブラウザで確認）
+npx vitest --ui
 
-    // またはブレークポイントを使用
-    debugger;
-
-    expect(someVariable).to.equal('expected');
-  });
-});
+# 特定ファイルのみ実行
+npx vitest run src/test/vitest/unit/specific-file.test.ts
 ```
 
 ---
 
 ## トラブルシューティング
 
-### Exit Code 7 エラー
-
-**症状**:
-```text
-Error: Process completed with exit code 7
-```
-
-**原因**: グローバルリソースのクリーンアップ処理の問題
-
-**解決方法**:
-1. すべてのテストで適切なクリーンアップを実施
-2. `afterEach` でリソースを確実に解放
-3. [トラブルシューティングガイド](../troubleshooting.md#mocha-exit-code-7問題) を参照
-
 ### タイムアウトエラー
 
 **症状**:
 ```text
-Error: Timeout of 2000ms exceeded
+Error: Test timed out in 5000ms
 ```
 
 **解決方法**:
 ```typescript
-// タイムアウトを延長
-it('slow test', async function() {
-  this.timeout(10000); // 10秒
+it('slow test', async () => {
   await slowOperation();
-});
+}, 10000); // タイムアウトを延長
 ```
 
 ### テストが見つからない
 
 **症状**:
 ```text
-Warning: Could not find any test files
+No test files found
 ```
 
 **解決方法**:
-1. `.mocharc.json` の `spec` パターンを確認
-2. テストファイルがコンパイルされているか確認
-3. ファイル名が `*.test.js` で終わっているか確認
+1. `vitest.config.ts` の `include` パターンを確認
+2. ファイル名が `*.test.ts` で終わっているか確認
 
 ```bash
-# テストファイルの存在確認
-ls -la out/test/unit/**/*.test.js
+# テストファイルの一覧確認
+npx vitest --list
 ```
 
 ---
@@ -635,15 +476,14 @@ ls -la out/test/unit/**/*.test.js
 - 明確なテスト名を付ける
 - beforeEach/afterEach でクリーンアップ
 - 非同期テストは async/await を使用
-- 適切なタイムアウトを設定
+- `vi.restoreAllMocks()` でモックを確実にリセット
 
 ### ❌ Don't
 
 - .only() をコミットしない
-- タイムアウトを0に設定しない
 - グローバル状態に依存しない
-- リトライに頼りすぎない
 - 不安定なテストを放置しない
+- モックのクリーンアップを忘れない
 
 ---
 
@@ -652,13 +492,11 @@ ls -la out/test/unit/**/*.test.js
 ```json
 {
   "scripts": {
-    "test": "mocha",
-    "test:unit": "mocha 'out/test/unit/**/*.test.js'",
-    "test:integration": "mocha 'out/test/integration/**/*.test.js' --timeout 30000",
-    "test:watch": "mocha --watch 'out/test/**/*.test.js'",
-    "test:debug": "mocha --inspect-brk 'out/test/**/*.test.js'",
-    "test:parallel": "mocha --config .mocharc.parallel.json",
-    "test:coverage": "nyc mocha"
+    "test": "vitest run",
+    "test:unit": "vitest run src/test/vitest/unit",
+    "test:watch": "vitest watch",
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui"
   }
 }
 ```
@@ -667,11 +505,11 @@ ls -la out/test/unit/**/*.test.js
 
 ## 参考リンク
 
-- [Mocha公式ドキュメント](https://mochajs.org/)
-- [Mocha GitHub](https://github.com/mochajs/mocha)
+- [Vitest公式ドキュメント](https://vitest.dev/)
+- [Vitest GitHub](https://github.com/vitest-dev/vitest)
 - [トラブルシューティング](../troubleshooting.md)
 - [ベストプラクティス](../best-practices.md)
 
 ---
 
-**最終更新**: 2025-11-08
+**最終更新**: 2026-02-07

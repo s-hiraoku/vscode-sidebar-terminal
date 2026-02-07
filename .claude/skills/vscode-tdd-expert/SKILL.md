@@ -69,33 +69,29 @@ npm run tdd:quality-gate
   "devDependencies": {
     "@vscode/test-cli": "^0.0.10",
     "@vscode/test-electron": "^2.4.1",
-    "mocha": "^10.7.3",
-    "chai": "^5.1.2",
-    "sinon": "^19.0.2",
-    "sinon-chai": "^4.0.0",
-    "@types/mocha": "^10.0.9",
-    "@types/chai": "^5.0.1",
-    "@types/sinon": "^17.0.3",
-    "c8": "^10.1.2"
+    "vitest": "^3.0.0",
+    "@vitest/coverage-v8": "^3.0.0"
   }
 }
 ```
 
-### Test Configuration (.vscode-test.js)
+### Test Configuration (vitest.config.ts)
 
-```javascript
-const { defineConfig } = require('@vscode/test-cli');
+```typescript
+import { defineConfig } from 'vitest/config';
 
-module.exports = defineConfig({
-  files: 'out/test/**/*.test.js',
-  version: 'stable',
-  workspaceFolder: './test-fixtures',
-  launchArgs: ['--disable-extensions'],
-  mocha: {
-    timeout: 20000,
-    ui: 'bdd',
-    color: true
-  }
+export default defineConfig({
+  test: {
+    include: ['src/test/**/*.test.ts'],
+    globals: true,
+    testTimeout: 20000,
+    environment: 'node',
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.ts'],
+      exclude: ['src/test/**', '**/*.d.ts'],
+    },
+  },
 });
 ```
 
@@ -126,30 +122,23 @@ src/
 ### 1. Command Testing
 
 ```typescript
-import * as assert from 'assert';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as vscode from 'vscode';
-import * as sinon from 'sinon';
 
-suite('Command Tests', () => {
-  let sandbox: sinon.SinonSandbox;
-
-  setup(() => {
-    sandbox = sinon.createSandbox();
+describe('Command Tests', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
-  teardown(() => {
-    sandbox.restore();
-  });
-
-  test('RED: createTerminal command should create new terminal', async () => {
+  it('RED: createTerminal command should create new terminal', async () => {
     // Arrange - Setup expectations
-    const createTerminalSpy = sandbox.spy(vscode.window, 'createTerminal');
+    const createTerminalSpy = vi.spyOn(vscode.window, 'createTerminal');
 
     // Act - Execute command
     await vscode.commands.executeCommand('extension.createTerminal');
 
     // Assert - Verify behavior
-    assert.strictEqual(createTerminalSpy.calledOnce, true);
+    expect(createTerminalSpy).toHaveBeenCalledOnce();
   });
 });
 ```
@@ -157,33 +146,38 @@ suite('Command Tests', () => {
 ### 2. WebView Testing
 
 ```typescript
-import { expect } from 'chai';
-import * as sinon from 'sinon';
+import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
 import { WebviewPanel } from 'vscode';
 import { MyWebviewProvider } from '../../webview/MyWebviewProvider';
 
-suite('WebView Provider Tests', () => {
-  let sandbox: sinon.SinonSandbox;
-  let mockPanel: sinon.SinonStubbedInstance<WebviewPanel>;
+describe('WebView Provider Tests', () => {
+  let mockPanel: {
+    webview: {
+      html: string;
+      postMessage: Mock;
+      onDidReceiveMessage: Mock;
+    };
+    onDidDispose: Mock;
+    dispose: Mock;
+  };
 
-  setup(() => {
-    sandbox = sinon.createSandbox();
+  beforeEach(() => {
     mockPanel = {
       webview: {
         html: '',
-        postMessage: sandbox.stub().resolves(true),
-        onDidReceiveMessage: sandbox.stub()
+        postMessage: vi.fn().mockResolvedValue(true),
+        onDidReceiveMessage: vi.fn()
       },
-      onDidDispose: sandbox.stub(),
-      dispose: sandbox.stub()
-    } as any;
+      onDidDispose: vi.fn(),
+      dispose: vi.fn()
+    };
   });
 
-  teardown(() => {
-    sandbox.restore();
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
-  test('RED: should handle message from webview', async () => {
+  it('RED: should handle message from webview', async () => {
     // Arrange
     const provider = new MyWebviewProvider();
     const message = { type: 'action', data: 'test' };
@@ -192,7 +186,7 @@ suite('WebView Provider Tests', () => {
     await provider.handleMessage(message);
 
     // Assert
-    expect(mockPanel.webview.postMessage).to.have.been.calledWith({
+    expect(mockPanel.webview.postMessage).toHaveBeenCalledWith({
       type: 'response',
       success: true
     });
@@ -203,25 +197,22 @@ suite('WebView Provider Tests', () => {
 ### 3. Terminal Manager Testing
 
 ```typescript
-import { expect } from 'chai';
-import * as sinon from 'sinon';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { TerminalManager } from '../../terminals/TerminalManager';
 
-suite('TerminalManager Tests', () => {
-  let sandbox: sinon.SinonSandbox;
+describe('TerminalManager Tests', () => {
   let terminalManager: TerminalManager;
 
-  setup(() => {
-    sandbox = sinon.createSandbox();
+  beforeEach(() => {
     terminalManager = new TerminalManager();
   });
 
-  teardown(() => {
-    sandbox.restore();
+  afterEach(() => {
+    vi.restoreAllMocks();
     terminalManager.dispose();
   });
 
-  test('RED: should recycle terminal IDs 1-5', async () => {
+  it('RED: should recycle terminal IDs 1-5', async () => {
     // Arrange
     const terminal1 = await terminalManager.createTerminal();
     const terminal2 = await terminalManager.createTerminal();
@@ -231,10 +222,10 @@ suite('TerminalManager Tests', () => {
     const terminal3 = await terminalManager.createTerminal();
 
     // Assert - ID should be recycled
-    expect(terminal3.id).to.equal(terminal1.id);
+    expect(terminal3.id).toBe(terminal1.id);
   });
 
-  test('RED: should prevent creating more than 5 terminals', async () => {
+  it('RED: should prevent creating more than 5 terminals', async () => {
     // Arrange - Create 5 terminals
     for (let i = 0; i < 5; i++) {
       await terminalManager.createTerminal();
@@ -242,7 +233,7 @@ suite('TerminalManager Tests', () => {
 
     // Act & Assert
     await expect(terminalManager.createTerminal())
-      .to.be.rejectedWith('Maximum terminal limit reached');
+      .rejects.toThrow('Maximum terminal limit reached');
   });
 });
 ```
@@ -250,19 +241,19 @@ suite('TerminalManager Tests', () => {
 ### 4. Configuration Testing
 
 ```typescript
-import { expect } from 'chai';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as vscode from 'vscode';
 
-suite('Configuration Tests', () => {
+describe('Configuration Tests', () => {
   const originalConfig: Map<string, any> = new Map();
 
-  setup(async () => {
+  beforeEach(async () => {
     // Save original config
     const config = vscode.workspace.getConfiguration('myExtension');
     originalConfig.set('enabled', config.get('enabled'));
   });
 
-  teardown(async () => {
+  afterEach(async () => {
     // Restore original config
     const config = vscode.workspace.getConfiguration('myExtension');
     for (const [key, value] of originalConfig) {
@@ -270,7 +261,7 @@ suite('Configuration Tests', () => {
     }
   });
 
-  test('RED: should read configuration values', () => {
+  it('RED: should read configuration values', () => {
     // Arrange
     const config = vscode.workspace.getConfiguration('myExtension');
 
@@ -278,7 +269,7 @@ suite('Configuration Tests', () => {
     const enabled = config.get<boolean>('enabled');
 
     // Assert
-    expect(enabled).to.be.a('boolean');
+    expect(enabled).toBeTypeOf('boolean');
   });
 });
 ```
@@ -286,11 +277,11 @@ suite('Configuration Tests', () => {
 ### 5. Activation Testing
 
 ```typescript
-import * as assert from 'assert';
+import { describe, it, expect } from 'vitest';
 import * as vscode from 'vscode';
 
-suite('Extension Activation Tests', () => {
-  test('RED: extension should activate', async () => {
+describe('Extension Activation Tests', () => {
+  it('RED: extension should activate', async () => {
     // Arrange
     const extensionId = 'publisher.extension-name';
 
@@ -299,10 +290,10 @@ suite('Extension Activation Tests', () => {
     await extension?.activate();
 
     // Assert
-    assert.strictEqual(extension?.isActive, true);
+    expect(extension?.isActive).toBe(true);
   });
 
-  test('RED: should register all commands', async () => {
+  it('RED: should register all commands', async () => {
     // Arrange
     const expectedCommands = [
       'extension.createTerminal',
@@ -315,7 +306,7 @@ suite('Extension Activation Tests', () => {
 
     // Assert
     for (const cmd of expectedCommands) {
-      assert.ok(commands.includes(cmd), `Command ${cmd} not registered`);
+      expect(commands).toContain(cmd);
     }
   });
 });
@@ -327,27 +318,27 @@ suite('Extension Activation Tests', () => {
 
 ```typescript
 // test/helpers/vscode-mock.ts
-import * as sinon from 'sinon';
+import { vi } from 'vitest';
 
 export function createMockExtensionContext(): vscode.ExtensionContext {
   return {
     subscriptions: [],
     workspaceState: {
-      get: sinon.stub(),
-      update: sinon.stub().resolves(),
-      keys: sinon.stub().returns([])
+      get: vi.fn(),
+      update: vi.fn().mockResolvedValue(undefined),
+      keys: vi.fn().mockReturnValue([])
     },
     globalState: {
-      get: sinon.stub(),
-      update: sinon.stub().resolves(),
-      keys: sinon.stub().returns([]),
-      setKeysForSync: sinon.stub()
+      get: vi.fn(),
+      update: vi.fn().mockResolvedValue(undefined),
+      keys: vi.fn().mockReturnValue([]),
+      setKeysForSync: vi.fn()
     },
     secrets: {
-      get: sinon.stub().resolves(undefined),
-      store: sinon.stub().resolves(),
-      delete: sinon.stub().resolves(),
-      onDidChange: sinon.stub()
+      get: vi.fn().mockResolvedValue(undefined),
+      store: vi.fn().mockResolvedValue(undefined),
+      delete: vi.fn().mockResolvedValue(undefined),
+      onDidChange: vi.fn()
     },
     extensionUri: vscode.Uri.file('/mock/extension'),
     extensionPath: '/mock/extension',
@@ -372,30 +363,30 @@ export function createMockTerminal(): vscode.Terminal {
     creationOptions: {},
     exitStatus: undefined,
     state: { isInteractedWith: false },
-    sendText: sinon.stub(),
-    show: sinon.stub(),
-    hide: sinon.stub(),
-    dispose: sinon.stub()
+    sendText: vi.fn(),
+    show: vi.fn(),
+    hide: vi.fn(),
+    dispose: vi.fn()
   } as unknown as vscode.Terminal;
 }
 ```
 
-### Stubbing VS Code Window
+### Spying on VS Code Window
 
 ```typescript
 // test/helpers/window-stubs.ts
-import * as sinon from 'sinon';
+import { vi } from 'vitest';
 import * as vscode from 'vscode';
 
-export function stubWindowMethods(sandbox: sinon.SinonSandbox) {
+export function stubWindowMethods() {
   return {
-    showInformationMessage: sandbox.stub(vscode.window, 'showInformationMessage'),
-    showErrorMessage: sandbox.stub(vscode.window, 'showErrorMessage'),
-    showWarningMessage: sandbox.stub(vscode.window, 'showWarningMessage'),
-    showQuickPick: sandbox.stub(vscode.window, 'showQuickPick'),
-    showInputBox: sandbox.stub(vscode.window, 'showInputBox'),
-    createTerminal: sandbox.stub(vscode.window, 'createTerminal'),
-    createWebviewPanel: sandbox.stub(vscode.window, 'createWebviewPanel')
+    showInformationMessage: vi.spyOn(vscode.window, 'showInformationMessage'),
+    showErrorMessage: vi.spyOn(vscode.window, 'showErrorMessage'),
+    showWarningMessage: vi.spyOn(vscode.window, 'showWarningMessage'),
+    showQuickPick: vi.spyOn(vscode.window, 'showQuickPick'),
+    showInputBox: vi.spyOn(vscode.window, 'showInputBox'),
+    createTerminal: vi.spyOn(vscode.window, 'createTerminal'),
+    createWebviewPanel: vi.spyOn(vscode.window, 'createWebviewPanel')
   };
 }
 ```
@@ -405,9 +396,9 @@ export function stubWindowMethods(sandbox: sinon.SinonSandbox) {
 ### Testing Async Operations
 
 ```typescript
-import { expect } from 'chai';
+import { it, expect } from 'vitest';
 
-test('RED: should handle async terminal creation', async () => {
+it('RED: should handle async terminal creation', async () => {
   // Arrange
   const manager = new TerminalManager();
 
@@ -415,37 +406,37 @@ test('RED: should handle async terminal creation', async () => {
   const terminal = await manager.createTerminal();
 
   // Assert
-  expect(terminal).to.exist;
-  expect(terminal.id).to.be.a('number');
+  expect(terminal).toBeDefined();
+  expect(terminal.id).toBeTypeOf('number');
 });
 ```
 
 ### Testing Event Emitters
 
 ```typescript
-import { expect } from 'chai';
+import { it, expect, vi } from 'vitest';
 import { EventEmitter } from 'vscode';
 
-test('RED: should emit event on terminal creation', async () => {
+it('RED: should emit event on terminal creation', async () => {
   // Arrange
   const manager = new TerminalManager();
-  const eventSpy = sinon.spy();
+  const eventSpy = vi.fn();
   manager.onDidCreateTerminal(eventSpy);
 
   // Act
   await manager.createTerminal();
 
   // Assert
-  expect(eventSpy).to.have.been.calledOnce;
+  expect(eventSpy).toHaveBeenCalledOnce();
 });
 ```
 
 ### Testing Disposables
 
 ```typescript
-import { expect } from 'chai';
+import { it, expect } from 'vitest';
 
-test('RED: should dispose all resources', () => {
+it('RED: should dispose all resources', async () => {
   // Arrange
   const manager = new TerminalManager();
   const terminal = await manager.createTerminal();
@@ -454,45 +445,51 @@ test('RED: should dispose all resources', () => {
   manager.dispose();
 
   // Assert
-  expect(manager.getTerminalCount()).to.equal(0);
-  expect(manager.isDisposed).to.be.true;
+  expect(manager.getTerminalCount()).toBe(0);
+  expect(manager.isDisposed).toBe(true);
 });
 ```
 
 ### Testing Error Handling
 
 ```typescript
-import { expect } from 'chai';
+import { it, expect } from 'vitest';
 
-test('RED: should handle invalid shell path', async () => {
+it('RED: should handle invalid shell path', async () => {
   // Arrange
   const manager = new TerminalManager();
   const invalidPath = '/nonexistent/shell';
 
   // Act & Assert
   await expect(manager.createTerminal({ shellPath: invalidPath }))
-    .to.be.rejectedWith('Shell not found');
+    .rejects.toThrow('Shell not found');
 });
 ```
 
 ## Coverage Configuration
 
-### c8 Configuration (package.json)
+### Vitest Coverage Configuration (vitest.config.ts)
 
-```json
-{
-  "c8": {
-    "include": ["src/**/*.ts"],
-    "exclude": ["src/test/**", "**/*.d.ts"],
-    "reporter": ["text", "html", "lcov"],
-    "all": true,
-    "check-coverage": true,
-    "branches": 80,
-    "functions": 80,
-    "lines": 80,
-    "statements": 80
+```typescript
+import { defineConfig } from 'vitest/config';
+
+export default defineConfig({
+  test: {
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.ts'],
+      exclude: ['src/test/**', '**/*.d.ts'],
+      reporter: ['text', 'html', 'lcov'],
+      all: true,
+      thresholds: {
+        branches: 80,
+        functions: 80,
+        lines: 80,
+        statements: 80
+      }
+    }
   }
-}
+});
 ```
 
 ### Coverage Commands
@@ -500,12 +497,13 @@ test('RED: should handle invalid shell path', async () => {
 ```bash
 # Run tests with coverage
 npm run test:coverage
+# or: npx vitest run --coverage
 
-# Generate HTML report
-npx c8 report --reporter=html
+# Generate HTML report (included via reporter config above)
+# Open coverage/index.html after running coverage
 
-# Check coverage thresholds
-npx c8 check-coverage
+# Check coverage thresholds (enforced via thresholds config above)
+npx vitest run --coverage
 ```
 
 ## TDD Quality Gate
@@ -519,7 +517,7 @@ import { execSync } from 'child_process';
 function runTddQualityGate(): boolean {
   const checks = [
     { name: 'Unit Tests', cmd: 'npm run test:unit' },
-    { name: 'Coverage Threshold', cmd: 'npx c8 check-coverage' },
+    { name: 'Coverage Threshold', cmd: 'npx vitest run --coverage' },
     { name: 'Type Check', cmd: 'npm run compile' },
     { name: 'Lint', cmd: 'npm run lint' }
   ];
@@ -545,15 +543,15 @@ function runTddQualityGate(): boolean {
 
 ```typescript
 // Pattern: should [expected behavior] when [condition]
-test('should create terminal with default shell when no options provided', async () => {
+it('should create terminal with default shell when no options provided', async () => {
   // ...
 });
 
-test('should throw error when maximum terminals exceeded', async () => {
+it('should throw error when maximum terminals exceeded', async () => {
   // ...
 });
 
-test('should recycle ID when terminal is deleted', async () => {
+it('should recycle ID when terminal is deleted', async () => {
   // ...
 });
 ```
@@ -561,7 +559,7 @@ test('should recycle ID when terminal is deleted', async () => {
 ### Arrange-Act-Assert Pattern
 
 ```typescript
-test('should update terminal title', async () => {
+it('should update terminal title', async () => {
   // Arrange - Setup test conditions
   const terminal = await manager.createTerminal();
   const newTitle = 'New Title';
@@ -570,23 +568,23 @@ test('should update terminal title', async () => {
   await manager.setTerminalTitle(terminal.id, newTitle);
 
   // Assert - Verify the result
-  expect(terminal.name).to.equal(newTitle);
+  expect(terminal.name).toBe(newTitle);
 });
 ```
 
 ### Test Isolation
 
 ```typescript
-suite('TerminalManager Tests', () => {
+describe('TerminalManager Tests', () => {
   let manager: TerminalManager;
 
   // Fresh instance for each test
-  setup(() => {
+  beforeEach(() => {
     manager = new TerminalManager();
   });
 
   // Cleanup after each test
-  teardown(() => {
+  afterEach(() => {
     manager.dispose();
   });
 });
@@ -596,19 +594,19 @@ suite('TerminalManager Tests', () => {
 
 ```typescript
 // BAD - Tests depend on each other
-test('should create terminal', () => { /* creates terminal */ });
-test('should delete the terminal', () => { /* uses terminal from previous test */ });
+it('should create terminal', () => { /* creates terminal */ });
+it('should delete the terminal', () => { /* uses terminal from previous test */ });
 
 // GOOD - Each test is independent
-test('should create terminal', () => {
+it('should create terminal', () => {
   const terminal = manager.createTerminal();
-  expect(terminal).to.exist;
+  expect(terminal).toBeDefined();
 });
 
-test('should delete terminal', () => {
+it('should delete terminal', () => {
   const terminal = manager.createTerminal();
   manager.deleteTerminal(terminal.id);
-  expect(manager.getTerminal(terminal.id)).to.be.undefined;
+  expect(manager.getTerminal(terminal.id)).toBeUndefined();
 });
 ```
 
@@ -622,15 +620,15 @@ test('should delete terminal', () => {
 
 ```typescript
 // BAD
-test('flaky test', () => {
+it('flaky test', () => {
   manager.createTerminal();
-  expect(manager.getTerminalCount()).to.equal(1);
+  expect(manager.getTerminalCount()).toBe(1);
 });
 
 // GOOD
-test('stable test', async () => {
+it('stable test', async () => {
   await manager.createTerminal();
-  expect(manager.getTerminalCount()).to.equal(1);
+  expect(manager.getTerminalCount()).toBe(1);
 });
 ```
 
@@ -638,10 +636,10 @@ test('stable test', async () => {
 
 **Problem**: Tests affect each other through shared state
 
-**Solution**: Reset state in setup/teardown
+**Solution**: Reset state in beforeEach/afterEach
 
 ```typescript
-setup(() => {
+beforeEach(() => {
   // Reset singleton state
   TerminalManager.resetInstance();
 });
@@ -651,10 +649,10 @@ setup(() => {
 
 **Problem**: Resources leak between tests
 
-**Solution**: Dispose all resources in teardown
+**Solution**: Dispose all resources in afterEach
 
 ```typescript
-teardown(async () => {
+afterEach(async () => {
   // Dispose all created terminals
   await manager.disposeAll();
   // Clear all event listeners

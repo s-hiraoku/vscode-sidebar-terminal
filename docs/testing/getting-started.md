@@ -76,22 +76,18 @@ start coverage/index.html  # Windows
 ### ユニットテストの作成
 
 ```typescript
-// src/test/unit/example/MyFeature.test.ts
-import { expect } from 'chai';
-import * as sinon from 'sinon';
+// src/test/vitest/unit/example/MyFeature.test.ts
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MyFeature } from '../../../src/features/MyFeature';
 
 describe('MyFeature', () => {
-  let sandbox: sinon.SinonSandbox;
-
   beforeEach(() => {
     // テスト前の準備
-    sandbox = sinon.createSandbox();
   });
 
   afterEach(() => {
     // テスト後のクリーンアップ
-    sandbox.restore();
+    vi.restoreAllMocks();
   });
 
   it('should do something correctly', () => {
@@ -102,7 +98,7 @@ describe('MyFeature', () => {
     const result = feature.doSomething();
 
     // Then: 期待される結果を検証
-    expect(result).to.equal('expected value');
+    expect(result).toBe('expected value');
   });
 
   it('should handle errors gracefully', () => {
@@ -111,7 +107,7 @@ describe('MyFeature', () => {
 
     expect(() => {
       feature.doSomethingDangerous();
-    }).to.throw('Expected error message');
+    }).toThrow('Expected error message');
   });
 });
 ```
@@ -123,7 +119,7 @@ describe('MyFeature', () => {
 npm run compile-tests
 
 # 特定のテストファイルを実行
-npx mocha out/test/unit/example/MyFeature.test.js
+npx vitest run src/test/vitest/unit/example/MyFeature.test.ts
 ```
 
 ## テスト構成
@@ -157,31 +153,19 @@ src/test/
 
 ### テストフレームワーク
 
-- **Mocha**: テストランナー
-- **Chai**: アサーションライブラリ
-- **Sinon**: モック・スタブライブラリ
-- **nyc**: カバレッジツール
+- **Vitest**: テストランナー/アサーション/モック（`vi.fn()`, `vi.spyOn()`, `vi.mock()`）
+- **v8**: カバレッジツール（Vitest built-in）
 
 ## よくある問題
-
-### Mocha exit code 7エラー
-
-テスト実行後に exit code 7 が発生する場合があります。これはクリーンアップ処理の既知の問題です。
-
-**対処法**:
-- テストは正常に実行されているため、通常は無視して問題ありません
-- CI/CDでは exit code 7 を許容する設定になっています
-- 根本的な解決策は現在開発中です（[改善提案](../../test-environment-improvement-proposal.md)参照）
 
 ### テストがタイムアウトする
 
 **対処法**:
 ```typescript
 // 特定のテストのタイムアウトを延長
-it('should handle long operation', function(this: any) {
-  this.timeout(5000); // 5秒に延長
+it('should handle long operation', async () => {
   // テストコード
-});
+}, 5000); // 5秒に延長
 ```
 
 ### モックが期待通りに動作しない
@@ -204,9 +188,7 @@ afterEach(() => {
 
 ## 参考リンク
 
-- [Mocha公式ドキュメント](https://mochajs.org/)
-- [Chai公式ドキュメント](https://www.chaijs.com/)
-- [Sinon公式ドキュメント](https://sinonjs.org/)
+- [Vitest公式ドキュメント](https://vitest.dev/)
 - [VS Code Extension Testing](https://code.visualstudio.com/api/working-with-extensions/testing-extension)
 
 ---

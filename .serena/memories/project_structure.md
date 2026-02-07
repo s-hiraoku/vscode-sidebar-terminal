@@ -75,7 +75,7 @@ src/
 ### Testing
 - `src/test/unit/`: Component-specific unit tests
 - `src/test/shared/`: Test setup and utilities
-- Uses Mocha + Chai + Sinon framework
+- Uses Vitest framework (unit/integration), Mocha for E2E via @vscode/test-electron
 
 ### Build and Config
 - `webpack.config.js`: Dual build for extension + webview

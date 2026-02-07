@@ -101,11 +101,11 @@ Verifies that service failures don't cascade:
 
 ```typescript
 // Make one service fail
-(mockLifecycleManager.createTerminal as sinon.SinonStub).throws(new Error('Service failure'));
+vi.spyOn(mockLifecycleManager, 'createTerminal').mockImplementation(() => { throw new Error('Service failure'); });
 
 // Other services should still function
 const stats = terminalManager.getPerformanceMetrics();
-expect(stats.bufferingStats).to.exist; // Buffering service still works
+expect(stats.bufferingStats).toBeDefined(); // Buffering service still works
 ```
 
 ## Test Configuration

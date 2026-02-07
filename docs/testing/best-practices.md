@@ -128,19 +128,17 @@ describe('TerminalManager', () => {
 ```typescript
 describe('SessionManager', () => {
   let sessionManager: SessionManager;
-  let sandbox: sinon.SinonSandbox;
   let mockContext: any;
 
   beforeEach(() => {
     // 各テスト前に初期化
-    sandbox = sinon.createSandbox();
     mockContext = createMockContext();
     sessionManager = new SessionManager(mockContext);
   });
 
   afterEach(() => {
     // 各テスト後にクリーンアップ
-    sandbox.restore();
+    vi.restoreAllMocks();
     sessionManager.dispose();
   });
 
@@ -199,81 +197,74 @@ it('should process callback', (done) => {
 ### タイムアウトの設定
 
 ```typescript
-it('should complete within time limit', async function() {
-  this.timeout(5000); // 5秒
-
+it('should complete within time limit', async () => {
   await longRunningOperation();
 
-  expect(result).to.be.ok;
-});
+  expect(result).toBeTruthy();
+}, 5000); // 5秒
 ```
 
 ---
 
 ## モックとスタブ
 
-### Sinon Sandbox の使用
+### Vitest モックの使用
 
 ```typescript
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
 describe('MessageHandler', () => {
-  let sandbox: sinon.SinonSandbox;
-
-  beforeEach(() => {
-    sandbox = sinon.createSandbox();
-  });
-
   afterEach(() => {
-    sandbox.restore(); // すべてのスタブを自動復元
+    vi.restoreAllMocks(); // すべてのモックを自動復元
   });
 
   it('should call webview.postMessage', () => {
-    const postMessageStub = sandbox.stub(webview, 'postMessage');
+    const postMessageSpy = vi.spyOn(webview, 'postMessage');
 
     messageHandler.sendMessage({ command: 'test' });
 
-    expect(postMessageStub).to.have.been.calledOnce;
+    expect(postMessageSpy).toHaveBeenCalledOnce();
   });
 });
 ```
 
-### stub の戻り値設定
+### モックの戻り値設定
 
 ```typescript
 it('should handle configuration values', () => {
-  const getStub = sandbox.stub(config, 'get');
+  const getSpy = vi.spyOn(config, 'get');
 
   // 条件付き戻り値
-  getStub.withArgs('shell').returns('/bin/bash');
-  getStub.withArgs('fontSize').returns(14);
+  getSpy.mockImplementation((key: string) => {
+    if (key === 'shell') return '/bin/bash';
+    if (key === 'fontSize') return 14;
+    return undefined;
+  });
 
   const shell = config.get('shell');
   const fontSize = config.get('fontSize');
 
-  expect(shell).to.equal('/bin/bash');
-  expect(fontSize).to.equal(14);
+  expect(shell).toBe('/bin/bash');
+  expect(fontSize).toBe(14);
 });
 ```
 
-### 非同期スタブ
+### 非同期モック
 
 ```typescript
 it('should handle async operations', async () => {
-  const saveStub = sandbox.stub(storage, 'save');
-
-  // 成功ケース
-  saveStub.resolves({ success: true });
+  const saveSpy = vi.spyOn(storage, 'save');
+  saveSpy.mockResolvedValue({ success: true });
 
   const result = await storage.save(data);
-  expect(result.success).to.be.true;
+  expect(result.success).toBe(true);
 });
 
 it('should handle async errors', async () => {
-  const loadStub = sandbox.stub(storage, 'load');
+  const loadSpy = vi.spyOn(storage, 'load');
+  loadSpy.mockRejectedValue(new Error('Storage error'));
 
-  // エラーケース
-  loadStub.rejects(new Error('Storage error'));
-
-  await expect(storage.load()).to.be.rejectedWith('Storage error');
+  await expect(storage.load()).rejects.toThrow('Storage error');
 });
 ```
 
@@ -281,13 +272,13 @@ it('should handle async errors', async () => {
 
 ```typescript
 it('should call callback function', () => {
-  const callback = sandbox.spy();
+  const callback = vi.fn();
 
   eventEmitter.on('data', callback);
   eventEmitter.emit('data', 'test data');
 
-  expect(callback).to.have.been.calledOnce;
-  expect(callback).to.have.been.calledWith('test data');
+  expect(callback).toHaveBeenCalledOnce();
+  expect(callback).toHaveBeenCalledWith('test data');
 });
 ```
 
@@ -428,12 +419,11 @@ it('should throw TypeError for null argument', () => {
 it('should reject with error message', async () => {
   await expect(
     sessionManager.loadInvalidSession()
-  ).to.be.rejectedWith('Session not found');
+  ).rejects.toThrow('Session not found');
 });
 
-// または、chai-as-promisedを使用
-it('should handle async rejection', () => {
-  return expect(asyncOperation()).to.be.rejected;
+it('should handle async rejection', async () => {
+  await expect(asyncOperation()).rejects.toBeDefined();
 });
 ```
 
@@ -447,8 +437,8 @@ it('should handle async rejection', () => {
 // ✅ 良い例: モックを使用して高速化
 it('should process data quickly', () => {
   const mockStorage = {
-    save: sandbox.stub().resolves(),
-    load: sandbox.stub().resolves(mockData)
+    save: vi.fn().mockResolvedValue(undefined),
+    load: vi.fn().mockResolvedValue(mockData)
   };
 
   const processor = new DataProcessor(mockStorage);
@@ -563,9 +553,7 @@ itOnWindows('should use Windows-specific behavior', () => {
 
 ## 参考リンク
 
-- [Mocha Best Practices](https://mochajs.org/#best-practices)
-- [Chai Best Practices](https://www.chaijs.com/guide/styles/)
-- [Sinon Best Practices](https://sinonjs.org/releases/latest/best-practices/)
+- [Vitest Best Practices](https://vitest.dev/guide/best-practices)
 - [TDD Implementation Strategy](../../src/test/TDD-Implementation-Strategy.md)
 
 ---

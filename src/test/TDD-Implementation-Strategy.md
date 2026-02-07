@@ -175,16 +175,16 @@ npm run tdd:quality-gate
 ```bash
 # Session Manager TDD Tests
 npm run compile-tests
-./node_modules/.bin/mocha --require out/test/shared/TestSetup.js --timeout 30000 'out/test/unit/sessions/StandardTerminalSessionManager.TDD.test.js'
+npx vitest run --timeout 30000 'out/test/unit/sessions/StandardTerminalSessionManager.TDD.test.js'
 
 # Message Handling TDD Tests
-./node_modules/.bin/mocha --require out/test/shared/TestSetup.js --timeout 30000 'out/test/unit/providers/SecondaryTerminalProvider.MessageHandling.TDD.test.js'
+npx vitest run --timeout 30000 'out/test/unit/providers/SecondaryTerminalProvider.MessageHandling.TDD.test.js'
 
 # Regression Tests
-./node_modules/.bin/mocha --require out/test/shared/TestSetup.js --timeout 30000 'out/test/unit/regression/TerminalHistoryManagement.Regression.test.js'
+npx vitest run --timeout 30000 'out/test/unit/regression/TerminalHistoryManagement.Regression.test.js'
 
 # Async Strategy Tests
-./node_modules/.bin/mocha --require out/test/shared/TestSetup.js --timeout 30000 'out/test/unit/async/AsyncOperationsStrategy.TDD.test.js'
+npx vitest run --timeout 30000 'out/test/unit/async/AsyncOperationsStrategy.TDD.test.js'
 ```
 
 ## 🎯 Quality Gates

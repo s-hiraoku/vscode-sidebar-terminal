@@ -24,10 +24,7 @@ Secondary Terminal is a production-ready VS Code extension providing advanced te
 - **xterm.js addons**: fit, search, serialize, unicode11, web-links, webgl
 
 ### Build & Testing
-- **Mocha 10.8.2**: Test framework with comprehensive test suite (275+ tests)
-- **Chai 4.5.0**: Assertion library with chai-as-promised for async testing
-- **Sinon 21.0.0**: Test doubles (stubs, spies, mocks)
-- **nyc 17.1.0**: Code coverage reporting (targeting 85%+ coverage)
+- **Vitest 3.x**: Test framework with comprehensive test suite (275+ tests), built-in assertions, mocking (vi.fn/vi.spyOn/vi.mock), and v8 coverage reporting (targeting 85%+ coverage)
 - **ESLint 8.56.0**: Code quality with @typescript-eslint plugins
 - **Prettier 3.1.1**: Code formatting
 
@@ -215,7 +212,5 @@ npm run test:watch          # Watch mode for development
 - **GitHub Actions**: CI/CD workflows for testing, building, publishing
 
 ### Testing Infrastructure
-- **Mocha Test Runner**: Standard test execution
+- **Vitest**: Test framework with built-in assertion, mocking (vi.fn/vi.spyOn/vi.mock), and v8 coverage
 - **jsdom**: Browser environment simulation for WebView testing
-- **sinon**: Test doubles for PTY, VS Code API mocking
-- **nyc**: Istanbul-based coverage reporting with text, HTML, LCOV outputs

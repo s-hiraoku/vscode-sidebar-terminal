@@ -1,4 +1,6 @@
-# Test Utilities - Phase 2 Base Test Classes
+# Test Utilities - Phase 2 Base Test Classes (Legacy Mocha Infrastructure)
+
+> **Note**: These base test classes use sinon for mocking. New tests should use **Vitest** (`vi.fn()`, `vi.spyOn()`, etc.) directly. See `src/test/vitest/` for current test patterns.
 
 Complete test infrastructure with base classes for different testing scenarios.
 
@@ -40,7 +42,7 @@ describe('MyService', () => {
 
   it('should use configuration', () => {
     // test.vscode, test.sandbox, test.service all available
-    expect(test.service.isEnabled()).to.be.true;
+    expect(test.service.isEnabled()).toBe(true);
   });
 });
 ```
@@ -51,7 +53,7 @@ describe('MyService', () => {
 
 Foundation class providing:
 
-- Automatic sinon sandbox creation/cleanup
+- Automatic sandbox creation/cleanup (legacy sinon-based infrastructure)
 - VS Code mock setup via `VSCodeMockFactory`
 - Console log suppression
 - Common assertion helpers
@@ -200,18 +202,18 @@ describe('Async Feature', () => {
     await test.tick(1000); // Advance 1000ms
 
     const result = await promise;
-    expect(result).to.equal('completed');
+    expect(result).toBe('completed');
   });
 
   it('should track promises', async () => {
     test.track(asyncOp1());
     test.track(asyncOp2());
 
-    expect(test.hasPendingPromises()).to.be.true;
+    expect(test.hasPendingPromises()).toBe(true);
 
     await test.waitForAllPromises();
 
-    expect(test.hasPendingPromises()).to.be.false;
+    expect(test.hasPendingPromises()).toBe(false);
   });
 });
 ```
@@ -349,7 +351,7 @@ class MyTest extends BaseTest {
 
 // In test:
 it('works', () => {
-  expect(test.myService.doSomething()).to.be.true;
+  expect(test.myService.doSomething()).toBe(true);
 });
 ```
 

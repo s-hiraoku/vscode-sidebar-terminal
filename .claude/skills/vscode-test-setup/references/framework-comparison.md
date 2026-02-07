@@ -1,186 +1,191 @@
-# Test Framework Comparison: Mocha vs Jest
+# Test Framework Comparison: Vitest vs Mocha vs Jest
 
 ## Overview
 
-| Feature | Mocha | Jest |
-|---------|-------|------|
-| Built-in assertions | No (use Chai) | Yes |
-| Mocking | No (use Sinon) | Yes |
-| Snapshot testing | No | Yes |
-| Watch mode | Yes | Yes (better) |
-| Parallel execution | Yes (v8+) | Yes |
-| Code coverage | No (use c8/nyc) | Yes |
-| TypeScript support | Via ts-node | Via ts-jest |
-| VS Code integration | Official support | Community |
+| Feature | Vitest | Mocha | Jest |
+|---------|--------|-------|------|
+| Built-in assertions | Yes | No (use Chai) | Yes |
+| Mocking | Yes (vi) | No (use Sinon) | Yes |
+| Snapshot testing | Yes | No | Yes |
+| Watch mode | Yes (excellent) | Yes | Yes (better than Mocha) |
+| Parallel execution | Yes | Yes (v8+) | Yes |
+| Code coverage | Yes (v8/c8) | No (use c8/nyc) | Yes |
+| TypeScript support | Native | Via ts-node | Via ts-jest |
+| VS Code integration | Community | Official support | Community |
+| ESM support | Native | Limited | Limited |
+| Speed | Fastest | Fast | Moderate |
 
 ## Recommendation for VS Code Extensions
 
-**Use Mocha** for VS Code extension testing because:
+**Use Vitest** for unit and integration testing because:
 
-1. **Official support**: `@vscode/test-cli` uses Mocha
-2. **Better VS Code API integration**: Designed for VS Code's test runner
-3. **Flexibility**: Choose assertion library (Chai) and mocking (Sinon)
-4. **Simpler configuration**: Less magic, more explicit
+1. **All-in-one**: Built-in assertions, mocking, coverage, and watch mode
+2. **Fastest**: Vite-powered, native ESM, parallel execution
+3. **TypeScript native**: No configuration needed for TypeScript
+4. **Compatible API**: Similar to Jest, easy migration
+5. **Modern**: Native ESM support, no CommonJS workarounds
+
+**Use Mocha** only when:
+- Running VS Code extension host tests via `@vscode/test-electron` (requires Mocha)
+- Existing legacy test suites that haven't been migrated
 
 **Use Jest** when:
 - Building pure Node.js libraries
-- Need snapshot testing
-- Prefer batteries-included approach
-- Team already familiar with Jest
+- Team already familiar with Jest ecosystem
 
-## Mocha + Chai + Sinon Stack
+## Vitest Stack
 
 ### Strengths
 
-- **Flexibility**: Choose tools that fit your needs
-- **Explicit**: No hidden behavior
-- **VS Code compatible**: Works with official test runner
-- **Mature ecosystem**: Well-documented, stable
+- **All-in-one**: Assertions, mocking, coverage, watch mode included
+- **Fastest**: Vite-powered test runner
+- **TypeScript native**: No additional configuration
+- **Modern**: ESM-first, no CommonJS issues
+- **Compatible**: Jest-compatible API for easy migration
 
-### Example Setup
+### Configuration
 
 ```typescript
-// test/setup.ts
-import { expect } from 'chai';
-import sinon from 'sinon';
-import sinonChai from 'sinon-chai';
-import chaiAsPromised from 'chai-as-promised';
+// vitest.config.ts
+import { defineConfig } from 'vitest/config';
 
-chai.use(sinonChai);
-chai.use(chaiAsPromised);
-
-export { expect, sinon };
+export default defineConfig({
+  test: {
+    globals: false,
+    environment: 'node',
+    include: ['src/test/vitest/**/*.test.ts'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html', 'lcov'],
+      thresholds: {
+        lines: 85,
+        functions: 85,
+        branches: 60,
+      },
+    },
+  },
+});
 ```
 
 ### Test Example
 
 ```typescript
-import { expect, sinon } from './setup';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 describe('MyComponent', () => {
-  let sandbox: sinon.SinonSandbox;
-
   beforeEach(() => {
-    sandbox = sinon.createSandbox();
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
-    sandbox.restore();
+    vi.restoreAllMocks();
   });
 
   it('should do something', async () => {
-    const stub = sandbox.stub(dependency, 'method').resolves('result');
+    const stub = vi.spyOn(dependency, 'method').mockResolvedValue('result');
 
     const result = await component.doSomething();
 
-    expect(stub).to.have.been.calledOnce;
-    expect(result).to.equal('expected');
+    expect(stub).toHaveBeenCalledOnce();
+    expect(result).toBe('expected');
   });
 });
 ```
+
+## Mocha + Chai + Sinon Stack (Legacy)
+
+### Strengths
+
+- **VS Code compatible**: Works with official @vscode/test-electron runner
+- **Mature ecosystem**: Well-documented, stable
+
+### When Still Needed
+
+Mocha is still required for:
+- `@vscode/test-electron` E2E tests (VS Code extension host)
+- `@vscode/test-cli` integration tests
 
 ## Jest Stack
 
 ### Strengths
 
 - **All-in-one**: Assertions, mocking, coverage included
-- **Fast**: Parallel execution by default
 - **Snapshots**: Great for UI testing
 - **Watch mode**: Intelligent re-running
 
-### Example Setup
-
-```javascript
-// jest.config.js
-module.exports = {
-  preset: 'ts-jest',
-  testEnvironment: 'node',
-  moduleNameMapper: {
-    '^vscode$': '<rootDir>/test/mocks/vscode.ts'
-  }
-};
-```
-
-### Test Example
-
-```typescript
-import { MyComponent } from '../src/MyComponent';
-
-jest.mock('../src/dependency');
-
-describe('MyComponent', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('should do something', async () => {
-    const mockMethod = jest.fn().mockResolvedValue('result');
-    dependency.method = mockMethod;
-
-    const result = await component.doSomething();
-
-    expect(mockMethod).toHaveBeenCalledTimes(1);
-    expect(result).toBe('expected');
-  });
-});
-```
-
-## Migration Guide: Jest to Mocha
+## Migration Guide: Mocha/Chai/Sinon to Vitest
 
 ### Assertions
 
 ```typescript
-// Jest
-expect(value).toBe(1);
-expect(array).toContain(item);
-expect(obj).toEqual({ key: 'value' });
-expect(fn).toThrow();
-
 // Chai
 expect(value).to.equal(1);
 expect(array).to.include(item);
 expect(obj).to.deep.equal({ key: 'value' });
 expect(fn).to.throw();
+
+// Vitest
+expect(value).toBe(1);
+expect(array).toContain(item);
+expect(obj).toEqual({ key: 'value' });
+expect(fn).toThrow();
 ```
 
 ### Async Testing
 
 ```typescript
-// Jest
-await expect(promise).resolves.toBe('value');
-await expect(promise).rejects.toThrow('error');
-
 // Chai (with chai-as-promised)
 await expect(promise).to.eventually.equal('value');
 await expect(promise).to.be.rejectedWith('error');
+
+// Vitest
+expect(await promise).toBe('value');
+await expect(promise).rejects.toThrow('error');
 ```
 
 ### Mocking
 
 ```typescript
-// Jest
-const mock = jest.fn().mockReturnValue('value');
-jest.spyOn(obj, 'method').mockImplementation(() => 'mock');
-
 // Sinon
 const stub = sinon.stub().returns('value');
 const spy = sinon.stub(obj, 'method').returns('mock');
+sandbox.restore();
+
+// Vitest
+const mock = vi.fn().mockReturnValue('value');
+const spy = vi.spyOn(obj, 'method').mockReturnValue('mock');
+vi.restoreAllMocks();
 ```
 
 ### Lifecycle Hooks
 
 ```typescript
-// Jest
-beforeAll(() => { /* ... */ });
-beforeEach(() => { /* ... */ });
-afterEach(() => { /* ... */ });
-afterAll(() => { /* ... */ });
-
 // Mocha
 before(() => { /* ... */ });
 beforeEach(() => { /* ... */ });
 afterEach(() => { /* ... */ });
 after(() => { /* ... */ });
+
+// Vitest
+beforeAll(() => { /* ... */ });
+beforeEach(() => { /* ... */ });
+afterEach(() => { /* ... */ });
+afterAll(() => { /* ... */ });
+```
+
+### Timeouts
+
+```typescript
+// Mocha
+it('slow test', function() {
+  this.timeout(5000);
+  // ...
+});
+
+// Vitest
+it('slow test', async () => {
+  // ...
+}, 5000);
 ```
 
 ## Performance Comparison
@@ -189,41 +194,35 @@ after(() => { /* ... */ });
 
 | Framework | Time | Memory |
 |-----------|------|--------|
+| Vitest | ~8s | ~120MB |
 | Mocha | ~15s | ~150MB |
 | Jest | ~20s | ~300MB |
 
-### Watch Mode Efficiency
-
-| Scenario | Mocha | Jest |
-|----------|-------|------|
-| Single file change | Manual | Automatic |
-| Related tests only | No | Yes |
-| Snapshot updates | N/A | Interactive |
-
 ## Decision Matrix
 
-| Criteria | Weight | Mocha | Jest |
-|----------|--------|-------|------|
-| VS Code compatibility | 5 | ★★★★★ | ★★★ |
-| Ease of setup | 3 | ★★★ | ★★★★★ |
-| Flexibility | 4 | ★★★★★ | ★★★ |
-| Documentation | 3 | ★★★★ | ★★★★★ |
-| Community support | 3 | ★★★★ | ★★★★★ |
-| TypeScript support | 4 | ★★★★ | ★★★★ |
-| **Total** | | **41/50** | **39/50** |
+| Criteria | Weight | Vitest | Mocha | Jest |
+|----------|--------|--------|-------|------|
+| Speed | 5 | ★★★★★ | ★★★ | ★★★ |
+| TypeScript support | 5 | ★★★★★ | ★★★ | ★★★★ |
+| Built-in features | 4 | ★★★★★ | ★★ | ★★★★★ |
+| VS Code E2E compat | 3 | ★★★ | ★★★★★ | ★★★ |
+| ESM support | 4 | ★★★★★ | ★★★ | ★★★ |
+| Ease of setup | 4 | ★★★★★ | ★★★ | ★★★★ |
+| **Total** | | **48/50** | **33/50** | **38/50** |
 
 ## Final Recommendation
 
 For VS Code extension development:
 
-1. **Primary choice**: Mocha + Chai + Sinon
-   - Use for all integration tests with VS Code API
-   - Use for unit tests that need VS Code compatibility
+1. **Primary choice**: Vitest
+   - Use for all unit tests
+   - Use for integration tests that don't need VS Code API
+   - Built-in mocking, assertions, and coverage
 
-2. **Alternative**: Jest (for pure libraries)
-   - Use for isolated utility functions
-   - Use when team prefers Jest ecosystem
+2. **Secondary**: Mocha (for VS Code extension host tests)
+   - Use only for E2E tests requiring `@vscode/test-electron`
+   - Required by `@vscode/test-cli`
 
-3. **Hybrid approach**:
-   - Jest for unit tests (faster feedback)
-   - Mocha for integration tests (VS Code compatible)
+3. **Avoid**: Jest
+   - Unless team has strong Jest preference
+   - Slower than Vitest, no VS Code E2E support

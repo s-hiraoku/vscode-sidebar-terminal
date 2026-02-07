@@ -146,7 +146,7 @@ class TDDTestRunner {
       duration: 0
     };
 
-    // Parse Mocha output
+    // Parse test runner output
     const passingMatch = output.match(/(\d+) passing/);
     const failingMatch = output.match(/(\d+) failing/);
     const pendingMatch = output.match(/(\d+) pending/);

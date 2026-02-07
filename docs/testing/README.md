@@ -18,7 +18,7 @@ VS Code Sidebar Terminal拡張機能のテスト環境に関する包括的な�
 - **[Performance Testing Patterns](./patterns/performance-testing.md)** - パフォーマンステスト
 
 ### 🛠 ツールガイド
-- **[Mocha Guide](./tools/mocha-guide.md)** - Mochaテストランナーの詳細
+- **[Vitest Guide](./tools/vitest-guide.md)** - Vitestテストランナーの詳細
 - **[Coverage Guide](./tools/coverage-guide.md)** - カバレッジ測定と改善
 
 ---
@@ -31,7 +31,7 @@ VS Code Sidebar Terminal拡張機能のテスト環境に関する包括的な�
 3. [テストの実行](./getting-started.md#テストの実行)
 
 ### 問題解決
-- [Mocha exit code 7](./troubleshooting.md#mocha-exit-code-7問題)
+- [テスト終了コードの問題](./troubleshooting.md#テスト終了コードの問題)
 - [テストタイムアウト](./troubleshooting.md#テストタイムアウト)
 - [モック関連の問題](./troubleshooting.md#モック関連の問題)
 
@@ -45,15 +45,14 @@ VS Code Sidebar Terminal拡張機能のテスト環境に関する包括的な�
 ## 📊 テスト環境の概要
 
 ### テストフレームワーク
-- **テストランナー**: Mocha
-- **アサーション**: Chai
-- **モック・スタブ**: Sinon
-- **カバレッジ**: nyc (Istanbul)
+- **ユニット/統合テスト**: Vitest (テストランナー/アサーション/モック)
+- **E2Eテスト**: Mocha (@vscode/test-electron が要求)
+- **カバレッジ**: v8 (Vitest built-in)
 
 ### テストカテゴリ
 
 #### ユニットテスト
-- **場所**: `src/test/unit/`
+- **場所**: `src/test/vitest/unit/`
 - **目的**: 個別のコンポーネント・関数のテスト
 - **実行**: `npm run test:unit`
 
@@ -103,7 +102,7 @@ npm run test:unit:parallel
 npm run test:coverage
 
 # 特定のテストファイルのみ実行
-npx mocha out/test/unit/specific-file.test.js
+npx vitest run src/test/vitest/unit/specific-file.test.ts
 
 # ウォッチモード（変更を自動検出）
 npm run test:watch
@@ -136,9 +135,7 @@ npm run test:watch
 - [CLAUDE.md](../../src/test/CLAUDE.md) - TDD効率化ガイド
 
 ### 外部リンク
-- [Mocha Documentation](https://mochajs.org/) - Mocha公式ドキュメント
-- [Chai Documentation](https://www.chaijs.com/) - Chaiアサーション
-- [Sinon Documentation](https://sinonjs.org/) - Sinonモック
+- [Vitest Documentation](https://vitest.dev/) - Vitest公式ドキュメント
 - [VS Code Extension Testing](https://code.visualstudio.com/api/working-with-extensions/testing-extension) - VS Code拡張機能テスト
 
 ---

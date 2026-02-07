@@ -14,7 +14,7 @@ VS Code Sidebar Terminal プロジェクトでの経験を基に、効果的なT
 // ❌ 悪い例: 実装を意識したテスト
 it('should call updateSettings method', () => {
   const panel = new SettingsPanel();
-  const spy = sinon.spy(panel, 'updateSettings');
+  const spy = vi.spyOn(panel, 'updateSettings');
   panel.handleApplyClick();
   expect(spy).to.have.been.called;
 });
@@ -107,7 +107,7 @@ describe('SettingsPanel', () => {
     // Arrange（準備）
     const panel = new SettingsPanel();
     const mockSlider = { value: '18' };
-    document.getElementById = sinon.stub().returns(mockSlider);
+    document.getElementById = vi.fn().returns(mockSlider);
     
     // Act（実行）
     panel.handleFontSizeChange();
@@ -146,7 +146,7 @@ describe('Font size validation', () => {
 describe('Error handling', () => {
   it('should handle missing DOM elements gracefully', () => {
     // DOM要素が存在しない場合のテスト
-    document.getElementById = sinon.stub().returns(null);
+    document.getElementById = vi.fn().returns(null);
     
     const panel = new SettingsPanel();
     
@@ -156,7 +156,7 @@ describe('Error handling', () => {
   
   it('should handle invalid slider values', () => {
     const mockSlider = { value: 'invalid' };
-    document.getElementById = sinon.stub().returns(mockSlider);
+    document.getElementById = vi.fn().returns(mockSlider);
     
     const panel = new SettingsPanel();
     panel.handleFontSizeChange();
@@ -175,16 +175,16 @@ describe('Error handling', () => {
 // テストセットアップファイル
 export const mockVSCodeAPI = {
   workspace: {
-    getConfiguration: sinon.stub().returns({
-      get: sinon.stub().returns(true)
+    getConfiguration: vi.fn().returns({
+      get: vi.fn().returns(true)
     })
   },
   window: {
-    showInformationMessage: sinon.stub(),
-    showErrorMessage: sinon.stub()
+    showInformationMessage: vi.fn(),
+    showErrorMessage: vi.fn()
   },
   commands: {
-    executeCommand: sinon.stub().resolves()
+    executeCommand: vi.fn().resolves()
   }
 };
 
@@ -199,7 +199,7 @@ beforeEach(() => {
 ```typescript
 describe('Webview communication', () => {
   it('should send settings update message to extension', () => {
-    const mockPostMessage = sinon.spy();
+    const mockPostMessage = vi.spyOn();
     (global as any).acquireVsCodeApi = () => ({
       postMessage: mockPostMessage
     });
@@ -220,7 +220,7 @@ describe('Webview communication', () => {
 ```typescript
 describe('Async operations', () => {
   it('should handle command execution asynchronously', async () => {
-    const commandStub = sinon.stub().resolves('success');
+    const commandStub = vi.fn().resolves('success');
     (global as any).vscode.commands.executeCommand = commandStub;
     
     const command = new CopilotIntegrationCommand();
@@ -230,7 +230,7 @@ describe('Async operations', () => {
   });
   
   it('should handle command execution errors', async () => {
-    const commandStub = sinon.stub().rejects(new Error('Command failed'));
+    const commandStub = vi.fn().rejects(new Error('Command failed'));
     (global as any).vscode.commands.executeCommand = commandStub;
     
     const command = new CopilotIntegrationCommand();
@@ -386,15 +386,15 @@ it('should verify each step', () => {
 ```typescript
 // ❌ 悪い例: 過度なモック
 it('should test with excessive mocking', () => {
-  const mockDOM = sinon.createStubInstance(Document);
-  const mockWindow = sinon.createStubInstance(Window);
-  const mockElement = sinon.createStubInstance(HTMLElement);
+  const mockDOM = vi.mocked(Document);
+  const mockWindow = vi.mocked(Window);
+  const mockElement = vi.mocked(HTMLElement);
   // ... 過度なモック設定
 });
 
 // ✅ 良い例: 必要最小限のモック
 it('should test with minimal mocking', () => {
-  const mockGetElementById = sinon.stub(document, 'getElementById');
+  const mockGetElementById = vi.spyOn(document, 'getElementById');
   mockGetElementById.withArgs('font-size-slider').returns({ value: '16' });
   
   const panel = new SettingsPanel();

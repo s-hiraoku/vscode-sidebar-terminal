@@ -4,7 +4,7 @@
 
 ## 目次
 
-- [Mocha exit code 7問題](#mocha-exit-code-7問題)
+- [テスト終了コードの問題](#テスト終了コードの問題)
 - [テストタイムアウト](#テストタイムアウト)
 - [モック関連の問題](#モック関連の問題)
 - [VS Code API モックエラー](#vs-code-api-モックエラー)
@@ -14,19 +14,15 @@
 
 ---
 
-## Mocha exit code 7問題
+## テスト終了コードの問題
 
 ### 症状
-テスト実行後に以下のようなエラーが表示される：
-
-```text
-Error: Process completed with exit code 7
-```
+テスト実行後にプロセスが正常終了しない場合があります。
 
 ### 原因
 グローバルリソースのクリーンアップ処理で発生する問題です。主な原因：
 - テスト間でリソースが適切に解放されていない
-- Mochaのイベントリスナーが残留している
+- イベントリスナーが残留している
 - グローバル状態の不完全なリセット
 
 **重要**: このエラーを単に許容するのではなく、根本原因を特定して解決することが重要です。
@@ -37,21 +33,21 @@ Error: Process completed with exit code 7
 テストファイルで確実なクリーンアップを行う：
 
 ```typescript
+import { describe, it, beforeEach, afterEach, vi } from 'vitest';
 import { cleanupTestEnvironment, resetTestEnvironment } from '../../shared/TestSetup';
 
 describe('Test Suite', () => {
-  let sandbox: sinon.SinonSandbox;
   let dom: JSDOM;
 
   beforeEach(() => {
-    sandbox = sinon.createSandbox();
     // 各テスト前にリセット
     resetTestEnvironment();
   });
 
   afterEach(() => {
     // 確実なクリーンアップ
-    cleanupTestEnvironment(sandbox, dom);
+    vi.restoreAllMocks();
+    cleanupTestEnvironment(dom);
   });
 
   // テストケース
@@ -59,38 +55,17 @@ describe('Test Suite', () => {
 ```
 
 #### 方法2: リソースリークの調査
-exit code 7が発生する場合、以下を確認：
 
 ```bash
 # デバッグモードでテスト実行
 DEBUG=* npm run test:unit
 
 # 特定のテストファイルのみ実行して原因を特定
-npx mocha out/test/unit/specific-file.test.js --reporter tap
+npx vitest run src/test/vitest/unit/specific-file.test.ts
 ```
-
-#### 方法3: CI/CDでの一時的な対処（非推奨）
-根本原因の調査中のみ、CI/CDで一時的に許容：
-
-```bash
-# 一時的な対処（根本原因を解決するまで）
-npm run test:unit || {
-  exit_code=$?
-  if [ $exit_code -eq 7 ]; then
-    echo "⚠️  Exit code 7 detected - requires investigation"
-    echo "See: docs/testing/troubleshooting.md#mocha-exit-code-7問題"
-    # TODO: Issue #XXX で根本原因を解決する
-    exit 0
-  else
-    exit $exit_code
-  fi
-}
-```
-
-**注意**: この方法は一時的な回避策であり、根本解決ではありません。
 
 ### 参考
-- [GitHub Issue: Mocha exit code 7](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues)
+- [GitHub Issues](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues)
 - [改善提案書](../../test-environment-improvement-proposal.md)
 
 ---
@@ -110,35 +85,20 @@ Error: Timeout of 2000ms exceeded
 
 #### 方法1: 個別テストのタイムアウト延長
 ```typescript
-it('should handle async operation', function(this: any) {
-  this.timeout(5000); // 5秒に延長
-
-  return someAsyncOperation().then(result => {
-    expect(result).to.be.ok;
-  });
-});
+it('should handle async operation', async () => {
+  const result = await someAsyncOperation();
+  expect(result).toBeTruthy();
+}, 5000); // 5秒に延長
 ```
 
-#### 方法2: テストスイート全体のタイムアウト延長
+#### 方法2: vitest.config.tsで全体設定
 ```typescript
-describe('Async Operations', function() {
-  this.timeout(10000); // 10秒に延長
-
-  it('should handle operation 1', async () => {
-    // テストコード
-  });
-
-  it('should handle operation 2', async () => {
-    // テストコード
-  });
+// vitest.config.ts
+export default defineConfig({
+  test: {
+    testTimeout: 10000,
+  },
 });
-```
-
-#### 方法3: .mocharc.jsonで全体設定
-```json
-{
-  "timeout": 10000
-}
 ```
 
 ### ベストプラクティス
@@ -146,13 +106,13 @@ describe('Async Operations', function() {
 // async/await を使用
 it('should process data', async () => {
   const result = await asyncOperation();
-  expect(result).to.equal('expected');
+  expect(result).toBe('expected');
 });
 
 // Promiseを返す
 it('should save data', () => {
   return saveData().then(saved => {
-    expect(saved).to.be.true;
+    expect(saved).toBe(true);
   });
 });
 ```
@@ -171,20 +131,15 @@ Error: Attempted to wrap someFunction which is already wrapped
 
 **解決方法**:
 ```typescript
-import { safeStub } from '../../shared/TestSetup';
+import { vi, beforeEach, afterEach } from 'vitest';
 
-// 安全なstub作成
-const stub = safeStub(object, 'method');
-
-// または、beforeEachでstub作成、afterEachで復元
-let stub: sinon.SinonStub;
-
+// beforeEachでモック作成、afterEachで復元
 beforeEach(() => {
-  stub = sinon.stub(object, 'method');
+  vi.spyOn(object, 'method').mockReturnValue('value');
 });
 
 afterEach(() => {
-  stub.restore();
+  vi.restoreAllMocks();
 });
 ```
 
@@ -247,7 +202,7 @@ beforeEach(() => {
       }
       return undefined;
     },
-    update: sinon.stub().resolves(),
+    update: vi.fn().mockResolvedValue(undefined),
   }));
 });
 ```
@@ -365,7 +320,7 @@ Error: No coverage information was collected
 ```bash
 # カバレッジなしで実行（テストが動くか確認）
 npm run compile-tests
-npx mocha 'out/test/unit/**/*.test.js'
+npx vitest run src/test/vitest/unit
 
 # カバレッジ付きで実行
 npm run test:coverage
@@ -393,18 +348,15 @@ npm run test:coverage
 ```typescript
 // 各テストで独立した状態を作成
 describe('Parallel Safe Tests', () => {
-  let sandbox: sinon.SinonSandbox;
   let testResource: any;
 
   beforeEach(() => {
-    // テストごとに新しいサンドボックス
-    sandbox = sinon.createSandbox();
     testResource = createFreshResource();
   });
 
   afterEach(() => {
     // 確実にクリーンアップ
-    sandbox.restore();
+    vi.restoreAllMocks();
     if (testResource && testResource.dispose) {
       testResource.dispose();
     }
@@ -433,13 +385,11 @@ describe('Parallel Safe Tests', () => {
 {
   "type": "node",
   "request": "launch",
-  "name": "Mocha Tests",
-  "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+  "name": "Vitest Tests",
+  "program": "${workspaceFolder}/node_modules/vitest/vitest.mjs",
   "args": [
-    "--require", "out/test/shared/TestSetup.js",
-    "--timeout", "999999",
-    "--colors",
-    "${workspaceFolder}/out/test/unit/**/*.test.js"
+    "run",
+    "--reporter=verbose"
   ],
   "console": "integratedTerminal",
   "internalConsoleOptions": "neverOpen"

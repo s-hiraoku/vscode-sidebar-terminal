@@ -32,7 +32,7 @@ VS Code Sidebar Terminal拡張機能のパフォーマンステストでは、�
 
 ```typescript
 // src/test/performance/memory/TerminalMemoryLeak.test.ts
-import { expect } from 'chai';
+import { describe, it, expect } from 'vitest';
 import { TerminalManager } from '../../../terminal/TerminalManager';
 
 describe('Performance: Memory Leak Detection', () => {
@@ -140,13 +140,13 @@ function calculateTrend(values: number[]): number {
 
 ```bash
 # GCを有効にしてテスト実行
-node --expose-gc --max-old-space-size=4096 ./node_modules/mocha/bin/_mocha \
-  'out/test/performance/memory/**/*.test.js' \
-  --timeout 60000
+node --expose-gc ./node_modules/vitest/vitest.mjs run \
+  src/test/vitest/unit/performance/memory \
+  --testTimeout 60000
 
 # ヒープスナップショットを取得
-node --inspect-brk --expose-gc ./node_modules/mocha/bin/_mocha \
-  'out/test/performance/memory/**/*.test.js'
+node --inspect-brk --expose-gc ./node_modules/vitest/vitest.mjs run \
+  src/test/vitest/unit/performance/memory
 # Chrome DevTools で chrome://inspect にアクセスして解析
 ```
 
@@ -158,7 +158,7 @@ node --inspect-brk --expose-gc ./node_modules/mocha/bin/_mocha \
 
 ```typescript
 // src/test/performance/buffer/ScrollbackPerformance.test.ts
-import { expect } from 'chai';
+import { describe, it, expect } from 'vitest';
 import { ScrollbackBuffer } from '../../../buffer/ScrollbackBuffer';
 
 describe('Performance: Scrollback Buffer', () => {
@@ -302,7 +302,7 @@ describe('Performance: Scrollback Buffer', () => {
 
 ```typescript
 // src/test/performance/load/ConcurrentTerminals.test.ts
-import { expect } from 'chai';
+import { describe, it, expect } from 'vitest';
 import { TerminalManager } from '../../../terminal/TerminalManager';
 
 describe('Performance: Load Testing', () => {
@@ -438,7 +438,7 @@ describe('Performance: Message Throughput', () => {
 
 ```typescript
 // src/test/performance/benchmark/RelativePerformance.test.ts
-import { expect } from 'chai';
+import { describe, it, expect } from 'vitest';
 
 describe('Performance: Benchmarks', () => {
   describe('String Operations', () => {

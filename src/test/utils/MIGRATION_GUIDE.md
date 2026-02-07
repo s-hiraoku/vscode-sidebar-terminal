@@ -1,4 +1,6 @@
-# Test Infrastructure Migration Guide
+# Test Infrastructure Migration Guide (Legacy Mocha → Base Test Classes)
+
+> **Note**: This guide documents migration to legacy sinon-based Base Test Classes. For new tests, use **Vitest** directly. See `src/test/vitest/` for current patterns.
 
 ## Overview
 
@@ -44,7 +46,7 @@ describe('MyService', () => {
 
   it('should work correctly', () => {
     // Use test.service, test.sandbox, test.vscode
-    expect(test.service.method()).to.equal(expected);
+    expect(test.service.method()).toBe(expected);
   });
 });
 ```
@@ -91,7 +93,7 @@ describe('ConfigService', () => {
     test.triggerSectionChange('myExtension');
 
     // Verify behavior
-    expect(test.configService.getSetting('setting1')).to.equal('default');
+    expect(test.configService.getSetting('setting1')).toBe('default');
   });
 });
 ```
@@ -133,7 +135,7 @@ describe('AsyncService', () => {
     await test.tick(1000);
 
     const result = await promise;
-    expect(result).to.equal(expected);
+    expect(result).toBe(expected);
   });
 });
 ```
@@ -179,7 +181,7 @@ describe('MessageManager', () => {
 
     // Check message queue
     const messages = test.getPostedMessages();
-    expect(messages).to.have.length(1);
+    expect(messages).toHaveLength(1);
   });
 });
 ```
@@ -224,7 +226,7 @@ describe('TerminalService', () => {
 
     // Check output
     const output = test.getTerminalOutput(1);
-    expect(output).to.include('hello');
+    expect(output).toContain('hello');
   });
 });
 ```

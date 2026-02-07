@@ -4,41 +4,35 @@
 
 ```typescript
 // test/helpers/vscode-mock-factory.ts
-import * as sinon from 'sinon';
+import { vi, type Mock } from 'vitest';
 
 export class VSCodeMockFactory {
-  private sandbox: sinon.SinonSandbox;
-
-  constructor(sandbox: sinon.SinonSandbox) {
-    this.sandbox = sandbox;
-  }
-
   createExtensionContext(): MockExtensionContext {
-    return new MockExtensionContext(this.sandbox);
+    return new MockExtensionContext();
   }
 
   createTerminal(options?: Partial<vscode.Terminal>): MockTerminal {
-    return new MockTerminal(this.sandbox, options);
+    return new MockTerminal(options);
   }
 
   createWebviewPanel(options?: Partial<vscode.WebviewPanel>): MockWebviewPanel {
-    return new MockWebviewPanel(this.sandbox, options);
+    return new MockWebviewPanel(options);
   }
 
   createOutputChannel(name: string): MockOutputChannel {
-    return new MockOutputChannel(this.sandbox, name);
+    return new MockOutputChannel(name);
   }
 
   createStatusBarItem(): MockStatusBarItem {
-    return new MockStatusBarItem(this.sandbox);
+    return new MockStatusBarItem();
   }
 
   createTextDocument(content: string, uri?: vscode.Uri): MockTextDocument {
-    return new MockTextDocument(this.sandbox, content, uri);
+    return new MockTextDocument(content, uri);
   }
 
   createTextEditor(document: MockTextDocument): MockTextEditor {
-    return new MockTextEditor(this.sandbox, document);
+    return new MockTextEditor(document);
   }
 }
 ```
@@ -47,13 +41,13 @@ export class VSCodeMockFactory {
 
 ```typescript
 // test/helpers/mock-extension-context.ts
-import * as sinon from 'sinon';
+import { vi, type Mock } from 'vitest';
 import * as vscode from 'vscode';
 
 export class MockExtensionContext implements vscode.ExtensionContext {
   subscriptions: { dispose(): any }[] = [];
   workspaceState: MockMemento;
-  globalState: MockMemento & { setKeysForSync: sinon.SinonStub };
+  globalState: MockMemento & { setKeysForSync: Mock };
   secrets: MockSecretStorage;
   extensionUri: vscode.Uri;
   extensionPath: string;
@@ -68,13 +62,13 @@ export class MockExtensionContext implements vscode.ExtensionContext {
   logUri: vscode.Uri;
   languageModelAccessInformation: vscode.LanguageModelAccessInformation;
 
-  constructor(private sandbox: sinon.SinonSandbox) {
-    this.workspaceState = new MockMemento(sandbox);
+  constructor() {
+    this.workspaceState = new MockMemento();
     this.globalState = Object.assign(
-      new MockMemento(sandbox),
-      { setKeysForSync: sandbox.stub() }
+      new MockMemento(),
+      { setKeysForSync: vi.fn() }
     );
-    this.secrets = new MockSecretStorage(sandbox);
+    this.secrets = new MockSecretStorage();
     this.extensionUri = vscode.Uri.file('/mock/extension');
     this.extensionPath = '/mock/extension';
     this.storagePath = '/mock/storage';
@@ -92,23 +86,23 @@ export class MockExtensionContext implements vscode.ExtensionContext {
       packageJSON: {},
       extensionKind: vscode.ExtensionKind.Workspace,
       exports: undefined,
-      activate: sandbox.stub().resolves()
+      activate: vi.fn().mockResolvedValue(undefined)
     };
     this.environmentVariableCollection = {
       persistent: true,
       description: 'Test',
-      replace: sandbox.stub(),
-      append: sandbox.stub(),
-      prepend: sandbox.stub(),
-      get: sandbox.stub(),
-      forEach: sandbox.stub(),
-      delete: sandbox.stub(),
-      clear: sandbox.stub(),
-      getScoped: sandbox.stub()
+      replace: vi.fn(),
+      append: vi.fn(),
+      prepend: vi.fn(),
+      get: vi.fn(),
+      forEach: vi.fn(),
+      delete: vi.fn(),
+      clear: vi.fn(),
+      getScoped: vi.fn()
     } as any;
     this.languageModelAccessInformation = {
-      onDidChange: sandbox.stub(),
-      canSendRequest: sandbox.stub().returns(true)
+      onDidChange: vi.fn(),
+      canSendRequest: vi.fn().mockReturnValue(true)
     } as any;
   }
 
@@ -119,8 +113,6 @@ export class MockExtensionContext implements vscode.ExtensionContext {
 
 class MockMemento implements vscode.Memento {
   private storage = new Map<string, any>();
-
-  constructor(private sandbox: sinon.SinonSandbox) {}
 
   keys(): readonly string[] {
     return Array.from(this.storage.keys());
@@ -142,8 +134,6 @@ class MockSecretStorage implements vscode.SecretStorage {
   private secrets = new Map<string, string>();
   private _onDidChange = new vscode.EventEmitter<vscode.SecretStorageChangeEvent>();
   readonly onDidChange = this._onDidChange.event;
-
-  constructor(private sandbox: sinon.SinonSandbox) {}
 
   get(key: string): Thenable<string | undefined> {
     return Promise.resolve(this.secrets.get(key));
@@ -167,7 +157,7 @@ class MockSecretStorage implements vscode.SecretStorage {
 
 ```typescript
 // test/helpers/mock-terminal.ts
-import * as sinon from 'sinon';
+import { vi, type Mock } from 'vitest';
 import * as vscode from 'vscode';
 
 export class MockTerminal implements vscode.Terminal {
@@ -178,30 +168,27 @@ export class MockTerminal implements vscode.Terminal {
   state: vscode.TerminalState;
   shellIntegration: vscode.TerminalShellIntegration | undefined;
 
-  private _sendText: sinon.SinonStub;
-  private _show: sinon.SinonStub;
-  private _hide: sinon.SinonStub;
-  private _dispose: sinon.SinonStub;
+  private _sendText: Mock;
+  private _show: Mock;
+  private _hide: Mock;
+  private _dispose: Mock;
 
   private outputBuffer: string[] = [];
   private inputBuffer: string[] = [];
 
-  constructor(
-    private sandbox: sinon.SinonSandbox,
-    options?: Partial<vscode.Terminal>
-  ) {
+  constructor(options?: Partial<vscode.Terminal>) {
     this.name = options?.name ?? 'Mock Terminal';
     this.processId = Promise.resolve(options?.processId ?? 12345);
     this.creationOptions = options?.creationOptions ?? {};
     this.exitStatus = options?.exitStatus;
     this.state = options?.state ?? { isInteractedWith: false };
 
-    this._sendText = sandbox.stub().callsFake((text: string) => {
+    this._sendText = vi.fn().mockImplementation((text: string) => {
       this.inputBuffer.push(text);
     });
-    this._show = sandbox.stub();
-    this._hide = sandbox.stub();
-    this._dispose = sandbox.stub();
+    this._show = vi.fn();
+    this._hide = vi.fn();
+    this._dispose = vi.fn();
   }
 
   sendText(text: string, shouldExecute?: boolean): void {
@@ -233,19 +220,19 @@ export class MockTerminal implements vscode.Terminal {
     return [...this.outputBuffer];
   }
 
-  getSendTextStub(): sinon.SinonStub {
+  getSendTextMock(): Mock {
     return this._sendText;
   }
 
-  getShowStub(): sinon.SinonStub {
+  getShowMock(): Mock {
     return this._show;
   }
 
-  getHideStub(): sinon.SinonStub {
+  getHideMock(): Mock {
     return this._hide;
   }
 
-  getDisposeStub(): sinon.SinonStub {
+  getDisposeMock(): Mock {
     return this._dispose;
   }
 }
@@ -255,7 +242,7 @@ export class MockTerminal implements vscode.Terminal {
 
 ```typescript
 // test/helpers/mock-webview-panel.ts
-import * as sinon from 'sinon';
+import { vi, type Mock } from 'vitest';
 import * as vscode from 'vscode';
 
 export class MockWebviewPanel implements vscode.WebviewPanel {
@@ -274,23 +261,20 @@ export class MockWebviewPanel implements vscode.WebviewPanel {
   private _onDidChangeViewState = new vscode.EventEmitter<vscode.WebviewPanelOnDidChangeViewStateEvent>();
   readonly onDidChangeViewState = this._onDidChangeViewState.event;
 
-  private _reveal: sinon.SinonStub;
-  private _dispose: sinon.SinonStub;
+  private _reveal: Mock;
+  private _dispose: Mock;
 
-  constructor(
-    private sandbox: sinon.SinonSandbox,
-    options?: Partial<vscode.WebviewPanel>
-  ) {
+  constructor(options?: Partial<vscode.WebviewPanel>) {
     this.viewType = options?.viewType ?? 'testView';
     this.title = options?.title ?? 'Test Panel';
-    this.webview = new MockWebview(sandbox);
+    this.webview = new MockWebview();
     this.options = options?.options ?? {};
     this.viewColumn = options?.viewColumn ?? vscode.ViewColumn.One;
     this.active = options?.active ?? true;
     this.visible = options?.visible ?? true;
 
-    this._reveal = sandbox.stub();
-    this._dispose = sandbox.stub().callsFake(() => {
+    this._reveal = vi.fn();
+    this._dispose = vi.fn().mockImplementation(() => {
       this._onDidDispose.fire();
     });
   }
@@ -324,21 +308,21 @@ export class MockWebview implements vscode.Webview {
   private _onDidReceiveMessage = new vscode.EventEmitter<any>();
   readonly onDidReceiveMessage = this._onDidReceiveMessage.event;
 
-  private _postMessage: sinon.SinonStub;
-  private _asWebviewUri: sinon.SinonStub;
+  private _postMessage: Mock;
+  private _asWebviewUri: Mock;
   private receivedMessages: any[] = [];
 
-  constructor(private sandbox: sinon.SinonSandbox) {
+  constructor() {
     this.options = {};
     this.html = '';
     this.cspSource = 'https://test.vscode-cdn.net';
 
-    this._postMessage = sandbox.stub().callsFake((message) => {
+    this._postMessage = vi.fn().mockImplementation((message) => {
       this.receivedMessages.push(message);
       return Promise.resolve(true);
     });
 
-    this._asWebviewUri = sandbox.stub().callsFake((uri: vscode.Uri) => {
+    this._asWebviewUri = vi.fn().mockImplementation((uri: vscode.Uri) => {
       return vscode.Uri.parse(`vscode-webview://test/${uri.path}`);
     });
   }
@@ -360,7 +344,7 @@ export class MockWebview implements vscode.Webview {
     return [...this.receivedMessages];
   }
 
-  getPostMessageStub(): sinon.SinonStub {
+  getPostMessageMock(): Mock {
     return this._postMessage;
   }
 
@@ -374,57 +358,57 @@ export class MockWebview implements vscode.Webview {
 
 ```typescript
 // test/helpers/window-stubs.ts
-import * as sinon from 'sinon';
+import { vi, type Mock } from 'vitest';
 import * as vscode from 'vscode';
 
 export interface WindowStubs {
-  showInformationMessage: sinon.SinonStub;
-  showWarningMessage: sinon.SinonStub;
-  showErrorMessage: sinon.SinonStub;
-  showQuickPick: sinon.SinonStub;
-  showInputBox: sinon.SinonStub;
-  showOpenDialog: sinon.SinonStub;
-  showSaveDialog: sinon.SinonStub;
-  createTerminal: sinon.SinonStub;
-  createWebviewPanel: sinon.SinonStub;
-  createOutputChannel: sinon.SinonStub;
-  createStatusBarItem: sinon.SinonStub;
-  withProgress: sinon.SinonStub;
-  setStatusBarMessage: sinon.SinonStub;
+  showInformationMessage: Mock;
+  showWarningMessage: Mock;
+  showErrorMessage: Mock;
+  showQuickPick: Mock;
+  showInputBox: Mock;
+  showOpenDialog: Mock;
+  showSaveDialog: Mock;
+  createTerminal: Mock;
+  createWebviewPanel: Mock;
+  createOutputChannel: Mock;
+  createStatusBarItem: Mock;
+  withProgress: Mock;
+  setStatusBarMessage: Mock;
 }
 
-export function stubWindowAPI(sandbox: sinon.SinonSandbox): WindowStubs {
+export function stubWindowAPI(): WindowStubs {
   return {
-    showInformationMessage: sandbox.stub(vscode.window, 'showInformationMessage'),
-    showWarningMessage: sandbox.stub(vscode.window, 'showWarningMessage'),
-    showErrorMessage: sandbox.stub(vscode.window, 'showErrorMessage'),
-    showQuickPick: sandbox.stub(vscode.window, 'showQuickPick'),
-    showInputBox: sandbox.stub(vscode.window, 'showInputBox'),
-    showOpenDialog: sandbox.stub(vscode.window, 'showOpenDialog'),
-    showSaveDialog: sandbox.stub(vscode.window, 'showSaveDialog'),
-    createTerminal: sandbox.stub(vscode.window, 'createTerminal'),
-    createWebviewPanel: sandbox.stub(vscode.window, 'createWebviewPanel'),
-    createOutputChannel: sandbox.stub(vscode.window, 'createOutputChannel'),
-    createStatusBarItem: sandbox.stub(vscode.window, 'createStatusBarItem'),
-    withProgress: sandbox.stub(vscode.window, 'withProgress'),
-    setStatusBarMessage: sandbox.stub(vscode.window, 'setStatusBarMessage')
+    showInformationMessage: vi.spyOn(vscode.window, 'showInformationMessage') as unknown as Mock,
+    showWarningMessage: vi.spyOn(vscode.window, 'showWarningMessage') as unknown as Mock,
+    showErrorMessage: vi.spyOn(vscode.window, 'showErrorMessage') as unknown as Mock,
+    showQuickPick: vi.spyOn(vscode.window, 'showQuickPick') as unknown as Mock,
+    showInputBox: vi.spyOn(vscode.window, 'showInputBox') as unknown as Mock,
+    showOpenDialog: vi.spyOn(vscode.window, 'showOpenDialog') as unknown as Mock,
+    showSaveDialog: vi.spyOn(vscode.window, 'showSaveDialog') as unknown as Mock,
+    createTerminal: vi.spyOn(vscode.window, 'createTerminal') as unknown as Mock,
+    createWebviewPanel: vi.spyOn(vscode.window, 'createWebviewPanel') as unknown as Mock,
+    createOutputChannel: vi.spyOn(vscode.window, 'createOutputChannel') as unknown as Mock,
+    createStatusBarItem: vi.spyOn(vscode.window, 'createStatusBarItem') as unknown as Mock,
+    withProgress: vi.spyOn(vscode.window, 'withProgress') as unknown as Mock,
+    setStatusBarMessage: vi.spyOn(vscode.window, 'setStatusBarMessage') as unknown as Mock
   };
 }
 
 export function configureDefaultBehaviors(stubs: WindowStubs): void {
   // Default to user selecting "Yes" in confirmations
-  stubs.showInformationMessage.resolves('Yes');
-  stubs.showWarningMessage.resolves('Yes');
-  stubs.showErrorMessage.resolves(undefined);
+  stubs.showInformationMessage.mockResolvedValue('Yes');
+  stubs.showWarningMessage.mockResolvedValue('Yes');
+  stubs.showErrorMessage.mockResolvedValue(undefined);
 
   // Default quick pick to first item
-  stubs.showQuickPick.callsFake(async (items) => {
+  stubs.showQuickPick.mockImplementation(async (items) => {
     const resolvedItems = await items;
     return Array.isArray(resolvedItems) ? resolvedItems[0] : undefined;
   });
 
   // Default input box to empty string
-  stubs.showInputBox.resolves('');
+  stubs.showInputBox.mockResolvedValue('');
 }
 ```
 
@@ -432,26 +416,26 @@ export function configureDefaultBehaviors(stubs: WindowStubs): void {
 
 ```typescript
 // test/helpers/workspace-stubs.ts
-import * as sinon from 'sinon';
+import { vi, type Mock } from 'vitest';
 import * as vscode from 'vscode';
 
 export interface WorkspaceStubs {
-  getConfiguration: sinon.SinonStub;
-  openTextDocument: sinon.SinonStub;
-  findFiles: sinon.SinonStub;
-  createFileSystemWatcher: sinon.SinonStub;
-  applyEdit: sinon.SinonStub;
-  saveAll: sinon.SinonStub;
+  getConfiguration: Mock;
+  openTextDocument: Mock;
+  findFiles: Mock;
+  createFileSystemWatcher: Mock;
+  applyEdit: Mock;
+  saveAll: Mock;
 }
 
-export function stubWorkspaceAPI(sandbox: sinon.SinonSandbox): WorkspaceStubs {
+export function stubWorkspaceAPI(): WorkspaceStubs {
   return {
-    getConfiguration: sandbox.stub(vscode.workspace, 'getConfiguration'),
-    openTextDocument: sandbox.stub(vscode.workspace, 'openTextDocument'),
-    findFiles: sandbox.stub(vscode.workspace, 'findFiles'),
-    createFileSystemWatcher: sandbox.stub(vscode.workspace, 'createFileSystemWatcher'),
-    applyEdit: sandbox.stub(vscode.workspace, 'applyEdit'),
-    saveAll: sandbox.stub(vscode.workspace, 'saveAll')
+    getConfiguration: vi.spyOn(vscode.workspace, 'getConfiguration') as unknown as Mock,
+    openTextDocument: vi.spyOn(vscode.workspace, 'openTextDocument') as unknown as Mock,
+    findFiles: vi.spyOn(vscode.workspace, 'findFiles') as unknown as Mock,
+    createFileSystemWatcher: vi.spyOn(vscode.workspace, 'createFileSystemWatcher') as unknown as Mock,
+    applyEdit: vi.spyOn(vscode.workspace, 'applyEdit') as unknown as Mock,
+    saveAll: vi.spyOn(vscode.workspace, 'saveAll') as unknown as Mock
   };
 }
 
@@ -507,48 +491,43 @@ export class MockConfiguration implements vscode.WorkspaceConfiguration {
 
 ```typescript
 // test/helpers/command-stubs.ts
-import * as sinon from 'sinon';
+import { vi, type Mock } from 'vitest';
 import * as vscode from 'vscode';
 
 export class MockCommandRegistry {
   private commands = new Map<string, (...args: any[]) => any>();
-  private sandbox: sinon.SinonSandbox;
-  private registerCommandStub: sinon.SinonStub;
-  private executeCommandStub: sinon.SinonStub;
-  private getCommandsStub: sinon.SinonStub;
+  private registerCommandMock: Mock;
+  private executeCommandMock: Mock;
+  private getCommandsMock: Mock;
 
-  constructor(sandbox: sinon.SinonSandbox) {
-    this.sandbox = sandbox;
-    this.setupStubs();
+  constructor() {
+    this.setupMocks();
   }
 
-  private setupStubs(): void {
-    this.registerCommandStub = this.sandbox
-      .stub(vscode.commands, 'registerCommand')
-      .callsFake((command: string, callback: (...args: any[]) => any) => {
+  private setupMocks(): void {
+    this.registerCommandMock = vi.spyOn(vscode.commands, 'registerCommand')
+      .mockImplementation((command: string, callback: (...args: any[]) => any) => {
         this.commands.set(command, callback);
         return {
           dispose: () => {
             this.commands.delete(command);
           }
         };
-      });
+      }) as unknown as Mock;
 
-    this.executeCommandStub = this.sandbox
-      .stub(vscode.commands, 'executeCommand')
-      .callsFake(async (command: string, ...args: any[]) => {
+    this.executeCommandMock = vi.spyOn(vscode.commands, 'executeCommand')
+      .mockImplementation(async (command: string, ...args: any[]) => {
         const handler = this.commands.get(command);
         if (handler) {
           return handler(...args);
         }
         throw new Error(`Command not found: ${command}`);
-      });
+      }) as unknown as Mock;
 
-    this.getCommandsStub = this.sandbox
-      .stub(vscode.commands, 'getCommands')
-      .callsFake(async () => {
+    this.getCommandsMock = vi.spyOn(vscode.commands, 'getCommands')
+      .mockImplementation(async () => {
         return Array.from(this.commands.keys());
-      });
+      }) as unknown as Mock;
   }
 
   // Test helpers
@@ -570,21 +549,16 @@ export class MockCommandRegistry {
 
 ```typescript
 // test/helpers/mock-file-system.ts
-import * as sinon from 'sinon';
+import { vi, type Mock } from 'vitest';
 import * as vscode from 'vscode';
 
 export class MockFileSystem {
   private files = new Map<string, Uint8Array>();
   private directories = new Set<string>();
-  private sandbox: sinon.SinonSandbox;
-
-  constructor(sandbox: sinon.SinonSandbox) {
-    this.sandbox = sandbox;
-  }
 
   createMockFs(): vscode.FileSystem {
     return {
-      stat: this.sandbox.stub().callsFake((uri: vscode.Uri) => {
+      stat: vi.fn().mockImplementation((uri: vscode.Uri) => {
         const path = uri.fsPath;
         if (this.files.has(path)) {
           return Promise.resolve({
@@ -605,7 +579,7 @@ export class MockFileSystem {
         throw vscode.FileSystemError.FileNotFound(uri);
       }),
 
-      readFile: this.sandbox.stub().callsFake((uri: vscode.Uri) => {
+      readFile: vi.fn().mockImplementation((uri: vscode.Uri) => {
         const content = this.files.get(uri.fsPath);
         if (content) {
           return Promise.resolve(content);
@@ -613,18 +587,18 @@ export class MockFileSystem {
         throw vscode.FileSystemError.FileNotFound(uri);
       }),
 
-      writeFile: this.sandbox.stub().callsFake((uri: vscode.Uri, content: Uint8Array) => {
+      writeFile: vi.fn().mockImplementation((uri: vscode.Uri, content: Uint8Array) => {
         this.files.set(uri.fsPath, content);
         return Promise.resolve();
       }),
 
-      delete: this.sandbox.stub().callsFake((uri: vscode.Uri) => {
+      delete: vi.fn().mockImplementation((uri: vscode.Uri) => {
         this.files.delete(uri.fsPath);
         this.directories.delete(uri.fsPath);
         return Promise.resolve();
       }),
 
-      rename: this.sandbox.stub().callsFake((source: vscode.Uri, target: vscode.Uri) => {
+      rename: vi.fn().mockImplementation((source: vscode.Uri, target: vscode.Uri) => {
         const content = this.files.get(source.fsPath);
         if (content) {
           this.files.set(target.fsPath, content);
@@ -633,7 +607,7 @@ export class MockFileSystem {
         return Promise.resolve();
       }),
 
-      copy: this.sandbox.stub().callsFake((source: vscode.Uri, target: vscode.Uri) => {
+      copy: vi.fn().mockImplementation((source: vscode.Uri, target: vscode.Uri) => {
         const content = this.files.get(source.fsPath);
         if (content) {
           this.files.set(target.fsPath, content);
@@ -641,12 +615,12 @@ export class MockFileSystem {
         return Promise.resolve();
       }),
 
-      createDirectory: this.sandbox.stub().callsFake((uri: vscode.Uri) => {
+      createDirectory: vi.fn().mockImplementation((uri: vscode.Uri) => {
         this.directories.add(uri.fsPath);
         return Promise.resolve();
       }),
 
-      readDirectory: this.sandbox.stub().callsFake((uri: vscode.Uri) => {
+      readDirectory: vi.fn().mockImplementation((uri: vscode.Uri) => {
         const entries: [string, vscode.FileType][] = [];
         const prefix = uri.fsPath + '/';
 
@@ -667,7 +641,7 @@ export class MockFileSystem {
         return Promise.resolve(entries);
       }),
 
-      isWritableFileSystem: this.sandbox.stub().returns(true)
+      isWritableFileSystem: vi.fn().mockReturnValue(true)
     };
   }
 
@@ -695,39 +669,39 @@ export class MockFileSystem {
 ## Usage Example
 
 ```typescript
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { vi } from 'vitest';
 import { VSCodeMockFactory } from '../helpers/vscode-mock-factory';
 import { stubWindowAPI, configureDefaultBehaviors } from '../helpers/window-stubs';
 import { MockCommandRegistry } from '../helpers/command-stubs';
 
-suite('My Extension Tests', () => {
-  let sandbox: sinon.SinonSandbox;
+describe('My Extension Tests', () => {
   let mockFactory: VSCodeMockFactory;
   let windowStubs: WindowStubs;
   let commandRegistry: MockCommandRegistry;
 
-  setup(() => {
-    sandbox = sinon.createSandbox();
-    mockFactory = new VSCodeMockFactory(sandbox);
-    windowStubs = stubWindowAPI(sandbox);
+  beforeEach(() => {
+    mockFactory = new VSCodeMockFactory();
+    windowStubs = stubWindowAPI();
     configureDefaultBehaviors(windowStubs);
-    commandRegistry = new MockCommandRegistry(sandbox);
+    commandRegistry = new MockCommandRegistry();
   });
 
-  teardown(() => {
-    sandbox.restore();
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
-  test('should create terminal with mock', async () => {
+  it('should create terminal with mock', async () => {
     // Arrange
     const mockTerminal = mockFactory.createTerminal({ name: 'Test' });
-    windowStubs.createTerminal.returns(mockTerminal);
+    windowStubs.createTerminal.mockReturnValue(mockTerminal);
 
     // Act
     const terminal = vscode.window.createTerminal('Test');
     terminal.sendText('echo hello');
 
     // Assert
-    expect(mockTerminal.getSendTextStub()).to.have.been.calledWith('echo hello');
+    expect(mockTerminal.getSendTextMock()).toHaveBeenCalledWith('echo hello');
   });
 });
 ```
