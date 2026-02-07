@@ -128,25 +128,25 @@ npx vitest run src/test/vitest/unit/example/MyFeature.test.ts
 
 ```text
 src/test/
-├── shared/              # 共通テストユーティリティ
-│   ├── TestSetup.ts    # グローバルセットアップ
+├── shared/                    # 共通テストユーティリティ
+│   ├── TestSetup.ts          # グローバルセットアップ
 │   └── setup-exit-handler.js
-├── utils/              # テストヘルパー
+├── utils/                    # テストヘルパー
 │   ├── TDDTestHelper.ts
 │   └── TestSetupFactory.ts
-├── unit/               # ユニットテスト
-│   ├── commands/
-│   ├── providers/
-│   ├── services/
-│   └── utils/
-├── integration/        # 統合テスト
+├── vitest/                   # Vitestテスト（メイン）
+│   └── unit/                 # ユニットテスト
+│       ├── commands/
+│       ├── providers/
+│       ├── services/
+│       └── utils/
+├── integration/              # 統合テスト（Mocha / @vscode/test-electron）
 │   ├── messaging/
 │   ├── sessions/
 │   └── terminal/
-├── performance/        # パフォーマンステスト
-│   ├── buffer/
-│   └── memory/
-└── suite/              # E2Eテストスイート
+├── e2e/                      # E2Eテスト（Playwright）
+│   └── tests/
+└── suite/                    # レガシーE2Eテストスイート
     ├── e2e.test.ts
     └── integration.test.ts
 ```

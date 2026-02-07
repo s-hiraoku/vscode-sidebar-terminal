@@ -24,7 +24,7 @@ Secondary Terminal is a production-ready VS Code extension providing advanced te
 - **xterm.js addons**: fit, search, serialize, unicode11, web-links, webgl
 
 ### Build & Testing
-- **Vitest 3.x**: Test framework with comprehensive test suite (275+ tests), built-in assertions, mocking (vi.fn/vi.spyOn/vi.mock), and v8 coverage reporting (targeting 85%+ coverage)
+- **Vitest 3.x**: Test framework with comprehensive test suite (3,900+ tests), built-in assertions, mocking (vi.fn/vi.spyOn/vi.mock), and v8 coverage reporting (targeting 85%+ coverage)
 - **ESLint 8.56.0**: Code quality with @typescript-eslint plugins
 - **Prettier 3.1.1**: Code formatting
 
@@ -83,7 +83,7 @@ TerminalWebviewManager (Coordinator)
 4. **Quality Gate**: Verify TDD compliance (`npm run tdd:quality-gate`)
 
 #### Test Categories
-- **Unit Tests**: 275+ tests covering core functionality (fast, reliable)
+- **Unit Tests**: 3,900+ tests covering core functionality (fast, reliable)
 - **Integration Tests**: Component interaction and AI agent scenarios
 - **Performance Tests**: Buffer management, memory optimization, CPU usage
 - **Edge Cases**: Error handling, resource cleanup, concurrent operations

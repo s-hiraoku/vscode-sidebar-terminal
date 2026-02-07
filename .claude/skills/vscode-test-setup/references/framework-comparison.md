@@ -202,13 +202,15 @@ it('slow test', async () => {
 
 | Criteria | Weight | Vitest | Mocha | Jest |
 |----------|--------|--------|-------|------|
-| Speed | 5 | ★★★★★ | ★★★ | ★★★ |
-| TypeScript support | 5 | ★★★★★ | ★★★ | ★★★★ |
-| Built-in features | 4 | ★★★★★ | ★★ | ★★★★★ |
-| VS Code E2E compat | 3 | ★★★ | ★★★★★ | ★★★ |
-| ESM support | 4 | ★★★★★ | ★★★ | ★★★ |
-| Ease of setup | 4 | ★★★★★ | ★★★ | ★★★★ |
-| **Total** | | **48/50** | **33/50** | **38/50** |
+| Speed | 5 | ★★★★★ (5) | ★★★ (3) | ★★★ (3) |
+| TypeScript support | 5 | ★★★★★ (5) | ★★★ (3) | ★★★★ (4) |
+| Built-in features | 4 | ★★★★★ (5) | ★★ (2) | ★★★★★ (5) |
+| VS Code E2E compat | 3 | ★★★ (3) | ★★★★★ (5) | ★★★ (3) |
+| ESM support | 4 | ★★★★★ (5) | ★★★ (3) | ★★★ (3) |
+| Ease of setup | 4 | ★★★★★ (5) | ★★★ (3) | ★★★★ (4) |
+| **Total** | | **119/125** | **79/125** | **93/125** |
+
+> Scoring: Each star = 1 point (1–5 scale). Total = sum of (weight × star rating) for each criterion. Maximum possible = 125 (sum of all weights × 5).
 
 ## Final Recommendation
 
