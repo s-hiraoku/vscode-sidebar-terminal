@@ -59,13 +59,13 @@ export class CliAgentCoordinator {
    * Properly switches connected agents and moves previous connected to disconnected
    */
   public handleAiAgentToggle(terminalId: string): void {
-    log(`📎 AI Agent toggle clicked for terminal: ${terminalId}`);
+    log(`⏻ AI Agent toggle clicked for terminal: ${terminalId}`);
 
     try {
       const agentState = this.deps.getAgentState(terminalId);
       const currentStatus = agentState?.status || 'none';
 
-      log(`📎 Current AI Agent state: ${currentStatus} for terminal: ${terminalId}`);
+      log(`⏻ Current AI Agent state: ${currentStatus} for terminal: ${terminalId}`);
 
       if (currentStatus === 'connected') {
         log(
@@ -79,7 +79,7 @@ export class CliAgentCoordinator {
           agentType: agentState?.agentType || 'claude',
           timestamp: Date.now(),
         });
-      } else {
+      } else if (currentStatus === 'disconnected') {
         this.deps.postMessageToExtension({
           command: 'switchAiAgent',
           terminalId,
@@ -90,6 +90,19 @@ export class CliAgentCoordinator {
         log(
           `✅ Sent AI Agent activation request for terminal: ${terminalId} (status: ${currentStatus})`
         );
+      } else {
+        // None state: force-reconnect to create a new agent connection
+        log(
+          `⏻ No agent detected, sending force-reconnect for terminal: ${terminalId}`
+        );
+        this.deps.postMessageToExtension({
+          command: 'switchAiAgent',
+          terminalId,
+          action: 'force-reconnect',
+          forceReconnect: true,
+          agentType: 'claude',
+          timestamp: Date.now(),
+        });
       }
     } catch (error) {
       log(`❌ Error handling AI Agent toggle for terminal ${terminalId}:`, error);

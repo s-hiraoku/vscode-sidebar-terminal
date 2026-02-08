@@ -598,11 +598,27 @@ export class TerminalCommandHandlers {
     }
 
     try {
-      // Call TerminalManager's switchAiAgentConnection method
-      const result = this.deps.terminalManager.switchAiAgentConnection(terminalId);
+      const forceReconnect = action === 'force-reconnect' || (message as any)?.forceReconnect;
+      const agentType = (message as any)?.agentType || 'claude';
+
+      let result: { success: boolean; reason?: string; newStatus: string; agentType: string | null };
+
+      if (forceReconnect) {
+        // Force reconnect: works even in 'none' state
+        const success = this.deps.terminalManager.forceReconnectAiAgent(terminalId, agentType);
+        result = {
+          success,
+          newStatus: success ? 'connected' : 'none',
+          agentType: success ? agentType : null,
+          reason: success ? undefined : 'Force reconnect failed',
+        };
+      } else {
+        // Normal activate: only works when agent was previously detected
+        result = this.deps.terminalManager.switchAiAgentConnection(terminalId);
+      }
 
       log(
-        `📎 [HANDLER] switchAiAgentConnection result: success=${result.success}, newStatus=${result.newStatus}, agentType=${result.agentType}`
+        `⏻ [HANDLER] switchAiAgent result: success=${result.success}, newStatus=${result.newStatus}, agentType=${result.agentType}`
       );
 
       // Send response back to WebView
@@ -613,6 +629,7 @@ export class TerminalCommandHandlers {
         newStatus: result.newStatus,
         agentType: result.agentType,
         reason: result.reason,
+        isForceReconnect: forceReconnect,
       } as WebviewMessage);
 
       if (result.success) {
