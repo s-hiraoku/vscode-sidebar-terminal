@@ -99,7 +99,7 @@ describe('CliAgentCoordinator', () => {
       );
     });
 
-    it('should send activate when agent state is none', () => {
+    it('should send force-reconnect when agent state is none', () => {
       vi.mocked(deps.getAgentState).mockReturnValue(null);
 
       coordinator.handleAiAgentToggle('terminal-1');
@@ -108,7 +108,8 @@ describe('CliAgentCoordinator', () => {
         expect.objectContaining({
           command: 'switchAiAgent',
           terminalId: 'terminal-1',
-          action: 'activate',
+          action: 'force-reconnect',
+          forceReconnect: true,
         })
       );
     });
