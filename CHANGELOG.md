@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Terminal Header Persistence**: Terminal name and indicator color now survive VS Code restarts (#433)
+  - Added `indicatorColor` to session persistence data (`TerminalSessionData`, `TerminalRestoreData`)
+  - Terminal names set via header double-click are now restored after restart (previously reset to default "Terminal N")
+  - Indicator colors chosen from the color palette are now restored after restart
+  - Fixed WebView header sync to propagate both name and color on state updates (`syncHeaderIndicatorColors`)
+  - Backward-compatible with existing session data (missing fields are gracefully ignored)
+
 ## [0.2.14] - 2026-02-07
 
 ### Fixed

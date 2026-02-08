@@ -189,6 +189,72 @@ describe('TerminalStateDisplayManager', () => {
     });
   });
 
+  describe('Header Metadata Sync', () => {
+    it('should sync terminal name to header during state update', () => {
+      (mockUIManager as any).updateTerminalHeader = vi.fn();
+
+      const state: TerminalState = {
+        terminals: [
+          { id: 't1', name: 'My Custom Name', isActive: true },
+          { id: 't2', name: 'Terminal 2', isActive: false },
+        ],
+        activeTerminalId: 't1',
+        maxTerminals: 5,
+        availableSlots: [3, 4, 5],
+        config: {} as any,
+      };
+
+      manager.updateFromState(state);
+
+      expect((mockUIManager as any).updateTerminalHeader).toHaveBeenCalledWith(
+        't1', 'My Custom Name', undefined
+      );
+      expect((mockUIManager as any).updateTerminalHeader).toHaveBeenCalledWith(
+        't2', 'Terminal 2', undefined
+      );
+    });
+
+    it('should sync both name and indicatorColor to header', () => {
+      (mockUIManager as any).updateTerminalHeader = vi.fn();
+
+      const state: TerminalState = {
+        terminals: [
+          { id: 't1', name: 'My Terminal', isActive: true, indicatorColor: '#FF0000' },
+        ],
+        activeTerminalId: 't1',
+        maxTerminals: 5,
+        availableSlots: [3, 4, 5],
+        config: {} as any,
+      };
+
+      manager.updateFromState(state);
+
+      expect((mockUIManager as any).updateTerminalHeader).toHaveBeenCalledWith(
+        't1', 'My Terminal', '#FF0000'
+      );
+    });
+
+    it('should sync name without indicatorColor when color is not set', () => {
+      (mockUIManager as any).updateTerminalHeader = vi.fn();
+
+      const state: TerminalState = {
+        terminals: [
+          { id: 't1', name: 'Renamed Terminal', isActive: true },
+        ],
+        activeTerminalId: 't1',
+        maxTerminals: 5,
+        availableSlots: [],
+        config: {} as any,
+      };
+
+      manager.updateFromState(state);
+
+      expect((mockUIManager as any).updateTerminalHeader).toHaveBeenCalledWith(
+        't1', 'Renamed Terminal', undefined
+      );
+    });
+  });
+
   describe('Optional Managers', () => {
     it('should handle missing managers gracefully', () => {
       const minimalManager = new TerminalStateDisplayManager(

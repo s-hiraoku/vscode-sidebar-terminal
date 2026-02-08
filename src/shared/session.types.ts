@@ -17,6 +17,7 @@ export interface TerminalSessionData {
   scrollback?: string[];
   shellCommand?: string;
   cliAgentType?: 'claude' | 'gemini';
+  indicatorColor?: string;
 }
 
 /**
@@ -258,6 +259,7 @@ export class SessionDataTransformer {
       scrollback: terminal.scrollback || [],
       shellCommand: terminal.shellCommand || '',
       cliAgentType: terminal.cliAgentType,
+      ...(terminal.indicatorColor ? { indicatorColor: terminal.indicatorColor } : {}),
     };
   }
 
