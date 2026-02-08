@@ -7,14 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.15] - 2026-02-08
+
 ### Fixed
 
-- **Terminal Header Persistence**: Terminal name and indicator color now survive VS Code restarts (#433)
+- **Terminal Header Persistence**: Terminal name and indicator color now survive VS Code restarts (#435)
   - Added `indicatorColor` to session persistence data (`TerminalSessionData`, `TerminalRestoreData`)
   - Terminal names set via header double-click are now restored after restart (previously reset to default "Terminal N")
   - Indicator colors chosen from the color palette are now restored after restart
   - Fixed WebView header sync to propagate both name and color on state updates (`syncHeaderIndicatorColors`)
   - Backward-compatible with existing session data (missing fields are gracefully ignored)
+
+- **AI Agent Toggle in None State**: Clicking the toggle button now works when no agent is detected (#435)
+  - Previously showed "AI Agent operation failed" error
+  - Now sends force-reconnect to properly activate agent connection
+
+### Changed
+
+- **AI Agent Toggle Icon**: Replaced 📎 (paperclip) with ⏻ (power toggle) for clearer semantics
+  - Improved tooltip text for each connection state (connected/disconnected/none)
 
 ## [0.2.14] - 2026-02-07
 
