@@ -348,8 +348,6 @@ describe('Terminal History Restoration', () => {
         reorderTerminals: vi.fn(),
         renameTerminal: vi.fn().mockReturnValue(true),
         updateTerminalHeader: vi.fn().mockReturnValue(true),
-        getTerminal: vi.fn(),
-        // We need a way to track if createTerminal was called
       } as any;
 
       const sidebarProvider2 = {
