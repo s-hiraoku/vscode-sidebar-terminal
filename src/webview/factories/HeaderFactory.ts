@@ -235,14 +235,14 @@ export class HeaderFactory {
         border: 'none',
         color: fgColor,
         cursor: 'pointer',
-        fontSize: '13px',
+        fontSize: '14px',
         padding: '4px',
         borderRadius: '3px',
         display: 'flex', // Always visible - changed from 'none' to support constant visibility
         alignItems: 'center',
         justifyContent: 'center',
         opacity: '0.7',
-        transition: 'opacity 0.2s, background-color 0.2s, filter 0.2s',
+        transition: 'opacity 0.2s, background-color 0.2s',
         width: '24px',
         height: '24px',
         minWidth: '24px',
@@ -250,7 +250,7 @@ export class HeaderFactory {
         boxSizing: 'border-box',
       },
       {
-        textContent: '📎', // AI Agentを表すクリップアイコン
+        textContent: '⏻', // AI Agent toggle icon
         className: 'terminal-control ai-agent-toggle-btn',
         title: 'Switch AI Agent Connection',
         'data-terminal-id': terminalId,
@@ -359,7 +359,7 @@ export class HeaderFactory {
       aiAgentToggleButton.addEventListener('click', (event: MouseEvent) => {
         event.stopPropagation(); // Prevent header click event
         config.onAiAgentToggleClick!(terminalId);
-        log(`📎 [HeaderFactory] AI Agent toggle button clicked for terminal: ${terminalId}`);
+        log(`⏻ [HeaderFactory] AI Agent toggle button clicked for terminal: ${terminalId}`);
       });
     }
 
@@ -840,12 +840,15 @@ export class HeaderFactory {
     if (elements.aiAgentToggleButton) {
       elements.aiAgentToggleButton.style.display = visible ? 'flex' : 'none';
 
-      // Update tooltip based on connection status
-      if (visible && agentStatus) {
-        const isConnected = agentStatus === 'connected';
-        elements.aiAgentToggleButton.title = isConnected
-          ? 'AI Agent Connected (click ignored)'
-          : 'Connect AI Agent';
+      // Update tooltip, color, and opacity based on connection status
+      if (visible) {
+        if (agentStatus === 'connected') {
+          elements.aiAgentToggleButton.title = 'AI Agent Connected (click to force reconnect)';
+        } else if (agentStatus === 'disconnected') {
+          elements.aiAgentToggleButton.title = 'AI Agent Disconnected - Click to reconnect';
+        } else {
+          elements.aiAgentToggleButton.title = 'Click to activate AI Agent';
+        }
       }
 
       log(
