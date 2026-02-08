@@ -62,6 +62,7 @@ export interface TerminalRestoreData {
   cwd: string;
   isActive: boolean;
   scrollbackData?: string[];
+  indicatorColor?: string;
 }
 
 // ============================================================================
@@ -153,6 +154,7 @@ export class ExtensionPersistenceService implements vscode.Disposable {
         cwd: terminal.cwd || safeProcessCwd(),
         isActive: terminal.id === activeTerminalId,
         cliAgentType: this.detectCLIAgent(terminal),
+        ...(terminal.indicatorColor ? { indicatorColor: terminal.indicatorColor } : {}),
       }));
 
       const preferCache = Boolean(options?.preferCache);
@@ -815,7 +817,20 @@ export class ExtensionPersistenceService implements vscode.Disposable {
           cwd: terminalInfo.cwd,
           isActive: terminalInfo.isActive,
           scrollbackData: scrollbackData?.[terminalInfo.id] as string[] | undefined,
+          ...(terminalInfo.indicatorColor ? { indicatorColor: terminalInfo.indicatorColor } : {}),
         });
+
+        // Restore terminal name (createTerminal() assigns default name)
+        if (terminalInfo.name) {
+          this.terminalManager.renameTerminal(terminalId, terminalInfo.name);
+        }
+
+        // Restore indicator color
+        if (terminalInfo.indicatorColor) {
+          this.terminalManager.updateTerminalHeader(terminalId, {
+            indicatorColor: terminalInfo.indicatorColor,
+          });
+        }
 
         if (terminalInfo.isActive) {
           this.terminalManager.setActiveTerminal(terminalId);

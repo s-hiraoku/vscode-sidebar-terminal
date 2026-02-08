@@ -248,7 +248,7 @@ describe('LightweightTerminalWebviewManager', () => {
   });
 
   describe('AI Agent Toggle', () => {
-    it('should activate AI agent if disconnected', () => {
+    it('should force-reconnect AI agent if none state', () => {
        const cliStateManager = (manager as any).cliAgentStateManager;
        cliStateManager.getAgentState.mockReturnValue({ status: 'none' });
 
@@ -257,7 +257,8 @@ describe('LightweightTerminalWebviewManager', () => {
        expect(manager.postMessageToExtension).toHaveBeenCalledWith(expect.objectContaining({
            command: 'switchAiAgent',
            terminalId: 't1',
-           action: 'activate'
+           action: 'force-reconnect',
+           forceReconnect: true,
        }));
     });
 

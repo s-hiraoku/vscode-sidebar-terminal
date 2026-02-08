@@ -18,6 +18,8 @@ describe('ExtensionPersistenceService', () => {
     createTerminal: ReturnType<typeof vi.fn>;
     setActiveTerminal: ReturnType<typeof vi.fn>;
     reorderTerminals: ReturnType<typeof vi.fn>;
+    renameTerminal: ReturnType<typeof vi.fn>;
+    updateTerminalHeader: ReturnType<typeof vi.fn>;
   };
   let workspaceState: {
     get: ReturnType<typeof vi.fn>;
@@ -48,6 +50,8 @@ describe('ExtensionPersistenceService', () => {
       createTerminal: vi.fn().mockReturnValue(''),
       setActiveTerminal: vi.fn(),
       reorderTerminals: vi.fn(),
+      renameTerminal: vi.fn().mockReturnValue(true),
+      updateTerminalHeader: vi.fn().mockReturnValue(true),
     };
 
     service = new ExtensionPersistenceService(context, terminalManager as any);
@@ -149,5 +153,166 @@ describe('ExtensionPersistenceService', () => {
       'new-3',
     ]);
     expect(terminalManager.setActiveTerminal).toHaveBeenCalledWith('new-2');
+  });
+
+  describe('indicatorColor persistence', () => {
+    it('saves indicatorColor in session data when present', async () => {
+      terminalManager.getTerminals.mockReturnValue([
+        { id: 'terminal-1', name: 'Terminal 1', cwd: '/tmp', indicatorColor: '#FF0000' },
+        { id: 'terminal-2', name: 'Terminal 2', cwd: '/tmp' },
+      ]);
+
+      // Ensure persistence is enabled
+      vi.spyOn(service as any, 'getPersistenceConfig').mockReturnValue({
+        enablePersistentSessions: true,
+        persistentSessionScrollback: 1000,
+        persistentSessionReviveProcess: 'never',
+        persistentSessionStorageLimit: 20,
+        persistentSessionExpiryDays: 7,
+      });
+
+      // Pre-populate scrollback cache so save proceeds
+      service.handlePushedScrollbackData({ terminalId: 'terminal-1', scrollbackData: ['line1'] });
+      service.handlePushedScrollbackData({ terminalId: 'terminal-2', scrollbackData: ['line2'] });
+
+      await service.saveCurrentSession({ preferCache: true });
+
+      // Find the save call
+      const saveCalls = workspaceState.update.mock.calls.filter(
+        (call: unknown[]) => call[0] === 'terminal-session-unified' && call[1] != null
+      );
+      expect(saveCalls.length).toBeGreaterThanOrEqual(1);
+      const saved = saveCalls[0][1] as {
+        terminals: Array<{ id: string; indicatorColor?: string }>;
+      };
+
+      expect(saved.terminals[0].indicatorColor).toBe('#FF0000');
+      expect(saved.terminals[1].indicatorColor).toBeUndefined();
+    });
+
+    it('saves transparent indicatorColor correctly', async () => {
+      terminalManager.getTerminals.mockReturnValue([
+        { id: 'terminal-1', name: 'Terminal 1', cwd: '/tmp', indicatorColor: 'transparent' },
+      ]);
+
+      // Ensure persistence is enabled
+      vi.spyOn(service as any, 'getPersistenceConfig').mockReturnValue({
+        enablePersistentSessions: true,
+        persistentSessionScrollback: 1000,
+        persistentSessionReviveProcess: 'never',
+        persistentSessionStorageLimit: 20,
+        persistentSessionExpiryDays: 7,
+      });
+
+      // Pre-populate scrollback cache so save proceeds
+      service.handlePushedScrollbackData({ terminalId: 'terminal-1', scrollbackData: ['line1'] });
+
+      await service.saveCurrentSession({ preferCache: true });
+
+      const saveCalls = workspaceState.update.mock.calls.filter(
+        (call: unknown[]) => call[0] === 'terminal-session-unified' && call[1] != null
+      );
+      expect(saveCalls.length).toBeGreaterThanOrEqual(1);
+      const saved = saveCalls[0][1] as {
+        terminals: Array<{ id: string; indicatorColor?: string }>;
+      };
+
+      expect(saved.terminals[0].indicatorColor).toBe('transparent');
+    });
+  });
+
+  describe('terminal name and indicatorColor restoration', () => {
+    it('restores terminal name via renameTerminal after creation', async () => {
+      terminalManager.createTerminal
+        .mockReturnValueOnce('new-1')
+        .mockReturnValueOnce('new-2');
+
+      vi.spyOn(service as any, 'waitForTerminalsReady').mockResolvedValue(undefined);
+      vi.spyOn(service as any, 'requestScrollbackRestoration').mockResolvedValue(undefined);
+
+      const sessionData = {
+        terminals: [
+          { id: 'old-1', name: 'My Custom Name', number: 1, cwd: '/tmp', isActive: false },
+          { id: 'old-2', name: 'Terminal 2', number: 2, cwd: '/tmp', isActive: true },
+        ],
+        activeTerminalId: 'old-2',
+        timestamp: Date.now(),
+        version: '4.0.0',
+      };
+
+      await (service as any).batchRestoreTerminals(sessionData);
+
+      expect(terminalManager.renameTerminal).toHaveBeenCalledWith('new-1', 'My Custom Name');
+      expect(terminalManager.renameTerminal).toHaveBeenCalledWith('new-2', 'Terminal 2');
+    });
+
+    it('restores indicatorColor via updateTerminalHeader after creation', async () => {
+      terminalManager.createTerminal
+        .mockReturnValueOnce('new-1')
+        .mockReturnValueOnce('new-2');
+
+      vi.spyOn(service as any, 'waitForTerminalsReady').mockResolvedValue(undefined);
+      vi.spyOn(service as any, 'requestScrollbackRestoration').mockResolvedValue(undefined);
+
+      const sessionData = {
+        terminals: [
+          { id: 'old-1', name: 'Terminal 1', number: 1, cwd: '/tmp', isActive: false, indicatorColor: '#FF0000' },
+          { id: 'old-2', name: 'Terminal 2', number: 2, cwd: '/tmp', isActive: true },
+        ],
+        activeTerminalId: 'old-2',
+        timestamp: Date.now(),
+        version: '4.0.0',
+      };
+
+      await (service as any).batchRestoreTerminals(sessionData);
+
+      expect(terminalManager.updateTerminalHeader).toHaveBeenCalledWith('new-1', {
+        indicatorColor: '#FF0000',
+      });
+      expect(terminalManager.updateTerminalHeader).not.toHaveBeenCalledWith('new-2', expect.anything());
+    });
+
+    it('includes indicatorColor in TerminalRestoreData', async () => {
+      terminalManager.createTerminal.mockReturnValueOnce('new-1');
+
+      vi.spyOn(service as any, 'waitForTerminalsReady').mockResolvedValue(undefined);
+      const restoreStub = vi.spyOn(service as any, 'requestScrollbackRestoration').mockResolvedValue(undefined);
+
+      const sessionData = {
+        terminals: [
+          { id: 'old-1', name: 'Terminal 1', number: 1, cwd: '/tmp', isActive: true, indicatorColor: '#00FF00' },
+        ],
+        activeTerminalId: 'old-1',
+        timestamp: Date.now(),
+        version: '4.0.0',
+        scrollbackData: { 'old-1': ['line1'] },
+      };
+
+      await (service as any).batchRestoreTerminals(sessionData);
+
+      expect(restoreStub).toHaveBeenCalledOnce();
+      const restoreData = restoreStub.mock.calls[0][0];
+      expect(restoreData[0].indicatorColor).toBe('#00FF00');
+    });
+
+    it('handles legacy session data without indicatorColor gracefully', async () => {
+      terminalManager.createTerminal.mockReturnValueOnce('new-1');
+
+      vi.spyOn(service as any, 'waitForTerminalsReady').mockResolvedValue(undefined);
+      vi.spyOn(service as any, 'requestScrollbackRestoration').mockResolvedValue(undefined);
+
+      const sessionData = {
+        terminals: [
+          { id: 'old-1', name: 'Terminal 1', number: 1, cwd: '/tmp', isActive: true },
+        ],
+        activeTerminalId: 'old-1',
+        timestamp: Date.now(),
+        version: '4.0.0',
+      };
+
+      await (service as any).batchRestoreTerminals(sessionData);
+
+      expect(terminalManager.updateTerminalHeader).not.toHaveBeenCalled();
+    });
   });
 });

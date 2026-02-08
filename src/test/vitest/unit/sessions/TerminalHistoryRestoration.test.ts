@@ -60,6 +60,8 @@ describe('Terminal History Restoration', () => {
         createTerminal: vi.fn().mockReturnValue('term-1'),
         setActiveTerminal: vi.fn(),
         reorderTerminals: vi.fn(),
+        renameTerminal: vi.fn().mockReturnValue(true),
+        updateTerminalHeader: vi.fn().mockReturnValue(true),
       } as any;
 
       const mockSidebarProvider = {
@@ -225,6 +227,8 @@ describe('Terminal History Restoration', () => {
         createTerminal: vi.fn().mockReturnValue('new-1'),
         setActiveTerminal: vi.fn(),
         reorderTerminals: vi.fn(),
+        renameTerminal: vi.fn().mockReturnValue(true),
+        updateTerminalHeader: vi.fn().mockReturnValue(true),
       } as any;
       const mockSidebarProvider = { sendMessageToWebview: vi.fn() };
       const { ExtensionPersistenceService } = await import('../../../../services/persistence/ExtensionPersistenceService');
@@ -251,12 +255,14 @@ describe('Terminal History Restoration', () => {
         scrollbackData: { 'orig-1': ['history'] },
       };
       mockContext.workspaceState.get.mockReturnValue(sessionData);
-      
+
       const mockTerminalManager = {
         getTerminals: vi.fn().mockReturnValue([]),
         createTerminal: vi.fn().mockReturnValue('new-1'),
         setActiveTerminal: vi.fn(),
         reorderTerminals: vi.fn(),
+        renameTerminal: vi.fn().mockReturnValue(true),
+        updateTerminalHeader: vi.fn().mockReturnValue(true),
       } as any;
       const mockSidebarProvider = { sendMessageToWebview: vi.fn() };
       const { ExtensionPersistenceService } = await import('../../../../services/persistence/ExtensionPersistenceService');
@@ -340,8 +346,8 @@ describe('Terminal History Restoration', () => {
         createTerminal: vi.fn().mockReturnValue('term-new-1'),
         setActiveTerminal: vi.fn(),
         reorderTerminals: vi.fn(),
-        getTerminal: vi.fn(), 
-        // We need a way to track if createTerminal was called
+        renameTerminal: vi.fn().mockReturnValue(true),
+        updateTerminalHeader: vi.fn().mockReturnValue(true),
       } as any;
 
       const sidebarProvider2 = {
@@ -398,6 +404,8 @@ describe('Terminal History Restoration', () => {
           .mockReturnValueOnce('t2-new'),
         setActiveTerminal: vi.fn(),
         reorderTerminals: vi.fn(),
+        renameTerminal: vi.fn().mockReturnValue(true),
+        updateTerminalHeader: vi.fn().mockReturnValue(true),
       } as any;
 
       const mockSidebarProvider = {

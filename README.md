@@ -45,7 +45,7 @@ Your sidebar, your terminal, your AI agents -- all in one place. A full-featured
 | -------------------------- | -------------------------------------------------------------------------------- |
 | **Multiple terminals**     | Up to 5 concurrent terminals with tab management (drag & drop reordering)        |
 | **Split views**            | Vertical / horizontal splitting with drag-to-resize                              |
-| **Session persistence**    | Auto-save/restore with ANSI color preservation (up to 3,000 lines of scrollback) |
+| **Session persistence**    | Auto-save/restore with ANSI color preservation, terminal names, and header indicator colors |
 | **Shell integration**      | Command status indicators, working directory display, command history            |
 | **Find in terminal**       | `Ctrl+F` / `Cmd+F` -- search through terminal output with regex support          |
 | **Command decorations**    | Visual success/error/running indicators at command boundaries                    |
