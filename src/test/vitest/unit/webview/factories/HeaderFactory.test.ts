@@ -222,7 +222,7 @@ describe('HeaderFactory', () => {
       expect(elements.nameSpan.textContent).toBe('Original');
     });
 
-    it('should submit rename on blur', () => {
+    it('should submit rename on blur', async () => {
       const onRenameSubmit = vi.fn();
       const elements = HeaderFactory.createTerminalHeader({
         terminalId: 't1',
@@ -235,7 +235,10 @@ describe('HeaderFactory', () => {
         '.terminal-name-edit-input'
       ) as HTMLInputElement;
       input.value = 'Renamed By Blur';
-      input.dispatchEvent(new Event('blur', { bubbles: true }));
+      input.dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
+
+      // blur handler uses requestAnimationFrame
+      await new Promise((resolve) => requestAnimationFrame(resolve));
 
       expect(onRenameSubmit).toHaveBeenCalledWith('t1', 'Renamed By Blur');
       expect(elements.nameSpan.textContent).toBe('Renamed By Blur');
@@ -258,6 +261,192 @@ describe('HeaderFactory', () => {
 
       expect(onRenameSubmit).not.toHaveBeenCalled();
       expect(elements.nameSpan.textContent).toBe('Original');
+    });
+
+    it('should NOT close editor when clicking a color palette button', async () => {
+      const onHeaderUpdate = vi.fn();
+      const elements = HeaderFactory.createTerminalHeader({
+        terminalId: 't1',
+        terminalName: 'Original',
+        onHeaderUpdate,
+      });
+
+      elements.container.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+      expect(elements.titleSection.querySelector('.terminal-header-editor')).toBeTruthy();
+
+      const pinkOption = elements.titleSection.querySelector(
+        '[data-indicator-color="#FF69B4"]'
+      ) as HTMLButtonElement;
+      const input = elements.titleSection.querySelector('.terminal-name-edit-input') as HTMLInputElement;
+
+      // Simulate: mousedown sets flag, blur fires, click fires and re-focuses input
+      pinkOption.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      input.dispatchEvent(new Event('blur'));
+      pinkOption.click();
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+
+      expect(elements.titleSection.querySelector('.terminal-header-editor')).toBeTruthy();
+      // Do not commit updates while the editor is still open.
+      expect(onHeaderUpdate).not.toHaveBeenCalledWith('t1', { indicatorColor: '#FF69B4' });
+    });
+
+    it('should NOT close editor when focus moves from input to a palette button (blur path)', async () => {
+      const onHeaderUpdate = vi.fn();
+      const elements = HeaderFactory.createTerminalHeader({
+        terminalId: 't1',
+        terminalName: 'Original',
+        onHeaderUpdate,
+      });
+      document.body.appendChild(elements.container);
+
+      elements.container.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+      const editor = elements.titleSection.querySelector('.terminal-header-editor') as HTMLElement;
+      expect(editor).toBeTruthy();
+
+      const input = elements.titleSection.querySelector('.terminal-name-edit-input') as HTMLInputElement;
+      const pinkOption = elements.titleSection.querySelector(
+        '[data-indicator-color="#FF69B4"]'
+      ) as HTMLButtonElement;
+      expect(input).toBeTruthy();
+      expect(pinkOption).toBeTruthy();
+
+      input.focus();
+      pinkOption.focus(); // activeElement moves within editor
+      input.dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: pinkOption }));
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+
+      expect(elements.titleSection.querySelector('.terminal-header-editor')).toBeTruthy();
+    });
+
+    it('should NOT close editor when clicking the color palette area (non-button)', async () => {
+      const onHeaderUpdate = vi.fn();
+      const elements = HeaderFactory.createTerminalHeader({
+        terminalId: 't1',
+        terminalName: 'Original',
+        onHeaderUpdate,
+      });
+
+      elements.container.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+      expect(elements.titleSection.querySelector('.terminal-header-editor')).toBeTruthy();
+
+      const palette = elements.titleSection.querySelector(
+        '.terminal-header-color-palette'
+      ) as HTMLElement;
+      const input = elements.titleSection.querySelector('.terminal-name-edit-input') as HTMLInputElement;
+
+      // Simulate: clicking within palette background triggers input blur.
+      palette.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      input.dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
+      palette.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+
+      expect(elements.titleSection.querySelector('.terminal-header-editor')).toBeTruthy();
+    });
+
+    it('should close editor when double-clicking the color palette area (non-button)', () => {
+      const onHeaderUpdate = vi.fn();
+      const elements = HeaderFactory.createTerminalHeader({
+        terminalId: 't1',
+        terminalName: 'Original',
+        onHeaderUpdate,
+      });
+
+      elements.container.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+      expect(elements.titleSection.querySelector('.terminal-header-editor')).toBeTruthy();
+
+      const palette = elements.titleSection.querySelector(
+        '.terminal-header-color-palette'
+      ) as HTMLElement;
+      palette.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+
+      expect(elements.titleSection.querySelector('.terminal-header-editor')).toBeNull();
+      expect(elements.nameSpan.textContent).toBe('Original');
+    });
+
+    it('should commit indicator color when closing the editor (palette dblclick)', () => {
+      const onHeaderUpdate = vi.fn();
+      const elements = HeaderFactory.createTerminalHeader({
+        terminalId: 't1',
+        terminalName: 'Original',
+        onHeaderUpdate,
+      });
+
+      elements.container.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+
+      const pinkOption = elements.titleSection.querySelector(
+        '[data-indicator-color="#FF69B4"]'
+      ) as HTMLButtonElement;
+      pinkOption.click();
+
+      const palette = elements.titleSection.querySelector(
+        '.terminal-header-color-palette'
+      ) as HTMLElement;
+      palette.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+
+      expect(onHeaderUpdate).toHaveBeenCalledWith('t1', { indicatorColor: '#FF69B4' });
+    });
+
+    it('should apply enhanced visual styles to selected color option', () => {
+      const onHeaderUpdate = vi.fn();
+      const elements = HeaderFactory.createTerminalHeader({
+        terminalId: 't1',
+        terminalName: 'Original',
+        onHeaderUpdate,
+      });
+
+      elements.container.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+
+      const pinkOption = elements.titleSection.querySelector(
+        '[data-indicator-color="#FF69B4"]'
+      ) as HTMLButtonElement;
+      pinkOption.click();
+
+      expect(pinkOption.style.outline).toContain('var(--vscode-focusBorder)');
+      expect(pinkOption.style.outlineOffset).toBe('1px');
+      expect(pinkOption.style.transform).toBe('scale(1)');
+      expect(pinkOption.style.opacity).toBe('1');
+
+      const redOption = elements.titleSection.querySelector(
+        '[data-indicator-color="#FF0000"]'
+      ) as HTMLButtonElement;
+      expect(redOption.style.outline).toContain('none');
+      expect(redOption.style.transform).toBe('scale(1)');
+      expect(redOption.style.opacity).toBe('0.6');
+    });
+
+    it('should flash processing indicator when color is selected', () => {
+      vi.useFakeTimers();
+      const onHeaderUpdate = vi.fn();
+      const elements = HeaderFactory.createTerminalHeader({
+        terminalId: 't1',
+        terminalName: 'Original',
+        onHeaderUpdate,
+      });
+      document.body.appendChild(elements.container);
+
+      elements.container.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+
+      const indicator = elements.container.querySelector('.terminal-processing-indicator') as HTMLElement;
+      const flow = elements.container.querySelector(
+        '.terminal-processing-indicator-flow'
+      ) as HTMLElement;
+      expect(indicator.style.opacity).toBe('0');
+      expect(flow.style.animation).toContain('infinite');
+
+      const pinkOption = elements.titleSection.querySelector(
+        '[data-indicator-color="#FF69B4"]'
+      ) as HTMLButtonElement;
+      pinkOption.click();
+
+      expect(indicator.style.opacity).toBe('1');
+      // Palette click should provide a single-run animation for quick color confirmation.
+      expect(flow.style.animation).not.toContain('infinite');
+
+      vi.advanceTimersByTime(600);
+      expect(indicator.style.opacity).toBe('0');
+      expect(flow.style.animation).toContain('infinite');
+
+      vi.useRealTimers();
     });
 
     it('should open unified editor on header double click with color palette', () => {
@@ -295,7 +484,7 @@ describe('HeaderFactory', () => {
       ) as HTMLButtonElement;
       pinkOption.click();
 
-      expect(onHeaderUpdate).toHaveBeenCalledWith('t1', { indicatorColor: '#FF69B4' });
+      expect(onHeaderUpdate).not.toHaveBeenCalledWith('t1', { indicatorColor: '#FF69B4' });
       expect(elements.container.style.getPropertyValue('--terminal-indicator-color')).toBe('#FF69B4');
     });
 
@@ -317,7 +506,7 @@ describe('HeaderFactory', () => {
 
       offOption?.click();
 
-      expect(onHeaderUpdate).toHaveBeenCalledWith('t1', { indicatorColor: 'transparent' });
+      expect(onHeaderUpdate).not.toHaveBeenCalledWith('t1', { indicatorColor: 'transparent' });
       expect(elements.container.style.getPropertyValue('--terminal-indicator-color')).toBe(
         'transparent'
       );
