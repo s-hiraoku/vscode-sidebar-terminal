@@ -462,6 +462,10 @@ export class CliAgentStateStore {
   ): boolean {
     log(`🔄 [STATE-STORE] Force reconnecting ${agentType} in terminal ${terminalId}`);
 
+    const previousConnectedId = this.connectedAgentTerminalId;
+    const previousType = this.connectedAgentType;
+    const previousState = previousConnectedId ? this.agentStates.get(previousConnectedId) : null;
+
     // Clear existing state
     this.disconnectedAgents.delete(terminalId);
 
@@ -484,6 +488,33 @@ export class CliAgentStateStore {
       type: agentType,
       terminalName,
     });
+
+    // If another terminal was previously CONNECTED, it is still running but no longer globally active.
+    // Move it to DISCONNECTED instead of clearing to NONE.
+    if (previousConnectedId && previousConnectedId !== terminalId && previousType) {
+      const previousTerminalName = previousState?.terminalName;
+      this.disconnectedAgents.set(previousConnectedId, {
+        type: previousType,
+        startTime: new Date(),
+        terminalName: previousTerminalName,
+      });
+
+      this.updateAgentState(previousConnectedId, {
+        terminalId: previousConnectedId,
+        status: 'disconnected',
+        agentType: previousType,
+        terminalName: previousTerminalName,
+        preserveScrollPosition: false,
+        isDisplayingChoices: false,
+      });
+
+      this.notifyObservers({
+        terminalId: previousConnectedId,
+        status: 'disconnected',
+        type: previousType,
+        terminalName: previousTerminalName,
+      });
+    }
 
     log(`🚀 [STATE-STORE] Successfully force-reconnected ${agentType} in terminal ${terminalId}`);
     return true;
