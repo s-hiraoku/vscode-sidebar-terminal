@@ -198,6 +198,20 @@ describe('CliAgentDetectionEngine', () => {
       expect(result.isTerminated).toBe(false);
     });
 
+    it('should not treat Claude TUI prompt "❯" as shell termination (prevents connected -> none flip)', () => {
+      // Simulate Claude startup / activity (sets last AI output timestamp)
+      engine.detectFromOutput(terminalId, 'Claude Code v2.1.37');
+
+      // Advance beyond the "recent AI activity" window so the generic shell-prompt
+      // termination heuristic would normally trigger.
+      vi.advanceTimersByTime(15000);
+
+      // Claude Code uses "❯" as an in-app prompt. Treating it as a shell prompt
+      // causes a false termination and flips the status back to none.
+      const result = engine.detectTermination(terminalId, '❯', 'claude');
+      expect(result.isTerminated).toBe(false);
+    });
+
     it('should detect termination when Ctrl+C is followed by shell prompt', () => {
       engine.detectFromInput(terminalId, '\x03');
       engine.detectFromOutput(terminalId, 'Claude is thinking...');

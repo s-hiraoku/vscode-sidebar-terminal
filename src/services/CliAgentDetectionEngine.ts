@@ -353,6 +353,21 @@ export class CliAgentDetectionEngine {
     const terminalSignals = this.getTerminalSignalState(terminalId);
     const normalizedLine = cleanLine.trim();
 
+    // Claude Code TUI uses "❯" prompts inside the application. Our shell prompt regexes
+    // also match it (Starship), which can cause a false termination and flip connected -> none.
+    // Prefer explicit termination/shell-integration signals for Claude instead.
+    if (
+      agentType === 'claude' &&
+      /^❯(?:\s+\[.*?\].*)?$/.test(normalizedLine)
+    ) {
+      return {
+        isTerminated: false,
+        confidence: 0,
+        detectedLine: cleanLine,
+        reason: 'Claude TUI prompt (not a shell prompt)',
+      };
+    }
+
     if (normalizedLine === '^C' || normalizedLine.toLowerCase() === 'keyboardinterrupt') {
       const interruptState = this.registerInterruptSignal(terminalSignals, 'output');
       if (interruptState.isDoubleInterrupt) {
