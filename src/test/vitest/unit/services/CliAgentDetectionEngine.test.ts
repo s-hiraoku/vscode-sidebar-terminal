@@ -212,6 +212,19 @@ describe('CliAgentDetectionEngine', () => {
       expect(result.isTerminated).toBe(false);
     });
 
+    it('should not terminate on "❯" even if currentAgentType is missing but shell integration context indicates claude', () => {
+      // Simulate VS Code shell integration command start for claude.
+      engine.detectFromOutput(terminalId, '\x1b]633;B;claude\x07');
+
+      // After some time, Claude TUI prompt is displayed.
+      vi.advanceTimersByTime(15000);
+
+      // Some call sites may not provide currentAgentType (or it may be temporarily unknown).
+      // Still, we must not treat Claude's in-app prompt as a shell prompt termination signal.
+      const result = engine.detectTermination(terminalId, '❯');
+      expect(result.isTerminated).toBe(false);
+    });
+
     it('should detect termination when Ctrl+C is followed by shell prompt', () => {
       engine.detectFromInput(terminalId, '\x03');
       engine.detectFromOutput(terminalId, 'Claude is thinking...');

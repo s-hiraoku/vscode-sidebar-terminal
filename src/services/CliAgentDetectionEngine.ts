@@ -356,10 +356,25 @@ export class CliAgentDetectionEngine {
     // Claude Code TUI uses "❯" prompts inside the application. Our shell prompt regexes
     // also match it (Starship), which can cause a false termination and flip connected -> none.
     // Prefer explicit termination/shell-integration signals for Claude instead.
-    if (
-      agentType === 'claude' &&
-      /^❯(?:\s+\[.*?\].*)?$/.test(normalizedLine)
-    ) {
+    //
+    // Note: Some call sites may not provide agentType reliably; use recent shell/input context
+    // as a fallback signal that Claude is active in this terminal.
+    const now = Date.now();
+    const claudeContextLikelyActive =
+      agentType === 'claude' ||
+      (terminalSignals.shellExecutingAgent === 'claude' &&
+        now - terminalSignals.lastShellSignalAt <= this.RECENT_INPUT_WINDOW_MS) ||
+      (terminalSignals.lastInputAgent === 'claude' &&
+        now - terminalSignals.lastInputAt <= this.RECENT_INPUT_WINDOW_MS);
+
+    if (claudeContextLikelyActive && /^❯(?:\s+.*)?$/.test(normalizedLine)) {
+      // Treat the Claude prompt as activity so the generic shell-prompt termination heuristic
+      // doesn't fire after inactivity windows while the TUI is still open.
+      this.detectionCache.set(`${terminalId}_lastAIOutput`, {
+        result: null,
+        timestamp: now,
+      });
+
       return {
         isTerminated: false,
         confidence: 0,
