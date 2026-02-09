@@ -50,6 +50,15 @@ describe('CliAgentPatternRegistry', () => {
       expect(registry.matchStartupOutput('Gemini model initialized')).toBe('gemini');
     });
 
+    it('should match GitHub Copilot startup banner with version', () => {
+      expect(registry.matchStartupOutput('GitHub Copilot v0.0.406')).toBe('copilot');
+      expect(registry.matchStartupOutput('GitHub Copilot v1.2.3')).toBe('copilot');
+    });
+
+    it('should match GitHub Copilot CLI startup message', () => {
+      expect(registry.matchStartupOutput('Welcome to GitHub Copilot CLI')).toBe('copilot');
+    });
+
     it('should not match plain agent command text as startup output', () => {
       expect(registry.matchStartupOutput('opencode')).toBeNull();
       expect(registry.matchStartupOutput('copilot')).toBeNull();

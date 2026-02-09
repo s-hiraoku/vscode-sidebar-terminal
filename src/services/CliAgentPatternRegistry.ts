@@ -141,7 +141,7 @@ export class CliAgentPatternRegistry {
       type: 'copilot',
       commandPrefixes: ['copilot ', 'copilot', 'gh copilot'],
       startupPatterns: ['Welcome to GitHub Copilot CLI'],
-      startupRegexPatterns: [/GitHub\s+Copilot\s+CLI/i],
+      startupRegexPatterns: [/GitHub\s+Copilot/i],
       activityKeywords: ['copilot', 'github'],
       terminationPatterns: [],
       terminationRegexPatterns: [/\[process exited with code \d+\]/i],
