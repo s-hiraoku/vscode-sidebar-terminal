@@ -80,7 +80,8 @@ export class CliAgentPatternRegistry {
       commandPrefixes: ['claude ', 'claude'],
       startupPatterns: ['Welcome to Claude Code!', 'Tips for getting started'],
       startupRegexPatterns: [
-        /Claude\s+Code/,
+        // Allow "ClaudeCode" as some TUIs can lose the visible whitespace after ANSI stripping.
+        /Claude\s*Code/i,
       ],
       activityKeywords: ['claude', 'anthropic'],
       terminationPatterns: ['[Process completed]'],

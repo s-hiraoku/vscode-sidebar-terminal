@@ -200,6 +200,12 @@ describe('EnhancedBaseManager Lifecycle - Comprehensive TDD Suite', () => {
 
       it('should measure initialization time accurately', async () => {
         // RED: Initialization time should be tracked
+        // Use fake timers + deterministic performance.now() to avoid flaky wall-clock assertions in CI.
+        vi.useFakeTimers();
+        const perfNowSpy = vi.spyOn(performance, 'now');
+        let perfNow = 0;
+        perfNowSpy.mockImplementation(() => perfNow);
+
         const manager = new TestLifecycleManager('TestManager', {
           enableLogging: true,
           enablePerformanceTracking: true,
@@ -209,12 +215,18 @@ describe('EnhancedBaseManager Lifecycle - Comprehensive TDD Suite', () => {
 
         manager.initializationDelay = 50;
 
-        await manager.initialize();
+        const initPromise = manager.initialize();
+        // Advance the scheduled delay and simulated clock for performance measurement.
+        perfNow = 50;
+        await vi.advanceTimersByTimeAsync(50);
+        await initPromise;
 
         const health = manager.getHealthStatus();
         expect(health.performanceMetrics.initializationTimeMs).toBeGreaterThan(40);
-        // Relaxed timing threshold due to CI environment variability
         expect(health.performanceMetrics.initializationTimeMs).toBeLessThan(200);
+
+        perfNowSpy.mockRestore();
+        vi.useRealTimers();
       });
     });
   });

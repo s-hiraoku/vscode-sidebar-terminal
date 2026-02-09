@@ -114,6 +114,9 @@ export class HeaderFactory {
         className: ['terminal-header', ...customClasses].join(' '),
       }
     );
+    // Some host CSS can force a fixed header height; ensure the header can grow when showing the edit UI.
+    container.style.setProperty('height', 'auto', 'important');
+    container.style.setProperty('min-height', '32px', 'important');
     container.style.setProperty('--terminal-indicator-color', indicatorColor);
     container.dataset.headerEnhancementsEnabled = String(headerEnhancementsEnabled);
 
@@ -482,7 +485,11 @@ export class HeaderFactory {
   }): void {
     const { terminalId, container, titleSection, nameSpan, onRenameSubmit, onHeaderUpdate } = params;
     let isEditing = false;
+    let isPaletteInteracting = false;
     let currentIndicatorColor = params.initialIndicatorColor;
+    const initialIndicatorColor = params.initialIndicatorColor;
+    let paletteFlashTimer: number | null = null;
+    let pendingIndicatorColor: string | null = null;
 
     const openEditor = (event: MouseEvent): void => {
       const target = event.target as HTMLElement;
@@ -500,6 +507,16 @@ export class HeaderFactory {
         return;
       }
       isEditing = true;
+
+      // Reset stale palette state from a previous editor session so that
+      // onHeaderUpdate comparisons (finalColor !== initialIndicatorColor)
+      // don't erroneously fire with a previously committed color.
+      pendingIndicatorColor = null;
+      currentIndicatorColor = initialIndicatorColor;
+      if (paletteFlashTimer) {
+        window.clearTimeout(paletteFlashTimer);
+        paletteFlashTimer = null;
+      }
 
       const originalName = nameSpan.textContent?.trim() || '';
 
@@ -533,13 +550,51 @@ export class HeaderFactory {
       palette.style.display = 'flex';
       palette.style.flexWrap = 'wrap';
       palette.style.gap = '4px';
+      // Selected option uses transform scale which doesn't affect layout size.
+      // Add padding so the scaled circle still fits inside the header frame.
+      palette.style.padding = '3px';
+      palette.style.boxSizing = 'border-box';
+      palette.style.alignItems = 'center';
+      palette.addEventListener(
+        'pointerdown',
+        (e) => {
+          // Prevent focus from leaving the input (which would blur + close the editor).
+          e.preventDefault();
+          e.stopPropagation();
+          isPaletteInteracting = true;
+        },
+        { capture: true }
+      );
+      palette.addEventListener('mousedown', (e) => {
+        // Keep input focus so blur doesn't close the editor when interacting with palette area.
+        e.preventDefault();
+        e.stopPropagation();
+        isPaletteInteracting = true;
+      });
+      palette.addEventListener('mouseup', (e) => {
+        e.stopPropagation();
+        // If blur doesn't happen (focus preserved), clear the guard after blur's rAF would run.
+        requestAnimationFrame(() => {
+          isPaletteInteracting = false;
+        });
+      });
+      palette.addEventListener('click', (e) => {
+        e.stopPropagation();
+        // In case focus didn't change, clear the interaction guard.
+        requestAnimationFrame(() => {
+          isPaletteInteracting = false;
+        });
+      });
 
       const refreshSelection = (): void => {
         const options = palette.querySelectorAll<HTMLButtonElement>('.terminal-header-color-option');
         options.forEach((option) => {
           const isSelected = option.dataset.indicatorColor === currentIndicatorColor;
-          option.style.outline = isSelected ? '1px solid var(--vscode-focusBorder)' : '1px solid transparent';
-          option.style.opacity = isSelected ? '1' : '0.78';
+          option.style.outline = isSelected ? '2px solid var(--vscode-focusBorder)' : 'none';
+          option.style.outlineOffset = isSelected ? '1px' : '0';
+          option.style.opacity = isSelected ? '1' : '0.6';
+          // Keep selection indication subtle: border/outline only (no scaling).
+          option.style.transform = 'scale(1)';
         });
       };
 
@@ -557,6 +612,7 @@ export class HeaderFactory {
           colorButton.style.border = '1px solid rgba(127, 127, 127, 0.6)';
           colorButton.style.padding = '0';
           colorButton.style.cursor = 'pointer';
+          colorButton.style.transition = 'transform 0.15s ease, opacity 0.15s ease, outline 0.15s ease';
           if (color === 'transparent') {
             colorButton.textContent = 'OFF';
             colorButton.style.width = '26px';
@@ -569,17 +625,69 @@ export class HeaderFactory {
           } else {
             colorButton.style.backgroundColor = color;
           }
+          colorButton.addEventListener(
+            'pointerdown',
+            (e) => {
+              // Prevent click-to-focus; keep rename input focused.
+              e.preventDefault();
+              e.stopPropagation();
+              isPaletteInteracting = true;
+            },
+            { capture: true }
+          );
           colorButton.addEventListener('mousedown', (e) => {
             e.preventDefault();
             e.stopPropagation();
+            isPaletteInteracting = true;
           });
           colorButton.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
             currentIndicatorColor = color;
+            pendingIndicatorColor = color;
             container.style.setProperty('--terminal-indicator-color', color);
             refreshSelection();
-            onHeaderUpdate?.(terminalId, { indicatorColor: color });
+
+            // Flash processing indicator for visual feedback
+            const indicator = container.querySelector('.terminal-processing-indicator') as HTMLElement;
+            if (indicator) {
+              const flow = container.querySelector(
+                '.terminal-processing-indicator-flow'
+              ) as HTMLElement | null;
+              if (paletteFlashTimer) {
+                window.clearTimeout(paletteFlashTimer);
+                paletteFlashTimer = null;
+              }
+              indicator.style.opacity = '1';
+              if (flow) {
+                // Show the flow once (not infinite) to confirm the selected color.
+                // Then restore the default infinite animation used for the processing indicator.
+                // Reset animation state so it always starts from the beginning and looks smooth.
+                flow.style.willChange = 'transform';
+                flow.style.animation = 'none';
+                flow.style.transform = 'translateX(-130%)';
+                // Force reflow to apply the reset before re-enabling animation.
+                // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+                flow.offsetHeight;
+                flow.style.animation = 'terminal-processing-flow 0.65s linear 1';
+              }
+              paletteFlashTimer = window.setTimeout(() => {
+                indicator.style.opacity = '0';
+                if (flow) {
+                  flow.style.animation = 'terminal-processing-flow 1.1s linear infinite';
+                }
+                paletteFlashTimer = null;
+              }, 600);
+            }
+
+            // Re-focus input to keep editor open
+            input.focus();
+            // If blur was triggered, its rAF should see isPaletteInteracting=true and keep editor open.
+            // Clear after that point to avoid swallowing the next genuine blur.
+            requestAnimationFrame(() => {
+              isPaletteInteracting = false;
+            });
+
             log(`🎨 [HeaderFactory] Indicator color updated: ${terminalId} -> ${color}`);
           });
           palette.appendChild(colorButton);
@@ -612,6 +720,18 @@ export class HeaderFactory {
           nameSpan.textContent = originalName;
           nameSpan.setAttribute('title', originalName);
         }
+
+        // Commit indicator color only when closing the editor.
+        if (commit) {
+          const finalColor = pendingIndicatorColor ?? currentIndicatorColor;
+          if (finalColor && finalColor !== initialIndicatorColor) {
+            onHeaderUpdate?.(terminalId, { indicatorColor: finalColor });
+          }
+        } else if (pendingIndicatorColor) {
+          // Cancel: revert to the initial indicator color.
+          currentIndicatorColor = initialIndicatorColor;
+          container.style.setProperty('--terminal-indicator-color', initialIndicatorColor);
+        }
       };
 
       input.addEventListener('click', (e) => e.stopPropagation());
@@ -627,11 +747,39 @@ export class HeaderFactory {
           finalizeRename(false);
         }
       });
-      input.addEventListener('blur', () => finalizeRename(true));
+      input.addEventListener('focusout', (evt: FocusEvent) => {
+        requestAnimationFrame(() => {
+          if (!isEditing) return;
+          const related = evt.relatedTarget as HTMLElement | null;
+          if (related && editor.contains(related)) {
+            return;
+          }
+          // If focus moved within the editor (e.g. into a palette button), keep the editor open.
+          const active = document.activeElement as HTMLElement | null;
+          if (active && editor.contains(active)) {
+            return;
+          }
+          if (isPaletteInteracting) {
+            isPaletteInteracting = false;
+            return;
+          }
+          finalizeRename(true);
+        });
+      });
 
       editor.appendChild(input);
       if (enhancementsEnabled) {
         editor.appendChild(palette);
+      }
+
+      if (enhancementsEnabled) {
+        palette.addEventListener('dblclick', (e) => {
+          // Single click selects colors; double click closes the editor.
+          e.preventDefault();
+          e.stopPropagation();
+          isPaletteInteracting = false;
+          finalizeRename(true);
+        });
       }
 
       if (nameSpan.parentElement === titleSection) {

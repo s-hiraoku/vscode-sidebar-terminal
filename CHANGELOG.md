@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Header Color Palette UX**: Improved header rename editor palette interactions and visuals
+  - Clicking the palette no longer closes the editor; palette now closes via double-click
+  - Selected color is indicated with an outline only (no scaling)
+  - Palette layout stays within the header frame
+  - Color confirmation indicator now animates smoothly (single-pass)
+
+- **Claude Agent Status Flapping**: Prevented false termination when Claude Code shows its in-app `❯` prompt
+  - Stops the status from flipping from `connected` to `none` while Claude is still running
+
 ## [0.2.16] - 2026-02-09
 
 ### Fixed

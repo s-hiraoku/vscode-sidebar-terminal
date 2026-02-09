@@ -123,6 +123,16 @@ describe('CliAgentDetectionEngine', () => {
       expect(result.agentType).toBe('claude');
     });
 
+    it('should detect Claude Code even if whitespace between words is missing after ANSI cleaning', () => {
+      // Some TUIs can interleave style resets such that the visible gap isn't preserved in the
+      // cleaned output, resulting in "ClaudeCode".
+      const tuiLine = '\x1b[32mClaude\x1b[0m\x1b[1mCode\x1b[0m v2.1.37';
+      const result = engine.detectFromOutput(terminalId, tuiLine);
+
+      expect(result.isDetected).toBe(true);
+      expect(result.agentType).toBe('claude');
+    });
+
     it('should detect OpenCode from TUI output', () => {
       const tuiLine = 'OpenCode Zen';
       const result = engine.detectFromOutput(terminalId, tuiLine);
@@ -185,6 +195,33 @@ describe('CliAgentDetectionEngine', () => {
     it('should ignore shell prompt if there is very recent AI activity', () => {
       engine.detectFromOutput(terminalId, 'Claude is thinking...');
       const result = engine.detectTermination(terminalId, 'user@host:~$ ');
+      expect(result.isTerminated).toBe(false);
+    });
+
+    it('should not treat Claude TUI prompt "❯" as shell termination (prevents connected -> none flip)', () => {
+      // Simulate Claude startup / activity (sets last AI output timestamp)
+      engine.detectFromOutput(terminalId, 'Claude Code v2.1.37');
+
+      // Advance beyond the "recent AI activity" window so the generic shell-prompt
+      // termination heuristic would normally trigger.
+      vi.advanceTimersByTime(15000);
+
+      // Claude Code uses "❯" as an in-app prompt. Treating it as a shell prompt
+      // causes a false termination and flips the status back to none.
+      const result = engine.detectTermination(terminalId, '❯', 'claude');
+      expect(result.isTerminated).toBe(false);
+    });
+
+    it('should not terminate on "❯" even if currentAgentType is missing but shell integration context indicates claude', () => {
+      // Simulate VS Code shell integration command start for claude.
+      engine.detectFromOutput(terminalId, '\x1b]633;B;claude\x07');
+
+      // After some time, Claude TUI prompt is displayed.
+      vi.advanceTimersByTime(15000);
+
+      // Some call sites may not provide currentAgentType (or it may be temporarily unknown).
+      // Still, we must not treat Claude's in-app prompt as a shell prompt termination signal.
+      const result = engine.detectTermination(terminalId, '❯');
       expect(result.isTerminated).toBe(false);
     });
 
