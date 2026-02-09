@@ -7,9 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.16] - 2026-02-09
+
 ### Fixed
 
-- **GitHub Copilot Startup Detection**: Fixed detection failure when Copilot displays version banner (`GitHub Copilot v0.0.406`) instead of legacy `GitHub Copilot CLI` text
+- **GitHub Copilot Startup Detection**: Fixed detection failure when Copilot displays version banner (`GitHub Copilot v0.0.406`) instead of legacy `GitHub Copilot CLI` text (#437)
   - Updated startup regex pattern from `/GitHub\s+Copilot\s+CLI/i` to `/GitHub\s+Copilot/i`
   - Now correctly detects both old (`GitHub Copilot CLI`) and new (`GitHub Copilot vX.X.X`) startup banners
 
