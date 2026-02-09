@@ -508,6 +508,16 @@ export class HeaderFactory {
       }
       isEditing = true;
 
+      // Reset stale palette state from a previous editor session so that
+      // onHeaderUpdate comparisons (finalColor !== initialIndicatorColor)
+      // don't erroneously fire with a previously committed color.
+      pendingIndicatorColor = null;
+      currentIndicatorColor = initialIndicatorColor;
+      if (paletteFlashTimer) {
+        window.clearTimeout(paletteFlashTimer);
+        paletteFlashTimer = null;
+      }
+
       const originalName = nameSpan.textContent?.trim() || '';
 
       const editor = document.createElement('div');

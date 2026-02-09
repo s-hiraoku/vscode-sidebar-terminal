@@ -279,9 +279,9 @@ describe('HeaderFactory', () => {
       ) as HTMLButtonElement;
       const input = elements.titleSection.querySelector('.terminal-name-edit-input') as HTMLInputElement;
 
-      // Simulate: mousedown sets flag, blur fires, click fires and re-focuses input
+      // Simulate: mousedown sets flag, focusout fires, click fires and re-focuses input
       pinkOption.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-      input.dispatchEvent(new Event('blur'));
+      input.dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
       pinkOption.click();
       await new Promise((resolve) => requestAnimationFrame(resolve));
 
