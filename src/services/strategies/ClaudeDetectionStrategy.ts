@@ -19,7 +19,7 @@ export class ClaudeDetectionStrategy extends BaseDetectionStrategy {
   }
 
   protected override getStartupRegexPatterns(): RegExp[] {
-    return [/Claude\s+Code/];
+    return [/Claude\s*Code/i];
   }
 
   protected getActivityKeywords(): string[] {

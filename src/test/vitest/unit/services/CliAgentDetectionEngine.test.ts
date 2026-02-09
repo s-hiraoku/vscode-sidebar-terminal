@@ -123,6 +123,16 @@ describe('CliAgentDetectionEngine', () => {
       expect(result.agentType).toBe('claude');
     });
 
+    it('should detect Claude Code even if whitespace between words is missing after ANSI cleaning', () => {
+      // Some TUIs can interleave style resets such that the visible gap isn't preserved in the
+      // cleaned output, resulting in "ClaudeCode".
+      const tuiLine = '\x1b[32mClaude\x1b[0m\x1b[1mCode\x1b[0m v2.1.37';
+      const result = engine.detectFromOutput(terminalId, tuiLine);
+
+      expect(result.isDetected).toBe(true);
+      expect(result.agentType).toBe('claude');
+    });
+
     it('should detect OpenCode from TUI output', () => {
       const tuiLine = 'OpenCode Zen';
       const result = engine.detectFromOutput(terminalId, tuiLine);
