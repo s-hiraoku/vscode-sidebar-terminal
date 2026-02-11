@@ -42,7 +42,7 @@ export const CONFIG_CACHE_CONSTANTS = {
   // ========================================
 
   /** デフォルトのターミナル数上限 */
-  DEFAULT_MAX_TERMINALS: 5,
+  DEFAULT_MAX_TERMINALS: 10,
 } as const;
 
 /** 設定キャッシュ定数の型 */

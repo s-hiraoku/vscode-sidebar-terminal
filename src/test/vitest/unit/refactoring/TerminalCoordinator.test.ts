@@ -152,7 +152,7 @@ describe('TerminalCoordinator Service', () => {
       const defaultCoordinator = TerminalCoordinatorFactory.createDefault();
 
       expect(defaultCoordinator).toBeInstanceOf(TerminalCoordinator);
-      expect(defaultCoordinator.getAvailableSlots()).toBe(5); // Default max
+      expect(defaultCoordinator.getAvailableSlots()).toBe(10); // Default max
 
       defaultCoordinator.dispose();
     });

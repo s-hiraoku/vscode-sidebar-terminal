@@ -11,6 +11,7 @@ import {
 import { TerminalNumberManager } from '../../utils/TerminalNumberManager';
 import { ShellIntegrationService } from '../../services/ShellIntegrationService';
 import { TerminalProfileService } from '../../services/TerminalProfileService';
+import { TERMINAL_CONSTANTS } from '../../constants/SystemConstants';
 
 /**
  * Interface for terminal creation options
@@ -55,7 +56,7 @@ export class TerminalInstanceService {
 
   constructor() {
     const config = getTerminalConfig();
-    this._maxTerminals = config.maxTerminals || 10;
+    this._maxTerminals = config.maxTerminals || TERMINAL_CONSTANTS.MAX_TERMINAL_COUNT;
     this._terminalNumberManager = new TerminalNumberManager(this._maxTerminals);
     this._profileService = new TerminalProfileService();
 

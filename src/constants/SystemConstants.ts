@@ -245,21 +245,21 @@ export const PERFORMANCE_CONSTANTS = {
 export const TERMINAL_CONSTANTS = {
   // ターミナル制限
   /**
-   * 最大ターミナル数 (5個)
+   * 最大ターミナル数 (10個)
    *
-   * @rationale VS Codeのサイドバーのスペース制約とパフォーマンスを考慮して、
-   * 5個のターミナルを上限としています。
+   * @rationale フルスクリーンモードでの活用を想定し、10個まで対応。
+   * WebGLコンテキスト制限(Chromium: ~16)に余裕を持たせています。
    *
-   * @performance 5個を超えると、UIの応答性とメモリ使用量に影響します。
+   * @performance 10個でもWebGL auto-fallbackにより安定動作します。
    */
-  MAX_TERMINAL_COUNT: 5,
+  MAX_TERMINAL_COUNT: 10,
 
   /**
-   * デフォルトの最大ターミナル数 (5個)
+   * デフォルトの最大ターミナル数 (10個)
    *
    * @rationale ユーザー設定のデフォルト値として使用されます。
    */
-  DEFAULT_MAX_TERMINALS: 5,
+  DEFAULT_MAX_TERMINALS: 10,
 
   /**
    * 最小ターミナルID番号 (1)
@@ -269,11 +269,11 @@ export const TERMINAL_CONSTANTS = {
   MIN_TERMINAL_ID_NUMBER: 1,
 
   /**
-   * 最大ターミナルID番号 (5)
+   * 最大ターミナルID番号 (10)
    *
    * @rationale MAX_TERMINAL_COUNTと一致し、一貫性のあるID管理を提供します.
    */
-  MAX_TERMINAL_ID_NUMBER: 5,
+  MAX_TERMINAL_ID_NUMBER: 10,
 
   // プラットフォーム設定
   /**
@@ -1552,5 +1552,5 @@ export const CONFIG_CACHE_CONSTANTS = {
   /**
    * デフォルトのターミナル数上限
    */
-  DEFAULT_MAX_TERMINALS: 5,
+  DEFAULT_MAX_TERMINALS: 10,
 } as const;

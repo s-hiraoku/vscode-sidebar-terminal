@@ -18,6 +18,7 @@ import {
 import { TerminalNumberManager } from '../../utils/TerminalNumberManager';
 import { ShellIntegrationService } from '../../services/ShellIntegrationService';
 import { TerminalProfileService } from '../../services/TerminalProfileService';
+import { TERMINAL_CONSTANTS } from '../../constants/SystemConstants';
 
 /**
  * Interface for terminal creation options
@@ -80,12 +81,11 @@ export class TerminalLifecycleService {
       // Get terminal number from manager
       const terminals = new Map<string, TerminalInstance>(); // Empty for first terminal
       const terminalNumber = this._terminalNumberManager.findAvailableNumber(terminals);
-      if (terminalNumber > 5) {
-        // Default max terminals
+      if (terminalNumber > TERMINAL_CONSTANTS.MAX_TERMINAL_COUNT) {
         return failureFromDetails({
           code: ErrorCode.RESOURCE_EXHAUSTED,
           message: 'Maximum number of terminals reached',
-          context: { maxTerminals: 5, attemptedNumber: terminalNumber },
+          context: { maxTerminals: TERMINAL_CONSTANTS.MAX_TERMINAL_COUNT, attemptedNumber: terminalNumber },
         });
       }
 
@@ -271,7 +271,7 @@ export class TerminalLifecycleService {
   } {
     const terminals = new Map<string, TerminalInstance>(); // Empty map for now
     return {
-      maxTerminals: 5, // Default max terminals
+      maxTerminals: TERMINAL_CONSTANTS.MAX_TERMINAL_COUNT,
       availableNumbers: this._terminalNumberManager.getAvailableSlots(terminals),
       usedNumbers: [], // Would need to track this externally
       terminalsBeingCreated: this._terminalsBeingCreated.size,

@@ -10,6 +10,7 @@ import { webview as log } from '../../utils/logger';
 import { PartialTerminalSettings, WebViewFontSettings } from '../../types/shared';
 import { IConfigManager, TerminalInstance } from '../interfaces/ManagerInterfaces';
 import { FontSettingsService } from '../services/FontSettingsService';
+import { SPLIT_CONSTANTS } from '../constants/webview';
 
 // VS Code API interface for settings persistence
 declare const vscode: {
@@ -23,8 +24,8 @@ declare const vscode: {
 const ValidationLimits = {
   FONT_SIZE: { min: 8, max: 72 },
   SCROLLBACK: { min: 0, max: 100000 },
-  MAX_TERMINALS: { min: 1, max: 10 },
-} as const;
+  MAX_TERMINALS: { min: 1, max: SPLIT_CONSTANTS.MAX_TERMINALS },
+};
 
 /**
  * Allowed values for enumerated settings
@@ -139,7 +140,7 @@ export class ConfigManager implements IConfigManager {
     shellArgs: [],
     cwd: '',
     defaultDirectory: '',
-    maxTerminals: 5,
+    maxTerminals: SPLIT_CONSTANTS.MAX_TERMINALS,
     cursor: {
       style: 'block',
       blink: true,

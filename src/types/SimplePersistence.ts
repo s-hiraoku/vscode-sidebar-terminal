@@ -63,6 +63,6 @@ export interface ISimplePersistenceManager {
 export const SIMPLE_PERSISTENCE = {
   STORAGE_KEY: 'simple_terminal_session',
   VERSION: '1.0.0',
-  MAX_TERMINALS: 5,
+  MAX_TERMINALS: 10,
   DEFAULT_TERMINAL_NAME: 'Terminal',
 } as const;

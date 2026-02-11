@@ -551,6 +551,27 @@ describe('LightweightTerminalWebviewManager', () => {
           expect(displayModeManager.showAllTerminalsSplit).toHaveBeenCalledTimes(1);
           expect(updateSplitResizersSpy).toHaveBeenCalledTimes(1);
       });
+
+      it('should NOT trigger split layout refresh when in fullscreen mode even if multiple terminals exist', () => {
+          const displayModeManager = (manager as any).displayModeManager;
+          displayModeManager.getCurrentMode.mockReturnValue('fullscreen');
+          const updateSplitResizersSpy = vi
+            .spyOn(manager, 'updateSplitResizers')
+            .mockImplementation(() => {});
+
+          const newState = {
+              terminals: [{ id: 't1' }, { id: 't2' }],
+              availableSlots: [3],
+              maxTerminals: 5,
+              activeTerminalId: 't1'
+          };
+
+          manager.updateState(newState);
+
+          // Should NOT call showAllTerminalsSplit because currentMode is fullscreen
+          expect(displayModeManager.showAllTerminalsSplit).not.toHaveBeenCalled();
+          expect(updateSplitResizersSpy).not.toHaveBeenCalled();
+      });
   });
 
   describe('Lifecycle', () => {

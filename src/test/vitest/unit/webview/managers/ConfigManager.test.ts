@@ -199,11 +199,11 @@ describe('ConfigManager', () => {
 
       // Too small
       configManager.saveSettings({ maxTerminals: 0 });
-      expect(configManager.getCurrentSettings().maxTerminals).toBe(5);
+      expect(configManager.getCurrentSettings().maxTerminals).toBe(10);
 
       // Too large
       configManager.saveSettings({ maxTerminals: 20 });
-      expect(configManager.getCurrentSettings().maxTerminals).toBe(5);
+      expect(configManager.getCurrentSettings().maxTerminals).toBe(10);
     });
 
     it('should validate cursor settings', () => {

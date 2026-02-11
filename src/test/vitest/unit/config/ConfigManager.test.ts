@@ -45,7 +45,7 @@ describe('ConfigManager', () => {
 
       const config = configManager.getExtensionTerminalConfig();
 
-      expect(config).toHaveProperty('maxTerminals', 5);
+      expect(config).toHaveProperty('maxTerminals', 10);
       expect(config).toHaveProperty('shell', '');
       expect(config).toHaveProperty('fontFamily', 'monospace');
       expect(config).toHaveProperty('fontSize', 14);

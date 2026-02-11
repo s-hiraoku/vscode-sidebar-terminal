@@ -17,6 +17,7 @@ import {
 } from './UnifiedConfigurationService';
 import { CONFIG_SECTIONS } from '../types/shared';
 import { terminal as log } from '../utils/logger';
+import { TERMINAL_CONSTANTS } from '../constants/SystemConstants';
 
 /**
  * Migration result interface
@@ -75,7 +76,7 @@ const MIGRATION_KEYS = {
   'editor.multiCursorModifier': 'alt',
 
   // Extension settings
-  'sidebarTerminal.maxTerminals': 5,
+  'sidebarTerminal.maxTerminals': TERMINAL_CONSTANTS.MAX_TERMINAL_COUNT,
   'sidebarTerminal.shell': '',
   'sidebarTerminal.shellArgs': [],
   'sidebarTerminal.defaultDirectory': '',

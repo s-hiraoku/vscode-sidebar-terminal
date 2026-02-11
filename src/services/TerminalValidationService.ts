@@ -10,6 +10,7 @@ import { terminal as log } from '../utils/logger';
 import { OperationResult, OperationResultHandler } from '../utils/OperationResultHandler';
 import { TerminalNumberManager } from '../utils/TerminalNumberManager';
 import { getTerminalConfig } from '../utils/common';
+import { TERMINAL_CONSTANTS } from '../constants/SystemConstants';
 
 export interface ITerminalValidationService {
   /**
@@ -89,7 +90,7 @@ export class TerminalValidationService implements ITerminalValidationService {
     const terminalConfig = getTerminalConfig();
 
     this.config = {
-      maxTerminals: terminalConfig.maxTerminals || 5,
+      maxTerminals: terminalConfig.maxTerminals || TERMINAL_CONSTANTS.MAX_TERMINAL_COUNT,
       minTerminals: 1,
       maxDataSize: 10 * 1024 * 1024, // 10MB
       maxDimensions: { cols: 500, rows: 200 },

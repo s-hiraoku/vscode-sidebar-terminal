@@ -56,7 +56,7 @@ export const SHARED_SIZES = {
  * Shared default values
  */
 export const SHARED_DEFAULTS = {
-  MAX_TERMINALS: 5,
+  MAX_TERMINALS: 10,
   DEFAULT_COLS: 80,
   DEFAULT_ROWS: 30,
   SCROLLBACK_LINES: 10000,

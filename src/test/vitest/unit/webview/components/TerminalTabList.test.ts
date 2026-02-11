@@ -151,6 +151,236 @@ describe('TerminalTabList', () => {
     });
   });
 
+  describe('Double-Click Rename', () => {
+    it('should show rename input when tab label is double-clicked', () => {
+      tabList.addTab({ id: 't1', name: 'Terminal 1', isActive: true, isClosable: true });
+      // Need 2+ tabs for tabs to be visible
+      tabList.addTab({ id: 't2', name: 'Terminal 2', isActive: false, isClosable: true });
+      const tabEl = container.querySelector('[data-tab-id="t1"]') as HTMLElement;
+
+      const dblclickEvent = new dom.window.MouseEvent('dblclick', { bubbles: true });
+      tabEl.dispatchEvent(dblclickEvent);
+
+      const input = tabEl.querySelector('input.terminal-tab-rename-input') as HTMLInputElement;
+      expect(input).not.toBeNull();
+      expect(input.value).toBe('Terminal 1');
+    });
+
+    it('should NOT trigger rename when close button is double-clicked', () => {
+      tabList.addTab({ id: 't1', name: 'Terminal 1', isActive: true, isClosable: true });
+      tabList.addTab({ id: 't2', name: 'Terminal 2', isActive: false, isClosable: true });
+      const closeBtn = container.querySelector('.terminal-tab-close') as HTMLElement;
+
+      const dblclickEvent = new dom.window.MouseEvent('dblclick', { bubbles: true });
+      closeBtn.dispatchEvent(dblclickEvent);
+
+      const tabEl = container.querySelector('[data-tab-id="t1"]') as HTMLElement;
+      const input = tabEl.querySelector('input.terminal-tab-rename-input');
+      expect(input).toBeNull();
+    });
+
+    it('should call onTabRename when Enter is pressed in rename input', () => {
+      tabList.addTab({ id: 't1', name: 'Terminal 1', isActive: true, isClosable: true });
+      tabList.addTab({ id: 't2', name: 'Terminal 2', isActive: false, isClosable: true });
+      const tabEl = container.querySelector('[data-tab-id="t1"]') as HTMLElement;
+
+      // Trigger rename mode
+      const dblclickEvent = new dom.window.MouseEvent('dblclick', { bubbles: true });
+      tabEl.dispatchEvent(dblclickEvent);
+
+      const input = tabEl.querySelector('input.terminal-tab-rename-input') as HTMLInputElement;
+      expect(input).not.toBeNull();
+
+      // Type new name and press Enter
+      input.value = 'New Name';
+      const enterEvent = new dom.window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true });
+      input.dispatchEvent(enterEvent);
+
+      expect(mockEvents.onTabRename).toHaveBeenCalledWith('t1', 'New Name');
+    });
+
+    it('should restore original name when Escape is pressed in rename input', () => {
+      tabList.addTab({ id: 't1', name: 'Terminal 1', isActive: true, isClosable: true });
+      tabList.addTab({ id: 't2', name: 'Terminal 2', isActive: false, isClosable: true });
+      const tabEl = container.querySelector('[data-tab-id="t1"]') as HTMLElement;
+
+      // Trigger rename mode
+      const dblclickEvent = new dom.window.MouseEvent('dblclick', { bubbles: true });
+      tabEl.dispatchEvent(dblclickEvent);
+
+      const input = tabEl.querySelector('input.terminal-tab-rename-input') as HTMLInputElement;
+      input.value = 'Changed Name';
+
+      const escapeEvent = new dom.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true });
+      input.dispatchEvent(escapeEvent);
+
+      expect(mockEvents.onTabRename).not.toHaveBeenCalled();
+      // Label should be restored
+      const label = tabEl.querySelector('.terminal-tab-label');
+      expect(label?.textContent).toBe('Terminal 1');
+    });
+
+    it('should save name on blur from rename input after delay', () => {
+      vi.useFakeTimers();
+      tabList.addTab({ id: 't1', name: 'Terminal 1', isActive: true, isClosable: true });
+      tabList.addTab({ id: 't2', name: 'Terminal 2', isActive: false, isClosable: true });
+      const tabEl = container.querySelector('[data-tab-id="t1"]') as HTMLElement;
+
+      // Trigger rename mode
+      const dblclickEvent = new dom.window.MouseEvent('dblclick', { bubbles: true });
+      tabEl.dispatchEvent(dblclickEvent);
+
+      const input = tabEl.querySelector('input.terminal-tab-rename-input') as HTMLInputElement;
+      input.value = 'Blurred Name';
+
+      const blurEvent = new dom.window.Event('blur', { bubbles: false });
+      input.dispatchEvent(blurEvent);
+
+      // Not called immediately due to delayed blur pattern
+      expect(mockEvents.onTabRename).not.toHaveBeenCalled();
+
+      // After the delay expires, the rename should be committed
+      vi.advanceTimersByTime(60);
+
+      expect(mockEvents.onTabRename).toHaveBeenCalledWith('t1', 'Blurred Name');
+      vi.useRealTimers();
+    });
+
+    it('should survive focus steal from terminal.focus() during rename', () => {
+      vi.useFakeTimers();
+      tabList.addTab({ id: 't1', name: 'Terminal 1', isActive: true, isClosable: true });
+      tabList.addTab({ id: 't2', name: 'Terminal 2', isActive: false, isClosable: true });
+      const tabEl = container.querySelector('[data-tab-id="t1"]') as HTMLElement;
+
+      // Trigger rename mode
+      const dblclickEvent = new dom.window.MouseEvent('dblclick', { bubbles: true });
+      tabEl.dispatchEvent(dblclickEvent);
+
+      const input = tabEl.querySelector('input.terminal-tab-rename-input') as HTMLInputElement;
+      expect(input).not.toBeNull();
+      input.value = 'New Name';
+
+      // Simulate terminal.focus() stealing focus (triggers blur on the input)
+      const blurEvent = new dom.window.Event('blur', { bubbles: false });
+      input.dispatchEvent(blurEvent);
+
+      // Before the delay expires, re-focus the input (simulating the re-assert timeout).
+      // In JSDOM, focus() alone may not fire the 'focus' event, so dispatch it explicitly.
+      vi.advanceTimersByTime(30);
+      input.focus();
+      input.dispatchEvent(new dom.window.Event('focus', { bubbles: false }));
+
+      // Now advance past the full delay
+      vi.advanceTimersByTime(30);
+
+      // Rename should NOT have been committed because input regained focus
+      expect(mockEvents.onTabRename).not.toHaveBeenCalled();
+
+      // Input should still be present in the DOM
+      expect(tabEl.querySelector('input.terminal-tab-rename-input')).not.toBeNull();
+      vi.useRealTimers();
+    });
+
+    it('should NOT trigger rename when input element is double-clicked', () => {
+      tabList.addTab({ id: 't1', name: 'Terminal 1', isActive: true, isClosable: true });
+      tabList.addTab({ id: 't2', name: 'Terminal 2', isActive: false, isClosable: true });
+      const tabEl = container.querySelector('[data-tab-id="t1"]') as HTMLElement;
+
+      // Enter rename mode first
+      const dblclickEvent = new dom.window.MouseEvent('dblclick', { bubbles: true });
+      tabEl.dispatchEvent(dblclickEvent);
+
+      const input = tabEl.querySelector('input.terminal-tab-rename-input') as HTMLInputElement;
+      expect(input).not.toBeNull();
+
+      // Double-click the input itself should not cause issues
+      const dblclickInput = new dom.window.MouseEvent('dblclick', { bubbles: true });
+      input.dispatchEvent(dblclickInput);
+
+      // Input should still be present (no error, no duplicate rename)
+      expect(tabEl.querySelector('input.terminal-tab-rename-input')).not.toBeNull();
+    });
+
+    it('should call onTabRename exactly once when Enter triggers blur', () => {
+      tabList.addTab({ id: 't1', name: 'Terminal 1', isActive: true, isClosable: true });
+      tabList.addTab({ id: 't2', name: 'Terminal 2', isActive: false, isClosable: true });
+      const tabEl = container.querySelector('[data-tab-id="t1"]') as HTMLElement;
+
+      const dblclickEvent = new dom.window.MouseEvent('dblclick', { bubbles: true });
+      tabEl.dispatchEvent(dblclickEvent);
+
+      const input = tabEl.querySelector('input.terminal-tab-rename-input') as HTMLInputElement;
+      input.value = 'New Name';
+
+      // Enter calls finishRename, which removes input and triggers blur
+      const enterEvent = new dom.window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true });
+      input.dispatchEvent(enterEvent);
+
+      // blur fires after replaceWith but finishRename guard prevents double call
+      const blurEvent = new dom.window.Event('blur', { bubbles: false });
+      input.dispatchEvent(blurEvent);
+
+      expect(mockEvents.onTabRename).toHaveBeenCalledTimes(1);
+    });
+
+    it('should NOT call onTabRename when name is empty or whitespace', () => {
+      tabList.addTab({ id: 't1', name: 'Terminal 1', isActive: true, isClosable: true });
+      tabList.addTab({ id: 't2', name: 'Terminal 2', isActive: false, isClosable: true });
+      const tabEl = container.querySelector('[data-tab-id="t1"]') as HTMLElement;
+
+      const dblclickEvent = new dom.window.MouseEvent('dblclick', { bubbles: true });
+      tabEl.dispatchEvent(dblclickEvent);
+
+      const input = tabEl.querySelector('input.terminal-tab-rename-input') as HTMLInputElement;
+      input.value = '   ';
+
+      const enterEvent = new dom.window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true });
+      input.dispatchEvent(enterEvent);
+
+      expect(mockEvents.onTabRename).not.toHaveBeenCalled();
+    });
+
+    it('should NOT call onTabRename when name is unchanged', () => {
+      tabList.addTab({ id: 't1', name: 'Terminal 1', isActive: true, isClosable: true });
+      tabList.addTab({ id: 't2', name: 'Terminal 2', isActive: false, isClosable: true });
+      const tabEl = container.querySelector('[data-tab-id="t1"]') as HTMLElement;
+
+      const dblclickEvent = new dom.window.MouseEvent('dblclick', { bubbles: true });
+      tabEl.dispatchEvent(dblclickEvent);
+
+      const input = tabEl.querySelector('input.terminal-tab-rename-input') as HTMLInputElement;
+      // Name unchanged
+      expect(input.value).toBe('Terminal 1');
+
+      const enterEvent = new dom.window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true });
+      input.dispatchEvent(enterEvent);
+
+      expect(mockEvents.onTabRename).not.toHaveBeenCalled();
+    });
+
+    it('should preserve rename input when updateTab is called during rename', () => {
+      tabList.addTab({ id: 't1', name: 'Terminal 1', isActive: true, isClosable: true });
+      tabList.addTab({ id: 't2', name: 'Terminal 2', isActive: false, isClosable: true });
+      const tabEl = container.querySelector('[data-tab-id="t1"]') as HTMLElement;
+
+      // Enter rename mode
+      const dblclickEvent = new dom.window.MouseEvent('dblclick', { bubbles: true });
+      tabEl.dispatchEvent(dblclickEvent);
+
+      const input = tabEl.querySelector('input.terminal-tab-rename-input') as HTMLInputElement;
+      expect(input).not.toBeNull();
+      input.value = 'Editing...';
+
+      // Simulate a concurrent update (e.g., theme change triggers updateTab)
+      tabList.updateTab('t1', { isDirty: true });
+
+      // Input should still be present
+      const inputAfterUpdate = tabEl.querySelector('input.terminal-tab-rename-input') as HTMLInputElement;
+      expect(inputAfterUpdate).not.toBeNull();
+      expect(inputAfterUpdate.value).toBe('Editing...');
+    });
+  });
+
   describe('Visual State', () => {
     it('should update mode indicator', () => {
       tabList.setModeIndicator('fullscreen');

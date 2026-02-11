@@ -3,6 +3,7 @@ import { TerminalInstance, TerminalState, TerminalInfo } from '../../types/share
 import { terminal as log } from '../../utils/logger';
 import { getTerminalConfig } from '../../utils/common';
 import { TerminalNumberManager } from '../../utils/TerminalNumberManager';
+import { TERMINAL_CONSTANTS } from '../../constants/SystemConstants';
 import { ActiveTerminalManager } from '../../utils/common';
 
 /**
@@ -280,7 +281,7 @@ export class TerminalStateManagementService {
       terminalsBeingKilled: this._terminalBeingKilled.size,
       availableSlots: this._terminalNumberManager.getAvailableSlots(this._terminals),
       usedNumbers: [], // Would need external tracking
-      maxTerminals: 5, // Default max terminals
+      maxTerminals: TERMINAL_CONSTANTS.MAX_TERMINAL_COUNT,
     };
   }
 

@@ -853,7 +853,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     const canCreate = this.canCreateTerminal();
     if (!canCreate && requestSource !== 'extension') {
       const localCount = this.splitManager?.getTerminals()?.size ?? 0;
-      const maxCount = this.currentTerminalState?.maxTerminals ?? SPLIT_CONSTANTS.MAX_TERMINALS ?? 5;
+      const maxCount = this.currentTerminalState?.maxTerminals ?? SPLIT_CONSTANTS.MAX_TERMINALS;
       log(`❌ [STATE] Terminal creation blocked (local count=${localCount}, max=${maxCount})`);
       this.showTerminalLimitMessage(localCount, maxCount);
       return { action: 'skip', terminal: null };
@@ -1617,6 +1617,14 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       return;
     }
 
+    const currentMode = displayModeManager.getCurrentMode?.() ?? 'normal';
+
+    // 🔧 FIX: If we are in fullscreen mode, we intentionally have no split resizers.
+    // Do not trigger a split layout refresh in this case, as it would kick the user out of fullscreen.
+    if (currentMode === 'fullscreen') {
+      return;
+    }
+
     const terminalsWrapper = document.getElementById('terminals-wrapper');
     const stateTerminalCount = state.terminals.length;
     const domWrapperCount = terminalsWrapper
@@ -1625,7 +1633,6 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     const resizerCount = terminalsWrapper
       ? terminalsWrapper.querySelectorAll('.split-resizer').length
       : document.querySelectorAll('.split-resizer').length;
-    const currentMode = displayModeManager.getCurrentMode?.() ?? 'normal';
     const wrapperCount = domWrapperCount > 0 ? domWrapperCount : stateTerminalCount;
     const expectedResizerCount = wrapperCount - 1;
     const resizerLayoutValid = resizerCount === expectedResizerCount;
