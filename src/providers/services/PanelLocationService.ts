@@ -130,19 +130,20 @@ export class PanelLocationService implements vscode.Disposable {
     this._cachedPanelLocation = location;
     log('📍 [DEBUG] ✅ Cached panel location UPDATED:', location);
 
-    // Update context key for VS Code when clause
-    await vscode.commands.executeCommand('setContext', PanelLocationService.CONTEXT_KEY, location);
-    log('📍 [DEBUG] Context key updated with panel location:', location);
+    // Only call setContext when location actually changes.
+    // Redundant setContext calls trigger VS Code layout recalculation,
+    // which can cancel the secondary sidebar's maximized state.
+    if (previousLocation !== location) {
+      await vscode.commands.executeCommand('setContext', PanelLocationService.CONTEXT_KEY, location);
+      log('📍 [DEBUG] Context key updated with NEW panel location:', location);
 
-    // 🎯 REMOVED: No longer send confirmation back to WebView
-    // WebView applies changes autonomously, reducing message round-trips
-    // await this._sendMessage({ command: 'panelLocationUpdate', location: location });
-    log('📍 [DEBUG] ✅ Location cached and context updated (no confirmation message sent)');
-
-    // Notify caller if location changed
-    if (previousLocation !== location && onLocationChange) {
-      log(`🔄 [RELAYOUT] Location changed: ${previousLocation} → ${location}`);
-      await onLocationChange(previousLocation, location);
+      // Notify caller if location changed
+      if (onLocationChange) {
+        log(`🔄 [RELAYOUT] Location changed: ${previousLocation} → ${location}`);
+        await onLocationChange(previousLocation, location);
+      }
+    } else {
+      log('📍 [DEBUG] ⏭️ Panel location unchanged, skipping setContext');
     }
 
     log('📍 [DEBUG] ===============================================================');

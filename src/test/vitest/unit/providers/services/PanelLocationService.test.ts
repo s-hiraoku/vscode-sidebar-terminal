@@ -125,6 +125,64 @@ describe('PanelLocationService', () => {
     });
   });
 
+  describe('handlePanelLocationReport - skip redundant setContext', () => {
+    it('should skip setContext when location is unchanged', async () => {
+      // Arrange: Report 'panel' first (changes from default 'sidebar')
+      await service.handlePanelLocationReport('panel');
+      vi.mocked(vscode.commands.executeCommand).mockClear();
+
+      // Act: Report same location again
+      await service.handlePanelLocationReport('panel');
+
+      // Assert: setContext should NOT be called for unchanged location
+      expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
+    });
+
+    it('should call setContext when location changes', async () => {
+      // Arrange: Report 'panel' first
+      await service.handlePanelLocationReport('panel');
+      vi.mocked(vscode.commands.executeCommand).mockClear();
+
+      // Act: Report different location
+      await service.handlePanelLocationReport('sidebar');
+
+      // Assert: setContext should be called for changed location
+      expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+        'setContext',
+        'secondaryTerminal.panelLocation',
+        'sidebar'
+      );
+    });
+
+    it('should not trigger onLocationChange callback when location unchanged', async () => {
+      const onChange = vi.fn();
+
+      // Arrange: Set location to 'panel'
+      await service.handlePanelLocationReport('panel');
+
+      // Act: Report same location with callback
+      await service.handlePanelLocationReport('panel', onChange);
+
+      // Assert: Callback should not be called
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
+    it('should skip setContext when first report matches default location', async () => {
+      // The default cached location is 'sidebar'
+      // Reporting the same value should not trigger setContext
+
+      // Act: Report 'sidebar' (same as default)
+      await service.handlePanelLocationReport('sidebar');
+
+      // Assert: setContext should NOT be called because location hasn't changed
+      expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(
+        'setContext',
+        'secondaryTerminal.panelLocation',
+        'sidebar'
+      );
+    });
+  });
+
   describe('getCurrentPanelLocation', () => {
     it('should return sidebar if dynamic split is disabled', () => {
       const mockGet = vi.fn().mockImplementation((key, def) => {

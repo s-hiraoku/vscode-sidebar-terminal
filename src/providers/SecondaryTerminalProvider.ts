@@ -62,6 +62,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private _webviewMessageListenerDisposable: vscode.Disposable | null = null;
   private _webviewMessageListenerView: vscode.WebviewView | null = null;
   private _pendingPanelMoveReinit = false;
+  private _hasDetectedPanelLocation = false;
 
   // Phase 8 services (typed properly)
   private _decorationsService?: import('../services/TerminalDecorationsService').TerminalDecorationsService;
@@ -419,10 +420,19 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private _handleWebviewVisible(): void {
     log('🔄 [VISIBILITY] Handling WebView visible event');
 
-    // Trigger panel location detection with debounce
+    // Guard: Skip panel location detection on simple visibility restore.
+    // Only detect on first visibility to prevent unnecessary setContext calls
+    // that can cancel VS Code's secondary sidebar maximize state.
+    if (this._hasDetectedPanelLocation) {
+      log('⏭️ [VISIBILITY] Panel location already detected, skipping redundant detection');
+      return;
+    }
+
+    // First visibility: trigger detection
     setTimeout(() => {
-      log('📍 [VISIBILITY] Requesting panel location detection after visibility change');
+      log('📍 [VISIBILITY] Requesting initial panel location detection');
       this._requestPanelLocationDetection();
+      this._hasDetectedPanelLocation = true;
     }, 200);
   }
 
@@ -1642,6 +1652,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
     // Reset state
     this._isInitialized = false;
+    this._hasDetectedPanelLocation = false;
 
     log('✅ [DEBUG] SecondaryTerminalProvider disposed');
   }
