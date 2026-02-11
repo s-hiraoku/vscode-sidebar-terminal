@@ -63,6 +63,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private _webviewMessageListenerView: vscode.WebviewView | null = null;
   private _pendingPanelMoveReinit = false;
   private _hasDetectedPanelLocation = false;
+  private _panelLocationDetectionPending = false;
+  private _panelLocationDetectionTimeout: NodeJS.Timeout | null = null;
 
   // Phase 8 services (typed properly)
   private _decorationsService?: import('../services/TerminalDecorationsService').TerminalDecorationsService;
@@ -106,6 +108,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     maxAttempts: 1,
     backoffFactor: 1,
   };
+
+  private static readonly PANEL_LOCATION_RESPONSE_TIMEOUT_MS = 2000;
 
   constructor(
     private readonly _extensionContext: vscode.ExtensionContext,
@@ -1166,18 +1170,49 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   private async _handleReportPanelLocation(message: WebviewMessage): Promise<void> {
+    // Accept panel location reports only as responses to explicit detection requests.
+    // Autonomous reports can trigger setContext and cause VS Code to recalculate layout,
+    // which cancels the secondary sidebar's maximized state.
+    if (!this._panelLocationDetectionPending) {
+      log('⏭️ [PROVIDER] Ignoring unsolicited panel location report');
+      return;
+    }
+
     const reportedLocation = message.location as PanelLocation;
     if (!reportedLocation) {
       log('⚠️ [PROVIDER] Panel location report missing location');
       return;
     }
 
+    this._clearPanelLocationDetectionPending('panel location report received');
+
     log(`📍 [PROVIDER] WebView reports panel location: ${reportedLocation}`);
     await this._panelLocationService.handlePanelLocationReport(reportedLocation);
   }
 
   private _requestPanelLocationDetection(): void {
+    this._panelLocationDetectionPending = true;
+    if (this._panelLocationDetectionTimeout) {
+      clearTimeout(this._panelLocationDetectionTimeout);
+    }
+    this._panelLocationDetectionTimeout = setTimeout(() => {
+      this._clearPanelLocationDetectionPending('panel location response timeout');
+    }, SecondaryTerminalProvider.PANEL_LOCATION_RESPONSE_TIMEOUT_MS);
+
     this._panelLocationService.requestPanelLocationDetection();
+  }
+
+  private _clearPanelLocationDetectionPending(reason: string): void {
+    if (!this._panelLocationDetectionPending && !this._panelLocationDetectionTimeout) {
+      return;
+    }
+
+    log(`📍 [PROVIDER] Clearing panel location detection pending state (${reason})`);
+    this._panelLocationDetectionPending = false;
+    if (this._panelLocationDetectionTimeout) {
+      clearTimeout(this._panelLocationDetectionTimeout);
+      this._panelLocationDetectionTimeout = null;
+    }
   }
 
   private _determineSplitDirection(): SplitDirection {
@@ -1653,6 +1688,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     // Reset state
     this._isInitialized = false;
     this._hasDetectedPanelLocation = false;
+    this._clearPanelLocationDetectionPending('provider disposed');
 
     log('✅ [DEBUG] SecondaryTerminalProvider disposed');
   }
