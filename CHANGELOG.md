@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Split Direction Regression Recovery**:
+  - Restored auto-detection behavior so wide WebView layouts use `panel` location and horizontal split.
+  - Preserved vertical split for narrow layouts (`sidebar` location), matching pre-regression behavior.
+
+- **Secondary Sidebar Maximize Stability**:
+  - Prevented `setContext('secondaryTerminal.panelLocation', ...)` updates while `panelLocation=auto`.
+  - This avoids VS Code layout recalculation side effects that could collapse maximized secondary sidebar state.
+
 ## [0.2.18] - 2026-02-11
 
 ### Added

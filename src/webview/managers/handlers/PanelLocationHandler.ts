@@ -277,8 +277,7 @@ export class PanelLocationHandler implements IMessageHandler {
         return 'sidebar';
       }
 
-      const aspectRatio = width / height;
-      return aspectRatio > PANEL_LOCATION_CONSTANTS.ASPECT_RATIO_THRESHOLD ? 'panel' : 'sidebar';
+      return this.classifyPanelLocation(width, height);
     } catch (error) {
       this.logger.error('Error detecting panel location', error);
       return 'sidebar';
@@ -460,12 +459,20 @@ export class PanelLocationHandler implements IMessageHandler {
         return 'sidebar';
       }
 
-      const aspectRatio = width / height;
-      return aspectRatio > PANEL_LOCATION_CONSTANTS.ASPECT_RATIO_THRESHOLD ? 'panel' : 'sidebar';
+      return this.classifyPanelLocation(width, height);
     } catch (error) {
       this.logger.error('Error analyzing dimensions', error);
       return 'sidebar';
     }
+  }
+
+  /**
+   * Classify panel location from dimensions.
+   * Wide layouts use panel mode (horizontal split), otherwise sidebar mode.
+   */
+  private classifyPanelLocation(width: number, height: number): 'sidebar' | 'panel' {
+    const aspectRatio = width / height;
+    return aspectRatio > PANEL_LOCATION_CONSTANTS.ASPECT_RATIO_THRESHOLD ? 'panel' : 'sidebar';
   }
 
   /**

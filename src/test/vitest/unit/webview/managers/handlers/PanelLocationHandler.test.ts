@@ -234,6 +234,38 @@ describe('PanelLocationHandler', () => {
           })
         );
       });
+
+      it('should use panel when view is wide and short', () => {
+        // requestPanelLocationDetection path uses document.body dimensions.
+        Object.defineProperty(document.body, 'clientWidth', { value: 1200, configurable: true });
+        Object.defineProperty(document.body, 'clientHeight', { value: 400, configurable: true });
+
+        const msg = { command: 'requestPanelLocationDetection' };
+        handler.handleMessage(msg, mockCoordinator);
+
+        expect(mockMessageQueue.enqueue).toHaveBeenCalledWith(
+          expect.objectContaining({
+            command: 'reportPanelLocation',
+            location: 'panel',
+          })
+        );
+      });
+
+      it('should use panel when view is wide and tall (secondary sidebar maximized)', () => {
+        // requestPanelLocationDetection path uses document.body dimensions.
+        Object.defineProperty(document.body, 'clientWidth', { value: 1400, configurable: true });
+        Object.defineProperty(document.body, 'clientHeight', { value: 900, configurable: true });
+
+        const msg = { command: 'requestPanelLocationDetection' };
+        handler.handleMessage(msg, mockCoordinator);
+
+        expect(mockMessageQueue.enqueue).toHaveBeenCalledWith(
+          expect.objectContaining({
+            command: 'reportPanelLocation',
+            location: 'panel',
+          })
+        );
+      });
     });
 
     describe('unknown command', () => {
@@ -283,6 +315,38 @@ describe('PanelLocationHandler', () => {
       if (resizeObserverCallback) {
         resizeObserverCallback(
           [{ contentRect: { width: 1200, height: 400 } }] as ResizeObserverEntry[],
+          {} as ResizeObserver
+        );
+      }
+      vi.advanceTimersByTime(200);
+
+      expect(handler.getCurrentPanelLocation()).toBe('panel');
+      expect(handler.getCurrentFlexDirection()).toBe('row');
+    });
+
+    it('should use panel on initial observation when wide and short', () => {
+      Object.defineProperty(window, 'innerWidth', { value: 1200, configurable: true });
+      Object.defineProperty(window, 'innerHeight', { value: 400, configurable: true });
+
+      if (resizeObserverCallback) {
+        resizeObserverCallback(
+          [{ contentRect: { width: 1200, height: 400 } }] as ResizeObserverEntry[],
+          {} as ResizeObserver
+        );
+      }
+      vi.advanceTimersByTime(200);
+
+      expect(handler.getCurrentPanelLocation()).toBe('panel');
+      expect(handler.getCurrentFlexDirection()).toBe('row');
+    });
+
+    it('should use panel on initial observation when wide and tall', () => {
+      Object.defineProperty(window, 'innerWidth', { value: 1400, configurable: true });
+      Object.defineProperty(window, 'innerHeight', { value: 900, configurable: true });
+
+      if (resizeObserverCallback) {
+        resizeObserverCallback(
+          [{ contentRect: { width: 1400, height: 900 } }] as ResizeObserverEntry[],
           {} as ResizeObserver
         );
       }

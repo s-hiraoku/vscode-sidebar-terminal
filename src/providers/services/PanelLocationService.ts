@@ -130,12 +130,22 @@ export class PanelLocationService implements vscode.Disposable {
     this._cachedPanelLocation = location;
     log('📍 [DEBUG] ✅ Cached panel location UPDATED:', location);
 
-    // Only call setContext when location actually changes.
-    // Redundant setContext calls trigger VS Code layout recalculation,
-    // which can cancel the secondary sidebar's maximized state.
+    // Only call setContext when location actually changes and panel location is manually controlled.
+    // In auto mode, setContext can trigger VS Code layout recalculation and cancel maximized secondary sidebar.
     if (previousLocation !== location) {
-      await vscode.commands.executeCommand('setContext', PanelLocationService.CONTEXT_KEY, location);
-      log('📍 [DEBUG] Context key updated with NEW panel location:', location);
+      const config = vscode.workspace.getConfiguration('secondaryTerminal');
+      const manualPanelLocation = config.get<'sidebar' | 'panel' | 'auto'>(
+        PanelLocationService.CONFIG_KEYS.PANEL_LOCATION,
+        'auto'
+      );
+      const shouldUpdateContext = manualPanelLocation !== 'auto';
+
+      if (shouldUpdateContext) {
+        await vscode.commands.executeCommand('setContext', PanelLocationService.CONTEXT_KEY, location);
+        log('📍 [DEBUG] Context key updated with NEW panel location:', location);
+      } else {
+        log('📍 [DEBUG] Auto mode detected, skipping setContext update');
+      }
 
       // Notify caller if location changed
       if (onLocationChange) {
