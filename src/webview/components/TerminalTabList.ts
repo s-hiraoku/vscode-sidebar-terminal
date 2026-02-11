@@ -7,6 +7,18 @@ import { Terminal } from '@xterm/xterm';
 import { webview as log } from '../../utils/logger';
 import { TerminalTheme } from '../types/theme.types';
 
+/**
+ * Escape HTML special characters to prevent XSS when interpolating into innerHTML.
+ */
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export interface TerminalTab {
   id: string;
   name: string;
@@ -554,14 +566,16 @@ export class TerminalTabList {
     // Skip update if rename input is active to avoid destroying user's edit
     if (tabElement.querySelector('.terminal-tab-rename-input')) return;
 
+    const safeName = escapeHtml(tab.name);
+    const safeIcon = tab.icon ? escapeHtml(tab.icon) : '';
     tabElement.innerHTML = `
-      ${tab.icon ? `<span class="terminal-tab-icon codicon codicon-${tab.icon}" aria-hidden="true"></span>` : ''}
-      <span class="terminal-tab-label" title="${tab.name}">${tab.name}</span>
+      ${safeIcon ? `<span class="terminal-tab-icon codicon codicon-${safeIcon}" aria-hidden="true"></span>` : ''}
+      <span class="terminal-tab-label" title="${safeName}">${safeName}</span>
       ${tab.isDirty ? '<span class="terminal-tab-dirty-indicator" role="status" aria-label="Modified" title="This terminal has unsaved changes"></span>' : ''}
       ${
         tab.isClosable
           ? `
-        <button class="terminal-tab-close" title="Close Terminal" aria-label="Close ${tab.name}" type="button">×</button>
+        <button class="terminal-tab-close" title="Close Terminal" aria-label="Close ${safeName}" type="button">×</button>
       `
           : ''
       }
