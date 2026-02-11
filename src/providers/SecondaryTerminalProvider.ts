@@ -432,11 +432,15 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       return;
     }
 
-    // First visibility: trigger detection
+    // Set flag BEFORE setTimeout to prevent race condition:
+    // Multiple visibility events within 200ms would otherwise bypass the guard
+    // and queue multiple detection timers, each triggering setContext.
+    this._hasDetectedPanelLocation = true;
+
+    // First visibility: trigger detection after layout stabilizes
     setTimeout(() => {
       log('📍 [VISIBILITY] Requesting initial panel location detection');
       this._requestPanelLocationDetection();
-      this._hasDetectedPanelLocation = true;
     }, 200);
   }
 

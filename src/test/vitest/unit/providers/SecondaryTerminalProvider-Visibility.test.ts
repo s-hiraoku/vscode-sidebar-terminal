@@ -62,10 +62,12 @@ describe('SecondaryTerminalProvider - Visibility Guard', () => {
           return;
         }
 
-        // First visibility: trigger detection
+        // Set flag BEFORE setTimeout to prevent race condition
+        this._hasDetectedPanelLocation = true;
+
+        // First visibility: trigger detection after layout stabilizes
         setTimeout(() => {
           this._requestPanelLocationDetection();
-          this._hasDetectedPanelLocation = true;
         }, 200);
       },
 
@@ -148,6 +150,37 @@ describe('SecondaryTerminalProvider - Visibility Guard', () => {
 
       // Assert: Detection runs again for new lifecycle
       expect(mockRequestPanelLocationDetection).toHaveBeenCalledTimes(1);
+    });
+
+    it('should NOT queue multiple timers when rapid visibility events fire within 200ms', () => {
+      // This tests the race condition: if multiple visibility events fire
+      // before the 200ms setTimeout completes, only ONE detection should run.
+      // Bug: _hasDetectedPanelLocation was set INSIDE setTimeout, allowing
+      // multiple timers to be queued.
+
+      // Act: Fire 5 rapid visibility events within 200ms
+      provider._handleWebviewVisible();
+      provider._handleWebviewVisible();
+      provider._handleWebviewVisible();
+      provider._handleWebviewVisible();
+      provider._handleWebviewVisible();
+
+      // Advance past all timers
+      vi.advanceTimersByTime(200);
+
+      // Assert: Detection should run exactly ONCE, not 5 times
+      expect(mockRequestPanelLocationDetection).toHaveBeenCalledTimes(1);
+    });
+
+    it('should set flag immediately to prevent race condition', () => {
+      // The flag must be set BEFORE setTimeout to prevent
+      // concurrent visibility events from bypassing the guard.
+
+      // Act: First visibility event
+      provider._handleWebviewVisible();
+
+      // Assert: Flag should be true IMMEDIATELY, not after 200ms
+      expect(provider._hasDetectedPanelLocation).toBe(true);
     });
   });
 });

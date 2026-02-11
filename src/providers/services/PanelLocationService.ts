@@ -181,15 +181,11 @@ export class PanelLocationService implements vscode.Disposable {
       } catch (error) {
         log('⚠️ [PANEL-DETECTION] Error requesting panel location detection:', error);
 
-        // Fallback to sidebar assumption - but don't send panelLocationUpdate
-        // Let WebView handle its own layout
-
-        // Set fallback context key
-        await vscode.commands.executeCommand(
-          'setContext',
-          PanelLocationService.CONTEXT_KEY,
-          'sidebar'
-        );
+        // On detection failure, do NOT call setContext as a fallback.
+        // - auto mode: setContext triggers layout recalculation → cancels maximize
+        // - manual mode: user's explicit setting is used by getCurrentPanelLocation(),
+        //   so overriding context key would contradict their preference
+        // The cached value remains valid; detection will retry on next visibility cycle.
       }
     }, PanelLocationService.DEBOUNCE_DELAY);
   }

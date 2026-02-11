@@ -125,18 +125,74 @@ describe('PanelLocationService', () => {
       });
     });
 
-    it('should handle errors when sending request', async () => {
+    it('should NOT call setContext in error path even in manual mode', async () => {
+      // On detection failure, setContext should never be called as fallback.
+      // Manual mode users have explicit settings that getCurrentPanelLocation()
+      // respects, so overriding context key would contradict their preference.
       mockSendMessage.mockRejectedValue(new Error('Fail'));
-      
+
+      const mockGet = vi.fn().mockImplementation((key: string, def: unknown) => {
+        if (key === 'panelLocation') return 'panel';
+        return def;
+      });
+      (vscode.workspace.getConfiguration as any).mockReturnValue({ get: mockGet });
+
+      // Change cached location to 'panel'
+      await service.handlePanelLocationReport('panel');
+      vi.mocked(vscode.commands.executeCommand).mockClear();
+
       service.requestPanelLocationDetection();
       vi.advanceTimersByTime(300);
-      
-      // Wait for async execution inside setTimeout
       await vi.runAllTimersAsync();
-      
-      expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+
+      // Assert: setContext should NOT be called - respect user's manual 'panel' setting
+      expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
+    });
+
+    it('should NOT call setContext in error path when panelLocation is auto mode', async () => {
+      // Bug: The error fallback unconditionally calls setContext('sidebar')
+      // even in auto mode, causing VS Code layout recalculation that
+      // cancels the secondary sidebar maximize state.
+      mockSendMessage.mockRejectedValue(new Error('Fail'));
+
+      const mockGet = vi.fn().mockImplementation((key: string, def: unknown) => {
+        if (key === 'panelLocation') return 'auto';
+        return def;
+      });
+      (vscode.workspace.getConfiguration as any).mockReturnValue({ get: mockGet });
+
+      service.requestPanelLocationDetection();
+      vi.advanceTimersByTime(300);
+      await vi.runAllTimersAsync();
+
+      // Assert: setContext should NOT be called in auto mode
+      expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(
         'setContext',
-        expect.anything(),
+        'secondaryTerminal.panelLocation',
+        'sidebar'
+      );
+    });
+
+    it('should NOT call setContext in error path when cached location is already sidebar', async () => {
+      // If cached location is already 'sidebar', calling setContext('sidebar')
+      // is redundant and triggers unnecessary layout recalculation.
+      mockSendMessage.mockRejectedValue(new Error('Fail'));
+
+      const mockGet = vi.fn().mockImplementation((key: string, def: unknown) => {
+        if (key === 'panelLocation') return 'panel'; // manual mode
+        return def;
+      });
+      (vscode.workspace.getConfiguration as any).mockReturnValue({ get: mockGet });
+
+      // Default cached location is 'sidebar', so fallback to 'sidebar' is redundant
+      service.requestPanelLocationDetection();
+      vi.advanceTimersByTime(300);
+      await vi.runAllTimersAsync();
+
+      // Assert: setContext should NOT be called because location hasn't changed
+      expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(
+        'setContext',
+        'secondaryTerminal.panelLocation',
         'sidebar'
       );
     });
@@ -144,7 +200,11 @@ describe('PanelLocationService', () => {
 
   describe('determineSplitDirection', () => {
     it('should return vertical for sidebar', () => {
-      // Default is sidebar
+      // Reset mock to default behavior to avoid leaking from previous tests
+      (vscode.workspace.getConfiguration as any).mockReturnValue({
+        get: vi.fn((key: string, def: unknown) => def),
+      });
+      // Default cached location is sidebar
       expect(service.determineSplitDirection()).toBe('vertical');
     });
 

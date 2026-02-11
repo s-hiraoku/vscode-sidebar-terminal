@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.23] - 2026-02-11
+
+### Fixed
+
+- **Secondary Sidebar Maximize Race Condition**:
+  - Fixed race condition in `_handleWebviewVisible()` where multiple visibility events within 200ms could bypass the detection guard and queue multiple `setContext` calls, each triggering VS Code layout recalculation that cancels the maximized sidebar state.
+  - Moved `_hasDetectedPanelLocation` flag before `setTimeout` to prevent concurrent visibility events from creating duplicate detection timers.
+
+- **Error Path Unguarded setContext Removal**:
+  - Removed unconditional `setContext('sidebar')` fallback in `requestPanelLocationDetection()` error handler.
+  - In auto mode, this fallback caused unnecessary VS Code layout recalculation.
+  - In manual mode, it contradicted user's explicit panel location preference.
+  - Detection failure now preserves cached value and retries on next visibility cycle.
+
+## [0.2.22] - 2026-02-11
+
 ### Fixed
 
 - **Split Direction Regression Recovery**:
