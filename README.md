@@ -11,7 +11,7 @@
 
 Your sidebar, your terminal, your AI agents -- all in one place. A full-featured terminal that lives in the VS Code sidebar, with built-in AI agent detection for Claude Code, Codex CLI, Gemini CLI, GitHub Copilot CLI.
 
-![Demo](resources/readme-hero.png)
+<video src="resources/demo/demo.mov" controls muted loop playsinline poster="resources/readme-hero.png"></video>
 
 ## Why Secondary Terminal?
 

@@ -11,7 +11,7 @@
 
 Tu barra lateral, tu terminal, tus agentes de IA — todo en un solo lugar. Un terminal completo que vive en la barra lateral de VS Code, con detección integrada de agentes de IA para Claude Code, Codex CLI, Gemini CLI y GitHub Copilot CLI.
 
-![Demo](resources/readme-hero.png)
+<video src="resources/demo/demo.mov" controls muted loop playsinline poster="resources/readme-hero.png"></video>
 
 ## ¿Por qué Secondary Terminal?
 

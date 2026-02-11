@@ -11,7 +11,7 @@
 
 侧边栏、终端、AI 代理——一切尽在一处。一个常驻于 VS Code 侧边栏的全功能终端，内置 Claude Code、Codex CLI、Gemini CLI、GitHub Copilot CLI 的 AI 代理检测功能。
 
-![演示](resources/readme-hero.png)
+<video src="resources/demo/demo.mov" controls muted loop playsinline poster="resources/readme-hero.png"></video>
 
 ## 为什么选择 Secondary Terminal？
 

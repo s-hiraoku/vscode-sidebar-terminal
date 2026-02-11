@@ -11,7 +11,7 @@
 
 Deine Seitenleiste, dein Terminal, deine KI-Agenten -- alles an einem Ort. Ein vollwertiges Terminal in der VS Code-Seitenleiste mit integrierter KI-Agenten-Erkennung für Claude Code, Codex CLI, Gemini CLI und GitHub Copilot CLI.
 
-![Demo](resources/readme-hero.png)
+<video src="resources/demo/demo.mov" controls muted loop playsinline poster="resources/readme-hero.png"></video>
 
 ## Warum Secondary Terminal?
 

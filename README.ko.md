@@ -11,7 +11,7 @@
 
 사이드바, 터미널, AI 에이전트 -- 모두 한 곳에. VS Code 사이드바에 상주하는 완전한 기능의 터미널로, Claude Code, Codex CLI, Gemini CLI, GitHub Copilot CLI의 AI 에이전트 감지 기능이 내장되어 있습니다.
 
-![데모](resources/readme-hero.png)
+<video src="resources/demo/demo.mov" controls muted loop playsinline poster="resources/readme-hero.png"></video>
 
 ## 왜 Secondary Terminal인가?
 

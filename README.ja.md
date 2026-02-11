@@ -11,7 +11,7 @@
 
 サイドバー、ターミナル、AIエージェント -- すべてを一箇所に。VS Codeのサイドバーに常駐するフル機能のターミナルです。Claude Code、Codex CLI、Gemini CLI、GitHub Copilot CLIのAIエージェント検出機能を内蔵しています。
 
-![デモ](resources/readme-hero.png)
+<video src="resources/demo/demo.mov" controls muted loop playsinline poster="resources/readme-hero.png"></video>
 
 ## なぜ Secondary Terminal？
 
