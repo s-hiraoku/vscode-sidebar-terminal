@@ -8,6 +8,7 @@
 import * as vscode from 'vscode';
 import { extension as log } from '../utils/logger';
 import { FeatureFlagService } from '../services/FeatureFlagService';
+import { TERMINAL_CONSTANTS } from '../constants/SystemConstants';
 import { DisposableBase } from '../patterns/DisposableBase';
 
 /**
@@ -190,7 +191,7 @@ export class ConfigurationService extends DisposableBase {
   getTerminalSettings(): Record<string, unknown> {
     return {
       // Secondary Terminal設定
-      maxTerminals: this.getCachedValue('secondaryTerminal', 'maxTerminals', 5),
+      maxTerminals: this.getCachedValue('secondaryTerminal', 'maxTerminals', TERMINAL_CONSTANTS.MAX_TERMINAL_COUNT),
       shell: this.getCachedValue('secondaryTerminal', 'shell', ''),
       shellArgs: this.getCachedValue('secondaryTerminal', 'shellArgs', []),
       cwd: this.getCachedValue('secondaryTerminal', 'cwd', ''),

@@ -376,7 +376,7 @@ export class TerminalCoordinatorFactory {
 
   public static createDefault(): ITerminalCoordinator {
     const defaultConfig: TerminalCoordinatorConfig = {
-      maxTerminals: SPLIT_CONSTANTS.MAX_TERMINALS || 5,
+      maxTerminals: SPLIT_CONSTANTS.MAX_TERMINALS,
       defaultShell: '/bin/bash',
       workingDirectory: safeProcessCwd(),
       enablePerformanceOptimization: true,

@@ -9,17 +9,17 @@ export const TERMINAL_CONSTANTS = {
   // ターミナル制限
   // ========================================
 
-  /** 最大ターミナル数 (5個) */
-  MAX_TERMINAL_COUNT: 5,
+  /** 最大ターミナル数 (10個) */
+  MAX_TERMINAL_COUNT: 10,
 
-  /** デフォルトの最大ターミナル数 (5個) */
-  DEFAULT_MAX_TERMINALS: 5,
+  /** デフォルトの最大ターミナル数 (10個) */
+  DEFAULT_MAX_TERMINALS: 10,
 
   /** 最小ターミナルID番号 (1) */
   MIN_TERMINAL_ID_NUMBER: 1,
 
-  /** 最大ターミナルID番号 (5) */
-  MAX_TERMINAL_ID_NUMBER: 5,
+  /** 最大ターミナルID番号 (10) */
+  MAX_TERMINAL_ID_NUMBER: 10,
 
   // ========================================
   // プラットフォーム設定

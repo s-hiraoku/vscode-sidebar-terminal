@@ -323,7 +323,9 @@
         },
         "secondaryTerminal.maxTerminals": {
           "type": "number",
-          "default": 5,
+          "default": 10,
+          "minimum": 1,
+          "maximum": 10,
           "description": "Maximum number of terminals allowed."
         },
         "secondaryTerminal.cursorBlink": {
@@ -360,14 +362,14 @@
           "type": "number",
           "default": 1,
           "minimum": 0,
-          "maximum": 5,
+          "maximum": 10,
           "description": "Minimum number of terminals to keep open"
         },
         "secondaryTerminal.maxSplitTerminals": {
           "type": "number",
-          "default": 5,
+          "default": 10,
           "minimum": 1,
-          "maximum": 5,
+          "maximum": 10,
           "description": "Maximum number of terminals to display in split view"
         },
         "secondaryTerminal.minTerminalHeight": {

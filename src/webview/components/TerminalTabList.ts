@@ -7,6 +7,18 @@ import { Terminal } from '@xterm/xterm';
 import { webview as log } from '../../utils/logger';
 import { TerminalTheme } from '../types/theme.types';
 
+/**
+ * Escape HTML special characters to prevent XSS when interpolating into innerHTML.
+ */
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export interface TerminalTab {
   id: string;
   name: string;
@@ -353,6 +365,27 @@ export class TerminalTabList {
       }
     });
 
+    // Delegate double-click for rename
+    this.tabsContainer.addEventListener('dblclick', (e) => {
+      const target = e.target as HTMLElement;
+
+      // Ignore double-click on close button
+      if (target.closest('.terminal-tab-close')) return;
+
+      // Ignore if already renaming (input element)
+      if (target.tagName === 'INPUT') return;
+
+      const tabElement = target.closest('.terminal-tab');
+      if (tabElement) {
+        e.preventDefault();
+        e.stopPropagation();
+        const tabId = tabElement.getAttribute('data-tab-id');
+        if (tabId) {
+          this.startRename(tabId);
+        }
+      }
+    });
+
     // Delegate context menu
     this.tabsContainer.addEventListener('contextmenu', (e) => {
       const target = e.target as HTMLElement;
@@ -530,14 +563,19 @@ export class TerminalTabList {
   }
 
   private updateTabElement(tabElement: HTMLElement, tab: TerminalTab): void {
+    // Skip update if rename input is active to avoid destroying user's edit
+    if (tabElement.querySelector('.terminal-tab-rename-input')) return;
+
+    const safeName = escapeHtml(tab.name);
+    const safeIcon = tab.icon ? escapeHtml(tab.icon) : '';
     tabElement.innerHTML = `
-      ${tab.icon ? `<span class="terminal-tab-icon codicon codicon-${tab.icon}" aria-hidden="true"></span>` : ''}
-      <span class="terminal-tab-label" title="${tab.name}">${tab.name}</span>
+      ${safeIcon ? `<span class="terminal-tab-icon codicon codicon-${safeIcon}" aria-hidden="true"></span>` : ''}
+      <span class="terminal-tab-label" title="${safeName}">${safeName}</span>
       ${tab.isDirty ? '<span class="terminal-tab-dirty-indicator" role="status" aria-label="Modified" title="This terminal has unsaved changes"></span>' : ''}
       ${
         tab.isClosable
           ? `
-        <button class="terminal-tab-close" title="Close Terminal" aria-label="Close ${tab.name}" type="button">×</button>
+        <button class="terminal-tab-close" title="Close Terminal" aria-label="Close ${safeName}" type="button">×</button>
       `
           : ''
       }
@@ -753,16 +791,45 @@ export class TerminalTabList {
       box-sizing: border-box;
     `;
 
+    let finished = false;
+    let blurTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    const cancelBlurTimeout = () => {
+      if (blurTimeout !== null) {
+        clearTimeout(blurTimeout);
+        blurTimeout = null;
+      }
+    };
+
     const finishRename = (save: boolean = true) => {
-      if (save && input.value.trim() && input.value !== tab.name) {
-        this.events.onTabRename(tabId, input.value.trim());
+      if (finished) return;
+      finished = true;
+      cancelBlurTimeout();
+      const trimmedValue = input.value.trim();
+      if (save && trimmedValue && trimmedValue !== tab.name) {
+        this.events.onTabRename(tabId, trimmedValue);
       } else {
         labelElement.textContent = tab.name;
       }
       input.replaceWith(labelElement);
     };
 
-    input.addEventListener('blur', () => finishRename());
+    input.addEventListener('click', (e) => e.stopPropagation());
+    input.addEventListener('blur', () => {
+      // Delay blur handling so that a scheduled terminal.focus() steal
+      // (which fires ~20ms after tab click) does not immediately kill
+      // the rename input. If the input regains focus within the window,
+      // the pending finish is cancelled by the focus handler below.
+      blurTimeout = setTimeout(() => {
+        blurTimeout = null;
+        finishRename();
+      }, 50);
+    });
+    input.addEventListener('focus', () => {
+      // Input regained focus (e.g. from the re-assert timeout below),
+      // cancel the pending blur finish.
+      cancelBlurTimeout();
+    });
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
@@ -776,6 +843,16 @@ export class TerminalTabList {
     labelElement.replaceWith(input);
     input.focus();
     input.select();
+
+    // Re-assert focus after a short delay to survive terminal.focus() steal
+    // triggered by setActiveTerminalId's 20ms setTimeout.
+    // This mirrors the pattern used in HeaderFactory.setupHeaderEditor.
+    setTimeout(() => {
+      if (finished) return;
+      if (document.activeElement !== input) {
+        input.focus();
+      }
+    }, 30);
   }
 
   private showContextMenu(e: MouseEvent, _tab: TerminalTab): void {

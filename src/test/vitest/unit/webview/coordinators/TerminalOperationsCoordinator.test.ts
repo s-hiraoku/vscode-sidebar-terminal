@@ -69,7 +69,7 @@ describe('TerminalOperationsCoordinator', () => {
     });
 
     it('should block creation if limit reached', async () => {
-      mockDeps.getTerminalCount.mockReturnValue(5);
+      mockDeps.getTerminalCount.mockReturnValue(10);
       
       const result = await coordinator.createTerminal('t-limit', 'Limit Test');
       

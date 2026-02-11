@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.18] - 2026-02-11
+
+### Added
+
+- **Split Direction Enhancement**: New options for controlling terminal split layout
+  - Added `secondaryTerminal.defaultSplitDirection` setting (`auto`, `vertical`, `horizontal`)
+  - New `secondaryTerminal.toggleSplitDirection` command to switch layout on the fly
+  - Horizontal split button added to terminal title menu
+  - Keyboard shortcuts for horizontal split: `Cmd+Shift+\` (Mac) / `Ctrl+Shift+\` (Win/Linux)
+  - Intelligent auto-detection of split direction based on panel location (sidebar vs. bottom panel)
+
+- **Increased Terminal Limit**: Maximum number of terminals expanded from 5 to 10
+  - Updated `MAX_TERMINAL_COUNT` and `DEFAULT_MAX_TERMINALS` constants
+  - All related validation logic and unit tests updated to support up to 10 terminals
+  - Replaced hardcoded fallback values with constant references across the codebase
+  - Added `minimum`/`maximum` constraints to `maxTerminals` setting in `package.json`
+  - Provides better flexibility for complex workflows and high-resolution displays
+
+- **Tab Double-Click Rename**: Double-click a terminal tab to rename it inline
+  - Rename input with Enter to confirm, Escape to cancel, blur to save
+  - Delayed blur pattern prevents focus-steal issues during terminal activation
+  - Close button double-click is excluded from triggering rename
+  - Guard against concurrent `updateTabElement` destroying active rename input
+
+### Security
+
+- **Configuration Validation**: Added runtime validation for split direction and panel location settings
+  - Implemented `isSplitDirection` and `isPanelLocation` type guards in `PanelLocationService`
+  - Prevents invalid or malicious configuration values from affecting terminal layout
+  - Robust fallback to `auto` mode for invalid setting values
+
 ## [0.2.17] - 2026-02-09
 
 ### Fixed

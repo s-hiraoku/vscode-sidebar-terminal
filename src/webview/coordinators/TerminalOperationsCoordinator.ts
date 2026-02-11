@@ -32,8 +32,6 @@ const OperationTimings = {
   QUEUE_TIMEOUT_MS: 10000,
   /** Timeout for deletion tracking (ms) */
   DELETION_TRACKING_TIMEOUT_MS: 5000,
-  /** Fallback max terminals when not specified */
-  FALLBACK_MAX_TERMINALS: 5,
 } as const;
 
 /**
@@ -117,9 +115,7 @@ export class TerminalOperationsCoordinator {
    */
   public canCreateTerminal(): boolean {
     const maxTerminals =
-      this.currentTerminalState?.maxTerminals ??
-      SPLIT_CONSTANTS.MAX_TERMINALS ??
-      OperationTimings.FALLBACK_MAX_TERMINALS;
+      this.currentTerminalState?.maxTerminals ?? SPLIT_CONSTANTS.MAX_TERMINALS;
     const localCount = this.deps.getTerminalCount();
     const pending = this.pendingTerminalCreations.size;
 
@@ -179,9 +175,7 @@ export class TerminalOperationsCoordinator {
       if (!this.canCreateTerminal() && requestSource !== 'extension') {
         const localCount = this.deps.getTerminalCount();
         const maxCount =
-          this.currentTerminalState?.maxTerminals ??
-          SPLIT_CONSTANTS.MAX_TERMINALS ??
-          OperationTimings.FALLBACK_MAX_TERMINALS;
+          this.currentTerminalState?.maxTerminals ?? SPLIT_CONSTANTS.MAX_TERMINALS;
         log(`❌ Terminal creation blocked (local=${localCount}, max=${maxCount})`);
         this.deps.showWarning(`Terminal limit reached (${localCount}/${maxCount})`);
         return null;

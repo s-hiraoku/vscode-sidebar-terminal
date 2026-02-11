@@ -88,6 +88,9 @@ eslint-rules/**
 .research/**
 .version-backups/**
 .mypy_cache/**
+.synapse/**
+.agent/**
+.agents/**
 
 # Mocha/nyc config files
 .mocharc.json

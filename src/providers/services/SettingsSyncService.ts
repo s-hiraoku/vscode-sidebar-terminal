@@ -3,6 +3,7 @@ import { PartialTerminalSettings, WebViewFontSettings, ActiveBorderMode } from '
 import { getUnifiedConfigurationService } from '../../config/UnifiedConfigurationService';
 import { showSuccess, showError } from '../../utils/feedback';
 import { provider as log } from '../../utils/logger';
+import { TERMINAL_CONSTANTS } from '../../constants/SystemConstants';
 
 /**
  * SettingsSyncService
@@ -124,7 +125,7 @@ export class SettingsSyncService {
         style: 'block',
         blink: true,
       },
-      maxTerminals: config.maxTerminals || 5,
+      maxTerminals: config.maxTerminals || TERMINAL_CONSTANTS.MAX_TERMINAL_COUNT,
       enableCliAgentIntegration: config.enableCliAgentIntegration || false,
       enableTerminalHeaderEnhancements: config.enableTerminalHeaderEnhancements ?? true,
       // 🆕 Issue #148: Dynamic split direction settings

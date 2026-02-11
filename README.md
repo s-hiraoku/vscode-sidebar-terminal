@@ -43,7 +43,7 @@ Your sidebar, your terminal, your AI agents -- all in one place. A full-featured
 
 |                            |                                                                                  |
 | -------------------------- | -------------------------------------------------------------------------------- |
-| **Multiple terminals**     | Up to 5 concurrent terminals with tab management (drag & drop reordering)        |
+| **Multiple terminals**     | Up to 10 concurrent terminals with tab management (drag & drop reordering, double-click to rename) |
 | **Split views**            | Vertical / horizontal splitting with drag-to-resize                              |
 | **Session persistence**    | Auto-save/restore with ANSI color preservation, terminal names, and header indicator colors |
 | **Shell integration**      | Command status indicators, working directory display, command history            |

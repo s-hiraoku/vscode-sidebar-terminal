@@ -16,56 +16,73 @@ This document defines the complete behavior specification for terminal display m
 - **Layout**: Selected terminal takes full available height, other terminals are hidden (but still exist)
 
 ### 3. Split Mode
-- **Definition**: Multiple terminals displayed simultaneously with equal height distribution
+- **Definition**: Multiple terminals displayed simultaneously with equal height/width distribution
 - **When Active**: 2+ terminals exist and user is not in fullscreen mode
-- **Layout**: All terminals divided equally in vertical direction
+- **Layout**: All terminals divided equally in either vertical (stacked) or horizontal (side-by-side) direction
 
 ## Core Requirements
 
-### REQ-1: Terminal Height Distribution in Split Mode
-**Description**: All visible terminals must have equal height in split mode.
+### REQ-1: Terminal Distribution in Split Mode
+**Description**: All visible terminals must have equal distribution in split mode.
 
 **Rules**:
-- Available height = terminal-body clientHeight
-- Each terminal height = Available height / Number of terminals
+- Available space = terminal-body clientHeight (vertical) or clientWidth (horizontal)
+- Distribution = 100% / Number of terminals
+- Direction: Determined by `secondaryTerminal.defaultSplitDirection` or manual toggle
 - Resizers (4px each) between terminals are automatically handled by flexbox
 - Tab bar height is automatically excluded by flexbox layout
 
 **Expected Behavior**:
 ```
-2 terminals: Each terminal = 50% of available height
-3 terminals: Each terminal = 33.33% of available height
-4 terminals: Each terminal = 25% of available height
-5 terminals: Each terminal = 20% of available height
+2 terminals: Each terminal = 50% of available space
+3 terminals: Each terminal = 33.33% of available space
+4 terminals: Each terminal = 25% of available space
+...
+10 terminals: Each terminal = 10% of available space
 ```
 
 **Test Cases**:
-- TC-1.1: Create 2 terminals in split mode → Each terminal height is equal
-- TC-1.2: Create 5 terminals in split mode → All 5 terminals visible with equal height
+- TC-1.1: Create 2 terminals in split mode → Each terminal size is equal
+- TC-1.2: Create 10 terminals in split mode → All 10 terminals visible with equal size
 - TC-1.3: No terminal should be cut off or hidden
-- TC-1.4: Sum of all terminal heights + resizers should not exceed available height
+- TC-1.4: Sum of all terminal sizes + resizers should not exceed available space
 
 ### REQ-2: Adding Terminal in Split Mode
 **Description**: When adding a new terminal in split mode, all terminals (existing + new) must be redistributed equally.
 
 **Sequence**:
-1. User clicks "+" button or creates new terminal
+1. User clicks "+" button, split button, or creates new terminal
 2. New terminal is created
 3. Split layout is immediately refreshed
-4. All terminals (N+1) are displayed with equal height
+4. All terminals (N+1) are displayed with equal size
 
 **Expected Behavior**:
 ```
-Before: 3 terminals, each 33.33% height
+Before: 3 terminals, each 33.33% size
 Add 1 terminal
-After: 4 terminals, each 25% height
+After: 4 terminals, each 25% size
 ```
 
 **Test Cases**:
 - TC-2.1: Start with 2 terminals → Add 1 → Result: 3 terminals equally distributed
-- TC-2.2: Start with 4 terminals → Add 1 → Result: 5 terminals equally distributed
+- TC-2.2: Start with 9 terminals → Add 1 → Result: 10 terminals equally distributed
 - TC-2.3: New terminal should be visible immediately after creation
 - TC-2.4: All existing terminals remain visible
+
+### REQ-8: Split Direction Control
+**Description**: Users can control the split direction (vertical or horizontal).
+
+**Settings**:
+- `secondaryTerminal.defaultSplitDirection`: `auto` (detect), `vertical` (stacked), `horizontal` (side-by-side)
+
+**Behaviors**:
+- **Auto-detection**: Horizontal splits in bottom panel, vertical splits in sidebar
+- **Manual Toggle**: User can switch between vertical and horizontal layout on the fly using `toggleSplitDirection` command or split buttons in title menu
+
+**Test Cases**:
+- TC-8.1: Change default direction to horizontal → New splits appear side-by-side
+- TC-8.2: Toggle split direction → Existing layout switches between stacked and side-by-side
+- TC-8.3: Move panel from sidebar to bottom (auto mode) → Layout switches from vertical to horizontal
 
 ### REQ-3: Adding Terminal in Fullscreen Mode
 **Description**: When adding a new terminal while in fullscreen mode, system must transition to split mode first, then add new terminal.
@@ -241,9 +258,10 @@ terminal-split-wrapper {
 
 ## Success Criteria
 
-✅ All terminals visible in split mode regardless of count (2-5)
-✅ Equal height distribution within 1px tolerance
+✅ All terminals visible in split mode regardless of count (2-10)
+✅ Equal size distribution (height/width) within 1px tolerance
 ✅ Fullscreen → split transition shows all existing terminals before adding new
+✅ Support for both vertical (stacked) and horizontal (side-by-side) split layouts
 ✅ No terminals cut off or hidden unexpectedly
 ✅ Tab reordering immediately updates display order
 ✅ Terminal removal correctly redistributes remaining terminals
@@ -251,8 +269,8 @@ terminal-split-wrapper {
 
 ## Failure Scenarios (To Be Prevented)
 
-❌ 5th terminal not visible (cut off)
-❌ Unequal heights when adding terminal
+❌ 10th terminal not visible (cut off)
+❌ Unequal sizes when adding terminal
 ❌ New terminal added before split mode transition completes
 ❌ Terminals remain hidden after mode change
 ❌ Tab order doesn't match display order
