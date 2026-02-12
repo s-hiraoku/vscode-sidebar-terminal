@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.24] - 2026-02-12
+
+### Fixed
+
+- **Secondary Sidebar Maximize Stability (First Command Path)**:
+  - Skipped panel location detection requests when `secondaryTerminal.panelLocation` is set to manual mode (`sidebar` or `panel`).
+  - Ignored WebView-reported panel locations in manual mode and prioritized the explicit user setting.
+  - Continued gating `reportPanelLocation` handling so only responses to explicit detection requests are accepted.
+  - Removed activation-time `setContext('secondaryTerminal.panelLocation', 'sidebar')` to avoid startup layout recalculation that could cancel the maximized secondary sidebar state.
+
 ## [0.2.23] - 2026-02-11
 
 ### Fixed
