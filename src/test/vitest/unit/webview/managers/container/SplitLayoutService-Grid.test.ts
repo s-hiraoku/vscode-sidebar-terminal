@@ -60,7 +60,7 @@ describe('SplitLayoutService - Grid Layout', () => {
       expect(sixthWrapper.style.gridColumn).toBe('1 / -1');
     });
 
-    it('should clear stale inline display style on terminals-wrapper when activating grid', () => {
+    it('should force inline display:grid on terminals-wrapper when activating grid', () => {
       const terminalsWrapper = document.createElement('div');
       terminalsWrapper.id = 'terminals-wrapper';
       terminalsWrapper.style.display = 'flex';
@@ -69,7 +69,7 @@ describe('SplitLayoutService - Grid Layout', () => {
       const containers = createContainers(6);
       service.activateGridLayout(terminalBody, getTerminalIds(6), (id) => containers.get(id));
 
-      expect(terminalsWrapper.style.display).toBe('');
+      expect(terminalsWrapper.style.display).toBe('grid');
     });
 
     it('should add terminal-grid-layout class to terminals-wrapper', () => {

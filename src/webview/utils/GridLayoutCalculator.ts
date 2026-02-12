@@ -39,10 +39,11 @@ export function calculateDistribution(count: number): GridDistribution {
  */
 export function shouldUseGrid(
   terminalCount: number,
-  _panelLocation: 'sidebar' | 'panel',
+  panelLocation: 'sidebar' | 'panel',
   isSplitMode: boolean
 ): boolean {
   return (
+    panelLocation === 'panel' &&
     terminalCount >= GRID_LAYOUT_CONSTANTS.MIN_TERMINALS_FOR_GRID &&
     terminalCount <= GRID_MAX_TERMINALS &&
     isSplitMode

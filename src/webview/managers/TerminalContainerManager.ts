@@ -34,6 +34,7 @@ import {
 } from './container';
 import { DOMUtils } from '../utils/DOMUtils';
 import { shouldUseGrid } from '../utils/GridLayoutCalculator';
+import { PANEL_LOCATION_CONSTANTS } from '../constants/webview';
 
 /**
  * TerminalContainerManager
@@ -207,8 +208,12 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
       this.clearSplitArtifacts();
       const splitDirection = state.splitDirection ?? 'vertical';
       const panelLocation: 'sidebar' | 'panel' = splitDirection === 'horizontal' ? 'panel' : 'sidebar';
+      const viewportArea = terminalBody.clientWidth * terminalBody.clientHeight;
+      const isCompactPanelArea =
+        panelLocation === 'panel' &&
+        viewportArea <= PANEL_LOCATION_CONSTANTS.COMPACT_VIEWPORT_AREA_THRESHOLD;
 
-      if (shouldUseGrid(orderedIds.length, panelLocation, true)) {
+      if (shouldUseGrid(orderedIds.length, panelLocation, true) && !isCompactPanelArea) {
         this.splitLayoutService.activateGridLayout(
           terminalBody,
           orderedIds,

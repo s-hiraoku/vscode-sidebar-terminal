@@ -99,7 +99,7 @@ describe('SplitManager - Grid Transition', () => {
       expect(splitManager.getLayoutMode()).toBe('grid-2-row');
     });
 
-    it('should return grid-2-row for 6 terminals in sidebar split mode', () => {
+    it('should return single-row for 6 terminals in sidebar split mode', () => {
       splitManager.isSplitMode = true;
       splitManager.setPanelLocation('sidebar');
 
@@ -108,7 +108,7 @@ describe('SplitManager - Grid Transition', () => {
         splitManager.setTerminal(`t${i}`, { terminal, fitAddon, id: `t${i}` });
       }
 
-      expect(splitManager.getLayoutMode()).toBe('grid-2-row');
+      expect(splitManager.getLayoutMode()).toBe('single-row');
     });
 
     it('should return single-row for 6 terminals not in split mode', () => {

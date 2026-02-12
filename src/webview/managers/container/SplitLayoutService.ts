@@ -275,8 +275,10 @@ export class SplitLayoutService {
     // Remove flex classes/styles, apply grid class
     terminalsWrapper.classList.remove('terminal-split-horizontal');
     terminalsWrapper.classList.add('terminal-grid-layout');
-    terminalsWrapper.style.display = '';
+    terminalsWrapper.style.display = 'grid';
     terminalsWrapper.style.flexDirection = '';
+    terminalsWrapper.style.gap = '4px';
+    terminalsWrapper.style.gridAutoFlow = 'row';
 
     const maxColumns = Math.max(row1, row2);
     terminalsWrapper.style.gridTemplateColumns = getGridTemplateColumns(maxColumns);
@@ -387,8 +389,10 @@ export class SplitLayoutService {
     const terminalsWrapper = document.getElementById('terminals-wrapper');
     if (terminalsWrapper) {
       terminalsWrapper.classList.remove('terminal-grid-layout');
+      terminalsWrapper.style.display = '';
       terminalsWrapper.style.gridTemplateColumns = '';
       terminalsWrapper.style.gridTemplateRows = '';
+      terminalsWrapper.style.gridAutoFlow = '';
     }
 
     if (this.gridRowResizer) {

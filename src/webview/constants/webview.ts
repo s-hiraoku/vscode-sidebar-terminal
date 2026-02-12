@@ -93,6 +93,8 @@ export const RENDERING_CONSTANTS = {
 export const PANEL_LOCATION_CONSTANTS = {
   /** Aspect ratio threshold for panel detection (width/height) */
   ASPECT_RATIO_THRESHOLD: 1.2,
+  /** Compact viewport area threshold for landscape-first panel detection */
+  COMPACT_VIEWPORT_AREA_THRESHOLD: 1_000_000,
   /** Maximum retry attempts for terminals-wrapper class sync */
   CLASS_SYNC_MAX_ATTEMPTS: 20,
   /** Retry interval for terminals-wrapper class sync (ms) */

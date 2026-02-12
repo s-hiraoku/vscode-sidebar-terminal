@@ -15,6 +15,7 @@ vi.mock('../../../../../webview/managers/container/SplitLayoutService', () => ({
     removeWrapper = vi.fn();
     getSplitResizers = vi.fn().mockReturnValue(new Set());
     refreshSplitArtifacts = vi.fn();
+    activateGridLayout = vi.fn();
     activateSplitLayout = vi.fn();
     getSplitWrapperCache = vi.fn().mockReturnValue(new Map());
     getWrapperArea = vi.fn();
@@ -145,6 +146,52 @@ describe('TerminalContainerManager', () => {
       
       expect((manager as any).splitLayoutService.activateSplitLayout).toHaveBeenCalled();
       expect(c1.classList.contains('terminal-container--split')).toBe(true);
+    });
+
+    it('should use horizontal single-row split in compact panel area even with 6 terminals', () => {
+      const terminalBody = document.getElementById('terminal-body') as HTMLElement;
+      Object.defineProperty(terminalBody, 'clientWidth', { value: 900, configurable: true });
+      Object.defineProperty(terminalBody, 'clientHeight', { value: 800, configurable: true });
+
+      for (let i = 1; i <= 6; i++) {
+        const container = document.createElement('div');
+        manager.registerContainer(`t${i}`, container);
+      }
+
+      manager.applyDisplayState({
+        mode: 'split',
+        activeTerminalId: 't1',
+        orderedTerminalIds: ['t1', 't2', 't3', 't4', 't5', 't6'],
+        splitDirection: 'horizontal',
+      });
+
+      expect((manager as any).splitLayoutService.activateGridLayout).not.toHaveBeenCalled();
+      expect((manager as any).splitLayoutService.activateSplitLayout).toHaveBeenCalledWith(
+        terminalBody,
+        ['t1', 't2', 't3', 't4', 't5', 't6'],
+        'horizontal',
+        expect.any(Function)
+      );
+    });
+
+    it('should use grid layout in panel when area is large and terminals are 6+', () => {
+      const terminalBody = document.getElementById('terminal-body') as HTMLElement;
+      Object.defineProperty(terminalBody, 'clientWidth', { value: 1600, configurable: true });
+      Object.defineProperty(terminalBody, 'clientHeight', { value: 1000, configurable: true });
+
+      for (let i = 1; i <= 6; i++) {
+        const container = document.createElement('div');
+        manager.registerContainer(`t${i}`, container);
+      }
+
+      manager.applyDisplayState({
+        mode: 'split',
+        activeTerminalId: 't1',
+        orderedTerminalIds: ['t1', 't2', 't3', 't4', 't5', 't6'],
+        splitDirection: 'horizontal',
+      });
+
+      expect((manager as any).splitLayoutService.activateGridLayout).toHaveBeenCalled();
     });
 
     it('should apply normal mode', () => {
