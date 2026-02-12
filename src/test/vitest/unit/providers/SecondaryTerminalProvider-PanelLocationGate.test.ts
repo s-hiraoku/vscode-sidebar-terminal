@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SecondaryTerminalProvider } from '../../../../providers/SecondaryTerminalProvider';
+import * as vscode from 'vscode';
 
 const mocks = vi.hoisted(() => ({
   mockDisposable: { dispose: vi.fn() },
@@ -119,6 +120,16 @@ describe('SecondaryTerminalProvider - Panel Location Response Gate', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.clearAllMocks();
+    (vscode.workspace.getConfiguration as any).mockReturnValue({
+      get: vi.fn().mockImplementation((key: string, defaultValue?: unknown) => {
+        if (key === 'dynamicSplitDirection') return true;
+        if (key === 'panelLocation') return 'auto';
+        return defaultValue;
+      }),
+      update: vi.fn().mockResolvedValue(undefined),
+      has: vi.fn().mockReturnValue(true),
+      inspect: vi.fn().mockReturnValue({ globalValue: undefined, workspaceValue: undefined }),
+    });
 
     mockWebview.onDidReceiveMessage = vi.fn().mockImplementation((handler) => {
       messageHandler = handler;
@@ -157,6 +168,26 @@ describe('SecondaryTerminalProvider - Panel Location Response Gate', () => {
 
     (provider as any)._requestPanelLocationDetection();
     vi.advanceTimersByTime(3000);
+    await messageHandler?.({ command: 'reportPanelLocation', location: 'panel' });
+
+    expect(handleReportSpy).not.toHaveBeenCalled();
+  });
+
+  it('should not start detection request in manual panelLocation mode', async () => {
+    (vscode.workspace.getConfiguration as any).mockReturnValue({
+      get: vi.fn().mockImplementation((key: string, defaultValue?: unknown) => {
+        if (key === 'dynamicSplitDirection') return true;
+        if (key === 'panelLocation') return 'sidebar';
+        return defaultValue;
+      }),
+      update: vi.fn().mockResolvedValue(undefined),
+      has: vi.fn().mockReturnValue(true),
+      inspect: vi.fn().mockReturnValue({ globalValue: undefined, workspaceValue: undefined }),
+    });
+
+    const handleReportSpy = vi.spyOn((provider as any)._panelLocationService, 'handlePanelLocationReport');
+
+    (provider as any)._requestPanelLocationDetection();
     await messageHandler?.({ command: 'reportPanelLocation', location: 'panel' });
 
     expect(handleReportSpy).not.toHaveBeenCalled();

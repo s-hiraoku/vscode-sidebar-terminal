@@ -1195,6 +1195,18 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   private _requestPanelLocationDetection(): void {
+    const manualPanelLocation = vscode.workspace
+      .getConfiguration('secondaryTerminal')
+      .get<'sidebar' | 'panel' | 'auto'>('panelLocation', 'auto');
+
+    if (manualPanelLocation !== 'auto') {
+      log(
+        `📍 [PROVIDER] Manual panelLocation=${manualPanelLocation}; skipping panel location detection request`
+      );
+      this._clearPanelLocationDetectionPending('manual panelLocation mode');
+      return;
+    }
+
     this._panelLocationDetectionPending = true;
     if (this._panelLocationDetectionTimeout) {
       clearTimeout(this._panelLocationDetectionTimeout);

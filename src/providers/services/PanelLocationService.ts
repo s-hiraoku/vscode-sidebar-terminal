@@ -117,9 +117,32 @@ export class PanelLocationService implements vscode.Disposable {
     log('📍 [DEBUG] Panel location reported from WebView:', location);
     log('📍 [DEBUG] Previous cached location:', this._cachedPanelLocation);
 
-    // Validate panel location using type guard
-    if (!isPanelLocation(location)) {
-      log('⚠️ [DEBUG] Invalid or missing panel location:', location);
+    const config = vscode.workspace.getConfiguration('secondaryTerminal');
+    const manualPanelLocation = config.get<'sidebar' | 'panel' | 'auto'>(
+      PanelLocationService.CONFIG_KEYS.PANEL_LOCATION,
+      'auto'
+    );
+
+    // Manual mode: always use configured location, never WebView-reported location.
+    // This prevents layout oscillation and maximize cancellation when WebView dimensions
+    // are interpreted differently from the user's explicit setting.
+    const effectiveLocation: PanelLocation =
+      manualPanelLocation !== 'auto'
+        ? manualPanelLocation
+        : isPanelLocation(location)
+          ? location
+          : (() => {
+              log('⚠️ [DEBUG] Invalid or missing panel location:', location);
+              return this._cachedPanelLocation;
+            })();
+
+    if (manualPanelLocation !== 'auto' && location !== effectiveLocation) {
+      log(
+        `📍 [DEBUG] Manual panelLocation=${manualPanelLocation}; ignoring reported location=${String(location)}`
+      );
+    }
+
+    if (manualPanelLocation === 'auto' && !isPanelLocation(location)) {
       return;
     }
 
@@ -127,30 +150,29 @@ export class PanelLocationService implements vscode.Disposable {
     const previousLocation = this._cachedPanelLocation;
 
     // Cache the panel location for split direction determination
-    this._cachedPanelLocation = location;
-    log('📍 [DEBUG] ✅ Cached panel location UPDATED:', location);
+    this._cachedPanelLocation = effectiveLocation;
+    log('📍 [DEBUG] ✅ Cached panel location UPDATED:', effectiveLocation);
 
     // Only call setContext when location actually changes and panel location is manually controlled.
     // In auto mode, setContext can trigger VS Code layout recalculation and cancel maximized secondary sidebar.
-    if (previousLocation !== location) {
-      const config = vscode.workspace.getConfiguration('secondaryTerminal');
-      const manualPanelLocation = config.get<'sidebar' | 'panel' | 'auto'>(
-        PanelLocationService.CONFIG_KEYS.PANEL_LOCATION,
-        'auto'
-      );
+    if (previousLocation !== effectiveLocation) {
       const shouldUpdateContext = manualPanelLocation !== 'auto';
 
       if (shouldUpdateContext) {
-        await vscode.commands.executeCommand('setContext', PanelLocationService.CONTEXT_KEY, location);
-        log('📍 [DEBUG] Context key updated with NEW panel location:', location);
+        await vscode.commands.executeCommand(
+          'setContext',
+          PanelLocationService.CONTEXT_KEY,
+          effectiveLocation
+        );
+        log('📍 [DEBUG] Context key updated with NEW panel location:', effectiveLocation);
       } else {
         log('📍 [DEBUG] Auto mode detected, skipping setContext update');
       }
 
       // Notify caller if location changed
       if (onLocationChange) {
-        log(`🔄 [RELAYOUT] Location changed: ${previousLocation} → ${location}`);
-        await onLocationChange(previousLocation, location);
+        log(`🔄 [RELAYOUT] Location changed: ${previousLocation} → ${effectiveLocation}`);
+        await onLocationChange(previousLocation, effectiveLocation);
       }
     } else {
       log('📍 [DEBUG] ⏭️ Panel location unchanged, skipping setContext');
@@ -165,9 +187,23 @@ export class PanelLocationService implements vscode.Disposable {
    * 🎯 OPTIMIZATION: Debounced to prevent multiple rapid requests
    */
   public async requestPanelLocationDetection(): Promise<void> {
+    const config = vscode.workspace.getConfiguration('secondaryTerminal');
+    const manualPanelLocation = config.get<'sidebar' | 'panel' | 'auto'>(
+      PanelLocationService.CONFIG_KEYS.PANEL_LOCATION,
+      'auto'
+    );
+
     // Clear existing timer
     if (this._detectionDebounceTimer) {
       clearTimeout(this._detectionDebounceTimer);
+      this._detectionDebounceTimer = null;
+    }
+
+    if (manualPanelLocation !== 'auto') {
+      log(
+        `📍 [PANEL-DETECTION] Manual panelLocation=${manualPanelLocation}; skipping WebView detection request`
+      );
+      return;
     }
 
     // Schedule new detection request
