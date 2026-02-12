@@ -17,7 +17,7 @@ Deine Seitenleiste, dein Terminal, deine KI-Agenten -- alles an einem Ort. Ein v
 
 - **Natives Seitenleisten-Terminal** -- Behalte dein Terminal beim Bearbeiten im Blick. Kein Umschalten des unteren Panels mehr.
 - **KI-Agenten-bewusst** -- Erkennt automatisch Claude Code, Copilot, Gemini und Codex. Zeigt den Verbindungsstatus in Echtzeit an und optimiert das Rendering für KI-Streaming-Ausgaben (bis zu 250fps).
-- **Vollständig ausgestattet** -- Geteilte Ansichten, Session-Persistenz, Shell-Integration, Terminal-Suche, Befehlsdekorationen, 89 konfigurierbare Einstellungen. Kein Spielzeug -- ein Produktions-Terminal.
+- **Vollständig ausgestattet** -- Geteilte Ansichten, Session-Persistenz, Shell-Integration, Terminal-Suche, Befehlsdekorationen, 90 konfigurierbare Einstellungen. Kein Spielzeug -- ein Produktions-Terminal.
 
 ## Schnellstart
 
@@ -94,7 +94,7 @@ Deine Seitenleiste, dein Terminal, deine KI-Agenten -- alles an einem Ort. Ein v
 
 ## Konfiguration
 
-Die Erweiterung hat 89 Einstellungen. Hier sind die wirkungsvollsten zum Anpassen:
+Die Erweiterung hat 90 Einstellungen. Hier sind die wirkungsvollsten zum Anpassen:
 
 ```json
 {
@@ -169,12 +169,12 @@ Suche `secondaryTerminal` in den VS Code-Einstellungen für die vollständige Li
 
 ```bash
 npm install && npm run compile    # Bauen
-npm test                          # 3.800+ Unit-Tests
+npm test                          # 3.900+ Unit-Tests
 npm run test:e2e                  # E2E-Tests (Playwright)
 npm run watch                     # Überwachungsmodus
 ```
 
-Qualität: TypeScript Strict-Modus, TDD-Workflow, 3.800+ Unit-Tests, E2E-Abdeckung mit Playwright, CI/CD-Builds für 9 Plattformen.
+Qualität: TypeScript Strict-Modus, TDD-Workflow, 3.900+ Unit-Tests, E2E-Abdeckung mit Playwright, CI/CD-Builds für 9 Plattformen.
 
 ## Datenschutz
 
