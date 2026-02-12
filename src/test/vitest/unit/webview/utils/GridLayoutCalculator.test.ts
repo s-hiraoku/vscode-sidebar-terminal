@@ -80,9 +80,9 @@ describe('GridLayoutCalculator', () => {
       expect(shouldUseGrid(10, 'panel', false)).toBe(false);
     });
 
-    it('should return false for sidebar location', () => {
-      expect(shouldUseGrid(6, 'sidebar', true)).toBe(false);
-      expect(shouldUseGrid(10, 'sidebar', true)).toBe(false);
+    it('should return true for sidebar location when split mode and 6+ terminals', () => {
+      expect(shouldUseGrid(6, 'sidebar', true)).toBe(true);
+      expect(shouldUseGrid(10, 'sidebar', true)).toBe(true);
     });
 
     it('should return true for 7, 8, 9 terminals in panel split mode', () => {

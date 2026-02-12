@@ -1,7 +1,7 @@
 /**
  * Grid Layout Calculator
  *
- * Calculates 2-row grid distribution for 6-10 terminals in panel (maximized) split mode.
+ * Calculates 2-row grid distribution for 6-10 terminals in split mode.
  * Terminals are evenly distributed across 2 rows using ceil/floor division.
  *
  * Distribution examples:
@@ -33,18 +33,14 @@ export function calculateDistribution(count: number): GridDistribution {
 
 /**
  * Determine whether grid layout should be used.
- * Grid is activated when: panel mode + split mode + 6+ terminals.
+ * Grid is activated when: split mode + 6+ terminals.
  */
 export function shouldUseGrid(
   terminalCount: number,
-  panelLocation: 'sidebar' | 'panel',
+  _panelLocation: 'sidebar' | 'panel',
   isSplitMode: boolean
 ): boolean {
-  return (
-    terminalCount >= GRID_LAYOUT_CONSTANTS.MIN_TERMINALS_FOR_GRID &&
-    panelLocation === 'panel' &&
-    isSplitMode
-  );
+  return terminalCount >= GRID_LAYOUT_CONSTANTS.MIN_TERMINALS_FOR_GRID && isSplitMode;
 }
 
 /**
