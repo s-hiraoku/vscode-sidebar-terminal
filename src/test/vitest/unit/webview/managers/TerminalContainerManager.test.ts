@@ -18,6 +18,7 @@ vi.mock('../../../../../webview/managers/container/SplitLayoutService', () => ({
     activateSplitLayout = vi.fn();
     getSplitWrapperCache = vi.fn().mockReturnValue(new Map());
     getWrapperArea = vi.fn();
+    deactivateGridLayout = vi.fn();
     clear = vi.fn();
     setCoordinator = vi.fn(); // 🔧 FIX: Added for split resizer initialization
   }
@@ -169,6 +170,24 @@ describe('TerminalContainerManager', () => {
       expect((manager as any).splitLayoutService.getSplitResizers).toHaveBeenCalled();
       expect((manager as any).splitLayoutService.getSplitWrapperCache).toHaveBeenCalled();
       expect((manager as any).visibilityService.normalizeTerminalBody).toHaveBeenCalled();
+    });
+
+    it('should clear grid and horizontal split classes from terminals-wrapper', () => {
+      const terminalBody = document.getElementById('terminal-body') as HTMLElement;
+      const terminalsWrapper = document.createElement('div');
+      terminalsWrapper.id = 'terminals-wrapper';
+      terminalsWrapper.classList.add('terminal-grid-layout', 'terminal-split-horizontal');
+      terminalsWrapper.style.display = 'grid';
+      terminalsWrapper.style.gridTemplateColumns = 'repeat(5, 1fr)';
+      terminalsWrapper.style.gridTemplateRows = '1fr auto 1fr';
+      terminalBody.appendChild(terminalsWrapper);
+
+      manager.clearSplitArtifacts();
+
+      expect(terminalsWrapper.classList.contains('terminal-grid-layout')).toBe(false);
+      expect(terminalsWrapper.classList.contains('terminal-split-horizontal')).toBe(false);
+      expect(terminalsWrapper.style.gridTemplateColumns).toBe('');
+      expect(terminalsWrapper.style.gridTemplateRows).toBe('');
     });
   });
 

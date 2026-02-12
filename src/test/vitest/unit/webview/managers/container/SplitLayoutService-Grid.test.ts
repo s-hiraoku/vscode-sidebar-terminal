@@ -41,6 +41,37 @@ describe('SplitLayoutService - Grid Layout', () => {
   });
 
   describe('activateGridLayout', () => {
+    it('should use fixed 5 columns for 6 terminals in 2x5 mode', () => {
+      const containers = createContainers(6);
+      service.activateGridLayout(terminalBody, getTerminalIds(6), (id) => containers.get(id));
+
+      const wrapper = document.getElementById('terminals-wrapper');
+      expect(wrapper?.style.gridTemplateColumns).toBe('repeat(5, 1fr)');
+    });
+
+    it('should place the 6th terminal on second row spanning full width in 2x5 mode', () => {
+      const containers = createContainers(6);
+      service.activateGridLayout(terminalBody, getTerminalIds(6), (id) => containers.get(id));
+
+      const sixthWrapper = document.querySelector(
+        '[data-terminal-wrapper-id="term-6"]'
+      ) as HTMLElement;
+      expect(sixthWrapper.style.gridRow).toBe('3');
+      expect(sixthWrapper.style.gridColumn).toBe('1 / -1');
+    });
+
+    it('should clear stale inline display style on terminals-wrapper when activating grid', () => {
+      const terminalsWrapper = document.createElement('div');
+      terminalsWrapper.id = 'terminals-wrapper';
+      terminalsWrapper.style.display = 'flex';
+      terminalBody.appendChild(terminalsWrapper);
+
+      const containers = createContainers(6);
+      service.activateGridLayout(terminalBody, getTerminalIds(6), (id) => containers.get(id));
+
+      expect(terminalsWrapper.style.display).toBe('');
+    });
+
     it('should add terminal-grid-layout class to terminals-wrapper', () => {
       const containers = createContainers(6);
       service.activateGridLayout(terminalBody, getTerminalIds(6), (id) => containers.get(id));
@@ -88,22 +119,20 @@ describe('SplitLayoutService - Grid Layout', () => {
       expect(resizer).not.toBeNull();
     });
 
-    it('should set grid-template-columns based on max row count', () => {
+    it('should set fixed 5 columns for 6 terminals', () => {
       const containers = createContainers(6);
       service.activateGridLayout(terminalBody, getTerminalIds(6), (id) => containers.get(id));
 
       const wrapper = document.getElementById('terminals-wrapper');
-      // 6 terminals → 3+3, so max columns is 3
-      expect(wrapper?.style.gridTemplateColumns).toBe('repeat(3, 1fr)');
+      expect(wrapper?.style.gridTemplateColumns).toBe('repeat(5, 1fr)');
     });
 
-    it('should set grid-template-columns for 7 terminals (4+3)', () => {
+    it('should set fixed 5 columns for 7 terminals', () => {
       const containers = createContainers(7);
       service.activateGridLayout(terminalBody, getTerminalIds(7), (id) => containers.get(id));
 
       const wrapper = document.getElementById('terminals-wrapper');
-      // 7 terminals → 4+3, so max columns is 4
-      expect(wrapper?.style.gridTemplateColumns).toBe('repeat(4, 1fr)');
+      expect(wrapper?.style.gridTemplateColumns).toBe('repeat(5, 1fr)');
     });
 
     it('should set grid-template-columns for 10 terminals (5+5)', () => {
@@ -115,26 +144,22 @@ describe('SplitLayoutService - Grid Layout', () => {
       expect(wrapper?.style.gridTemplateColumns).toBe('repeat(5, 1fr)');
     });
 
-    it('should assign grid-row 1 to first row terminals', () => {
+    it('should assign grid-row 1 to first 5 terminals', () => {
       const containers = createContainers(6);
       service.activateGridLayout(terminalBody, getTerminalIds(6), (id) => containers.get(id));
 
-      // First 3 terminals should be in grid-row 1
-      for (let i = 1; i <= 3; i++) {
+      for (let i = 1; i <= 5; i++) {
         const wrapper = document.querySelector(`[data-terminal-wrapper-id="term-${i}"]`) as HTMLElement;
         expect(wrapper?.style.gridRow).toBe('1');
       }
     });
 
-    it('should assign grid-row 3 to second row terminals', () => {
+    it('should assign grid-row 3 to remaining terminals', () => {
       const containers = createContainers(6);
       service.activateGridLayout(terminalBody, getTerminalIds(6), (id) => containers.get(id));
 
-      // Last 3 terminals should be in grid-row 3 (row 2 is resizer)
-      for (let i = 4; i <= 6; i++) {
-        const wrapper = document.querySelector(`[data-terminal-wrapper-id="term-${i}"]`) as HTMLElement;
-        expect(wrapper?.style.gridRow).toBe('3');
-      }
+      const wrapper = document.querySelector('[data-terminal-wrapper-id="term-6"]') as HTMLElement;
+      expect(wrapper?.style.gridRow).toBe('3');
     });
 
     it('should not create any .split-resizer elements', () => {
@@ -233,7 +258,7 @@ describe('SplitLayoutService - Grid Layout', () => {
       // index=3, row1Count=3 → row 2 (grid-row: 3), col 1
       const wrapper = service.createGridWrapper('t4', 3, 3, 3);
       expect(wrapper.style.gridRow).toBe('3');
-      expect(wrapper.style.gridColumn).toBe('1');
+      expect(wrapper.style.gridColumn).toBe('1 / span 1');
     });
 
     it('should assign correct column indices', () => {
@@ -250,9 +275,9 @@ describe('SplitLayoutService - Grid Layout', () => {
       expect(w1.style.gridColumn).toBe('2');
       expect(w2.style.gridColumn).toBe('3');
       expect(w3.style.gridColumn).toBe('4');
-      expect(w4.style.gridColumn).toBe('1');
-      expect(w5.style.gridColumn).toBe('2');
-      expect(w6.style.gridColumn).toBe('3');
+      expect(w4.style.gridColumn).toBe('1 / span 1');
+      expect(w5.style.gridColumn).toBe('2 / span 1');
+      expect(w6.style.gridColumn).toBe('3 / span 1');
     });
   });
 

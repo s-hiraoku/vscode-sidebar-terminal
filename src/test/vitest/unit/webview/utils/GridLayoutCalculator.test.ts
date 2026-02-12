@@ -1,8 +1,8 @@
 /**
  * GridLayoutCalculator Unit Tests
  *
- * Tests for the grid layout calculation logic used when 6-10 terminals
- * are displayed in split mode within a panel (maximized secondary sidebar).
+ * Tests for the fixed 2x5 grid layout calculation logic used when 6-10 terminals
+ * are displayed in split mode.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -24,24 +24,24 @@ describe('GridLayoutCalculator', () => {
       expect(result).toEqual({ row1: 1, row2: 0 });
     });
 
-    it('should return { row1: 3, row2: 2 } for 5 terminals', () => {
+    it('should return { row1: 5, row2: 0 } for 5 terminals', () => {
       const result = calculateDistribution(5);
-      expect(result).toEqual({ row1: 3, row2: 2 });
+      expect(result).toEqual({ row1: 5, row2: 0 });
     });
 
-    it('should return { row1: 3, row2: 3 } for 6 terminals', () => {
+    it('should return { row1: 5, row2: 1 } for 6 terminals', () => {
       const result = calculateDistribution(6);
-      expect(result).toEqual({ row1: 3, row2: 3 });
+      expect(result).toEqual({ row1: 5, row2: 1 });
     });
 
-    it('should return { row1: 4, row2: 3 } for 7 terminals', () => {
+    it('should return { row1: 5, row2: 2 } for 7 terminals', () => {
       const result = calculateDistribution(7);
-      expect(result).toEqual({ row1: 4, row2: 3 });
+      expect(result).toEqual({ row1: 5, row2: 2 });
     });
 
-    it('should return { row1: 4, row2: 4 } for 8 terminals', () => {
+    it('should return { row1: 5, row2: 3 } for 8 terminals', () => {
       const result = calculateDistribution(8);
-      expect(result).toEqual({ row1: 4, row2: 4 });
+      expect(result).toEqual({ row1: 5, row2: 3 });
     });
 
     it('should return { row1: 5, row2: 4 } for 9 terminals', () => {
@@ -54,9 +54,9 @@ describe('GridLayoutCalculator', () => {
       expect(result).toEqual({ row1: 5, row2: 5 });
     });
 
-    it('should handle 11 terminals (beyond max)', () => {
+    it('should handle 11 terminals (beyond 2x5 capacity)', () => {
       const result = calculateDistribution(11);
-      expect(result).toEqual({ row1: 6, row2: 5 });
+      expect(result).toEqual({ row1: 5, row2: 6 });
     });
   });
 
@@ -73,6 +73,10 @@ describe('GridLayoutCalculator', () => {
 
     it('should return true for 10 terminals in panel mode with split', () => {
       expect(shouldUseGrid(10, 'panel', true)).toBe(true);
+    });
+
+    it('should return false for more than 10 terminals', () => {
+      expect(shouldUseGrid(11, 'panel', true)).toBe(false);
     });
 
     it('should return false when not in split mode', () => {

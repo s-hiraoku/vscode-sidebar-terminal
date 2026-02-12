@@ -259,10 +259,17 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
       allContainers.forEach((container) => DOMUtils.clearContainerHeightStyles(container));
 
       if (isGridLayout) {
-        // Grid layout: schedule refit after CSS grid settles
+        // Grid layout: run staged refits to avoid transient 0-row rendering.
         requestAnimationFrame(() => {
           this.coordinator.refitAllTerminals?.();
-          this.log('🔄 [GRID] Terminal refit scheduled after grid layout');
+          requestAnimationFrame(() => {
+            this.coordinator.refitAllTerminals?.();
+            this._finalRedistributeTimeout = setTimeout(() => {
+              this._finalRedistributeTimeout = null;
+              this.coordinator.refitAllTerminals?.();
+              this.log('🔄 [GRID] Final terminal refit completed after CSS settle');
+            }, 100);
+          });
         });
       }
     } else {

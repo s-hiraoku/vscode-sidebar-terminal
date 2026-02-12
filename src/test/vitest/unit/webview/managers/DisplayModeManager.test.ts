@@ -32,6 +32,10 @@ describe('DisplayModeManager - Fullscreen Display (Issue #198)', () => {
     terminalBody.id = 'terminal-body';
     document.body.appendChild(terminalBody);
 
+    const terminalsWrapper = document.createElement('div');
+    terminalsWrapper.id = 'terminals-wrapper';
+    terminalBody.appendChild(terminalsWrapper);
+
     const container1 = document.createElement('div');
     container1.id = 'terminal-container-1';
     container1.className = 'terminal-container';
@@ -100,6 +104,7 @@ describe('DisplayModeManager - Fullscreen Display (Issue #198)', () => {
           updateModeIndicator: vi.fn(),
         },
       }),
+      refitAllTerminals: vi.fn(),
       splitManager: mockSplitManager as any,
     } as any;
 
@@ -277,6 +282,46 @@ describe('DisplayModeManager - Fullscreen Display (Issue #198)', () => {
       containers.forEach((container) => {
         expect(DOMUtils.clearContainerHeightStyles).toHaveBeenCalledWith(container);
       });
+    });
+
+    it('should skip vertical redistribution when grid class is active on DOM', () => {
+      vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb: FrameRequestCallback) => {
+        cb(0);
+        return 1;
+      });
+
+      const terminalsWrapper = document.getElementById('terminals-wrapper') as HTMLElement;
+      terminalsWrapper.classList.add('terminal-grid-layout');
+      Object.defineProperty(terminalsWrapper, 'clientHeight', {
+        configurable: true,
+        get: () => 500,
+      });
+
+      (mockSplitManager.getOptimalSplitDirection as ReturnType<typeof vi.fn>).mockReturnValue('vertical');
+      (mockSplitManager.getLayoutMode as ReturnType<typeof vi.fn>).mockReturnValue('single-row');
+
+      displayManager.showAllTerminalsSplit();
+
+      expect(mockSplitManager.redistributeSplitTerminals).not.toHaveBeenCalled();
+    });
+
+    it('should schedule multiple refits in grid mode to avoid header-only rendering', () => {
+      vi.useFakeTimers();
+      vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb: FrameRequestCallback) => {
+        cb(0);
+        return 1;
+      });
+
+      const terminalsWrapper = document.getElementById('terminals-wrapper') as HTMLElement;
+      terminalsWrapper.classList.add('terminal-grid-layout');
+
+      (mockSplitManager.getOptimalSplitDirection as ReturnType<typeof vi.fn>).mockReturnValue('vertical');
+
+      displayManager.showAllTerminalsSplit();
+      vi.runAllTimers();
+
+      expect(mockCoordinator.refitAllTerminals).toHaveBeenCalledTimes(3);
+      vi.useRealTimers();
     });
 
     it('should handle split -> fullscreen transition', () => {
