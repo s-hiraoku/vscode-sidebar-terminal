@@ -28,6 +28,7 @@ interface CompositionContext {
 export class IMEHandler extends BaseInputHandler implements IIMEHandler {
   private static readonly IME_CURSOR_STYLE_ID = 'terminal-ime-cursor-style';
   private static readonly IME_ACTIVE_CLASS = 'terminal-ime-composing';
+  private static readonly COMPOSITION_STUCK_RECOVERY_TIMEOUT_MS = 5000;
   // IME composition state - VS Code standard pattern
   private compositionContext: CompositionContext | null = null;
 
@@ -43,6 +44,7 @@ export class IMEHandler extends BaseInputHandler implements IIMEHandler {
 
   // Event service for centralized event handling
   private eventService: InputEventService;
+  private compositionRecoveryTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     eventDebounceTimers: Map<string, number>,
@@ -132,6 +134,23 @@ export class IMEHandler extends BaseInputHandler implements IIMEHandler {
       { preventDefault: false, stopPropagation: false }
     );
 
+    // Fail-safe: browser/IME can occasionally miss compositionend.
+    this.eventService.registerEventHandler(
+      'ime-window-blur',
+      window,
+      'blur',
+      this.handleWindowBlur.bind(this),
+      { preventDefault: false, stopPropagation: false }
+    );
+
+    this.eventService.registerEventHandler(
+      'ime-visibilitychange',
+      document,
+      'visibilitychange',
+      this.handleVisibilityChange.bind(this),
+      { preventDefault: false, stopPropagation: false }
+    );
+
     this.logger('IME handling', 'completed');
   }
 
@@ -164,6 +183,8 @@ export class IMEHandler extends BaseInputHandler implements IIMEHandler {
       lastEvent: 'start',
       timestamp: Date.now(),
     });
+
+    this.scheduleCompositionRecovery();
 
     // Clear any pending input events to avoid conflicts
     this.clearPendingInputEvents();
@@ -205,6 +226,8 @@ export class IMEHandler extends BaseInputHandler implements IIMEHandler {
       lastEvent: 'update',
       timestamp: Date.now(),
     });
+
+    this.scheduleCompositionRecovery();
   }
 
   /**
@@ -213,6 +236,7 @@ export class IMEHandler extends BaseInputHandler implements IIMEHandler {
   private handleCompositionEnd(event: Event): void {
     const compositionEvent = event as CompositionEvent;
     this.logger(`IME composition ended: ${compositionEvent.data || 'no data'}`);
+    this.clearCompositionRecoveryTimer();
 
     // Update final composition data
     if (this.compositionContext) {
@@ -250,6 +274,60 @@ export class IMEHandler extends BaseInputHandler implements IIMEHandler {
         timestamp: Date.now(),
       });
     }, 0);
+  }
+
+  private handleWindowBlur(): void {
+    if (!this.isIMEComposing()) {
+      return;
+    }
+
+    this.logger('Window blur detected during IME composition; forcing composition reset');
+    this.forceResetCompositionState('window-blur');
+  }
+
+  private handleVisibilityChange(): void {
+    if (document.visibilityState !== 'hidden' || !this.isIMEComposing()) {
+      return;
+    }
+
+    this.logger('Document hidden during IME composition; forcing composition reset');
+    this.forceResetCompositionState('visibility-hidden');
+  }
+
+  private scheduleCompositionRecovery(): void {
+    this.clearCompositionRecoveryTimer();
+
+    this.compositionRecoveryTimer = setTimeout(() => {
+      if (!this.isIMEComposing()) {
+        return;
+      }
+
+      this.logger('IME composition recovery timeout hit; forcing composition reset');
+      this.forceResetCompositionState('timeout');
+    }, IMEHandler.COMPOSITION_STUCK_RECOVERY_TIMEOUT_MS);
+  }
+
+  private clearCompositionRecoveryTimer(): void {
+    if (this.compositionRecoveryTimer !== null) {
+      clearTimeout(this.compositionRecoveryTimer);
+      this.compositionRecoveryTimer = null;
+    }
+  }
+
+  private forceResetCompositionState(reason: 'timeout' | 'window-blur' | 'visibility-hidden'): void {
+    this.clearCompositionRecoveryTimer();
+    this.compositionContext = null;
+    this.lastCompositionEvent = null;
+    this.setIMECursorVisibility(false);
+
+    this.stateManager.updateIMEState({
+      isActive: false,
+      data: '',
+      lastEvent: null,
+      timestamp: Date.now(),
+    });
+
+    this.logger(`IME composition state reset by fail-safe: ${reason}`);
   }
 
   /**
@@ -400,6 +478,7 @@ body.${IMEHandler.IME_ACTIVE_CLASS} .terminal-container .xterm .xterm-cursor-lay
     this.logger('disposal', 'starting');
 
     // Clear composition context
+    this.clearCompositionRecoveryTimer();
     this.compositionContext = null;
     this.lastCompositionEvent = null;
 
@@ -421,6 +500,8 @@ body.${IMEHandler.IME_ACTIVE_CLASS} .terminal-container .xterm .xterm-cursor-lay
       this.eventService.unregisterEventHandler('ime-composition-end');
       this.eventService.unregisterEventHandler('ime-input');
       this.eventService.unregisterEventHandler('ime-beforeinput');
+      this.eventService.unregisterEventHandler('ime-window-blur');
+      this.eventService.unregisterEventHandler('ime-visibilitychange');
     }
 
     // Call parent dispose

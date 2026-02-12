@@ -135,4 +135,31 @@ describe('IMEHandler Cursor Visibility', () => {
 
     expect((global as any).document.body.classList.contains('terminal-ime-composing')).toBe(false);
   });
+
+  it('recovers from stuck composition when compositionend is missing', () => {
+    const startEvent = new (global as any).CompositionEvent('compositionstart', {
+      data: 'あ',
+    });
+    (global as any).document.dispatchEvent(startEvent);
+    expect(handler.isIMEComposing()).toBe(true);
+
+    // Simulate missing compositionend from IME/browser edge case.
+    vi.advanceTimersByTime(5000);
+
+    expect(handler.isIMEComposing()).toBe(false);
+    expect((global as any).document.body.classList.contains('terminal-ime-composing')).toBe(false);
+  });
+
+  it('clears composition state on window blur', () => {
+    const startEvent = new (global as any).CompositionEvent('compositionstart', {
+      data: '候補',
+    });
+    (global as any).document.dispatchEvent(startEvent);
+    expect(handler.isIMEComposing()).toBe(true);
+
+    (global as any).window.dispatchEvent(new (global as any).Event('blur'));
+
+    expect(handler.isIMEComposing()).toBe(false);
+    expect((global as any).document.body.classList.contains('terminal-ime-composing')).toBe(false);
+  });
 });

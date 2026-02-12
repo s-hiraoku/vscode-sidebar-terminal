@@ -173,6 +173,26 @@ describe('Input Optimization Integration', () => {
       expect(outputData).toContain('output during IME');
     });
 
+    it('should recover IME state when compositionend is missing and focus/context changes', () => {
+      // Start IME composition and intentionally skip compositionend
+      document.dispatchEvent(new jsdom.window.CompositionEvent('compositionstart', { data: 'に' }));
+      expect(inputManager.isIMEComposing()).toBe(true);
+
+      // Simulate user switching away from webview/tab (context lost)
+      Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        get: () => 'hidden',
+      });
+      document.dispatchEvent(new jsdom.window.Event('visibilitychange'));
+      expect(inputManager.isIMEComposing()).toBe(false);
+
+      // Start composing again and recover via window blur
+      document.dispatchEvent(new jsdom.window.CompositionEvent('compositionstart', { data: 'ほ' }));
+      expect(inputManager.isIMEComposing()).toBe(true);
+      window.dispatchEvent(new jsdom.window.Event('blur'));
+      expect(inputManager.isIMEComposing()).toBe(false);
+    });
+
     it('should maintain responsiveness during CLI Agent activity', () => {
       // Enable CLI Agent mode
       performanceManager.setCliAgentMode(true);
