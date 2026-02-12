@@ -29,6 +29,9 @@ describe('PanelLocationService', () => {
   let mockSendMessage: any;
 
   beforeEach(() => {
+    (vscode.workspace.getConfiguration as any).mockReturnValue({
+      get: vi.fn((key: string, def: unknown) => def),
+    });
     mockSendMessage = vi.fn().mockResolvedValue(undefined);
     service = new PanelLocationService(mockSendMessage);
     vi.useFakeTimers();
@@ -90,6 +93,12 @@ describe('PanelLocationService', () => {
     });
 
     it('should ignore invalid locations', async () => {
+      const mockGet = vi.fn().mockImplementation((key, def) => {
+        if (key === 'panelLocation') return 'auto';
+        return def;
+      });
+      (vscode.workspace.getConfiguration as any).mockReturnValue({ get: mockGet });
+
       await service.handlePanelLocationReport('invalid');
       expect(service.getCachedPanelLocation()).toBe('sidebar');
     });
@@ -110,10 +119,43 @@ describe('PanelLocationService', () => {
         'panel'
       );
     });
+
+    it('should prioritize manual panelLocation over reported location', async () => {
+      const autoGet = vi.fn().mockImplementation((key, def) => {
+        if (key === 'panelLocation') return 'auto';
+        return def;
+      });
+      (vscode.workspace.getConfiguration as any).mockReturnValue({ get: autoGet });
+      await service.handlePanelLocationReport('panel');
+      expect(service.getCachedPanelLocation()).toBe('panel');
+
+      vi.mocked(vscode.commands.executeCommand).mockClear();
+
+      const manualGet = vi.fn().mockImplementation((key, def) => {
+        if (key === 'panelLocation') return 'sidebar';
+        return def;
+      });
+      (vscode.workspace.getConfiguration as any).mockReturnValue({ get: manualGet });
+
+      await service.handlePanelLocationReport('panel');
+
+      expect(service.getCachedPanelLocation()).toBe('sidebar');
+      expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+        'setContext',
+        'secondaryTerminal.panelLocation',
+        'sidebar'
+      );
+    });
   });
 
   describe('requestPanelLocationDetection', () => {
     it('should send request message to WebView after debounce', async () => {
+      const mockGet = vi.fn().mockImplementation((key, def) => {
+        if (key === 'panelLocation') return 'auto';
+        return def;
+      });
+      (vscode.workspace.getConfiguration as any).mockReturnValue({ get: mockGet });
+
       service.requestPanelLocationDetection();
       
       expect(mockSendMessage).not.toHaveBeenCalled();
@@ -123,6 +165,20 @@ describe('PanelLocationService', () => {
       expect(mockSendMessage).toHaveBeenCalledWith({
         command: 'requestPanelLocationDetection'
       });
+    });
+
+    it('should skip detection request in manual panelLocation mode', async () => {
+      const mockGet = vi.fn().mockImplementation((key: string, def: unknown) => {
+        if (key === 'panelLocation') return 'sidebar';
+        return def;
+      });
+      (vscode.workspace.getConfiguration as any).mockReturnValue({ get: mockGet });
+
+      service.requestPanelLocationDetection();
+      vi.advanceTimersByTime(300);
+      await vi.runAllTimersAsync();
+
+      expect(mockSendMessage).not.toHaveBeenCalled();
     });
 
     it('should NOT call setContext in error path even in manual mode', async () => {
@@ -234,17 +290,23 @@ describe('PanelLocationService', () => {
     });
 
     it('should call setContext when location changes', async () => {
-      const mockGet = vi.fn().mockImplementation((key, def) => {
+      const panelGet = vi.fn().mockImplementation((key, def) => {
         if (key === 'panelLocation') return 'panel';
         return def;
       });
-      (vscode.workspace.getConfiguration as any).mockReturnValue({ get: mockGet });
+      (vscode.workspace.getConfiguration as any).mockReturnValue({ get: panelGet });
 
       // Arrange: Report 'panel' first
       await service.handlePanelLocationReport('panel');
       vi.mocked(vscode.commands.executeCommand).mockClear();
 
-      // Act: Report different location
+      const sidebarGet = vi.fn().mockImplementation((key, def) => {
+        if (key === 'panelLocation') return 'sidebar';
+        return def;
+      });
+      (vscode.workspace.getConfiguration as any).mockReturnValue({ get: sidebarGet });
+
+      // Act: Emulate manual setting change to sidebar
       await service.handlePanelLocationReport('sidebar');
 
       // Assert: setContext should be called for changed location
