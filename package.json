@@ -1158,7 +1158,7 @@
     "webpack-cli": "^6.0.0"
   },
   "dependencies": {
-    "node-pty": "1.2.0-beta.10",
+    "node-pty": "1.2.0-beta.11",
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/addon-search": "^0.16.0",
     "@xterm/addon-serialize": "^0.14.0",
