@@ -249,11 +249,23 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
 
     containerManager.applyDisplayState(displayState);
 
+    // Check if grid mode is active (determined by applyDisplayState)
+    const isGridLayout = splitManager.getLayoutMode() === 'grid-2-row';
+
     // Ensure container heights are aligned with the split direction
     const allContainers = containerManager.getAllContainers();
-    if (direction === 'horizontal') {
+    if (direction === 'horizontal' || isGridLayout) {
       // Clear fixed heights from prior vertical splits/fullscreen
+      // In grid mode, CSS grid handles layout automatically
       allContainers.forEach((container) => DOMUtils.clearContainerHeightStyles(container));
+
+      if (isGridLayout) {
+        // Grid layout: schedule refit after CSS grid settles
+        requestAnimationFrame(() => {
+          this.coordinator.refitAllTerminals?.();
+          this.log('🔄 [GRID] Terminal refit scheduled after grid layout');
+        });
+      }
     } else {
       // Vertical split: divide height after layout settles
       // Force reflow to ensure CSS changes are applied before reading dimensions

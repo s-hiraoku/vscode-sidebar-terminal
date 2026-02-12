@@ -172,6 +172,19 @@ export const SESSION_RESTORE_CONSTANTS = {
 } as const;
 
 /**
+ * Grid Layout 定数
+ * 6-10ターミナル時の2段グリッドレイアウト設定
+ */
+export const GRID_LAYOUT_CONSTANTS = {
+  /** Minimum number of terminals to activate grid layout */
+  MIN_TERMINALS_FOR_GRID: 6,
+  /** Default grid template rows (2 equal rows) */
+  GRID_TEMPLATE_ROWS: '1fr 1fr',
+  /** Gap between grid cells (px) */
+  GRID_GAP_PX: 4,
+} as const;
+
+/**
  * Split Resize Manager 定数
  * ドラッグリサイズ機能に関する設定
  */

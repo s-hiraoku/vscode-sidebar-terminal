@@ -405,9 +405,14 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       return;
     }
 
-    const resizers = Array.from(
+    // Collect both split resizers and grid row resizers
+    const splitResizers = Array.from(
       terminalsWrapper.querySelectorAll<HTMLElement>('.split-resizer')
     );
+    const gridResizers = Array.from(
+      terminalsWrapper.querySelectorAll<HTMLElement>('.grid-row-resizer')
+    );
+    const resizers = [...splitResizers, ...gridResizers];
 
     // Always reinitialize to clear stale references, even with empty array
     this.splitResizeManager.reinitialize(resizers);
@@ -1630,14 +1635,26 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     const domWrapperCount = terminalsWrapper
       ? terminalsWrapper.querySelectorAll('[data-terminal-wrapper-id]').length
       : 0;
+    const isGridLayout = terminalsWrapper?.classList.contains('terminal-grid-layout') ?? false;
     const resizerCount = terminalsWrapper
       ? terminalsWrapper.querySelectorAll('.split-resizer').length
       : document.querySelectorAll('.split-resizer').length;
+    const gridResizerCount = terminalsWrapper
+      ? terminalsWrapper.querySelectorAll('.grid-row-resizer').length
+      : 0;
     const wrapperCount = domWrapperCount > 0 ? domWrapperCount : stateTerminalCount;
-    const expectedResizerCount = wrapperCount - 1;
-    const resizerLayoutValid = resizerCount === expectedResizerCount;
-    const wrapperLayoutValid = domWrapperCount === 0 || domWrapperCount === stateTerminalCount;
-    const layoutIsValid = resizerLayoutValid && wrapperLayoutValid;
+
+    const expectedResizerCount = isGridLayout ? 0 : wrapperCount - 1;
+    let layoutIsValid: boolean;
+    if (isGridLayout) {
+      // In grid mode: wrappers should match terminal count, one grid-row-resizer
+      const wrapperLayoutValid = domWrapperCount === 0 || domWrapperCount === stateTerminalCount;
+      layoutIsValid = wrapperLayoutValid && gridResizerCount === 1;
+    } else {
+      const resizerLayoutValid = resizerCount === expectedResizerCount;
+      const wrapperLayoutValid = domWrapperCount === 0 || domWrapperCount === stateTerminalCount;
+      layoutIsValid = resizerLayoutValid && wrapperLayoutValid;
+    }
 
     if (layoutIsValid) {
       return;

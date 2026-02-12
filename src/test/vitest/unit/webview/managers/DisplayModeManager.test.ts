@@ -86,6 +86,9 @@ describe('DisplayModeManager - Fullscreen Display (Issue #198)', () => {
         isSplitMode = true;
       }),
       redistributeSplitTerminals: vi.fn(),
+      getLayoutMode: vi.fn().mockReturnValue('single-row'),
+      getCurrentPanelLocation: vi.fn().mockReturnValue('sidebar'),
+      getSplitTerminals: vi.fn().mockReturnValue(new Map()),
     };
 
     // Create mock coordinator

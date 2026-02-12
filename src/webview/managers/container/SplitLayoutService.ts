@@ -6,7 +6,11 @@
  */
 
 import { containerLogger } from '../../utils/ManagerLogger';
-import { SPLIT_LAYOUT_CONSTANTS } from '../../constants/webview';
+import { SPLIT_LAYOUT_CONSTANTS, GRID_LAYOUT_CONSTANTS } from '../../constants/webview';
+import {
+  calculateDistribution,
+  getGridTemplateColumns,
+} from '../../utils/GridLayoutCalculator';
 
 /**
  * Interface for coordinator with updateSplitResizers method
@@ -27,6 +31,12 @@ export class SplitLayoutService {
 
   /** Reference to coordinator for calling updateSplitResizers */
   private coordinator: IResizeCoordinator | null = null;
+
+  /** Whether grid layout is currently active */
+  private gridMode = false;
+
+  /** Grid row resizer element (between the two rows) */
+  private gridRowResizer: HTMLElement | null = null;
 
   /**
    * Set the coordinator reference for resizer initialization
@@ -327,14 +337,219 @@ export class SplitLayoutService {
   }
 
   /**
+   * Whether grid layout is currently active
+   */
+  public isGridMode(): boolean {
+    return this.gridMode;
+  }
+
+  /**
+   * Activate 2-row grid layout for 6-10 terminals in panel split mode.
+   * Terminals are distributed across 2 rows using ceil/floor division.
+   */
+  public activateGridLayout(
+    terminalBody: HTMLElement,
+    orderedTerminalIds: string[],
+    getContainer: (terminalId: string) => HTMLElement | undefined
+  ): void {
+    const terminalCount = orderedTerminalIds.length;
+
+    if (terminalCount === 0) {
+      containerLogger.warn('No terminals to display in grid mode');
+      return;
+    }
+
+    containerLogger.info(
+      '🎨 [GRID] ==================== ACTIVATING GRID LAYOUT ===================='
+    );
+    containerLogger.info(`🎨 [GRID] Terminal count: ${terminalCount}`);
+
+    const { row1, row2 } = calculateDistribution(terminalCount);
+    containerLogger.info(`🎨 [GRID] Distribution: row1=${row1}, row2=${row2}`);
+
+    // Setup terminal-body
+    terminalBody.style.display = 'flex';
+    terminalBody.style.flexDirection = 'column';
+    terminalBody.style.height = '100%';
+    terminalBody.style.width = '100%';
+    terminalBody.style.overflow = 'hidden';
+    terminalBody.style.padding = '0';
+    terminalBody.style.margin = '0';
+
+    const terminalsWrapper = this.ensureTerminalsWrapper(terminalBody);
+
+    // Remove flex classes/styles, apply grid class
+    terminalsWrapper.classList.remove('terminal-split-horizontal');
+    terminalsWrapper.classList.add('terminal-grid-layout');
+    terminalsWrapper.style.flexDirection = '';
+
+    // Set grid-template-columns based on row1 count (wider row)
+    const maxColumns = Math.max(row1, row2);
+    terminalsWrapper.style.gridTemplateColumns = getGridTemplateColumns(maxColumns);
+    // 3 grid rows: row1 content | resizer (auto) | row2 content
+    terminalsWrapper.style.gridTemplateRows = '1fr auto 1fr';
+
+    // Collect containers
+    const containersToWrap: Array<{ id: string; container: HTMLElement }> = [];
+    orderedTerminalIds.forEach((terminalId) => {
+      const container = getContainer(terminalId);
+      if (container) {
+        containersToWrap.push({ id: terminalId, container });
+      } else {
+        containerLogger.error(`Container not found for terminal: ${terminalId}`);
+      }
+    });
+
+    // Clear existing content
+    terminalsWrapper.textContent = '';
+    this.splitWrapperCache.clear();
+    this.splitResizers.clear();
+    this.gridRowResizer = null;
+
+    // Place terminals in grid
+    containersToWrap.forEach(({ id: terminalId, container }, index) => {
+      const wrapper = this.createGridWrapper(terminalId, index, row1, maxColumns);
+      const area = this.getWrapperArea(wrapper, terminalId, true);
+      if (area) {
+        area.appendChild(container);
+      }
+
+      // Setup container styles for split mode
+      container.classList.remove('terminal-container--fullscreen', 'hidden-mode');
+      container.classList.add('terminal-container--split');
+      container.style.display = 'flex';
+      container.style.flex = '1 1 auto';
+      container.style.width = '100%';
+      container.style.height = '100%';
+      container.style.minHeight = '0';
+
+      terminalsWrapper.appendChild(wrapper);
+      this.splitWrapperCache.set(terminalId, wrapper);
+    });
+
+    // Add grid row resizer between the two rows
+    const rowResizer = this.createGridRowResizer();
+    terminalsWrapper.appendChild(rowResizer);
+    this.gridRowResizer = rowResizer;
+
+    this.gridMode = true;
+
+    containerLogger.info(
+      `Grid layout activated: ${containersToWrap.length} terminals in ${row1}+${row2} distribution`
+    );
+
+    // Initialize resizers
+    if (this.coordinator?.updateSplitResizers) {
+      setTimeout(() => {
+        this.coordinator?.updateSplitResizers?.();
+        containerLogger.info('Grid resizers initialized after layout activation');
+      }, 50);
+    }
+  }
+
+  /**
+   * Create a wrapper element positioned in the grid.
+   */
+  public createGridWrapper(
+    terminalId: string,
+    index: number,
+    row1Count: number,
+    maxColumns: number
+  ): HTMLElement {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'terminal-split-wrapper';
+    wrapper.setAttribute('data-terminal-wrapper-id', terminalId);
+
+    wrapper.style.display = 'flex';
+    wrapper.style.flexDirection = 'column';
+    wrapper.style.position = 'relative';
+    wrapper.style.overflow = 'hidden';
+    wrapper.style.minWidth = '0';
+    wrapper.style.minHeight = '0';
+
+    // Determine grid placement
+    const isRow1 = index < row1Count;
+    const gridRow = isRow1 ? '1' : '3'; // row 2 of grid is row 3 because resizer is row 2
+    const colIndex = isRow1 ? index : index - row1Count;
+    const gridColumn = `${colIndex + 1}`;
+
+    wrapper.style.gridRow = gridRow;
+    wrapper.style.gridColumn = gridColumn;
+
+    this.getWrapperArea(wrapper, terminalId, true);
+    return wrapper;
+  }
+
+  /**
+   * Create the grid row resizer element (between row 1 and row 2)
+   */
+  public createGridRowResizer(): HTMLElement {
+    const resizer = document.createElement('div');
+    resizer.className = 'grid-row-resizer';
+    resizer.style.gridRow = '2';
+    resizer.style.gridColumn = '1 / -1';
+    resizer.style.height = `${SPLIT_LAYOUT_CONSTANTS.RESIZER_SIZE_PX}px`;
+    resizer.style.cursor = 'row-resize';
+    resizer.style.background = 'var(--vscode-widget-border, #454545)';
+    return resizer;
+  }
+
+  /**
+   * Get the grid row resizer element
+   */
+  public getGridRowResizer(): HTMLElement | null {
+    return this.gridRowResizer;
+  }
+
+  /**
+   * Deactivate grid layout and restore flex layout
+   */
+  public deactivateGridLayout(): void {
+    if (!this.gridMode) {
+      return;
+    }
+
+    containerLogger.info('🎨 [GRID] Deactivating grid layout');
+
+    const terminalsWrapper = document.getElementById('terminals-wrapper');
+    if (terminalsWrapper) {
+      terminalsWrapper.classList.remove('terminal-grid-layout');
+      terminalsWrapper.style.gridTemplateColumns = '';
+      terminalsWrapper.style.gridTemplateRows = '';
+    }
+
+    // Remove grid row resizer
+    if (this.gridRowResizer) {
+      this.gridRowResizer.remove();
+      this.gridRowResizer = null;
+    }
+
+    // Clear grid-specific inline styles from wrappers
+    this.splitWrapperCache.forEach((wrapper) => {
+      wrapper.style.gridRow = '';
+      wrapper.style.gridColumn = '';
+    });
+
+    this.gridMode = false;
+    containerLogger.info('🎨 [GRID] Grid layout deactivated');
+  }
+
+  /**
    * Remove all split artifacts from DOM
    */
   public removeSplitArtifacts(terminalBody: HTMLElement): void {
+    // Deactivate grid mode if active
+    this.deactivateGridLayout();
+
     terminalBody.querySelectorAll<HTMLElement>('[data-terminal-wrapper-id]').forEach((wrapper) => {
       wrapper.remove();
     });
 
     terminalBody.querySelectorAll<HTMLElement>('.split-resizer').forEach((resizer) => {
+      resizer.remove();
+    });
+
+    terminalBody.querySelectorAll<HTMLElement>('.grid-row-resizer').forEach((resizer) => {
       resizer.remove();
     });
 
@@ -348,5 +563,7 @@ export class SplitLayoutService {
   public clear(): void {
     this.splitWrapperCache.clear();
     this.splitResizers.clear();
+    this.gridMode = false;
+    this.gridRowResizer = null;
   }
 }

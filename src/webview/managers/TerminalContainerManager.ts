@@ -33,6 +33,7 @@ import {
   type IResizeCoordinator,
 } from './container';
 import { DOMUtils } from '../utils/DOMUtils';
+import { shouldUseGrid } from '../utils/GridLayoutCalculator';
 
 /**
  * TerminalContainerManager
@@ -207,12 +208,23 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
 
     if (state.mode === 'split') {
       this.clearSplitArtifacts();
-      this.splitLayoutService.activateSplitLayout(
-        terminalBody,
-        orderedIds,
-        state.splitDirection ?? 'vertical',
-        (id) => this.containerCache.get(id)
-      );
+      const splitDirection = state.splitDirection ?? 'vertical';
+      const panelLocation: 'sidebar' | 'panel' = splitDirection === 'horizontal' ? 'panel' : 'sidebar';
+
+      if (shouldUseGrid(orderedIds.length, panelLocation, true)) {
+        this.splitLayoutService.activateGridLayout(
+          terminalBody,
+          orderedIds,
+          (id) => this.containerCache.get(id)
+        );
+      } else {
+        this.splitLayoutService.activateSplitLayout(
+          terminalBody,
+          orderedIds,
+          splitDirection,
+          (id) => this.containerCache.get(id)
+        );
+      }
     } else {
       this.clearSplitArtifacts();
     }

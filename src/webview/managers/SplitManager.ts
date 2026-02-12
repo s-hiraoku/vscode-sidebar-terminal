@@ -5,6 +5,7 @@ import { showSplitLimitWarning } from '../utils/NotificationUtils';
 import { BaseManager } from './BaseManager';
 import { TerminalInstance } from '../interfaces/ManagerInterfaces';
 import { ISplitLayoutController } from '../interfaces/ISplitLayoutController';
+import { shouldUseGrid } from '../utils/GridLayoutCalculator';
 
 // Re-export TerminalInstance for tests
 export { TerminalInstance };
@@ -427,6 +428,20 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
 
   public getIsSplitMode(): boolean {
     return this.isSplitMode;
+  }
+
+  /**
+   * Get current layout mode based on terminal count and panel location.
+   * Returns 'grid-2-row' when conditions are met for 2-row grid layout.
+   */
+  public getLayoutMode(): 'single-row' | 'grid-2-row' {
+    if (!this.isSplitMode) {
+      return 'single-row';
+    }
+    if (shouldUseGrid(this.terminals.size, this.currentPanelLocation, this.isSplitMode)) {
+      return 'grid-2-row';
+    }
+    return 'single-row';
   }
 
   /**
