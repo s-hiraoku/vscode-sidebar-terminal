@@ -221,12 +221,8 @@
   cursor: col-resize;
 }
 
-/* Hover state - visual feedback */
-.split-resizer:hover {
-  background: var(--vscode-sash-hoverBorder, #007acc);
-}
-
-/* Active dragging state */
+/* Hover and active dragging state */
+.split-resizer:hover,
 .split-resizer.dragging {
   background: var(--vscode-sash-hoverBorder, #007acc);
 }
@@ -260,10 +256,7 @@
   z-index: 1;
 }
 
-.grid-row-resizer:hover {
-  background: var(--vscode-sash-hoverBorder, #007acc);
-}
-
+.grid-row-resizer:hover,
 .grid-row-resizer.dragging {
   background: var(--vscode-sash-hoverBorder, #007acc);
 }
@@ -414,10 +407,6 @@ body.resizing-vertical * {
    VS CODE STYLE CURSOR
    Smooth cursor animation like VS Code terminal
    ======================================== */
-
-.xterm-cursor-layer {
-  /* Cursor layer positioning */
-}
 
 /* Blinking cursor animation */
 @keyframes terminal-cursor-blink {

@@ -1,11 +1,10 @@
 /**
  * Grid Layout Calculator
  *
- * Calculates 2-row grid distribution for 6-10 terminals in split mode.
- * Terminals are evenly distributed across 2 rows using ceil/floor division.
+ * Calculates fixed 2x5 grid distribution for 6-10 terminals in split mode.
  *
  * Distribution examples:
- *   6 → 3+3, 7 → 4+3, 8 → 4+4, 9 → 5+4, 10 → 5+5
+ *   6 → 5+1, 7 → 5+2, 8 → 5+3, 9 → 5+4, 10 → 5+5
  */
 
 import { GRID_LAYOUT_CONSTANTS } from '../constants/webview';
@@ -18,29 +17,36 @@ export interface GridDistribution {
   row2: number;
 }
 
+const GRID_MAX_COLUMNS = 5;
+const GRID_MAX_TERMINALS = 10;
+
 /**
- * Calculate how terminals should be distributed across 2 rows.
- * Row 1 gets ceil(count/2), row 2 gets the remainder.
+ * Calculate how terminals should be distributed across fixed 2x5 rows.
+ * Row 1 is filled first up to 5, row 2 receives the remainder.
  */
 export function calculateDistribution(count: number): GridDistribution {
   if (count <= 0) {
     return { row1: 0, row2: 0 };
   }
-  const row1 = Math.ceil(count / 2);
-  const row2 = count - row1;
+  const row1 = Math.min(count, GRID_MAX_COLUMNS);
+  const row2 = Math.max(0, count - row1);
   return { row1, row2 };
 }
 
 /**
  * Determine whether grid layout should be used.
- * Grid is activated when: split mode + 6+ terminals.
+ * Grid is activated when: split mode + 6-10 terminals.
  */
 export function shouldUseGrid(
   terminalCount: number,
   _panelLocation: 'sidebar' | 'panel',
   isSplitMode: boolean
 ): boolean {
-  return terminalCount >= GRID_LAYOUT_CONSTANTS.MIN_TERMINALS_FOR_GRID && isSplitMode;
+  return (
+    terminalCount >= GRID_LAYOUT_CONSTANTS.MIN_TERMINALS_FOR_GRID &&
+    terminalCount <= GRID_MAX_TERMINALS &&
+    isSplitMode
+  );
 }
 
 /**

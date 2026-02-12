@@ -194,8 +194,7 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
     const orderedIds = this.resolveOrderedIds(state.orderedTerminalIds);
 
     if (state.mode === 'split') {
-      // 🔧 FIX: Clear fullscreen inline heights before building split layout
-      // This prevents the previously fullscreen container from occupying full height.
+      // Clear fullscreen inline heights before building split layout
       this.containerCache.forEach((container) => {
         container.style.removeProperty('height');
         container.style.removeProperty('maxHeight');
@@ -204,9 +203,7 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
       });
       // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       document.body.offsetWidth;
-    }
 
-    if (state.mode === 'split') {
       this.clearSplitArtifacts();
       const splitDirection = state.splitDirection ?? 'vertical';
       const panelLocation: 'sidebar' | 'panel' = splitDirection === 'horizontal' ? 'panel' : 'sidebar';
@@ -310,27 +307,34 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
    * Splitアーティファクトを全て除去
    */
   public clearSplitArtifacts(): void {
-    const terminalBody = this.getTerminalBody();
-    const targetBody = terminalBody ?? document.getElementById('terminal-body');
+    const targetBody = this.getTerminalBody() ?? document.getElementById('terminal-body');
+    const terminalsWrapper = document.getElementById('terminals-wrapper');
 
-    // Clear tracked resizers first
+    // Ensure grid layout state is fully reset before any mode transition.
+    this.splitLayoutService.deactivateGridLayout();
+    if (terminalsWrapper) {
+      terminalsWrapper.classList.remove('terminal-grid-layout', 'terminal-split-horizontal');
+      terminalsWrapper.style.gridTemplateColumns = '';
+      terminalsWrapper.style.gridTemplateRows = '';
+      terminalsWrapper.style.display = 'flex';
+      terminalsWrapper.style.flexDirection = 'column';
+    }
+
     this.splitLayoutService.getSplitResizers().forEach((resizer) => resizer.remove());
     this.splitLayoutService.getSplitResizers().clear();
 
-    // Remove any stale resizers still in the DOM (e.g., after restore or reorder)
     targetBody?.querySelectorAll<HTMLElement>('.split-resizer').forEach((resizer) => {
       resizer.remove();
     });
 
-    // Clear wrappers and move containers back
     const splitWrapperCache = this.splitLayoutService.getSplitWrapperCache();
     splitWrapperCache.forEach((wrapper, terminalId) => {
       const container = this.containerCache.get(terminalId);
       if (container) {
         const area = this.splitLayoutService.getWrapperArea(wrapper, terminalId);
         if (area && area.contains(container)) {
-          const terminalsWrapper = document.getElementById('terminals-wrapper') || targetBody;
-          terminalsWrapper?.appendChild(container);
+          const wrapperParent = document.getElementById('terminals-wrapper') || targetBody;
+          wrapperParent?.appendChild(container);
         }
       }
       wrapper.remove();
@@ -378,24 +382,23 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
    * コンテナを取得（キャッシュ優先）
    */
   public getContainer(terminalId: string): HTMLElement | null {
-    let container: HTMLElement | undefined | null = this.containerCache.get(terminalId);
+    const cached = this.containerCache.get(terminalId);
 
-    if (container) {
-      if (document.contains(container)) {
-        return container;
-      } else {
-        this.containerCache.delete(terminalId);
-        this.log(`Stale cache entry removed: ${terminalId}`, 'warn');
+    if (cached) {
+      if (document.contains(cached)) {
+        return cached;
       }
+      this.containerCache.delete(terminalId);
+      this.log(`Stale cache entry removed: ${terminalId}`, 'warn');
     }
 
-    container = this.findContainerInDOM(terminalId);
-    if (container) {
-      this.containerCache.set(terminalId, container);
+    const found = this.findContainerInDOM(terminalId);
+    if (found) {
+      this.containerCache.set(terminalId, found);
       this.log(`Container found and cached: ${terminalId}`);
     }
 
-    return container ?? null;
+    return found ?? null;
   }
 
   /**

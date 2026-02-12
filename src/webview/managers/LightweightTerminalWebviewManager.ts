@@ -73,6 +73,7 @@ const NOOP_SHELL_INTEGRATION_MANAGER: IShellIntegrationBridge = {
   updateWorkingDirectory: () => {},
   showCommandHistory: () => {},
 };
+
 import { SplitManager } from './SplitManager';
 import { SplitResizeManager } from './SplitResizeManager';
 import { SettingsPanel } from '../components/SettingsPanel';
@@ -378,13 +379,8 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
    */
   private initializeSplitResizeManager(): void {
     this.splitResizeManager = new SplitResizeManager({
-      onResizeComplete: () => {
-        // PTY に通知するためにすべてのターミナルをリサイズ
-        this.refitAllTerminals();
-      },
-      getSplitDirection: () => {
-        return this.splitManager.getSplitDirection();
-      },
+      onResizeComplete: () => this.refitAllTerminals(),
+      getSplitDirection: () => this.splitManager.getSplitDirection(),
     });
     log('✅ SplitResizeManager initialized');
   }
@@ -400,21 +396,14 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
     const terminalsWrapper = document.getElementById('terminals-wrapper');
     if (!terminalsWrapper) {
-      // Clear stale references when wrapper is missing
       this.splitResizeManager.reinitialize([]);
       return;
     }
 
-    // Collect both split resizers and grid row resizers
-    const splitResizers = Array.from(
-      terminalsWrapper.querySelectorAll<HTMLElement>('.split-resizer')
+    const resizers = Array.from(
+      terminalsWrapper.querySelectorAll<HTMLElement>('.split-resizer, .grid-row-resizer')
     );
-    const gridResizers = Array.from(
-      terminalsWrapper.querySelectorAll<HTMLElement>('.grid-row-resizer')
-    );
-    const resizers = [...splitResizers, ...gridResizers];
 
-    // Always reinitialize to clear stale references, even with empty array
     this.splitResizeManager.reinitialize(resizers);
   }
 

@@ -124,7 +124,7 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
 
     // If we're in split mode, update the layout immediately
     if (this.isSplitMode && this.terminals.size > 1) {
-      this.applyNewSplitLayout(direction, previousDirection, location);
+      this.applyNewSplitLayout(direction, previousDirection);
     }
 
     this.splitManagerLogger.info(`Split direction updated to: ${direction}`);
@@ -132,8 +132,7 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
 
   private applyNewSplitLayout(
     newDirection: 'horizontal' | 'vertical',
-    previousDirection: 'horizontal' | 'vertical' | null,
-    _location: 'sidebar' | 'panel'
+    previousDirection: 'horizontal' | 'vertical' | null
   ): void {
     this.splitManagerLogger.info(
       `Applying new split layout: ${previousDirection} -> ${newDirection} (${this.terminals.size} terminals)`
@@ -234,21 +233,9 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
     return calculatedHeight;
   }
 
-  public addTerminalToSplit(terminalId: string, _terminalName: string): void {
-    const layoutInfo = this.calculateSplitLayout();
-    if (!layoutInfo.canSplit) {
-      this.splitManagerLogger.error('Cannot add terminal to split layout');
-      return;
-    }
-
-    this.requestSplitLayoutUpdate();
-    this.splitManagerLogger.info(`Terminal added to split layout: ${terminalId}`);
-  }
-
   public addNewTerminalToSplit(terminalId: string, _terminalName: string): void {
     this.splitManagerLogger.info(`Adding new terminal to split: ${terminalId} (${_terminalName})`);
 
-    // Check if we can split
     const layoutInfo = this.calculateSplitLayout();
     if (!layoutInfo.canSplit) {
       this.splitManagerLogger.error(`Cannot add more terminals to split: ${layoutInfo.reason}`);
@@ -471,11 +458,7 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
   public getOptimalSplitDirection(
     location: 'sidebar' | 'panel' | string
   ): 'vertical' | 'horizontal' {
-    if (location === 'panel') {
-      return 'horizontal'; // Wide layout - horizontal split
-    } else {
-      return 'vertical'; // Sidebar or unknown - vertical split
-    }
+    return location === 'panel' ? 'horizontal' : 'vertical';
   }
 
   public setPanelLocation(location: 'sidebar' | 'panel'): void {

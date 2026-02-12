@@ -178,10 +178,6 @@ export const SESSION_RESTORE_CONSTANTS = {
 export const GRID_LAYOUT_CONSTANTS = {
   /** Minimum number of terminals to activate grid layout */
   MIN_TERMINALS_FOR_GRID: 6,
-  /** Default grid template rows (2 equal rows) */
-  GRID_TEMPLATE_ROWS: '1fr 1fr',
-  /** Gap between grid cells (px) */
-  GRID_GAP_PX: 4,
 } as const;
 
 /**

@@ -391,32 +391,25 @@ export class SplitResizeManager {
    * End drag operation
    */
   private endDrag(notifyPty: boolean): void {
-    // Remove visual feedback classes
-    document.body.classList.remove('resizing-split');
-    document.body.classList.remove('resizing-horizontal');
-    document.body.classList.remove('resizing-vertical');
+    document.body.classList.remove('resizing-split', 'resizing-horizontal', 'resizing-vertical');
 
     if (this.dragState.resizerElement) {
       this.dragState.resizerElement.classList.remove('dragging');
     }
 
-    // Clean up document-level listeners
     this.eventRegistry.unregister('split-resize:document-pointermove');
     this.eventRegistry.unregister('split-resize:document-pointerup');
     this.eventRegistry.unregister('split-resize:document-pointercancel');
 
-    // Dispose throttler
     if (this.moveThrottler) {
       this.moveThrottler.dispose();
       this.moveThrottler = null;
     }
 
-    // Reset drag state
     this.dragState = this.createInitialDragState();
 
     log('📐 [SPLIT-RESIZE] Drag ended');
 
-    // Notify PTY with debounce
     if (notifyPty) {
       this.scheduleRefitCallback();
     }
@@ -479,10 +472,7 @@ export class SplitResizeManager {
    * Reinitialize with new resizers (called when split layout changes)
    */
   public reinitialize(resizers: HTMLElement[]): void {
-    // Cancel any active drag
     this.cancelDrag();
-
-    // Reinitialize with new resizers
     this.initialize(resizers);
   }
 
@@ -496,22 +486,18 @@ export class SplitResizeManager {
 
     log('📐 [SPLIT-RESIZE] Disposing SplitResizeManager');
 
-    // Cancel active drag
     this.cancelDrag();
 
-    // Clear PTY notify timer
     if (this.ptyNotifyTimer !== null) {
       clearTimeout(this.ptyNotifyTimer);
       this.ptyNotifyTimer = null;
     }
 
-    // Dispose throttler
     if (this.moveThrottler) {
       this.moveThrottler.dispose();
       this.moveThrottler = null;
     }
 
-    // Clean up all event listeners
     this.eventRegistry.unregisterByPattern(/^split-resize:/);
     this.eventRegistry.dispose();
 
