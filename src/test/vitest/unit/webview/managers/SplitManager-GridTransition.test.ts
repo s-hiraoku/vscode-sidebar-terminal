@@ -55,6 +55,7 @@ describe('SplitManager - Grid Transition', () => {
 
   afterEach(() => {
     splitManager.dispose();
+    splitManager = null as unknown as SplitManager;
     document.body.innerHTML = '';
   });
 
@@ -64,14 +65,17 @@ describe('SplitManager - Grid Transition', () => {
     });
 
     it('should return single-row for 5 terminals in panel split mode', () => {
+      // Given: split mode enabled with panel location
       splitManager.isSplitMode = true;
       splitManager.setPanelLocation('panel');
 
+      // When: 5 terminals are added
       for (let i = 1; i <= 5; i++) {
         const { terminal, fitAddon } = createMockTerminal();
         splitManager.setTerminal(`t${i}`, { terminal, fitAddon, id: `t${i}` });
       }
 
+      // Then: layout mode should be single-row (below grid threshold)
       expect(splitManager.getLayoutMode()).toBe('single-row');
     });
 

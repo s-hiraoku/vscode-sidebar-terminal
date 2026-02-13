@@ -196,7 +196,7 @@ export class SplitResizeManager {
       direction,
     };
 
-    this.startDragEvents(event, resizer, 'vertical');
+    this.startDragEvents(event, resizer, direction);
 
     log(`📐 [SPLIT-RESIZE] Drag started: ${beforeId} ↔ ${afterId} (${direction})`);
   }

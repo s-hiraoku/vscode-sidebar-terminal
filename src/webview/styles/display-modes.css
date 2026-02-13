@@ -239,6 +239,7 @@
 
 #terminals-wrapper.terminal-grid-layout {
   display: grid !important;
+
   /* 3 rows: content | resizer | content */
   grid-template-rows: 1fr auto 1fr !important;
   gap: 4px !important;

@@ -28,7 +28,7 @@ interface CompositionContext {
 export class IMEHandler extends BaseInputHandler implements IIMEHandler {
   private static readonly IME_CURSOR_STYLE_ID = 'terminal-ime-cursor-style';
   private static readonly IME_ACTIVE_CLASS = 'terminal-ime-composing';
-  private static readonly COMPOSITION_STUCK_RECOVERY_TIMEOUT_MS = 5000;
+  private static readonly compositionStuckRecoveryTimeoutMs = 5000;
   // IME composition state - VS Code standard pattern
   private compositionContext: CompositionContext | null = null;
 
@@ -304,7 +304,7 @@ export class IMEHandler extends BaseInputHandler implements IIMEHandler {
 
       this.logger('IME composition recovery timeout hit; forcing composition reset');
       this.forceResetCompositionState('timeout');
-    }, IMEHandler.COMPOSITION_STUCK_RECOVERY_TIMEOUT_MS);
+    }, IMEHandler.compositionStuckRecoveryTimeoutMs);
   }
 
   private clearCompositionRecoveryTimer(): void {

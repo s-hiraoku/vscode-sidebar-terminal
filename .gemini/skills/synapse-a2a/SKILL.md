@@ -118,7 +118,7 @@ synapse broadcast "FYI: Build completed" --no-response --from synapse-claude-810
 When you receive an A2A message, it appears with the `A2A:` prefix:
 
 **Message Formats:**
-```
+```text
 A2A: [REPLY EXPECTED] <message>   <- Reply is REQUIRED
 A2A: <message>                    <- Reply is optional (one-way notification)
 ```
@@ -140,13 +140,13 @@ synapse reply "Here is my analysis..." --from <your_agent_id> --to <sender_id>
 ```
 
 **Example - Question received (MUST reply):**
-```
+```text
 Received: A2A: [REPLY EXPECTED] What is the project structure?
 Reply:    synapse reply "The project has src/, tests/..." --from synapse-codex-8121
 ```
 
 **Example - Delegation received (no reply needed):**
-```
+```text
 Received: A2A: Run the tests and fix failures
 Action:   Just do the task. No reply needed unless you have questions.
 ```

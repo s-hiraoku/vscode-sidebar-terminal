@@ -207,6 +207,9 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
 
       this.clearSplitArtifacts();
       const splitDirection = state.splitDirection ?? 'vertical';
+      // Fallback heuristic: derive panelLocation from splitDirection when not available
+      // on TerminalDisplayState. Matches PanelLocationService mapping:
+      // panel → horizontal, sidebar → vertical.
       const panelLocation: 'sidebar' | 'panel' = splitDirection === 'horizontal' ? 'panel' : 'sidebar';
       const viewportArea = terminalBody.clientWidth * terminalBody.clientHeight;
       const isCompactPanelArea =
@@ -339,7 +342,11 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
         const area = this.splitLayoutService.getWrapperArea(wrapper, terminalId);
         if (area && area.contains(container)) {
           const wrapperParent = document.getElementById('terminals-wrapper') || targetBody;
-          wrapperParent?.appendChild(container);
+          if (wrapperParent) {
+            wrapperParent.appendChild(container);
+          } else {
+            this.log(`Warning: could not reparent container for terminal ${terminalId} — no parent found`);
+          }
         }
       }
       wrapper.remove();
