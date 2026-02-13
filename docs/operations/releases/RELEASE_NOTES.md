@@ -1,5 +1,25 @@
 # Release Notes
 
+## Version 0.2.25 - Panel Navigation Mode & Stability Improvements
+
+### 🎯 Release Highlights
+
+- **Panel Navigation Mode (Zellij-style)**: Introduced a dedicated navigation mode for fluidly switching between split terminals without leaving the keyboard.
+  - Activation: `Cmd+P` (Mac) or `Ctrl+P` (Windows/Linux) to enter/exit.
+  - Navigation: Use `h`, `j`, `k`, `l` (vim-style) or Arrow keys to move focus between terminals.
+  - Exit: `Escape` or the toggle shortcut.
+  - Visual Feedback: A dedicated status indicator appears in the top-right corner when active.
+- **Improved Terminal Limit**: Support for up to 10 concurrent terminals with optimized tab management.
+- **Tab Rename Fixes**: Resolved issues where backspace would delete the tab during renaming and fixed immediate label updates.
+- **Sidebar Stability**: Enhanced secondary sidebar maximize stability and panel location detection logic.
+
+### 🛠 Developer Notes
+
+- The navigation mode is implemented in `InputManager.ts` and integrated with VS Code's context key system for seamless extension-host coordination.
+- Release Date: February 13, 2026.
+
+---
+
 ## Version 0.1.90 - VS Code Standard Terminal Processing & Release Preparation
 
 ## 🎯 Core Enhancement: VS Code Standard Compliance
