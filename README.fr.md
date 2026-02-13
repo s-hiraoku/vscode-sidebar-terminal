@@ -169,12 +169,12 @@ Recherchez `secondaryTerminal` dans les Paramètres de VS Code pour la liste com
 
 ```bash
 npm install && npm run compile    # Compiler
-npm test                          # 3 900+ tests unitaires
+npm test                          # 4 000+ tests unitaires
 npm run test:e2e                  # Tests E2E (Playwright)
 npm run watch                     # Mode surveillance
 ```
 
-Qualité : TypeScript mode strict, workflow TDD, 3 900+ tests unitaires, couverture E2E avec Playwright, builds CI/CD pour 9 plateformes.
+Qualité : TypeScript mode strict, workflow TDD, 4 000+ tests unitaires, couverture E2E avec Playwright, builds CI/CD pour 9 plateformes.
 
 ## Confidentialité
 

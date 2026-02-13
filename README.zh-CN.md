@@ -169,12 +169,12 @@
 
 ```bash
 npm install && npm run compile    # 构建
-npm test                          # 3,900+ 单元测试
+npm test                          # 4,000+ 单元测试
 npm run test:e2e                  # E2E 测试（Playwright）
 npm run watch                     # 监视模式
 ```
 
-质量：TypeScript 严格模式、TDD 工作流、3,900+ 单元测试、Playwright E2E 覆盖、9 平台 CI/CD 构建。
+质量：TypeScript 严格模式、TDD 工作流、4,000+ 单元测试、Playwright E2E 覆盖、9 平台 CI/CD 构建。
 
 ## 隐私
 

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.24] - 2026-02-13
+
+### Fixed
+
+- **Tab Rename: Backspace Deletes Tab Instead of Character**:
+  - Pressing Backspace or Delete during inline tab rename no longer closes the tab.
+  - Added guard in `setupKeyboardNavigation` to skip close-tab shortcut when a rename input is focused.
+  - Moved `e.stopPropagation()` to apply to all keydown events in the rename input, preventing any key from bubbling to the container handler.
+
+- **Tab Rename: First Update Not Reflected**:
+  - After renaming, the tab label now updates immediately on the first attempt.
+  - Reordered `finishRename` to restore the label element in the DOM before firing the rename event, matching HeaderFactory's `finalizeRename` pattern.
+  - Previously, `updateTabElement` was skipped because the input guard detected the still-present rename input.
+
 ## [0.2.23] - 2026-02-11
 
 ### Fixed

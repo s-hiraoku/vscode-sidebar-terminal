@@ -169,12 +169,12 @@ VS Code 설정에서 `secondaryTerminal`을 검색하면 전체 설정 목록을
 
 ```bash
 npm install && npm run compile    # 빌드
-npm test                          # 3,900+ 단위 테스트
+npm test                          # 4,000+ 단위 테스트
 npm run test:e2e                  # E2E 테스트(Playwright)
 npm run watch                     # 감시 모드
 ```
 
-품질: TypeScript 엄격 모드, TDD 워크플로, 3,900+ 단위 테스트, Playwright E2E 커버리지, 9개 플랫폼 CI/CD 빌드.
+품질: TypeScript 엄격 모드, TDD 워크플로, 4,000+ 단위 테스트, Playwright E2E 커버리지, 9개 플랫폼 CI/CD 빌드.
 
 ## 개인정보 보호
 

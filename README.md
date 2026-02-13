@@ -169,12 +169,12 @@ Search `secondaryTerminal` in VS Code Settings for the full list, or see [packag
 
 ```bash
 npm install && npm run compile    # Build
-npm test                          # 3,900+ unit tests
+npm test                          # 4,000+ unit tests
 npm run test:e2e                  # E2E tests (Playwright)
 npm run watch                     # Watch mode
 ```
 
-Quality: TypeScript strict mode, TDD workflow, 3,900+ unit tests, E2E coverage with Playwright, 9-platform CI/CD builds.
+Quality: TypeScript strict mode, TDD workflow, 4,000+ unit tests, E2E coverage with Playwright, 9-platform CI/CD builds.
 
 ## Privacy
 
