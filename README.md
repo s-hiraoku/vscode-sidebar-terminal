@@ -84,16 +84,16 @@ Your sidebar, your terminal, your AI agents -- all in one place. A full-featured
 | `Cmd+Up/Down` (Mac) / `Ctrl+Up/Down`          | Scroll to previous/next command                     |
 | `Alt+Cmd+Left/Right` (Mac) / `Alt+Left/Right` | Focus previous/next terminal                        |
 | `Cmd+Alt+1..5` (Mac) / `Alt+1..5`             | Focus terminal by index                             |
-| `Cmd+P` / `Ctrl+P`                            | Toggle Panel Navigation Mode (Zellij-style)         |
+| `Ctrl+P`                                      | Toggle Panel Navigation Mode (Zellij-style)         |
 | `Cmd+R` / `Ctrl+R`                            | Run recent command                                  |
 | `Cmd+A` / `Ctrl+A`                            | Select all terminal content                         |
 | `Ctrl+Shift+D`                                | Toggle debug panel                                  |
 
 ### Panel Navigation Mode (Zellij-style)
 
-Use `Cmd+P` (Mac) or `Ctrl+P` (Linux/Windows) to enter a dedicated navigation mode. While active:
+Use `Ctrl+P` to enter a dedicated navigation mode (`Cmd+P` on macOS is reserved for VS Code Quick Open). While active:
 - Use `h`, `j`, `k`, `l` or `Arrow keys` to switch between split terminals.
-- Press `Cmd+P` / `Ctrl+P` again or `Escape` to exit.
+- Press `Ctrl+P` again or `Escape` to exit.
 - A visual indicator appears in the top-right corner while in navigation mode.
 
 > **Claude Code tips**:

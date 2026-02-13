@@ -188,9 +188,11 @@ describe('InputManager', () => {
       expect(spy).toHaveBeenCalledWith('keydown', expect.any(Function), true);
     });
 
-    it('should toggle panel navigation mode with Ctrl+P and exit with Ctrl+P/Escape', () => {
+    it('should enter panel navigation mode on Ctrl+P', () => {
+      // Given: initialized manager
       manager.initialize();
 
+      // When: press Ctrl+P
       const enterModeEvent = new dom.window.KeyboardEvent('keydown', {
         key: 'p',
         ctrlKey: true,
@@ -201,9 +203,21 @@ describe('InputManager', () => {
       vi.spyOn(enterModeEvent, 'stopPropagation');
       dom.window.document.dispatchEvent(enterModeEvent);
 
+      // Then: event is intercepted
       expect(enterModeEvent.preventDefault).toHaveBeenCalled();
       expect(enterModeEvent.stopPropagation).toHaveBeenCalled();
+    });
 
+    it('should navigate panels while in panel navigation mode', () => {
+      // Given: manager in panel navigation mode
+      manager.initialize();
+      const enterEvent = new dom.window.KeyboardEvent('keydown', {
+        key: 'p', ctrlKey: true, bubbles: true, cancelable: true,
+      });
+      dom.window.document.dispatchEvent(enterEvent);
+      mockCoordinator.postMessageToExtension.mockClear();
+
+      // When: press ArrowRight
       const moveEvent = new dom.window.KeyboardEvent('keydown', {
         key: 'ArrowRight',
         bubbles: true,
@@ -213,6 +227,7 @@ describe('InputManager', () => {
       vi.spyOn(moveEvent, 'stopPropagation');
       dom.window.document.dispatchEvent(moveEvent);
 
+      // Then: navigation event is sent
       expect(moveEvent.preventDefault).toHaveBeenCalled();
       expect(moveEvent.stopPropagation).toHaveBeenCalled();
       expect(mockCoordinator.postMessageToExtension).toHaveBeenCalledWith(
@@ -222,47 +237,52 @@ describe('InputManager', () => {
           terminalId: 'terminal-1',
         })
       );
+    });
 
+    it('should exit panel navigation mode on Escape', () => {
+      // Given: manager in panel navigation mode
+      manager.initialize();
+      dom.window.document.dispatchEvent(new dom.window.KeyboardEvent('keydown', {
+        key: 'p', ctrlKey: true, bubbles: true, cancelable: true,
+      }));
       mockCoordinator.postMessageToExtension.mockClear();
 
-      const exitByEscapeEvent = new dom.window.KeyboardEvent('keydown', {
-        key: 'Escape',
-        bubbles: true,
-        cancelable: true,
+      // When: press Escape
+      const escapeEvent = new dom.window.KeyboardEvent('keydown', {
+        key: 'Escape', bubbles: true, cancelable: true,
       });
-      vi.spyOn(exitByEscapeEvent, 'preventDefault');
-      vi.spyOn(exitByEscapeEvent, 'stopPropagation');
-      dom.window.document.dispatchEvent(exitByEscapeEvent);
-      expect(exitByEscapeEvent.preventDefault).toHaveBeenCalled();
-      expect(exitByEscapeEvent.stopPropagation).toHaveBeenCalled();
+      vi.spyOn(escapeEvent, 'preventDefault');
+      vi.spyOn(escapeEvent, 'stopPropagation');
+      dom.window.document.dispatchEvent(escapeEvent);
 
-      const moveAfterEscape = new dom.window.KeyboardEvent('keydown', {
-        key: 'ArrowRight',
-        bubbles: true,
-        cancelable: true,
-      });
-      dom.window.document.dispatchEvent(moveAfterEscape);
+      // Then: mode exits and navigation keys no longer work
+      expect(escapeEvent.preventDefault).toHaveBeenCalled();
+      expect(escapeEvent.stopPropagation).toHaveBeenCalled();
+
+      dom.window.document.dispatchEvent(new dom.window.KeyboardEvent('keydown', {
+        key: 'ArrowRight', bubbles: true, cancelable: true,
+      }));
       expect(mockCoordinator.postMessageToExtension).not.toHaveBeenCalled();
+    });
 
-      const enterModeAgainEvent = new dom.window.KeyboardEvent('keydown', {
-        key: 'p',
-        ctrlKey: true,
-        bubbles: true,
-        cancelable: true,
-      });
-      dom.window.document.dispatchEvent(enterModeAgainEvent);
+    it('should exit panel navigation mode on Ctrl+P when already in mode', () => {
+      // Given: manager in panel navigation mode
+      manager.initialize();
+      dom.window.document.dispatchEvent(new dom.window.KeyboardEvent('keydown', {
+        key: 'p', ctrlKey: true, bubbles: true, cancelable: true,
+      }));
 
-      const exitByCtrlPEvent = new dom.window.KeyboardEvent('keydown', {
-        key: 'p',
-        ctrlKey: true,
-        bubbles: true,
-        cancelable: true,
+      // When: press Ctrl+P again to toggle off
+      const exitEvent = new dom.window.KeyboardEvent('keydown', {
+        key: 'p', ctrlKey: true, bubbles: true, cancelable: true,
       });
-      vi.spyOn(exitByCtrlPEvent, 'preventDefault');
-      vi.spyOn(exitByCtrlPEvent, 'stopPropagation');
-      dom.window.document.dispatchEvent(exitByCtrlPEvent);
-      expect(exitByCtrlPEvent.preventDefault).toHaveBeenCalled();
-      expect(exitByCtrlPEvent.stopPropagation).toHaveBeenCalled();
+      vi.spyOn(exitEvent, 'preventDefault');
+      vi.spyOn(exitEvent, 'stopPropagation');
+      dom.window.document.dispatchEvent(exitEvent);
+
+      // Then: event is intercepted (mode toggled off)
+      expect(exitEvent.preventDefault).toHaveBeenCalled();
+      expect(exitEvent.stopPropagation).toHaveBeenCalled();
     });
 
     it('should ignore non-navigation keys in panel navigation mode', () => {
@@ -278,7 +298,7 @@ describe('InputManager', () => {
       dom.window.document.dispatchEvent(enterModeEvent);
       mockCoordinator.postMessageToExtension.mockClear();
 
-      // Send non-navigation keys — should NOT trigger terminal switch
+      // Send non-navigation keys — should be blocked and NOT trigger terminal switch
       const nonNavKeys = ['a', 'z', '1', 'Enter', 'Tab', ' '];
       for (const key of nonNavKeys) {
         const event = new dom.window.KeyboardEvent('keydown', {
@@ -286,7 +306,9 @@ describe('InputManager', () => {
           bubbles: true,
           cancelable: true,
         });
+        vi.spyOn(event, 'preventDefault');
         dom.window.document.dispatchEvent(event);
+        expect(event.preventDefault).toHaveBeenCalled();
       }
 
       expect(mockCoordinator.postMessageToExtension).not.toHaveBeenCalled();

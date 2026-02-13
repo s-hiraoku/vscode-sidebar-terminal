@@ -1058,7 +1058,11 @@ export class InputManager extends BaseManager implements IInputManager {
     } else if (NEXT_NAVIGATION_KEYS.has(normalizedKey)) {
       interactionType = 'switch-next';
     } else {
-      return false;
+      // Block non-navigation keys from reaching the terminal while in panel navigation mode
+      event.preventDefault();
+      event.stopPropagation();
+      this.logger(`Ignored non-navigation key in panel navigation mode: ${event.key}`);
+      return true;
     }
 
     event.preventDefault();

@@ -88,8 +88,8 @@ After: 4 terminals, each 25% size
 **Description**: Users can enter a dedicated navigation mode to switch between terminals using vim-style keys or arrow keys.
 
 **Activation**:
-- Toggle Mode: `Cmd+P` (Mac) or `Ctrl+P` (Linux/Windows)
-- Exit Mode: Same shortcut as activation OR `Escape` key
+- Toggle Mode: `Ctrl+P` (all platforms; `Cmd+P` is reserved for VS Code Quick Open on macOS)
+- Exit Mode: `Ctrl+P` again OR `Escape` key
 
 **Behaviors**:
 - While active, regular keyboard input is intercepted and mapped to navigation commands.

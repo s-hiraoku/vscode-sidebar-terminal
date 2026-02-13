@@ -1867,12 +1867,16 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       return;
     }
 
+    const instance = this.getTerminalInstance(targetTerminalId);
+    if (!instance) {
+      return;
+    }
+
     if (terminalId && this.getActiveTerminalId() !== terminalId) {
       this.setActiveTerminalId(terminalId);
     }
 
-    const instance = this.getTerminalInstance(targetTerminalId);
-    instance?.terminal.focus();
+    instance.terminal.focus();
   }
 
   // CLI Agent状態管理（レガシー互換 - CliAgentCoordinator経由）

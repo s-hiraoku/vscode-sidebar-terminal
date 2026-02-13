@@ -213,16 +213,20 @@ export class TerminalCommandHandlers {
       return;
     }
 
-    this.deps.terminalManager.setActiveTerminal(targetTerminalId);
-    await this.deps.communicationService.sendMessage({
-      command: 'focusTerminal',
-      terminalId: targetTerminalId,
-      timestamp: Date.now(),
-    });
-    await this.deps.communicationService.sendMessage({
-      command: 'stateUpdate',
-      state: this.deps.terminalManager.getCurrentState(),
-    });
+    try {
+      this.deps.terminalManager.setActiveTerminal(targetTerminalId);
+      await this.deps.communicationService.sendMessage({
+        command: 'focusTerminal',
+        terminalId: targetTerminalId,
+        timestamp: Date.now(),
+      });
+      await this.deps.communicationService.sendMessage({
+        command: 'stateUpdate',
+        state: this.deps.terminalManager.getCurrentState(),
+      });
+    } catch (error) {
+      TerminalErrorHandler.handleWebviewError(error);
+    }
   }
 
   /**

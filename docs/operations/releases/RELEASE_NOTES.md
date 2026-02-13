@@ -5,7 +5,7 @@
 ### 🎯 Release Highlights
 
 - **Panel Navigation Mode (Zellij-style)**: Introduced a dedicated navigation mode for fluidly switching between split terminals without leaving the keyboard.
-  - Activation: `Cmd+P` (Mac) or `Ctrl+P` (Windows/Linux) to enter/exit.
+  - Activation: `Ctrl+P` to enter/exit (`Cmd+P` on macOS is reserved for VS Code Quick Open).
   - Navigation: Use `h`, `j`, `k`, `l` (vim-style) or Arrow keys to move focus between terminals.
   - Exit: `Escape` or the toggle shortcut.
   - Visual Feedback: A dedicated status indicator appears in the top-right corner when active.

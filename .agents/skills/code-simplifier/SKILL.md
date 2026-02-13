@@ -32,7 +32,7 @@ If the user specifies particular files or directories, use those instead.
 
 Invoke the `code-simplifier` subagent via the Task tool with `subagent_type: "code-simplifier"`:
 
-```
+```yaml
 Task tool call:
   subagent_type: "code-simplifier"
   description: "Simplify recently modified code"
@@ -56,7 +56,7 @@ Include in the prompt:
 #### Example Invocations
 
 **After a feature implementation:**
-```
+```yaml
 Task tool:
   subagent_type: "code-simplifier"
   description: "Simplify header factory code"
@@ -64,7 +64,7 @@ Task tool:
 ```
 
 **Targeted cleanup:**
-```
+```yaml
 Task tool:
   subagent_type: "code-simplifier"
   description: "Simplify TerminalManager dispose"
@@ -72,7 +72,7 @@ Task tool:
 ```
 
 **Branch-wide cleanup:**
-```
+```yaml
 Task tool:
   subagent_type: "code-simplifier"
   description: "Simplify all changed files"

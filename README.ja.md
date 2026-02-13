@@ -84,16 +84,16 @@
 | `Cmd+Up/Down` (Mac) / `Ctrl+Up/Down`          | 前/次のコマンドにスクロール                         |
 | `Alt+Cmd+Left/Right` (Mac) / `Alt+Left/Right` | 前/次のターミナルにフォーカス                       |
 | `Cmd+Alt+1..5` (Mac) / `Alt+1..5`             | インデックスでターミナルにフォーカス                |
-| `Cmd+P` / `Ctrl+P`                            | パネルナビゲーションモードの切り替え (Zellij風)     |
+| `Ctrl+P`                                      | パネルナビゲーションモードの切り替え (Zellij風)     |
 | `Cmd+R` / `Ctrl+R`                            | 最近のコマンドを実行                                |
 | `Cmd+A` / `Ctrl+A`                            | ターミナルの全コンテンツを選択                      |
 | `Ctrl+Shift+D`                                | デバッグパネルの切り替え                            |
 
 ### パネルナビゲーションモード (Zellij風)
 
-`Cmd+P` (Mac) または `Ctrl+P` (Linux/Windows) を使用して、専用のナビゲーションモードに入ります。有効な間：
+`Ctrl+P` を使用して、専用のナビゲーションモードに入ります（macOSでは `Cmd+P` はVS Code Quick Open用に予約されています）。有効な間：
 - `h`, `j`, `k`, `l` または `矢印キー` を使用して、分割されたターミナル間を切り替えることができます。
-- 再度 `Cmd+P` / `Ctrl+P` を押すか、`Escape` キーで終了します。
+- 再度 `Ctrl+P` を押すか、`Escape` キーで終了します。
 - ナビゲーションモード中は、右上に視覚的なインジケーターが表示されます。
 
 > **Claude Code のコツ**:
