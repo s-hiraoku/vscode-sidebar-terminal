@@ -1109,8 +1109,6 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.11.0",
     "@eslint-community/eslint-plugin-eslint-comments": "^4.6.0",
-    "@eslint/eslintrc": "^3.3.3",
-    "@eslint/js": "^9.0.0",
     "@istanbuljs/nyc-config-typescript": "^1.0.2",
     "@playwright/test": "^1.57.0",
     "@testing-library/dom": "^10.4.0",
@@ -1133,7 +1131,7 @@
     "chai": "^6.0.0",
     "chai-as-promised": "^8.0.2",
     "css-loader": "^7.1.2",
-    "eslint": "^9.0.0",
+    "eslint": "^8.56.0",
     "eslint-config-prettier": "^10.0.0",
     "eslint-plugin-prettier": "^5.5.4",
     "glob": "^13.0.2",
