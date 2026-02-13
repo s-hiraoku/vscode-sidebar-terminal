@@ -26,6 +26,12 @@ Your sidebar, your terminal, your AI agents -- all in one place. A full-featured
 2. **Open**: Click the terminal icon (ST) in the activity bar
 3. **Use**: A terminal opens with your default shell. Run `claude`, `codex`, `gemini`, or `gh copilot` and watch the AI agent status appear in the header.
 
+## Latest Update (v0.2.24)
+
+- Improved secondary sidebar maximize stability on the first command interaction.
+- In manual `secondaryTerminal.panelLocation` mode (`sidebar` / `panel`), auto-detection reports are no longer allowed to override the configured location.
+- Removed activation-time panel location context initialization that could trigger unnecessary VS Code layout recalculation.
+
 ## Feature Highlights
 
 ### For AI Agent Workflows
