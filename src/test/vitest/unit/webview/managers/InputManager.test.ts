@@ -187,6 +187,358 @@ describe('InputManager', () => {
       manager.initialize();
       expect(spy).toHaveBeenCalledWith('keydown', expect.any(Function), true);
     });
+
+    it('should toggle panel navigation mode with Ctrl+P and exit with Ctrl+P/Escape', () => {
+      manager.initialize();
+
+      const enterModeEvent = new dom.window.KeyboardEvent('keydown', {
+        key: 'p',
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      vi.spyOn(enterModeEvent, 'preventDefault');
+      vi.spyOn(enterModeEvent, 'stopPropagation');
+      dom.window.document.dispatchEvent(enterModeEvent);
+
+      expect(enterModeEvent.preventDefault).toHaveBeenCalled();
+      expect(enterModeEvent.stopPropagation).toHaveBeenCalled();
+
+      const moveEvent = new dom.window.KeyboardEvent('keydown', {
+        key: 'ArrowRight',
+        bubbles: true,
+        cancelable: true,
+      });
+      vi.spyOn(moveEvent, 'preventDefault');
+      vi.spyOn(moveEvent, 'stopPropagation');
+      dom.window.document.dispatchEvent(moveEvent);
+
+      expect(moveEvent.preventDefault).toHaveBeenCalled();
+      expect(moveEvent.stopPropagation).toHaveBeenCalled();
+      expect(mockCoordinator.postMessageToExtension).toHaveBeenCalledWith(
+        expect.objectContaining({
+          command: 'terminalInteraction',
+          type: 'switch-next',
+          terminalId: 'terminal-1',
+        })
+      );
+
+      mockCoordinator.postMessageToExtension.mockClear();
+
+      const exitByEscapeEvent = new dom.window.KeyboardEvent('keydown', {
+        key: 'Escape',
+        bubbles: true,
+        cancelable: true,
+      });
+      vi.spyOn(exitByEscapeEvent, 'preventDefault');
+      vi.spyOn(exitByEscapeEvent, 'stopPropagation');
+      dom.window.document.dispatchEvent(exitByEscapeEvent);
+      expect(exitByEscapeEvent.preventDefault).toHaveBeenCalled();
+      expect(exitByEscapeEvent.stopPropagation).toHaveBeenCalled();
+
+      const moveAfterEscape = new dom.window.KeyboardEvent('keydown', {
+        key: 'ArrowRight',
+        bubbles: true,
+        cancelable: true,
+      });
+      dom.window.document.dispatchEvent(moveAfterEscape);
+      expect(mockCoordinator.postMessageToExtension).not.toHaveBeenCalled();
+
+      const enterModeAgainEvent = new dom.window.KeyboardEvent('keydown', {
+        key: 'p',
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      dom.window.document.dispatchEvent(enterModeAgainEvent);
+
+      const exitByCtrlPEvent = new dom.window.KeyboardEvent('keydown', {
+        key: 'p',
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      vi.spyOn(exitByCtrlPEvent, 'preventDefault');
+      vi.spyOn(exitByCtrlPEvent, 'stopPropagation');
+      dom.window.document.dispatchEvent(exitByCtrlPEvent);
+      expect(exitByCtrlPEvent.preventDefault).toHaveBeenCalled();
+      expect(exitByCtrlPEvent.stopPropagation).toHaveBeenCalled();
+    });
+
+    it('should ignore non-navigation keys in panel navigation mode', () => {
+      manager.initialize();
+
+      // Enter panel navigation mode
+      const enterModeEvent = new dom.window.KeyboardEvent('keydown', {
+        key: 'p',
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      dom.window.document.dispatchEvent(enterModeEvent);
+      mockCoordinator.postMessageToExtension.mockClear();
+
+      // Send non-navigation keys — should NOT trigger terminal switch
+      const nonNavKeys = ['a', 'z', '1', 'Enter', 'Tab', ' '];
+      for (const key of nonNavKeys) {
+        const event = new dom.window.KeyboardEvent('keydown', {
+          key,
+          bubbles: true,
+          cancelable: true,
+        });
+        dom.window.document.dispatchEvent(event);
+      }
+
+      expect(mockCoordinator.postMessageToExtension).not.toHaveBeenCalled();
+    });
+
+    it('should not send navigation events when no active terminal', () => {
+      manager.initialize();
+
+      // Set no active terminal
+      mockCoordinator.getActiveTerminalId.mockReturnValue(null);
+
+      // Enter panel navigation mode
+      const enterModeEvent = new dom.window.KeyboardEvent('keydown', {
+        key: 'p',
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      dom.window.document.dispatchEvent(enterModeEvent);
+      mockCoordinator.postMessageToExtension.mockClear();
+
+      // Try navigation
+      const moveEvent = new dom.window.KeyboardEvent('keydown', {
+        key: 'ArrowRight',
+        bubbles: true,
+        cancelable: true,
+      });
+      dom.window.document.dispatchEvent(moveEvent);
+
+      // Should NOT call postMessageToExtension since no active terminal
+      expect(mockCoordinator.postMessageToExtension).not.toHaveBeenCalled();
+    });
+
+    it('should fallback to DOM active terminal when active terminal id is temporarily null', () => {
+      manager.initialize();
+
+      const activeContainer = dom.window.document.createElement('div');
+      activeContainer.className = 'terminal-container active';
+      activeContainer.setAttribute('data-terminal-id', 'terminal-dom');
+      dom.window.document.body.appendChild(activeContainer);
+
+      mockCoordinator.getActiveTerminalId.mockReturnValue(null);
+
+      const enterModeEvent = new dom.window.KeyboardEvent('keydown', {
+        key: 'p',
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      dom.window.document.dispatchEvent(enterModeEvent);
+      mockCoordinator.postMessageToExtension.mockClear();
+
+      const moveEvent = new dom.window.KeyboardEvent('keydown', {
+        key: 'ArrowRight',
+        bubbles: true,
+        cancelable: true,
+      });
+      dom.window.document.dispatchEvent(moveEvent);
+
+      expect(mockCoordinator.postMessageToExtension).toHaveBeenCalledWith(
+        expect.objectContaining({
+          command: 'terminalInteraction',
+          type: 'switch-next',
+          terminalId: 'terminal-dom',
+        })
+      );
+    });
+
+    it('should not enter panel navigation mode with Ctrl+Shift+P or Ctrl+Alt+P', () => {
+      manager.initialize();
+
+      // Ctrl+Shift+P should NOT enter navigation mode
+      const ctrlShiftP = new dom.window.KeyboardEvent('keydown', {
+        key: 'p',
+        ctrlKey: true,
+        shiftKey: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      dom.window.document.dispatchEvent(ctrlShiftP);
+
+      // Ctrl+Alt+P should NOT enter navigation mode
+      const ctrlAltP = new dom.window.KeyboardEvent('keydown', {
+        key: 'p',
+        ctrlKey: true,
+        altKey: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      dom.window.document.dispatchEvent(ctrlAltP);
+
+      // Try arrow key — should NOT be intercepted (not in navigation mode)
+      const moveEvent = new dom.window.KeyboardEvent('keydown', {
+        key: 'ArrowRight',
+        bubbles: true,
+        cancelable: true,
+      });
+      dom.window.document.dispatchEvent(moveEvent);
+
+      expect(mockCoordinator.postMessageToExtension).not.toHaveBeenCalled();
+    });
+
+    it('should enter panel navigation mode with Cmd+P on macOS', () => {
+      manager.initialize();
+
+      const enterModeEvent = new dom.window.KeyboardEvent('keydown', {
+        key: 'p',
+        metaKey: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      vi.spyOn(enterModeEvent, 'preventDefault');
+      vi.spyOn(enterModeEvent, 'stopPropagation');
+      dom.window.document.dispatchEvent(enterModeEvent);
+
+      expect(enterModeEvent.preventDefault).toHaveBeenCalled();
+      expect(enterModeEvent.stopPropagation).toHaveBeenCalled();
+
+      mockCoordinator.postMessageToExtension.mockClear();
+
+      const moveEvent = new dom.window.KeyboardEvent('keydown', {
+        key: 'ArrowRight',
+        bubbles: true,
+        cancelable: true,
+      });
+      dom.window.document.dispatchEvent(moveEvent);
+
+      expect(mockCoordinator.postMessageToExtension).toHaveBeenCalledWith(
+        expect.objectContaining({
+          command: 'terminalInteraction',
+          type: 'switch-next',
+          terminalId: 'terminal-1',
+        })
+      );
+    });
+
+    it('should exit panel navigation mode on dispose', () => {
+      manager.initialize();
+
+      // Enter panel navigation mode
+      const enterModeEvent = new dom.window.KeyboardEvent('keydown', {
+        key: 'p',
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      dom.window.document.dispatchEvent(enterModeEvent);
+
+      // Dispose manager
+      manager.dispose();
+
+      // Re-create manager and initialize
+      manager = new InputManager(mockCoordinator);
+      manager.initialize();
+      mockCoordinator.postMessageToExtension.mockClear();
+
+      // Arrow key should NOT trigger navigation (mode was cleared)
+      const moveEvent = new dom.window.KeyboardEvent('keydown', {
+        key: 'ArrowRight',
+        bubbles: true,
+        cancelable: true,
+      });
+      dom.window.document.dispatchEvent(moveEvent);
+
+      expect(mockCoordinator.postMessageToExtension).not.toHaveBeenCalled();
+    });
+
+    it('should map vim keys and arrow keys to terminal switch events in panel navigation mode', () => {
+      manager.initialize();
+
+      const enterModeEvent = new dom.window.KeyboardEvent('keydown', {
+        key: 'p',
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      dom.window.document.dispatchEvent(enterModeEvent);
+      mockCoordinator.postMessageToExtension.mockClear();
+
+      const sendKey = (key: string): void => {
+        const event = new dom.window.KeyboardEvent('keydown', {
+          key,
+          bubbles: true,
+          cancelable: true,
+        });
+        dom.window.document.dispatchEvent(event);
+      };
+
+      sendKey('h');
+      sendKey('k');
+      sendKey('ArrowLeft');
+      sendKey('ArrowUp');
+
+      sendKey('j');
+      sendKey('l');
+      sendKey('ArrowRight');
+      sendKey('ArrowDown');
+
+      const interactionCalls = mockCoordinator.postMessageToExtension.mock.calls
+        .map((call: any[]) => call[0])
+        .filter((message: any) => message?.command === 'terminalInteraction');
+
+      const previousCount = interactionCalls.filter(
+        (message: any) => message.type === 'switch-previous'
+      ).length;
+      const nextCount = interactionCalls.filter(
+        (message: any) => message.type === 'switch-next'
+      ).length;
+
+      expect(previousCount).toBe(4);
+      expect(nextCount).toBe(4);
+    });
+
+    it('should allow panel navigation mode to be enabled externally', () => {
+      manager.initialize();
+      (manager as any).setPanelNavigationMode(true);
+      mockCoordinator.postMessageToExtension.mockClear();
+
+      const moveEvent = new dom.window.KeyboardEvent('keydown', {
+        key: 'ArrowRight',
+        bubbles: true,
+        cancelable: true,
+      });
+      dom.window.document.dispatchEvent(moveEvent);
+
+      expect(mockCoordinator.postMessageToExtension).toHaveBeenCalledWith(
+        expect.objectContaining({
+          command: 'terminalInteraction',
+          type: 'switch-next',
+          terminalId: 'terminal-1',
+        })
+      );
+    });
+
+    it('should show and hide panel navigation mode indicator', () => {
+      manager.initialize();
+      expect(dom.window.document.querySelector('.panel-navigation-indicator')).toBeNull();
+
+      (manager as any).setPanelNavigationMode(true);
+      const indicator = dom.window.document.querySelector(
+        '.panel-navigation-indicator'
+      ) as HTMLElement | null;
+
+      expect(indicator).not.toBeNull();
+      expect(indicator?.textContent).toContain('PANEL MODE');
+      expect(indicator?.style.display).toBe('block');
+      expect(dom.window.document.body.classList.contains('panel-navigation-mode')).toBe(true);
+
+      (manager as any).setPanelNavigationMode(false);
+      expect(indicator?.style.display).toBe('none');
+      expect(dom.window.document.body.classList.contains('panel-navigation-mode')).toBe(false);
+    });
   });
 
   describe('Input Buffering & Flushing', () => {

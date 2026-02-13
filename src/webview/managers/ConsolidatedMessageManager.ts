@@ -140,6 +140,7 @@ export class ConsolidatedMessageManager implements IMessageManager {
       'terminalCreated',
       'newTerminal',
       'focusTerminal',
+      'panelNavigationMode',
       'setActiveTerminal',
       'deleteTerminalResponse',
       'terminalRemoved',

@@ -188,6 +188,44 @@ export class TerminalCommandHandlers {
   }
 
   /**
+   * Handle terminal interaction events (switch-next / switch-previous)
+   */
+  public async handleTerminalInteraction(message: WebviewMessage): Promise<void> {
+    const interactionType = message.type;
+    if (interactionType !== 'switch-next' && interactionType !== 'switch-previous') {
+      return;
+    }
+
+    const terminals = this.deps.terminalManager.getTerminals();
+    if (terminals.length === 0) {
+      return;
+    }
+
+    const terminalIds = terminals.map((terminal) => terminal.id);
+    const currentTerminalId = this.deps.terminalManager.getActiveTerminalId() || message.terminalId;
+    const currentIndex = currentTerminalId ? terminalIds.indexOf(currentTerminalId) : 0;
+    const normalizedIndex = currentIndex >= 0 ? currentIndex : 0;
+    const offset = interactionType === 'switch-next' ? 1 : -1;
+    const targetIndex = (normalizedIndex + offset + terminalIds.length) % terminalIds.length;
+    const targetTerminalId = terminalIds[targetIndex];
+
+    if (!targetTerminalId) {
+      return;
+    }
+
+    this.deps.terminalManager.setActiveTerminal(targetTerminalId);
+    await this.deps.communicationService.sendMessage({
+      command: 'focusTerminal',
+      terminalId: targetTerminalId,
+      timestamp: Date.now(),
+    });
+    await this.deps.communicationService.sendMessage({
+      command: 'stateUpdate',
+      state: this.deps.terminalManager.getCurrentState(),
+    });
+  }
+
+  /**
    * Handle terminal closed event
    */
   public async handleTerminalClosed(message: WebviewMessage): Promise<void> {

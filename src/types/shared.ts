@@ -579,6 +579,7 @@ export interface WebviewMessage {
     | 'getSettings'
     | 'altClickSettings'
     | 'focusTerminal'
+    | 'panelNavigationMode'
     | 'switchAiAgent'
     | 'test'
     | 'timeoutTest'

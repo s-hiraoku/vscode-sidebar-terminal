@@ -107,6 +107,52 @@ describe('TerminalCommandHandlers', () => {
   });
 
   describe('Terminal Interaction Commands', () => {
+    it('should handle terminalInteraction switch-next', async () => {
+      mockTerminalManager.getTerminals.mockReturnValue([
+        { id: 't1' },
+        { id: 't2' },
+        { id: 't3' },
+      ]);
+      mockTerminalManager.getActiveTerminalId.mockReturnValue('t1');
+
+      await handlers.handleTerminalInteraction({
+        command: 'terminalInteraction',
+        type: 'switch-next',
+        terminalId: 't1',
+      } as any);
+
+      expect(mockTerminalManager.setActiveTerminal).toHaveBeenCalledWith('t2');
+      expect(mockCommService.sendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ command: 'focusTerminal', terminalId: 't2' })
+      );
+      expect(mockCommService.sendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ command: 'stateUpdate' })
+      );
+    });
+
+    it('should handle terminalInteraction switch-previous', async () => {
+      mockTerminalManager.getTerminals.mockReturnValue([
+        { id: 't1' },
+        { id: 't2' },
+        { id: 't3' },
+      ]);
+      mockTerminalManager.getActiveTerminalId.mockReturnValue('t1');
+
+      await handlers.handleTerminalInteraction({
+        command: 'terminalInteraction',
+        type: 'switch-previous',
+        terminalId: 't1',
+      } as any);
+
+      expect(mockTerminalManager.setActiveTerminal).toHaveBeenCalledWith('t3');
+      expect(mockCommService.sendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ command: 'focusTerminal', terminalId: 't3' })
+      );
+      expect(mockCommService.sendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ command: 'stateUpdate' })
+      );
+    });
+
     it('should handle terminal input', () => {
       handlers.handleTerminalInput({ command: 'input', terminalId: 't1', data: 'ls\n' });
       expect(mockTerminalManager.sendInput).toHaveBeenCalledWith('ls\n', 't1');
