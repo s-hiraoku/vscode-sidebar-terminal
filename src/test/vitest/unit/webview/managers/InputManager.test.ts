@@ -389,7 +389,7 @@ describe('InputManager', () => {
       expect(mockCoordinator.postMessageToExtension).not.toHaveBeenCalled();
     });
 
-    it('should enter panel navigation mode with Cmd+P on macOS', () => {
+    it('should not enter panel navigation mode with Cmd+P on macOS', () => {
       manager.initialize();
 
       const enterModeEvent = new dom.window.KeyboardEvent('keydown', {
@@ -402,8 +402,8 @@ describe('InputManager', () => {
       vi.spyOn(enterModeEvent, 'stopPropagation');
       dom.window.document.dispatchEvent(enterModeEvent);
 
-      expect(enterModeEvent.preventDefault).toHaveBeenCalled();
-      expect(enterModeEvent.stopPropagation).toHaveBeenCalled();
+      expect(enterModeEvent.preventDefault).not.toHaveBeenCalled();
+      expect(enterModeEvent.stopPropagation).not.toHaveBeenCalled();
 
       mockCoordinator.postMessageToExtension.mockClear();
 
@@ -414,13 +414,7 @@ describe('InputManager', () => {
       });
       dom.window.document.dispatchEvent(moveEvent);
 
-      expect(mockCoordinator.postMessageToExtension).toHaveBeenCalledWith(
-        expect.objectContaining({
-          command: 'terminalInteraction',
-          type: 'switch-next',
-          terminalId: 'terminal-1',
-        })
-      );
+      expect(mockCoordinator.postMessageToExtension).not.toHaveBeenCalled();
     });
 
     it('should exit panel navigation mode on dispose', () => {

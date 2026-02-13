@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Panel Navigation Mode (Zellij-style)**:
   - Added dedicated navigation mode for quick switching between split terminals.
-  - Activation with `Cmd+P` (Mac) or `Ctrl+P` (Linux/Windows).
+  - Activation with `Ctrl+P` (all platforms). `Cmd+P` on macOS is reserved for VS Code Quick Open.
   - Navigation using `h`, `j`, `k`, `l` or arrow keys.
   - Exit mode with `Escape` or the toggle shortcut.
   - Visual mode indicator in the top-right corner.

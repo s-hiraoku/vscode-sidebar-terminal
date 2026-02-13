@@ -1029,7 +1029,8 @@ export class InputManager extends BaseManager implements IInputManager {
       !event.shiftKey &&
       !event.altKey &&
       normalizedKey === 'p' &&
-      ((event.ctrlKey && !event.metaKey) || (event.metaKey && !event.ctrlKey));
+      event.ctrlKey &&
+      !event.metaKey;
 
     if (isToggleShortcut) {
       this.setPanelNavigationMode(!this.panelNavigationMode);
