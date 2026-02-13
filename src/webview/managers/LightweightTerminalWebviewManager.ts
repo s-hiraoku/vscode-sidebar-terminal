@@ -73,6 +73,7 @@ const NOOP_SHELL_INTEGRATION_MANAGER: IShellIntegrationBridge = {
   updateWorkingDirectory: () => {},
   showCommandHistory: () => {},
 };
+
 import { SplitManager } from './SplitManager';
 import { SplitResizeManager } from './SplitResizeManager';
 import { SettingsPanel } from '../components/SettingsPanel';
@@ -378,13 +379,8 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
    */
   private initializeSplitResizeManager(): void {
     this.splitResizeManager = new SplitResizeManager({
-      onResizeComplete: () => {
-        // PTY に通知するためにすべてのターミナルをリサイズ
-        this.refitAllTerminals();
-      },
-      getSplitDirection: () => {
-        return this.splitManager.getSplitDirection();
-      },
+      onResizeComplete: () => this.refitAllTerminals(),
+      getSplitDirection: () => this.splitManager.getSplitDirection(),
     });
     log('✅ SplitResizeManager initialized');
   }
@@ -400,16 +396,14 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
     const terminalsWrapper = document.getElementById('terminals-wrapper');
     if (!terminalsWrapper) {
-      // Clear stale references when wrapper is missing
       this.splitResizeManager.reinitialize([]);
       return;
     }
 
     const resizers = Array.from(
-      terminalsWrapper.querySelectorAll<HTMLElement>('.split-resizer')
+      terminalsWrapper.querySelectorAll<HTMLElement>('.split-resizer, .grid-row-resizer')
     );
 
-    // Always reinitialize to clear stale references, even with empty array
     this.splitResizeManager.reinitialize(resizers);
   }
 
@@ -1630,14 +1624,26 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     const domWrapperCount = terminalsWrapper
       ? terminalsWrapper.querySelectorAll('[data-terminal-wrapper-id]').length
       : 0;
+    const isGridLayout = terminalsWrapper?.classList.contains('terminal-grid-layout') ?? false;
     const resizerCount = terminalsWrapper
       ? terminalsWrapper.querySelectorAll('.split-resizer').length
       : document.querySelectorAll('.split-resizer').length;
+    const gridResizerCount = terminalsWrapper
+      ? terminalsWrapper.querySelectorAll('.grid-row-resizer').length
+      : 0;
     const wrapperCount = domWrapperCount > 0 ? domWrapperCount : stateTerminalCount;
-    const expectedResizerCount = wrapperCount - 1;
-    const resizerLayoutValid = resizerCount === expectedResizerCount;
-    const wrapperLayoutValid = domWrapperCount === 0 || domWrapperCount === stateTerminalCount;
-    const layoutIsValid = resizerLayoutValid && wrapperLayoutValid;
+
+    const expectedResizerCount = isGridLayout ? 0 : wrapperCount - 1;
+    let layoutIsValid: boolean;
+    if (isGridLayout) {
+      // In grid mode: wrappers should match terminal count, one grid-row-resizer
+      const wrapperLayoutValid = domWrapperCount === 0 || domWrapperCount === stateTerminalCount;
+      layoutIsValid = wrapperLayoutValid && gridResizerCount === 1;
+    } else {
+      const resizerLayoutValid = resizerCount === expectedResizerCount;
+      const wrapperLayoutValid = domWrapperCount === 0 || domWrapperCount === stateTerminalCount;
+      layoutIsValid = resizerLayoutValid && wrapperLayoutValid;
+    }
 
     if (layoutIsValid) {
       return;

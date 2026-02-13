@@ -266,6 +266,38 @@ describe('PanelLocationHandler', () => {
           })
         );
       });
+
+      it('should use panel when view is slightly landscape (small but width > height)', () => {
+        // Regression: panel should stay horizontal even in compact landscape sizes.
+        Object.defineProperty(document.body, 'clientWidth', { value: 901, configurable: true });
+        Object.defineProperty(document.body, 'clientHeight', { value: 900, configurable: true });
+
+        const msg = { command: 'requestPanelLocationDetection' };
+        handler.handleMessage(msg, mockCoordinator);
+
+        expect(mockMessageQueue.enqueue).toHaveBeenCalledWith(
+          expect.objectContaining({
+            command: 'reportPanelLocation',
+            location: 'panel',
+          })
+        );
+      });
+
+      it('should use sidebar when view is large and only slightly landscape', () => {
+        // Keep previous behavior for large area views unless aspect ratio is clearly wide.
+        Object.defineProperty(document.body, 'clientWidth', { value: 1601, configurable: true });
+        Object.defineProperty(document.body, 'clientHeight', { value: 1600, configurable: true });
+
+        const msg = { command: 'requestPanelLocationDetection' };
+        handler.handleMessage(msg, mockCoordinator);
+
+        expect(mockMessageQueue.enqueue).toHaveBeenCalledWith(
+          expect.objectContaining({
+            command: 'reportPanelLocation',
+            location: 'sidebar',
+          })
+        );
+      });
     });
 
     describe('unknown command', () => {

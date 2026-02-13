@@ -1,90 +1,12 @@
-<testsuites id="" name="" tests="41" failures="0" skipped="0" errors="0" time="14.961898000000001">
-<testsuite name="tests/visual/ansi-colors.spec.ts" timestamp="2025-12-26T05:00:14.629Z" hostname="chromium" tests="10" failures="0" skipped="0" time="15.951" errors="0">
-<testcase name="ANSI Color Rendering @visual-regression › should render 8-color palette correctly @P0" classname="tests/visual/ansi-colors.spec.ts" time="1.796">
-</testcase>
-<testcase name="ANSI Color Rendering @visual-regression › should render 16-color palette correctly @P0" classname="tests/visual/ansi-colors.spec.ts" time="1.797">
-</testcase>
-<testcase name="ANSI Color Rendering @visual-regression › should render text styling correctly @P0" classname="tests/visual/ansi-colors.spec.ts" time="1.823">
-</testcase>
-<testcase name="ANSI Color Rendering @visual-regression › should render background colors correctly @P0" classname="tests/visual/ansi-colors.spec.ts" time="1.796">
-</testcase>
-<testcase name="ANSI Color Rendering @visual-regression › should render status indicators correctly @P0" classname="tests/visual/ansi-colors.spec.ts" time="1.793">
-</testcase>
-<testcase name="ANSI Color Rendering @visual-regression › should render mixed colored and plain text @P0" classname="tests/visual/ansi-colors.spec.ts" time="1.287">
-</testcase>
-<testcase name="ANSI Color Rendering @visual-regression › should render sample terminal output correctly @P1" classname="tests/visual/ansi-colors.spec.ts" time="1.292">
-</testcase>
-<testcase name="ANSI Colors - Theme Variations @visual-regression › should render colors correctly in dark theme @P1" classname="tests/visual/ansi-colors.spec.ts" time="1.442">
-</testcase>
-<testcase name="ANSI Colors - Theme Variations @visual-regression › should render colors correctly in light theme @P1" classname="tests/visual/ansi-colors.spec.ts" time="1.461">
-</testcase>
-<testcase name="ANSI Colors - Theme Variations @visual-regression › should render colors correctly in high contrast theme @P2" classname="tests/visual/ansi-colors.spec.ts" time="1.464">
-</testcase>
-</testsuite>
-<testsuite name="tests/visual/terminal-layout.spec.ts" timestamp="2025-12-26T05:00:14.629Z" hostname="chromium" tests="16" failures="0" skipped="0" time="19.936" errors="0">
-<testcase name="Terminal Layout @visual-regression › should render single active terminal correctly @P0" classname="tests/visual/terminal-layout.spec.ts" time="1.282">
-</testcase>
-<testcase name="Terminal Layout @visual-regression › should render single inactive terminal correctly @P0" classname="tests/visual/terminal-layout.spec.ts" time="1.321">
-</testcase>
-<testcase name="Terminal Layout @visual-regression › should render terminal header correctly @P1" classname="tests/visual/terminal-layout.spec.ts" time="1.138">
-</testcase>
-<testcase name="Terminal Layout @visual-regression › should render terminal tabs correctly @P1" classname="tests/visual/terminal-layout.spec.ts" time="1.119">
-</testcase>
-<testcase name="Terminal Layout @visual-regression › should render full page layout correctly @P0" classname="tests/visual/terminal-layout.spec.ts" time="1.247">
-</testcase>
-<testcase name="Split Terminal Layout @visual-regression › should render vertical split layout correctly @P0" classname="tests/visual/terminal-layout.spec.ts" time="1.383">
-</testcase>
-<testcase name="Split Terminal Layout @visual-regression › should render horizontal split layout correctly @P0" classname="tests/visual/terminal-layout.spec.ts" time="1.371">
-</testcase>
-<testcase name="Split Terminal Layout @visual-regression › should render three-way vertical split correctly @P1" classname="tests/visual/terminal-layout.spec.ts" time="1.381">
-</testcase>
-<testcase name="Split Terminal Layout @visual-regression › should render split resizer correctly @P1" classname="tests/visual/terminal-layout.spec.ts" time="1.342">
-</testcase>
-<testcase name="Terminal Action Buttons @visual-regression › should render action buttons in default state @P1" classname="tests/visual/terminal-layout.spec.ts" time="1.124">
-</testcase>
-<testcase name="Terminal Action Buttons @visual-regression › should render new terminal button hover state @P2" classname="tests/visual/terminal-layout.spec.ts" time="1.234">
-</testcase>
-<testcase name="Terminal Action Buttons @visual-regression › should render split terminal button hover state @P2" classname="tests/visual/terminal-layout.spec.ts" time="1.195">
-</testcase>
-<testcase name="Agent Status Indicator @visual-regression › should render Claude Code agent status correctly @P1" classname="tests/visual/terminal-layout.spec.ts" time="1.261">
-</testcase>
-<testcase name="Agent Status Indicator @visual-regression › should render GitHub Copilot agent status correctly @P1" classname="tests/visual/terminal-layout.spec.ts" time="1.26">
-</testcase>
-<testcase name="Agent Status Indicator @visual-regression › should render Gemini CLI agent status correctly @P1" classname="tests/visual/terminal-layout.spec.ts" time="1.259">
-</testcase>
-<testcase name="Agent Status Indicator @visual-regression › should hide agent status when no agent detected @P2" classname="tests/visual/terminal-layout.spec.ts" time="1.019">
-</testcase>
-</testsuite>
-<testsuite name="tests/visual/theme-variations.spec.ts" timestamp="2025-12-26T05:00:14.629Z" hostname="chromium" tests="15" failures="0" skipped="0" time="21.099" errors="0">
-<testcase name="Theme Variations @visual-regression › should render full layout correctly in dark theme @P1" classname="tests/visual/theme-variations.spec.ts" time="1.345">
-</testcase>
-<testcase name="Theme Variations @visual-regression › should render full layout correctly in light theme @P1" classname="tests/visual/theme-variations.spec.ts" time="1.378">
-</testcase>
-<testcase name="Theme Variations @visual-regression › should render full layout correctly in high contrast theme @P2" classname="tests/visual/theme-variations.spec.ts" time="1.376">
-</testcase>
-<testcase name="Theme Variations @visual-regression › should render header correctly in dark theme @P1" classname="tests/visual/theme-variations.spec.ts" time="1.262">
-</testcase>
-<testcase name="Theme Variations @visual-regression › should render header correctly in light theme @P1" classname="tests/visual/theme-variations.spec.ts" time="1.188">
-</testcase>
-<testcase name="Theme Variations @visual-regression › should render terminal container correctly in dark theme @P1" classname="tests/visual/theme-variations.spec.ts" time="1.334">
-</testcase>
-<testcase name="Theme Variations @visual-regression › should render terminal container correctly in light theme @P1" classname="tests/visual/theme-variations.spec.ts" time="1.392">
-</testcase>
-<testcase name="Theme Consistency @visual-regression › should render status indicators visibly in dark theme @P1" classname="tests/visual/theme-variations.spec.ts" time="1.513">
-</testcase>
-<testcase name="Theme Consistency @visual-regression › should render status indicators visibly in light theme @P1" classname="tests/visual/theme-variations.spec.ts" time="1.507">
-</testcase>
-<testcase name="Theme Consistency @visual-regression › should render status indicators visibly in high contrast theme @P2" classname="tests/visual/theme-variations.spec.ts" time="1.361">
-</testcase>
-<testcase name="Theme Consistency @visual-regression › should render split layout correctly in dark theme @P2" classname="tests/visual/theme-variations.spec.ts" time="1.646">
-</testcase>
-<testcase name="Theme Consistency @visual-regression › should render split layout correctly in light theme @P2" classname="tests/visual/theme-variations.spec.ts" time="1.589">
-</testcase>
-<testcase name="Focus and Border States @visual-regression › should render focus border correctly in dark theme @P1" classname="tests/visual/theme-variations.spec.ts" time="1.512">
-</testcase>
-<testcase name="Focus and Border States @visual-regression › should render focus border correctly in light theme @P1" classname="tests/visual/theme-variations.spec.ts" time="1.472">
-</testcase>
-<testcase name="Focus and Border States @visual-regression › should render focus border correctly in high contrast theme @P2" classname="tests/visual/theme-variations.spec.ts" time="1.224">
+<testsuites id="" name="" tests="1" failures="0" skipped="1" errors="0" time="4.726005999999999">
+<testsuite name="tests/webview/keyboard-input.spec.ts" timestamp="2026-02-12T14:56:44.754Z" hostname="chromium" tests="1" failures="0" skipped="1" time="0" errors="0">
+<testcase name="WebView Keyboard Input › should keep input responsive after IME-like focus loss and return @P0 @ime @regression" classname="tests/webview/keyboard-input.spec.ts" time="0">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
 </testcase>
 </testsuite>
 </testsuites>

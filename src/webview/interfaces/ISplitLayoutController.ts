@@ -52,4 +52,10 @@ export interface ISplitLayoutController {
    * @returns 最適な分割方向
    */
   getOptimalSplitDirection(location: 'sidebar' | 'panel' | string): 'vertical' | 'horizontal';
+
+  /**
+   * 現在のレイアウトモードを取得
+   * @returns 'single-row' for flex layout, 'grid-2-row' for 2-row grid layout
+   */
+  getLayoutMode(): 'single-row' | 'grid-2-row';
 }

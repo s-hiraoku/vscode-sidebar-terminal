@@ -10,23 +10,31 @@
     "SYNAPSE_WEBHOOK_TIMEOUT": "10",
     "SYNAPSE_WEBHOOK_MAX_RETRIES": "3",
     "SYNAPSE_FILE_SAFETY_ENABLED": "true",
-    "SYNAPSE_FILE_SAFETY_DB_PATH": ".synapse/file_safety.db"
+    "SYNAPSE_FILE_SAFETY_DB_PATH": ".synapse/file_safety.db",
+    "SYNAPSE_FILE_SAFETY_RETENTION_DAYS": "30",
+    "SYNAPSE_LONG_MESSAGE_THRESHOLD": "200",
+    "SYNAPSE_LONG_MESSAGE_TTL": "3600",
+    "SYNAPSE_LONG_MESSAGE_DIR": ""
   },
   "instructions": {
     "default": "default.md",
     "claude": "",
-    "gemini": "gemini.md",
-    "codex": ""
+    "gemini": "",
+    "codex": "",
+    "opencode": ""
   },
+  "approvalMode": "required",
   "a2a": {
     "flow": "auto"
-  },
-  "delegation": {
-    "enabled": false
   },
   "resume_flags": {
     "claude": ["--continue", "--resume", "-c", "-r"],
     "codex": ["resume"],
-    "gemini": ["--resume"]
+    "gemini": ["--resume"],
+    "opencode": ["--continue", "-c"],
+    "copilot": ["--continue", "-c"]
+  },
+  "list": {
+    "columns": ["ID", "NAME", "STATUS", "CURRENT", "TRANSPORT", "WORKING_DIR", "EDITING_FILE"]
   }
 }

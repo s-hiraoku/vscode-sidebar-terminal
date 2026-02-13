@@ -471,6 +471,11 @@ export class PanelLocationHandler implements IMessageHandler {
    * Wide layouts use panel mode (horizontal split), otherwise sidebar mode.
    */
   private classifyPanelLocation(width: number, height: number): 'sidebar' | 'panel' {
+    const viewportArea = width * height;
+    if (viewportArea <= PANEL_LOCATION_CONSTANTS.COMPACT_VIEWPORT_AREA_THRESHOLD) {
+      return width > height ? 'panel' : 'sidebar';
+    }
+
     const aspectRatio = width / height;
     return aspectRatio > PANEL_LOCATION_CONSTANTS.ASPECT_RATIO_THRESHOLD ? 'panel' : 'sidebar';
   }

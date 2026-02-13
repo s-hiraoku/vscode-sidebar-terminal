@@ -125,8 +125,6 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
     this.updateDisplay();
 
     this.log(`Display mode set: ${mode}`);
-
-    this.refreshSplitToggleState();
     this.notifyModeChanged(mode);
   }
 
@@ -190,7 +188,6 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
     this.fullscreenTerminalId = terminalId;
 
     this.syncVisibilityFromSnapshot();
-    this.refreshSplitToggleState();
     this.notifyModeChanged('fullscreen');
 
     // 🔧 FIX (Issue #368): Refit terminal and notify PTY after fullscreen transition
@@ -249,11 +246,32 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
 
     containerManager.applyDisplayState(displayState);
 
+    // Check grid mode from actual DOM state to avoid manager count drift.
+    const isGridLayout =
+      document.getElementById('terminals-wrapper')?.classList.contains('terminal-grid-layout') ??
+      false;
+
     // Ensure container heights are aligned with the split direction
     const allContainers = containerManager.getAllContainers();
-    if (direction === 'horizontal') {
+    if (direction === 'horizontal' || isGridLayout) {
       // Clear fixed heights from prior vertical splits/fullscreen
+      // In grid mode, CSS grid handles layout automatically
       allContainers.forEach((container) => DOMUtils.clearContainerHeightStyles(container));
+
+      if (isGridLayout) {
+        // Grid layout: run staged refits to avoid transient 0-row rendering.
+        requestAnimationFrame(() => {
+          this.coordinator.refitAllTerminals?.();
+          requestAnimationFrame(() => {
+            this.coordinator.refitAllTerminals?.();
+            this._finalRedistributeTimeout = setTimeout(() => {
+              this._finalRedistributeTimeout = null;
+              this.coordinator.refitAllTerminals?.();
+              this.log('🔄 [GRID] Final terminal refit completed after CSS settle');
+            }, 100);
+          });
+        });
+      }
     } else {
       // Vertical split: divide height after layout settles
       // Force reflow to ensure CSS changes are applied before reading dimensions
@@ -293,7 +311,6 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
     this.fullscreenTerminalId = null;
 
     this.syncVisibilityFromSnapshot();
-    this.refreshSplitToggleState();
 
     // Note: refitAllTerminals is now called within redistributeSplitTerminals
     // via coordinator, which includes proper PTY notification timing (Issue #368)
@@ -402,8 +419,6 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
     this.fullscreenTerminalId = null;
 
     this.log('Normal mode applied');
-
-    this.refreshSplitToggleState();
     this.notifyModeChanged('normal');
 
     // 🔧 FIX (Issue #368): Refit terminal and notify PTY after mode change
@@ -444,12 +459,9 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
     previousMode: DisplayMode;
     visibleTerminals: string[];
   } {
-    const visibleTerminals: string[] = [];
-    this.terminalVisibility.forEach((visible, terminalId) => {
-      if (visible) {
-        visibleTerminals.push(terminalId);
-      }
-    });
+    const visibleTerminals = Array.from(this.terminalVisibility.entries())
+      .filter(([, visible]) => visible)
+      .map(([terminalId]) => terminalId);
 
     return {
       currentMode: this.currentMode,
@@ -494,14 +506,6 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
     this.fullscreenTerminalId = null;
 
     this.log('DisplayModeManager disposed successfully');
-  }
-
-  /**
-   * Split toggle buttonの状態を同期
-   * Note: Split button has been removed from the header
-   */
-  private refreshSplitToggleState(): void {
-    // Split button removed - no-op
   }
 
   private syncVisibilityFromSnapshot(): void {

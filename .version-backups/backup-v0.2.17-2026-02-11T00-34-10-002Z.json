@@ -2,7 +2,7 @@
   "name": "vscode-sidebar-terminal",
   "displayName": "Secondary Terminal",
   "description": "Production-ready VS Code extension with TypeScript-compliant terminal in sidebar, ProcessState/InteractionState management, and comprehensive session management.",
-  "version": "0.2.24",
+  "version": "0.2.17",
   "publisher": "s-hiraoku",
   "sideEffects": false,
   "engines": {
@@ -1108,7 +1108,6 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.0",
-    "@eslint-community/eslint-plugin-eslint-comments": "^4.6.0",
     "@istanbuljs/nyc-config-typescript": "^1.0.2",
     "@playwright/test": "^1.57.0",
     "@testing-library/dom": "^10.4.0",
@@ -1133,8 +1132,9 @@
     "css-loader": "^7.1.2",
     "eslint": "^8.56.0",
     "eslint-config-prettier": "^10.0.0",
+    "eslint-plugin-eslint-comments": "^3.2.0",
     "eslint-plugin-prettier": "^5.5.4",
-    "glob": "^13.0.2",
+    "glob": "^13.0.0",
     "happy-dom": "^20.0.11",
     "http-server": "^14.1.1",
     "jsdom": "^28.0.0",
@@ -1158,7 +1158,7 @@
     "webpack-cli": "^6.0.0"
   },
   "dependencies": {
-    "node-pty": "1.2.0-beta.11",
+    "node-pty": "1.2.0-beta.10",
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/addon-search": "^0.16.0",
     "@xterm/addon-serialize": "^0.14.0",
@@ -1175,6 +1175,6 @@
     "node-pty"
   ],
   "volta": {
-    "node": "24.13.1"
+    "node": "24.13.0"
   }
 }

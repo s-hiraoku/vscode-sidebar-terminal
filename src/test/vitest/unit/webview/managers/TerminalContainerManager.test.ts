@@ -15,9 +15,11 @@ vi.mock('../../../../../webview/managers/container/SplitLayoutService', () => ({
     removeWrapper = vi.fn();
     getSplitResizers = vi.fn().mockReturnValue(new Set());
     refreshSplitArtifacts = vi.fn();
+    activateGridLayout = vi.fn();
     activateSplitLayout = vi.fn();
     getSplitWrapperCache = vi.fn().mockReturnValue(new Map());
     getWrapperArea = vi.fn();
+    deactivateGridLayout = vi.fn();
     clear = vi.fn();
     setCoordinator = vi.fn(); // 🔧 FIX: Added for split resizer initialization
   }
@@ -146,6 +148,52 @@ describe('TerminalContainerManager', () => {
       expect(c1.classList.contains('terminal-container--split')).toBe(true);
     });
 
+    it('should use horizontal single-row split in compact panel area even with 6 terminals', () => {
+      const terminalBody = document.getElementById('terminal-body') as HTMLElement;
+      Object.defineProperty(terminalBody, 'clientWidth', { value: 900, configurable: true });
+      Object.defineProperty(terminalBody, 'clientHeight', { value: 800, configurable: true });
+
+      for (let i = 1; i <= 6; i++) {
+        const container = document.createElement('div');
+        manager.registerContainer(`t${i}`, container);
+      }
+
+      manager.applyDisplayState({
+        mode: 'split',
+        activeTerminalId: 't1',
+        orderedTerminalIds: ['t1', 't2', 't3', 't4', 't5', 't6'],
+        splitDirection: 'horizontal',
+      });
+
+      expect((manager as any).splitLayoutService.activateGridLayout).not.toHaveBeenCalled();
+      expect((manager as any).splitLayoutService.activateSplitLayout).toHaveBeenCalledWith(
+        terminalBody,
+        ['t1', 't2', 't3', 't4', 't5', 't6'],
+        'horizontal',
+        expect.any(Function)
+      );
+    });
+
+    it('should use grid layout in panel when area is large and terminals are 6+', () => {
+      const terminalBody = document.getElementById('terminal-body') as HTMLElement;
+      Object.defineProperty(terminalBody, 'clientWidth', { value: 1600, configurable: true });
+      Object.defineProperty(terminalBody, 'clientHeight', { value: 1000, configurable: true });
+
+      for (let i = 1; i <= 6; i++) {
+        const container = document.createElement('div');
+        manager.registerContainer(`t${i}`, container);
+      }
+
+      manager.applyDisplayState({
+        mode: 'split',
+        activeTerminalId: 't1',
+        orderedTerminalIds: ['t1', 't2', 't3', 't4', 't5', 't6'],
+        splitDirection: 'horizontal',
+      });
+
+      expect((manager as any).splitLayoutService.activateGridLayout).toHaveBeenCalled();
+    });
+
     it('should apply normal mode', () => {
       const c1 = document.createElement('div');
       manager.registerContainer('t1', c1);
@@ -169,6 +217,24 @@ describe('TerminalContainerManager', () => {
       expect((manager as any).splitLayoutService.getSplitResizers).toHaveBeenCalled();
       expect((manager as any).splitLayoutService.getSplitWrapperCache).toHaveBeenCalled();
       expect((manager as any).visibilityService.normalizeTerminalBody).toHaveBeenCalled();
+    });
+
+    it('should clear grid and horizontal split classes from terminals-wrapper', () => {
+      const terminalBody = document.getElementById('terminal-body') as HTMLElement;
+      const terminalsWrapper = document.createElement('div');
+      terminalsWrapper.id = 'terminals-wrapper';
+      terminalsWrapper.classList.add('terminal-grid-layout', 'terminal-split-horizontal');
+      terminalsWrapper.style.display = 'grid';
+      terminalsWrapper.style.gridTemplateColumns = 'repeat(5, 1fr)';
+      terminalsWrapper.style.gridTemplateRows = '1fr auto 1fr';
+      terminalBody.appendChild(terminalsWrapper);
+
+      manager.clearSplitArtifacts();
+
+      expect(terminalsWrapper.classList.contains('terminal-grid-layout')).toBe(false);
+      expect(terminalsWrapper.classList.contains('terminal-split-horizontal')).toBe(false);
+      expect(terminalsWrapper.style.gridTemplateColumns).toBe('');
+      expect(terminalsWrapper.style.gridTemplateRows).toBe('');
     });
   });
 

@@ -1,0 +1,55 @@
+{
+  "architect": {
+    "name": "architect",
+    "description": "System architecture and design — design docs, API contracts, code review",
+    "skills": [
+      "synapse-a2a",
+      "system-design",
+      "api-design",
+      "code-review",
+      "project-docs"
+    ]
+  },
+  "developer": {
+    "name": "developer",
+    "description": "Implementation and quality — test-first development, refactoring, code simplification",
+    "skills": [
+      "synapse-a2a",
+      "test-first",
+      "refactoring",
+      "code-simplifier",
+      "agent-memory"
+    ]
+  },
+  "reviewer": {
+    "name": "reviewer",
+    "description": "Code review and security — structured reviews, security audits, code simplification",
+    "skills": [
+      "synapse-a2a",
+      "code-review",
+      "security-audit",
+      "code-simplifier"
+    ]
+  },
+  "coordinator": {
+    "name": "coordinator",
+    "description": "Task coordination and orchestration — planning, delegation, memory, re-instruction",
+    "skills": [
+      "synapse-a2a",
+      "task-planner",
+      "agent-memory",
+      "synapse-reinst"
+    ]
+  },
+  "frontend": {
+    "name": "frontend",
+    "description": "Frontend development — React/Next.js performance, component composition, design systems, accessibility",
+    "skills": [
+      "synapse-a2a",
+      "react-performance",
+      "frontend-design",
+      "react-composition",
+      "web-accessibility"
+    ]
+  }
+}

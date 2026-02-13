@@ -1,57 +1,95 @@
 ================================================================================
-STOP! READ THIS BEFORE EVERY FILE EDIT
+CRITICAL: FILE LOCK REQUIRED BEFORE ANY EDIT
 ================================================================================
 
-You are {{agent_id}} in a multi-agent environment.
-Other agents may be editing files at the same time.
+You are {{agent_id}} in a MULTI-AGENT environment.
+Other agents may be editing files RIGHT NOW.
 
 ================================================================================
-BEFORE YOU USE: Edit, Write, sed, awk, or ANY file modification
+MANDATORY WORKFLOW
 ================================================================================
 
-ASK YOURSELF: "Did I run synapse file-safety lock?"
+STEP 1: BEFORE EVERY FILE EDIT
+-------------------------------
+ALWAYS run this FIRST - no exceptions:
 
-If NO --> Run this FIRST:
 ```bash
 synapse file-safety lock <file_path> {{agent_id}} --intent "what you plan to do"
 ```
 
-If lock fails (another agent has it):
-  - DO NOT edit the file
-  - Work on something else
-  - Try again later
+STEP 2: VERIFY LOCK STATUS
+--------------------------
+Confirm you have the lock before proceeding:
 
-================================================================================
-AFTER YOUR EDIT IS COMPLETE
-================================================================================
+```bash
+synapse file-safety locks
+```
 
-Run BOTH commands:
-`<task_id>` is your current task identifier or any unique string/UUID for this change set (e.g., `task-123`, `550e8400-e29b-41d4-a716-446655440000`), typically provided by your task system or chosen as a unique alphanumeric string.
+STEP 3: AFTER EDIT COMPLETE
+---------------------------
+Record and release the lock:
+
 ```bash
 synapse file-safety record <file_path> {{agent_id}} <task_id> --type MODIFY --intent "what you changed"
 synapse file-safety unlock <file_path> {{agent_id}}
 ```
 
 ================================================================================
-QUICK REFERENCE
+WHAT HAPPENS IF YOU FORGET
 ================================================================================
 
-BEFORE EDIT:
-  synapse file-safety lock src/foo.py {{agent_id}} --intent "Fix bug"
-
-AFTER EDIT:
-  synapse file-safety record src/foo.py {{agent_id}} task-123 --type MODIFY --intent "Fixed null check"
-  synapse file-safety unlock src/foo.py {{agent_id}}
-
-CHECK WHO HAS LOCKS:
-  synapse file-safety locks
-
-================================================================================
-WHY THIS MATTERS
-================================================================================
-
-- Without locks, two agents editing the same file = DATA LOSS
-- Your changes may be overwritten without warning
+- Your changes MAY BE OVERWRITTEN by another agent
+- Data loss is PERMANENT
+- No recovery possible
 - Other agents' work may be destroyed
+
+================================================================================
+IF LOCK FAILS (ANOTHER AGENT HAS IT)
+================================================================================
+
+- DO NOT edit the file
+- Check who has the lock: synapse file-safety locks
+- Work on something else first
+- Coordinate with the lock holder if urgent
+- Try again later
+
+================================================================================
+QUICK REFERENCE TABLE
+================================================================================
+
+| Action          | Command                                              |
+|-----------------|------------------------------------------------------|
+| Lock file       | synapse file-safety lock FILE {{agent_id}}           |
+| Unlock file     | synapse file-safety unlock FILE {{agent_id}}         |
+| Check locks     | synapse file-safety locks                            |
+| Record change   | synapse file-safety record FILE {{agent_id}} TASK_ID --type MODIFY |
+
+================================================================================
+EXAMPLE WORKFLOW
+================================================================================
+
+BEFORE EDITING src/foo.py:
+
+```bash
+synapse file-safety lock src/foo.py {{agent_id}} --intent "Fix null check bug"
+synapse file-safety locks  # Verify lock acquired
+```
+
+AFTER EDITING src/foo.py:
+
+```bash
+synapse file-safety record src/foo.py {{agent_id}} <task_id> --type MODIFY --intent "Added null check"
+synapse file-safety unlock src/foo.py {{agent_id}}
+```
+
+================================================================================
+CHECKLIST BEFORE USING Edit/Write TOOLS
+================================================================================
+
+[ ] Did I run: synapse file-safety lock <file> {{agent_id}}?
+[ ] Did I verify: synapse file-safety locks?
+[ ] If lock failed, am I working on a different file instead?
+
+If any answer is NO --> STOP and run the lock command first!
 
 EVERY EDIT NEEDS A LOCK. NO EXCEPTIONS.

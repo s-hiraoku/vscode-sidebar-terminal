@@ -5,6 +5,7 @@ import { showSplitLimitWarning } from '../utils/NotificationUtils';
 import { BaseManager } from './BaseManager';
 import { TerminalInstance } from '../interfaces/ManagerInterfaces';
 import { ISplitLayoutController } from '../interfaces/ISplitLayoutController';
+import { shouldUseGrid } from '../utils/GridLayoutCalculator';
 
 // Re-export TerminalInstance for tests
 export { TerminalInstance };
@@ -123,7 +124,7 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
 
     // If we're in split mode, update the layout immediately
     if (this.isSplitMode && this.terminals.size > 1) {
-      this.applyNewSplitLayout(direction, previousDirection, location);
+      this.applyNewSplitLayout(direction, previousDirection);
     }
 
     this.splitManagerLogger.info(`Split direction updated to: ${direction}`);
@@ -131,8 +132,7 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
 
   private applyNewSplitLayout(
     newDirection: 'horizontal' | 'vertical',
-    previousDirection: 'horizontal' | 'vertical' | null,
-    _location: 'sidebar' | 'panel'
+    previousDirection: 'horizontal' | 'vertical' | null
   ): void {
     this.splitManagerLogger.info(
       `Applying new split layout: ${previousDirection} -> ${newDirection} (${this.terminals.size} terminals)`
@@ -233,21 +233,9 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
     return calculatedHeight;
   }
 
-  public addTerminalToSplit(terminalId: string, _terminalName: string): void {
-    const layoutInfo = this.calculateSplitLayout();
-    if (!layoutInfo.canSplit) {
-      this.splitManagerLogger.error('Cannot add terminal to split layout');
-      return;
-    }
-
-    this.requestSplitLayoutUpdate();
-    this.splitManagerLogger.info(`Terminal added to split layout: ${terminalId}`);
-  }
-
   public addNewTerminalToSplit(terminalId: string, _terminalName: string): void {
     this.splitManagerLogger.info(`Adding new terminal to split: ${terminalId} (${_terminalName})`);
 
-    // Check if we can split
     const layoutInfo = this.calculateSplitLayout();
     if (!layoutInfo.canSplit) {
       this.splitManagerLogger.error(`Cannot add more terminals to split: ${layoutInfo.reason}`);
@@ -430,6 +418,20 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
   }
 
   /**
+   * Get current layout mode based on terminal count and panel location.
+   * Returns 'grid-2-row' when conditions are met for 2-row grid layout.
+   */
+  public getLayoutMode(): 'single-row' | 'grid-2-row' {
+    if (!this.isSplitMode) {
+      return 'single-row';
+    }
+    if (shouldUseGrid(this.terminals.size, this.currentPanelLocation, this.isSplitMode)) {
+      return 'grid-2-row';
+    }
+    return 'single-row';
+  }
+
+  /**
    * Get current split direction
    * Returns 'vertical' for sidebar (stacked), 'horizontal' for panel (side-by-side)
    */
@@ -456,11 +458,7 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
   public getOptimalSplitDirection(
     location: 'sidebar' | 'panel' | string
   ): 'vertical' | 'horizontal' {
-    if (location === 'panel') {
-      return 'horizontal'; // Wide layout - horizontal split
-    } else {
-      return 'vertical'; // Sidebar or unknown - vertical split
-    }
+    return location === 'panel' ? 'horizontal' : 'vertical';
   }
 
   public setPanelLocation(location: 'sidebar' | 'panel'): void {

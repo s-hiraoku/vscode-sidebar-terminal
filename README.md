@@ -17,7 +17,7 @@ Your sidebar, your terminal, your AI agents -- all in one place. A full-featured
 
 - **Sidebar-native terminal** -- Keep your terminal visible while editing. No more toggling the bottom panel.
 - **AI agent aware** -- Auto-detects Claude Code, Copilot, Gemini, Codex. Shows real-time connection status and optimizes rendering for AI streaming output (up to 250fps).
-- **Full-featured** -- Split views, session persistence, shell integration, find-in-terminal, command decorations, 89 configurable settings. Not a toy -- a production terminal.
+- **Full-featured** -- Split views, session persistence, shell integration, find-in-terminal, command decorations, 90 configurable settings. Not a toy -- a production terminal.
 
 ## Quick Start
 
@@ -100,7 +100,7 @@ Your sidebar, your terminal, your AI agents -- all in one place. A full-featured
 
 ## Configuration
 
-The extension has 89 settings. Here are the most impactful ones to customize:
+The extension has 90 settings. Here are the most impactful ones to customize:
 
 ```json
 {
@@ -175,12 +175,12 @@ Search `secondaryTerminal` in VS Code Settings for the full list, or see [packag
 
 ```bash
 npm install && npm run compile    # Build
-npm test                          # 3,800+ unit tests
+npm test                          # 4,000+ unit tests
 npm run test:e2e                  # E2E tests (Playwright)
 npm run watch                     # Watch mode
 ```
 
-Quality: TypeScript strict mode, TDD workflow, 3,800+ unit tests, E2E coverage with Playwright, 9-platform CI/CD builds.
+Quality: TypeScript strict mode, TDD workflow, 4,000+ unit tests, E2E coverage with Playwright, 9-platform CI/CD builds.
 
 ## Privacy
 

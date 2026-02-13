@@ -93,6 +93,8 @@ export const RENDERING_CONSTANTS = {
 export const PANEL_LOCATION_CONSTANTS = {
   /** Aspect ratio threshold for panel detection (width/height) */
   ASPECT_RATIO_THRESHOLD: 1.2,
+  /** Compact viewport area threshold for landscape-first panel detection */
+  COMPACT_VIEWPORT_AREA_THRESHOLD: 1_000_000,
   /** Maximum retry attempts for terminals-wrapper class sync */
   CLASS_SYNC_MAX_ATTEMPTS: 20,
   /** Retry interval for terminals-wrapper class sync (ms) */
@@ -169,6 +171,15 @@ export const HEADER_MANAGER_CONSTANTS = {
 export const SESSION_RESTORE_CONSTANTS = {
   /** Wait delay after terminal creation before proceeding with restoration (ms) */
   TERMINAL_CREATION_WAIT_MS: 100,
+} as const;
+
+/**
+ * Grid Layout 定数
+ * 6-10ターミナル時の2段グリッドレイアウト設定
+ */
+export const GRID_LAYOUT_CONSTANTS = {
+  /** Minimum number of terminals to activate grid layout */
+  MIN_TERMINALS_FOR_GRID: 6,
 } as const;
 
 /**

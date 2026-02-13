@@ -305,6 +305,8 @@ export class TerminalTabList {
         e.preventDefault();
         this.navigateTabs(e.key === 'ArrowRight' ? 1 : -1);
       } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        // Don't close tab when editing rename input
+        if ((e.target as HTMLElement).closest('.terminal-tab-rename-input')) return;
         e.preventDefault();
         const activeTab = this.getActiveTab();
         if (activeTab && activeTab.isClosable) {
@@ -806,12 +808,14 @@ export class TerminalTabList {
       finished = true;
       cancelBlurTimeout();
       const trimmedValue = input.value.trim();
+      // Restore label in DOM first (removes input guard in updateTabElement)
+      input.replaceWith(labelElement);
       if (save && trimmedValue && trimmedValue !== tab.name) {
+        labelElement.textContent = trimmedValue;
         this.events.onTabRename(tabId, trimmedValue);
       } else {
         labelElement.textContent = tab.name;
       }
-      input.replaceWith(labelElement);
     };
 
     input.addEventListener('click', (e) => e.stopPropagation());
@@ -831,6 +835,7 @@ export class TerminalTabList {
       cancelBlurTimeout();
     });
     input.addEventListener('keydown', (e) => {
+      e.stopPropagation(); // Prevent all keys from reaching container
       if (e.key === 'Enter') {
         e.preventDefault();
         finishRename();

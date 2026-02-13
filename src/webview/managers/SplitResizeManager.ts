@@ -21,6 +21,10 @@ export interface DragState {
   wrapperBefore: HTMLElement | null;
   wrapperAfter: HTMLElement | null;
   direction: 'horizontal' | 'vertical';
+  /** Whether this is a grid row resize (modifies grid-template-rows) */
+  isGridRowResize?: boolean;
+  /** Reference to the grid container for grid row resizing */
+  gridContainer?: HTMLElement | null;
 }
 
 /**
@@ -142,6 +146,13 @@ export class SplitResizeManager {
     event.preventDefault();
     event.stopPropagation();
 
+    const isGridRowResizer = resizer.classList.contains('grid-row-resizer');
+
+    if (isGridRowResizer) {
+      this.handleGridRowPointerDown(event, resizer);
+      return;
+    }
+
     // Get terminal IDs from resizer data attributes
     const beforeId = resizer.getAttribute('data-resizer-before');
     const afterId = resizer.getAttribute('data-resizer-after');
@@ -185,9 +196,52 @@ export class SplitResizeManager {
       direction,
     };
 
+    this.startDragEvents(event, resizer, direction);
+
+    log(`📐 [SPLIT-RESIZE] Drag started: ${beforeId} ↔ ${afterId} (${direction})`);
+  }
+
+  /**
+   * Handle pointer down on grid row resizer.
+   * Modifies grid-template-rows instead of individual wrapper flex values.
+   */
+  private handleGridRowPointerDown(event: PointerEvent, resizer: HTMLElement): void {
+    const gridContainer = resizer.parentElement;
+    if (!gridContainer) {
+      log('⚠️ [SPLIT-RESIZE] Grid row resizer has no parent container');
+      return;
+    }
+
+    const containerRect = gridContainer.getBoundingClientRect();
+    // Row 1 ends at resizer, row 2 starts after resizer
+    const resizerRect = resizer.getBoundingClientRect();
+    const row1Height = resizerRect.top - containerRect.top;
+    const row2Height = containerRect.bottom - resizerRect.bottom;
+
+    this.dragState = {
+      isActive: true,
+      resizerElement: resizer,
+      startPosition: event.clientY,
+      startSizes: { before: row1Height, after: row2Height },
+      wrapperBefore: null,
+      wrapperAfter: null,
+      direction: 'vertical',
+      isGridRowResize: true,
+      gridContainer,
+    };
+
+    this.startDragEvents(event, resizer, 'vertical');
+
+    log(`📐 [SPLIT-RESIZE] Grid row drag started: row1=${row1Height.toFixed(0)}px, row2=${row2Height.toFixed(0)}px`);
+  }
+
+  /**
+   * Common setup for drag event listeners and visual feedback
+   */
+  private startDragEvents(event: PointerEvent, resizer: HTMLElement, cursorDirection: 'horizontal' | 'vertical'): void {
     // Add visual feedback classes
     document.body.classList.add('resizing-split');
-    document.body.classList.add(`resizing-${direction}`);
+    document.body.classList.add(`resizing-${cursorDirection}`);
     resizer.classList.add('dragging');
 
     // Set pointer capture for smooth tracking
@@ -225,8 +279,6 @@ export class SplitResizeManager {
       'pointercancel',
       () => this.endDrag(false)
     );
-
-    log(`📐 [SPLIT-RESIZE] Drag started: ${beforeId} ↔ ${afterId} (${direction})`);
   }
 
   /**
@@ -246,6 +298,11 @@ export class SplitResizeManager {
    */
   private handlePointerMoveThrottled(event: PointerEvent): void {
     if (!this.dragState.isActive) {
+      return;
+    }
+
+    if (this.dragState.isGridRowResize) {
+      this.handleGridRowMoveThrottled(event);
       return;
     }
 
@@ -280,6 +337,37 @@ export class SplitResizeManager {
   }
 
   /**
+   * Handle grid row resize move - modifies grid-template-rows
+   */
+  private handleGridRowMoveThrottled(event: PointerEvent): void {
+    const { gridContainer } = this.dragState;
+    if (!gridContainer) {
+      return;
+    }
+
+    const currentPosition = event.clientY;
+
+    const { beforeSize, afterSize } = this.calculateNewSizes({
+      startPosition: this.dragState.startPosition,
+      currentPosition,
+      startSizes: this.dragState.startSizes,
+      direction: 'vertical',
+      minSize: SPLIT_RESIZE_CONSTANTS.MIN_RESIZE_SIZE_PX,
+    });
+
+    const totalSize = this.dragState.startSizes.before + this.dragState.startSizes.after;
+    const row1Fr = beforeSize / totalSize;
+    const row2Fr = afterSize / totalSize;
+
+    // Update grid-template-rows: row1 | auto (resizer) | row2
+    gridContainer.style.gridTemplateRows = `${row1Fr}fr auto ${row2Fr}fr`;
+
+    log(
+      `📐 [GRID-RESIZE] Row resize: row1=${(row1Fr * 100).toFixed(1)}%, row2=${(row2Fr * 100).toFixed(1)}%`
+    );
+  }
+
+  /**
    * Handle pointer up
    */
   private handlePointerUp(event: PointerEvent): void {
@@ -303,32 +391,25 @@ export class SplitResizeManager {
    * End drag operation
    */
   private endDrag(notifyPty: boolean): void {
-    // Remove visual feedback classes
-    document.body.classList.remove('resizing-split');
-    document.body.classList.remove('resizing-horizontal');
-    document.body.classList.remove('resizing-vertical');
+    document.body.classList.remove('resizing-split', 'resizing-horizontal', 'resizing-vertical');
 
     if (this.dragState.resizerElement) {
       this.dragState.resizerElement.classList.remove('dragging');
     }
 
-    // Clean up document-level listeners
     this.eventRegistry.unregister('split-resize:document-pointermove');
     this.eventRegistry.unregister('split-resize:document-pointerup');
     this.eventRegistry.unregister('split-resize:document-pointercancel');
 
-    // Dispose throttler
     if (this.moveThrottler) {
       this.moveThrottler.dispose();
       this.moveThrottler = null;
     }
 
-    // Reset drag state
     this.dragState = this.createInitialDragState();
 
     log('📐 [SPLIT-RESIZE] Drag ended');
 
-    // Notify PTY with debounce
     if (notifyPty) {
       this.scheduleRefitCallback();
     }
@@ -391,10 +472,7 @@ export class SplitResizeManager {
    * Reinitialize with new resizers (called when split layout changes)
    */
   public reinitialize(resizers: HTMLElement[]): void {
-    // Cancel any active drag
     this.cancelDrag();
-
-    // Reinitialize with new resizers
     this.initialize(resizers);
   }
 
@@ -408,22 +486,18 @@ export class SplitResizeManager {
 
     log('📐 [SPLIT-RESIZE] Disposing SplitResizeManager');
 
-    // Cancel active drag
     this.cancelDrag();
 
-    // Clear PTY notify timer
     if (this.ptyNotifyTimer !== null) {
       clearTimeout(this.ptyNotifyTimer);
       this.ptyNotifyTimer = null;
     }
 
-    // Dispose throttler
     if (this.moveThrottler) {
       this.moveThrottler.dispose();
       this.moveThrottler = null;
     }
 
-    // Clean up all event listeners
     this.eventRegistry.unregisterByPattern(/^split-resize:/);
     this.eventRegistry.dispose();
 

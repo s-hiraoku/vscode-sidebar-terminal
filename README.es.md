@@ -17,7 +17,7 @@ Tu barra lateral, tu terminal, tus agentes de IA — todo en un solo lugar. Un t
 
 - **Terminal nativo en la barra lateral** — Mantén tu terminal visible mientras editas. No más alternar el panel inferior.
 - **Consciente de agentes de IA** — Detecta automáticamente Claude Code, Copilot, Gemini y Codex. Muestra el estado de conexión en tiempo real y optimiza el renderizado para salida de streaming de IA (hasta 250 fps).
-- **Completo** — Vistas divididas, persistencia de sesiones, integración de shell, búsqueda en terminal, decoraciones de comandos, 89 configuraciones personalizables. No es un juguete — es un terminal de producción.
+- **Completo** — Vistas divididas, persistencia de sesiones, integración de shell, búsqueda en terminal, decoraciones de comandos, 90 configuraciones personalizables. No es un juguete — es un terminal de producción.
 
 ## Inicio Rápido
 
@@ -94,7 +94,7 @@ Tu barra lateral, tu terminal, tus agentes de IA — todo en un solo lugar. Un t
 
 ## Configuración
 
-La extensión tiene 89 configuraciones. Estas son las más impactantes para personalizar:
+La extensión tiene 90 configuraciones. Estas son las más impactantes para personalizar:
 
 ```json
 {
@@ -169,12 +169,12 @@ Busca `secondaryTerminal` en la Configuración de VS Code para ver la lista comp
 
 ```bash
 npm install && npm run compile    # Compilar
-npm test                          # 3.800+ pruebas unitarias
+npm test                          # 4.000+ pruebas unitarias
 npm run test:e2e                  # Pruebas E2E (Playwright)
 npm run watch                     # Modo de vigilancia
 ```
 
-Calidad: TypeScript modo estricto, flujo de trabajo TDD, 3.800+ pruebas unitarias, cobertura E2E con Playwright, compilaciones CI/CD para 9 plataformas.
+Calidad: TypeScript modo estricto, flujo de trabajo TDD, 4.000+ pruebas unitarias, cobertura E2E con Playwright, compilaciones CI/CD para 9 plataformas.
 
 ## Privacidad
 

@@ -221,13 +221,44 @@
   cursor: col-resize;
 }
 
-/* Hover state - visual feedback */
-.split-resizer:hover {
+/* Hover and active dragging state */
+.split-resizer:hover,
+.split-resizer.dragging {
   background: var(--vscode-sash-hoverBorder, #007acc);
 }
 
-/* Active dragging state */
-.split-resizer.dragging {
+/* Hide column resizers in grid mode (only row resize is supported) */
+#terminals-wrapper.terminal-grid-layout .split-resizer {
+  display: none !important;
+}
+
+/* ========================================
+   GRID LAYOUT (6-10 terminals in panel split mode)
+   2-row grid with equal column distribution per row
+   ======================================== */
+
+#terminals-wrapper.terminal-grid-layout {
+  display: grid !important;
+
+  /* 3 rows: content | resizer | content */
+  grid-template-rows: 1fr auto 1fr !important;
+  gap: 4px !important;
+  flex-direction: unset !important;
+}
+
+/* Grid row resizer - sits between the two grid rows */
+.grid-row-resizer {
+  grid-column: 1 / -1;
+  height: 4px;
+  background: var(--vscode-widget-border, #454545);
+  cursor: row-resize;
+  flex-shrink: 0;
+  transition: background-color 0.15s ease;
+  z-index: 1;
+}
+
+.grid-row-resizer:hover,
+.grid-row-resizer.dragging {
   background: var(--vscode-sash-hoverBorder, #007acc);
 }
 
@@ -377,10 +408,6 @@ body.resizing-vertical * {
    VS CODE STYLE CURSOR
    Smooth cursor animation like VS Code terminal
    ======================================== */
-
-.xterm-cursor-layer {
-  /* Cursor layer positioning */
-}
 
 /* Blinking cursor animation */
 @keyframes terminal-cursor-blink {
