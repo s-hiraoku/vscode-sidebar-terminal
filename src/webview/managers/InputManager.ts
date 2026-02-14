@@ -977,9 +977,6 @@ export class InputManager extends BaseManager implements IInputManager {
 
     const globalKeyHandler = (event: KeyboardEvent): void => {
       const manager = this.coordinator;
-      if (manager && this.handlePanelNavigationKey(event, manager)) {
-        return;
-      }
 
       // Handle keyboard shortcuts and commands here
       // This will be populated with global shortcut handling logic

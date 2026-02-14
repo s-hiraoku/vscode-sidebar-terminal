@@ -189,8 +189,9 @@ describe('InputManager', () => {
     });
 
     it('should enter panel navigation mode on Ctrl+P', () => {
-      // Given: initialized manager
+      // Given: initialized manager with keyboard shortcuts
       manager.initialize();
+      manager.setupKeyboardShortcuts(mockCoordinator);
 
       // When: press Ctrl+P
       const enterModeEvent = new dom.window.KeyboardEvent('keydown', {
@@ -211,6 +212,7 @@ describe('InputManager', () => {
     it('should navigate panels while in panel navigation mode', () => {
       // Given: manager in panel navigation mode
       manager.initialize();
+      manager.setupKeyboardShortcuts(mockCoordinator);
       const enterEvent = new dom.window.KeyboardEvent('keydown', {
         key: 'p', ctrlKey: true, bubbles: true, cancelable: true,
       });
@@ -242,6 +244,7 @@ describe('InputManager', () => {
     it('should exit panel navigation mode on Escape', () => {
       // Given: manager in panel navigation mode
       manager.initialize();
+      manager.setupKeyboardShortcuts(mockCoordinator);
       dom.window.document.dispatchEvent(new dom.window.KeyboardEvent('keydown', {
         key: 'p', ctrlKey: true, bubbles: true, cancelable: true,
       }));
@@ -268,6 +271,7 @@ describe('InputManager', () => {
     it('should exit panel navigation mode on Ctrl+P when already in mode', () => {
       // Given: manager in panel navigation mode
       manager.initialize();
+      manager.setupKeyboardShortcuts(mockCoordinator);
       dom.window.document.dispatchEvent(new dom.window.KeyboardEvent('keydown', {
         key: 'p', ctrlKey: true, bubbles: true, cancelable: true,
       }));
@@ -287,6 +291,7 @@ describe('InputManager', () => {
 
     it('should ignore non-navigation keys in panel navigation mode', () => {
       manager.initialize();
+      manager.setupKeyboardShortcuts(mockCoordinator);
 
       // Enter panel navigation mode
       const enterModeEvent = new dom.window.KeyboardEvent('keydown', {
@@ -316,6 +321,7 @@ describe('InputManager', () => {
 
     it('should not send navigation events when no active terminal', () => {
       manager.initialize();
+      manager.setupKeyboardShortcuts(mockCoordinator);
 
       // Set no active terminal
       mockCoordinator.getActiveTerminalId.mockReturnValue(null);
@@ -344,6 +350,7 @@ describe('InputManager', () => {
 
     it('should fallback to DOM active terminal when active terminal id is temporarily null', () => {
       manager.initialize();
+      manager.setupKeyboardShortcuts(mockCoordinator);
 
       const activeContainer = dom.window.document.createElement('div');
       activeContainer.className = 'terminal-container active';
@@ -379,6 +386,7 @@ describe('InputManager', () => {
 
     it('should not enter panel navigation mode with Ctrl+Shift+P or Ctrl+Alt+P', () => {
       manager.initialize();
+      manager.setupKeyboardShortcuts(mockCoordinator);
 
       // Ctrl+Shift+P should NOT enter navigation mode
       const ctrlShiftP = new dom.window.KeyboardEvent('keydown', {
@@ -413,6 +421,7 @@ describe('InputManager', () => {
 
     it('should not enter panel navigation mode with Cmd+P on macOS', () => {
       manager.initialize();
+      manager.setupKeyboardShortcuts(mockCoordinator);
 
       const enterModeEvent = new dom.window.KeyboardEvent('keydown', {
         key: 'p',
@@ -441,6 +450,7 @@ describe('InputManager', () => {
 
     it('should exit panel navigation mode on dispose', () => {
       manager.initialize();
+      manager.setupKeyboardShortcuts(mockCoordinator);
 
       // Enter panel navigation mode
       const enterModeEvent = new dom.window.KeyboardEvent('keydown', {
@@ -457,6 +467,7 @@ describe('InputManager', () => {
       // Re-create manager and initialize
       manager = new InputManager(mockCoordinator);
       manager.initialize();
+      manager.setupKeyboardShortcuts(mockCoordinator);
       mockCoordinator.postMessageToExtension.mockClear();
 
       // Arrow key should NOT trigger navigation (mode was cleared)
@@ -472,6 +483,7 @@ describe('InputManager', () => {
 
     it('should map vim keys and arrow keys to terminal switch events in panel navigation mode', () => {
       manager.initialize();
+      manager.setupKeyboardShortcuts(mockCoordinator);
 
       const enterModeEvent = new dom.window.KeyboardEvent('keydown', {
         key: 'p',
@@ -518,6 +530,7 @@ describe('InputManager', () => {
 
     it('should allow panel navigation mode to be enabled externally', () => {
       manager.initialize();
+      manager.setupKeyboardShortcuts(mockCoordinator);
       (manager as any).setPanelNavigationMode(true);
       mockCoordinator.postMessageToExtension.mockClear();
 
