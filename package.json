@@ -2,7 +2,7 @@
   "name": "vscode-sidebar-terminal",
   "displayName": "Secondary Terminal",
   "description": "Production-ready VS Code extension with TypeScript-compliant terminal in sidebar, ProcessState/InteractionState management, and comprehensive session management.",
-  "version": "0.2.25",
+  "version": "0.2.26",
   "publisher": "s-hiraoku",
   "sideEffects": false,
   "engines": {
@@ -211,6 +211,16 @@
       {
         "command": "secondaryTerminal.focusPreviousTerminal",
         "title": "Focus Previous Terminal",
+        "category": "Secondary Terminal"
+      },
+      {
+        "command": "secondaryTerminal.togglePanelNavigationMode",
+        "title": "Toggle Panel Navigation Mode",
+        "category": "Secondary Terminal"
+      },
+      {
+        "command": "secondaryTerminal.exitPanelNavigationMode",
+        "title": "Exit Panel Navigation Mode",
         "category": "Secondary Terminal"
       },
       {
@@ -952,6 +962,63 @@
         "key": "ctrl+k",
         "mac": "cmd+k",
         "when": "terminalFocus && view == secondaryTerminal"
+      },
+      {
+        "command": "secondaryTerminal.togglePanelNavigationMode",
+        "key": "ctrl+p",
+        "mac": "ctrl+p",
+        "when": "view == secondaryTerminal && !secondaryTerminal.panelNavigationMode"
+      },
+      {
+        "command": "secondaryTerminal.exitPanelNavigationMode",
+        "key": "ctrl+p",
+        "mac": "ctrl+p",
+        "when": "view == secondaryTerminal && secondaryTerminal.panelNavigationMode"
+      },
+      {
+        "command": "secondaryTerminal.exitPanelNavigationMode",
+        "key": "escape",
+        "when": "view == secondaryTerminal && secondaryTerminal.panelNavigationMode"
+      },
+      {
+        "command": "secondaryTerminal.focusPreviousTerminal",
+        "key": "h",
+        "when": "terminalFocus && view == secondaryTerminal && secondaryTerminal.panelNavigationMode"
+      },
+      {
+        "command": "secondaryTerminal.focusNextTerminal",
+        "key": "j",
+        "when": "terminalFocus && view == secondaryTerminal && secondaryTerminal.panelNavigationMode"
+      },
+      {
+        "command": "secondaryTerminal.focusPreviousTerminal",
+        "key": "k",
+        "when": "terminalFocus && view == secondaryTerminal && secondaryTerminal.panelNavigationMode"
+      },
+      {
+        "command": "secondaryTerminal.focusNextTerminal",
+        "key": "l",
+        "when": "terminalFocus && view == secondaryTerminal && secondaryTerminal.panelNavigationMode"
+      },
+      {
+        "command": "secondaryTerminal.focusPreviousTerminal",
+        "key": "left",
+        "when": "terminalFocus && view == secondaryTerminal && secondaryTerminal.panelNavigationMode"
+      },
+      {
+        "command": "secondaryTerminal.focusNextTerminal",
+        "key": "right",
+        "when": "terminalFocus && view == secondaryTerminal && secondaryTerminal.panelNavigationMode"
+      },
+      {
+        "command": "secondaryTerminal.focusPreviousTerminal",
+        "key": "up",
+        "when": "terminalFocus && view == secondaryTerminal && secondaryTerminal.panelNavigationMode"
+      },
+      {
+        "command": "secondaryTerminal.focusNextTerminal",
+        "key": "down",
+        "when": "terminalFocus && view == secondaryTerminal && secondaryTerminal.panelNavigationMode"
       },
       {
         "command": "secondaryTerminal.scrollToPreviousCommand",

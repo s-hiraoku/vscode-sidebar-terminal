@@ -42,6 +42,13 @@ const InputTimings = {
   INPUT_DEBOUNCE_DELAY_MS: 50,
 } as const;
 
+/**
+ * Key sets for panel navigation mode directional movement.
+ * Hoisted to module scope to avoid recreating on every keypress.
+ */
+const PREVIOUS_NAVIGATION_KEYS = new Set(['h', 'k', 'ArrowLeft', 'ArrowUp']);
+const NEXT_NAVIGATION_KEYS = new Set(['j', 'l', 'ArrowRight', 'ArrowDown']);
+
 export class InputManager extends BaseManager implements IInputManager {
   // Event handler registry for centralized event management
   protected readonly eventRegistry = new EventHandlerRegistry();
@@ -113,6 +120,9 @@ export class InputManager extends BaseManager implements IInputManager {
 
   // Simple arrow key handling for agent interactions
   private agentInteractionMode = false;
+  // Zellij-style panel navigation mode (Ctrl+P to toggle)
+  private panelNavigationMode = false;
+  private panelNavigationIndicator: HTMLElement | null = null;
 
   /**
    * Set the notification manager for Alt+Click feedback
@@ -208,6 +218,10 @@ export class InputManager extends BaseManager implements IInputManager {
     this.logger('Setting up VS Code compatible keyboard shortcuts');
 
     const shortcutHandler = (event: KeyboardEvent): void => {
+      if (this.handlePanelNavigationKey(event, manager)) {
+        return;
+      }
+
       // VS Code standard: Check IME composition before processing shortcuts
       if (this.imeHandler.isIMEComposing()) {
         this.logger(`Keyboard shortcut blocked during IME composition: ${event.key}`);
@@ -962,6 +976,8 @@ export class InputManager extends BaseManager implements IInputManager {
     this.logger('Setting up global keyboard listener');
 
     const globalKeyHandler = (event: KeyboardEvent): void => {
+      const manager = this.coordinator;
+
       // Handle keyboard shortcuts and commands here
       // This will be populated with global shortcut handling logic
       if (event.ctrlKey && event.shiftKey && event.key === 'D') {
@@ -970,7 +986,6 @@ export class InputManager extends BaseManager implements IInputManager {
       }
 
       // Handle special keys (Ctrl+C/V, etc.) for the active terminal
-      const manager = this.coordinator;
       if (manager) {
         const activeTerminalId = manager.getActiveTerminalId();
         if (activeTerminalId) {
@@ -992,6 +1007,110 @@ export class InputManager extends BaseManager implements IInputManager {
       globalKeyHandler as EventListener,
       true
     );
+  }
+
+  private resolveNavigationTerminalId(manager: IManagerCoordinator): string | null {
+    const activeTerminalId = manager.getActiveTerminalId?.();
+    if (activeTerminalId) {
+      return activeTerminalId;
+    }
+
+    const activeContainer = document.querySelector('.terminal-container.active');
+    const fallbackTerminalId = activeContainer?.getAttribute('data-terminal-id');
+    return fallbackTerminalId || null;
+  }
+
+  private handlePanelNavigationKey(event: KeyboardEvent, manager: IManagerCoordinator): boolean {
+    const normalizedKey = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+    const isToggleShortcut =
+      !event.shiftKey &&
+      !event.altKey &&
+      normalizedKey === 'p' &&
+      event.ctrlKey &&
+      !event.metaKey;
+
+    if (isToggleShortcut) {
+      this.setPanelNavigationMode(!this.panelNavigationMode);
+      event.preventDefault();
+      event.stopPropagation();
+      this.logger(`Panel navigation mode: ${this.panelNavigationMode ? 'enabled' : 'disabled'}`);
+      return true;
+    }
+
+    if (!this.panelNavigationMode) {
+      return false;
+    }
+
+    if (event.key === 'Escape') {
+      this.setPanelNavigationMode(false);
+      event.preventDefault();
+      event.stopPropagation();
+      this.logger('Panel navigation mode: disabled (Escape)');
+      return true;
+    }
+
+    let interactionType: 'switch-next' | 'switch-previous' | null = null;
+    if (PREVIOUS_NAVIGATION_KEYS.has(normalizedKey)) {
+      interactionType = 'switch-previous';
+    } else if (NEXT_NAVIGATION_KEYS.has(normalizedKey)) {
+      interactionType = 'switch-next';
+    } else {
+      // Block non-navigation keys from reaching the terminal while in panel navigation mode
+      event.preventDefault();
+      event.stopPropagation();
+      this.logger(`Ignored non-navigation key in panel navigation mode: ${event.key}`);
+      return true;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const activeTerminalId = this.resolveNavigationTerminalId(manager);
+    if (activeTerminalId) {
+      this.emitTerminalInteractionEvent(interactionType, activeTerminalId, undefined, manager);
+    } else {
+      this.logger('Panel navigation requested but no active terminal could be resolved');
+    }
+
+    return true;
+  }
+
+  public setPanelNavigationMode(enabled: boolean): void {
+    this.panelNavigationMode = enabled;
+    document.body.classList.toggle('panel-navigation-mode', enabled);
+
+    const indicator = this.getOrCreatePanelNavigationIndicator();
+    indicator.style.display = enabled ? 'block' : 'none';
+  }
+
+  private getOrCreatePanelNavigationIndicator(): HTMLElement {
+    if (this.panelNavigationIndicator && document.body.contains(this.panelNavigationIndicator)) {
+      return this.panelNavigationIndicator;
+    }
+
+    const indicator = document.createElement('div');
+    indicator.className = 'panel-navigation-indicator';
+    indicator.textContent = 'PANEL MODE (h/j/k/l, arrows, Esc)';
+    Object.assign(indicator.style, {
+      position: 'fixed',
+      top: '8px',
+      right: '8px',
+      zIndex: '10000',
+      padding: '4px 8px',
+      borderRadius: '4px',
+      fontSize: '11px',
+      fontWeight: '600',
+      letterSpacing: '0.04em',
+      textTransform: 'uppercase',
+      background: 'var(--vscode-badge-background, #0e639c)',
+      color: 'var(--vscode-badge-foreground, #ffffff)',
+      pointerEvents: 'none',
+      display: 'none',
+    });
+
+    document.body.appendChild(indicator);
+    this.panelNavigationIndicator = indicator;
+    return indicator;
   }
 
   /**
@@ -1447,6 +1566,11 @@ export class InputManager extends BaseManager implements IInputManager {
       isAltKeyPressed: false,
     };
     this.agentInteractionMode = false;
+    this.setPanelNavigationMode(false);
+    if (this.panelNavigationIndicator) {
+      this.panelNavigationIndicator.remove();
+      this.panelNavigationIndicator = null;
+    }
 
     // Dispose IME handler
     this.imeHandler.dispose();

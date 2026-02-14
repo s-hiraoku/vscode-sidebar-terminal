@@ -26,12 +26,6 @@ Your sidebar, your terminal, your AI agents -- all in one place. A full-featured
 2. **Open**: Click the terminal icon (ST) in the activity bar
 3. **Use**: A terminal opens with your default shell. Run `claude`, `codex`, `gemini`, or `gh copilot` and watch the AI agent status appear in the header.
 
-## Latest Update (v0.2.24)
-
-- Improved secondary sidebar maximize stability on the first command interaction.
-- In manual `secondaryTerminal.panelLocation` mode (`sidebar` / `panel`), auto-detection reports are no longer allowed to override the configured location.
-- Removed activation-time panel location context initialization that could trigger unnecessary VS Code layout recalculation.
-
 ## Feature Highlights
 
 ### For AI Agent Workflows
@@ -66,6 +60,7 @@ Your sidebar, your terminal, your AI agents -- all in one place. A full-featured
 | **Full IME support** | Japanese, Chinese, Korean input with VS Code standard handling         |
 | **Link detection**   | File paths open in VS Code, URLs open in browser, email links detected |
 | **Alt+Click**        | VS Code-standard cursor positioning                                    |
+| **Panel Navigation** | Zellij-style mode for quick terminal switching                         |
 | **Mouse tracking**   | TUI app support (vim, htop, zellij) with automatic mouse mode          |
 | **Full clipboard**   | Ctrl/Cmd+C/V with image paste support                                  |
 | **Cross-platform**   | Windows, macOS, Linux -- 9 platform-specific builds                    |
@@ -89,9 +84,17 @@ Your sidebar, your terminal, your AI agents -- all in one place. A full-featured
 | `Cmd+Up/Down` (Mac) / `Ctrl+Up/Down`          | Scroll to previous/next command                     |
 | `Alt+Cmd+Left/Right` (Mac) / `Alt+Left/Right` | Focus previous/next terminal                        |
 | `Cmd+Alt+1..5` (Mac) / `Alt+1..5`             | Focus terminal by index                             |
+| `Ctrl+P`                                      | Toggle Panel Navigation Mode (Zellij-style)         |
 | `Cmd+R` / `Ctrl+R`                            | Run recent command                                  |
 | `Cmd+A` / `Ctrl+A`                            | Select all terminal content                         |
 | `Ctrl+Shift+D`                                | Toggle debug panel                                  |
+
+### Panel Navigation Mode (Zellij-style)
+
+Use `Ctrl+P` to enter a dedicated navigation mode (`Cmd+P` on macOS is reserved for VS Code Quick Open). While active:
+- Use `h`, `j`, `k`, `l` or `Arrow keys` to switch between split terminals.
+- Press `Ctrl+P` again or `Escape` to exit.
+- A visual indicator appears in the top-right corner while in navigation mode.
 
 > **Claude Code tips**:
 >

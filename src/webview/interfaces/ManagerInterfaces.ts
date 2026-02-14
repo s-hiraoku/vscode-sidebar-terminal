@@ -280,6 +280,7 @@ export interface IInputManager {
     allowChords?: boolean;
     allowMnemonics?: boolean;
   }): void;
+  setPanelNavigationMode?(enabled: boolean): void;
   dispose(): void;
 }
 

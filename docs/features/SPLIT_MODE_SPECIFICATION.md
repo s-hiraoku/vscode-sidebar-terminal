@@ -84,6 +84,27 @@ After: 4 terminals, each 25% size
 - TC-8.2: Toggle split direction → Existing layout switches between stacked and side-by-side
 - TC-8.3: Move panel from sidebar to bottom (auto mode) → Layout switches from vertical to horizontal
 
+### REQ-9: Panel Navigation Mode (Zellij-style)
+**Description**: Users can enter a dedicated navigation mode to switch between terminals using vim-style keys or arrow keys.
+
+**Activation**:
+- Toggle Mode: `Ctrl+P` (all platforms; `Cmd+P` is reserved for VS Code Quick Open on macOS)
+- Exit Mode: `Ctrl+P` again OR `Escape` key
+
+**Behaviors**:
+- While active, regular keyboard input is intercepted and mapped to navigation commands.
+- Visual indicator: A badge appears in the top-right corner showing "PANEL MODE (h/j/k/l, arrows, Esc)".
+- Navigation Keys:
+  - `h` / `ArrowLeft` / `k` / `ArrowUp`: Switch to previous terminal.
+  - `j` / `ArrowDown` / `l` / `ArrowRight`: Switch to next terminal.
+- Terminal focus follows the navigation (tab highlighted and cursor focused).
+
+**Test Cases**:
+- TC-9.1: Press `Ctrl+P` → Mode enters, indicator shown.
+- TC-9.2: Press `l` in mode → Focus moves to next terminal.
+- TC-9.3: Press `Escape` → Mode exits, indicator hidden.
+- TC-9.4: Typing normal characters in mode → No input sent to terminal.
+
 ### REQ-3: Adding Terminal in Fullscreen Mode
 **Description**: When adding a new terminal while in fullscreen mode, system must transition to split mode first, then add new terminal.
 

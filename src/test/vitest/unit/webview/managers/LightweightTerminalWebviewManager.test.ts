@@ -75,6 +75,47 @@ describe('LightweightTerminalWebviewManager', () => {
       expect(tabs.setActiveTab).toHaveBeenCalledWith('term-1');
       expect(ui.updateTerminalBorders).toHaveBeenCalled();
     });
+
+    it('should focus specified terminal when target terminalId is provided', () => {
+      const lifecycle = (manager as any).terminalLifecycleManager;
+      const focusT1 = vi.fn();
+      const focusT2 = vi.fn();
+
+      lifecycle.getActiveTerminalId.mockReturnValue('t1');
+      lifecycle.getTerminalInstance.mockImplementation((id: string) => {
+        if (id === 't1') {
+          return { terminal: { focus: focusT1 } };
+        }
+        if (id === 't2') {
+          return { terminal: { focus: focusT2 } };
+        }
+        return undefined;
+      });
+
+      (manager as any).ensureTerminalFocus('t2');
+
+      expect(lifecycle.setActiveTerminalId).toHaveBeenCalledWith('t2');
+      expect(focusT2).toHaveBeenCalledTimes(1);
+      expect(focusT1).not.toHaveBeenCalled();
+    });
+
+    it('should focus currently active terminal when terminalId is not provided', () => {
+      const lifecycle = (manager as any).terminalLifecycleManager;
+      const focusT1 = vi.fn();
+
+      lifecycle.getActiveTerminalId.mockReturnValue('t1');
+      lifecycle.getTerminalInstance.mockImplementation((id: string) => {
+        if (id === 't1') {
+          return { terminal: { focus: focusT1 } };
+        }
+        return undefined;
+      });
+
+      manager.ensureTerminalFocus();
+
+      expect(lifecycle.setActiveTerminalId).not.toHaveBeenCalled();
+      expect(focusT1).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('Terminal Operations', () => {

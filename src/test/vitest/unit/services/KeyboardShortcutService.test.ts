@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => {
       commandHandlers.set(command, handler);
       return { dispose: vi.fn() };
     }),
+    executeCommand: vi.fn(),
   };
 
   const mockWindow = {
@@ -88,6 +89,53 @@ describe('KeyboardShortcutService', () => {
       command: 'setDisplayMode',
       mode: 'fullscreen',
       forceNextCreate: true,
+    });
+  });
+
+  it('should toggle panel navigation mode context via command', async () => {
+    const handler = commandHandlers.get('secondaryTerminal.togglePanelNavigationMode');
+    expect(handler).toBeDefined();
+
+    await handler?.();
+    expect(mocks.mockCommands.executeCommand).toHaveBeenCalledWith(
+      'setContext',
+      'secondaryTerminal.panelNavigationMode',
+      true
+    );
+    expect(webviewProvider.sendMessageToWebview).toHaveBeenCalledWith({
+      command: 'panelNavigationMode',
+      enabled: true,
+    });
+
+    await handler?.();
+    expect(mocks.mockCommands.executeCommand).toHaveBeenCalledWith(
+      'setContext',
+      'secondaryTerminal.panelNavigationMode',
+      false
+    );
+    expect(webviewProvider.sendMessageToWebview).toHaveBeenCalledWith({
+      command: 'panelNavigationMode',
+      enabled: false,
+    });
+  });
+
+  it('should exit panel navigation mode context via command', async () => {
+    const toggleHandler = commandHandlers.get('secondaryTerminal.togglePanelNavigationMode');
+    const exitHandler = commandHandlers.get('secondaryTerminal.exitPanelNavigationMode');
+    expect(toggleHandler).toBeDefined();
+    expect(exitHandler).toBeDefined();
+
+    await toggleHandler?.();
+    await exitHandler?.();
+
+    expect(mocks.mockCommands.executeCommand).toHaveBeenLastCalledWith(
+      'setContext',
+      'secondaryTerminal.panelNavigationMode',
+      false
+    );
+    expect(webviewProvider.sendMessageToWebview).toHaveBeenLastCalledWith({
+      command: 'panelNavigationMode',
+      enabled: false,
     });
   });
 });

@@ -93,6 +93,13 @@ All interactive elements support keyboard navigation:
 - **Enter** - Activate buttons
 - **Escape** - Close panel
 
+#### Panel Navigation Mode (Zellij-style)
+Provides a high-efficiency alternative for switching between split terminals without leaving the home row:
+- **Ctrl+P** - Toggle navigation mode (Cmd+P is reserved for VS Code Quick Open on macOS)
+- **h / j / k / l** - Switch terminal (vim-style)
+- **Arrow keys** - Switch terminal
+- **Escape** - Exit mode
+
 ### 3. Screen Reader Support
 
 #### Accessibility Utilities (`AccessibilityUtils.ts`)

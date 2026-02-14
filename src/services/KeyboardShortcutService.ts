@@ -15,6 +15,7 @@ export class KeyboardShortcutService {
   private _commandHistory: string[] = [];
   private _currentHistoryIndex: number = -1;
   private _searchBox: vscode.InputBox | null = null;
+  private _panelNavigationMode = false;
 
   constructor(terminalManager: TerminalManager) {
     this._terminalManager = terminalManager;
@@ -48,6 +49,18 @@ export class KeyboardShortcutService {
     this._disposables.add(
       vscode.commands.registerCommand('secondaryTerminal.focusPreviousTerminal', () => {
         this.focusPreviousTerminal();
+      })
+    );
+
+    this._disposables.add(
+      vscode.commands.registerCommand('secondaryTerminal.togglePanelNavigationMode', () => {
+        void this.togglePanelNavigationMode();
+      })
+    );
+
+    this._disposables.add(
+      vscode.commands.registerCommand('secondaryTerminal.exitPanelNavigationMode', () => {
+        void this.exitPanelNavigationMode();
       })
     );
 
@@ -430,8 +443,37 @@ export class KeyboardShortcutService {
    * Dispose of resources
    */
   public dispose(): void {
+    if (this._panelNavigationMode) {
+      void vscode.commands.executeCommand('setContext', 'secondaryTerminal.panelNavigationMode', false);
+      this._panelNavigationMode = false;
+    }
     this._disposables.dispose();
     this._searchBox?.dispose();
     log('🧹 [KEYBOARD] Service disposed');
+  }
+
+  private async togglePanelNavigationMode(): Promise<void> {
+    await this.setPanelNavigationMode(!this._panelNavigationMode);
+  }
+
+  private async exitPanelNavigationMode(): Promise<void> {
+    if (!this._panelNavigationMode) {
+      return;
+    }
+    await this.setPanelNavigationMode(false);
+  }
+
+  private async setPanelNavigationMode(enabled: boolean): Promise<void> {
+    this._panelNavigationMode = enabled;
+    await vscode.commands.executeCommand(
+      'setContext',
+      'secondaryTerminal.panelNavigationMode',
+      enabled
+    );
+    this.sendWebviewMessage({
+      command: 'panelNavigationMode',
+      enabled,
+    });
+    log(`🧭 [KEYBOARD] Panel navigation mode: ${enabled ? 'enabled' : 'disabled'}`);
   }
 }

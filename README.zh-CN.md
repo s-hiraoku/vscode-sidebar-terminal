@@ -83,9 +83,17 @@
 | `Cmd+Up/Down` (Mac) / `Ctrl+Up/Down`          | 滚动到上/下一个命令                                 |
 | `Alt+Cmd+Left/Right` (Mac) / `Alt+Left/Right` | 聚焦上/下一个终端                                   |
 | `Cmd+Alt+1..5` (Mac) / `Alt+1..5`             | 按索引聚焦终端                                      |
+| `Ctrl+P`                                      | 切换面板导航模式 (Zellij 风格)                      |
 | `Cmd+R` / `Ctrl+R`                            | 运行最近的命令                                      |
 | `Cmd+A` / `Ctrl+A`                            | 全选终端内容                                        |
 | `Ctrl+Shift+D`                                | 切换调试面板                                        |
+
+### 面板导航模式 (Zellij 风格)
+
+使用 `Ctrl+P` 进入专用导航模式（macOS 上 `Cmd+P` 保留用于 VS Code Quick Open）。在该模式下：
+- 使用 `h`, `j`, `k`, `l` 或 `方向键` 在分屏终端之间切换。
+- 再次按下 `Ctrl+P` 或 `Escape` 键退出。
+- 处于导航模式时，右上角会显示视觉指示器。
 
 > **Claude Code 小技巧**：
 >
