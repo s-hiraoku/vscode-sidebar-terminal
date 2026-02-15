@@ -3,6 +3,8 @@ import { KeyboardShortcutService } from '../../../../services/KeyboardShortcutSe
 
 const commandHandlers = new Map<string, (...args: any[]) => unknown>();
 
+const configChangeListeners: Array<(e: any) => void> = [];
+
 const mocks = vi.hoisted(() => {
   const mockCommands = {
     registerCommand: vi.fn((command: string, handler: (...args: any[]) => unknown) => {
@@ -17,15 +19,27 @@ const mocks = vi.hoisted(() => {
     showErrorMessage: vi.fn(),
   };
 
+  const mockWorkspace = {
+    getConfiguration: vi.fn().mockReturnValue({
+      get: vi.fn().mockReturnValue(false),
+    }),
+    onDidChangeConfiguration: vi.fn((listener: (e: any) => void) => {
+      configChangeListeners.push(listener);
+      return { dispose: vi.fn() };
+    }),
+  };
+
   return {
     mockCommands,
     mockWindow,
+    mockWorkspace,
   };
 });
 
 vi.mock('vscode', () => ({
   commands: mocks.mockCommands,
   window: mocks.mockWindow,
+  workspace: mocks.mockWorkspace,
 }));
 
 vi.mock('../../../../utils/logger', () => ({
@@ -39,9 +53,19 @@ describe('KeyboardShortcutService', () => {
 
   beforeEach(() => {
     commandHandlers.clear();
+    configChangeListeners.length = 0;
     mocks.mockCommands.registerCommand.mockClear();
+    mocks.mockCommands.executeCommand.mockClear();
     mocks.mockWindow.showWarningMessage.mockClear();
     mocks.mockWindow.showErrorMessage.mockClear();
+    mocks.mockWorkspace.getConfiguration.mockReturnValue({
+      get: vi.fn().mockReturnValue(false),
+    });
+    mocks.mockWorkspace.onDidChangeConfiguration.mockClear();
+    mocks.mockWorkspace.onDidChangeConfiguration.mockImplementation((listener: (e: any) => void) => {
+      configChangeListeners.push(listener);
+      return { dispose: vi.fn() };
+    });
 
     terminalManager = {
       getDefaultProfile: vi.fn().mockReturnValue(null),
@@ -136,6 +160,74 @@ describe('KeyboardShortcutService', () => {
     expect(webviewProvider.sendMessageToWebview).toHaveBeenLastCalledWith({
       command: 'panelNavigationMode',
       enabled: false,
+    });
+  });
+
+  describe('Panel Navigation Enabled', () => {
+    it('should initialize panel navigation enabled context key from settings (default: false)', () => {
+      expect(mocks.mockCommands.executeCommand).toHaveBeenCalledWith(
+        'setContext',
+        'secondaryTerminal.panelNavigation.enabled',
+        false
+      );
+    });
+
+    it('should initialize panel navigation enabled context key as true when setting is enabled', () => {
+      mocks.mockCommands.executeCommand.mockClear();
+      mocks.mockWorkspace.getConfiguration.mockReturnValue({
+        get: vi.fn().mockReturnValue(true),
+      });
+
+      const svc = new KeyboardShortcutService(terminalManager);
+      expect(mocks.mockCommands.executeCommand).toHaveBeenCalledWith(
+        'setContext',
+        'secondaryTerminal.panelNavigation.enabled',
+        true
+      );
+      svc.dispose();
+    });
+
+    it('should update panel navigation enabled context key when configuration changes', () => {
+      mocks.mockWorkspace.getConfiguration.mockReturnValue({
+        get: vi.fn().mockReturnValue(true),
+      });
+
+      const event = {
+        affectsConfiguration: (key: string) =>
+          key === 'secondaryTerminal.panelNavigation.enabled',
+      };
+      configChangeListeners.forEach((listener) => { listener(event); });
+
+      expect(mocks.mockCommands.executeCommand).toHaveBeenCalledWith(
+        'setContext',
+        'secondaryTerminal.panelNavigation.enabled',
+        true
+      );
+    });
+
+    it('should not react to unrelated configuration changes', () => {
+      mocks.mockCommands.executeCommand.mockClear();
+
+      const event = {
+        affectsConfiguration: (key: string) => key === 'editor.fontSize',
+      };
+      configChangeListeners.forEach((listener) => { listener(event); });
+
+      expect(mocks.mockCommands.executeCommand).not.toHaveBeenCalledWith(
+        'setContext',
+        'secondaryTerminal.panelNavigation.enabled',
+        expect.anything()
+      );
+    });
+
+    it('should clear panel navigation enabled context key on dispose', () => {
+      service.dispose();
+
+      expect(mocks.mockCommands.executeCommand).toHaveBeenCalledWith(
+        'setContext',
+        'secondaryTerminal.panelNavigation.enabled',
+        false
+      );
     });
   });
 });

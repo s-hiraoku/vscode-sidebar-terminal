@@ -699,7 +699,12 @@ export interface WebviewMessage {
     // Additional commands for WebView initialization
     | 'webviewInitialized' // WebView initialization complete
     | 'terminalInitializationComplete' // Terminal initialization complete
-    | 'terminalReady'; // Terminal ready for use
+    | 'terminalReady' // Terminal ready for use
+    // Focus tracking messages (WebView → Extension)
+    | 'terminalFocused' // Terminal gained DOM focus
+    | 'terminalBlurred' // Terminal lost DOM focus
+    // Panel navigation configuration (Extension → WebView)
+    | 'panelNavigationEnabledChanged'; // Panel navigation enabled setting changed
   config?: Partial<TerminalConfig>; // Allow partial config with fontSettings only
   data?: string | any[]; // Support both string and array data
   exitCode?: number;

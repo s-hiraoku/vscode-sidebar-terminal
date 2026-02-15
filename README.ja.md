@@ -16,7 +16,7 @@
 ## なぜ Secondary Terminal？
 
 - **サイドバーネイティブのターミナル** -- 編集中もターミナルを表示したまま。ボトムパネルの切り替え操作は不要です。
-- **AIエージェント対応** -- Claude Code、Copilot、Gemini、Codexを自動検出。リアルタイムの接続状態を表示し、AIストリーミング出力のレンダリングを最適化します（最大250fps）。
+- **AIエージェント対応** -- Claude Code、Copilot、Gemini (v0.28.2+)、Codexを自動検出。リアルタイムの接続状態を表示し、AIストリーミング出力のレンダリングを最適化します（最大250fps）。
 - **フル機能** -- 分割ビュー、セッション永続化、シェル統合、ターミナル内検索、コマンドデコレーション、90のカスタマイズ可能な設定。おもちゃではなく、本番環境で使えるターミナルです。
 
 ## クイックスタート
@@ -32,7 +32,7 @@
 
 |                         |                                                                                                         |
 | ----------------------- | ------------------------------------------------------------------------------------------------------- |
-| **自動検出**            | Claude Code、Codex CLI、Gemini CLI、GitHub Copilot CLIのリアルタイムステータスインジケーター             |
+| **自動検出**            | Claude Code、Codex CLI、Gemini CLI (v0.28.2+)、GitHub Copilot CLIのリアルタイムステータスインジケーター             |
 | **ファイル参照**        | `Cmd+Alt+L` / `Ctrl+Alt+L` で現在のファイルパスを挿入、`Cmd+Alt+A` / `Ctrl+Alt+A` で全オープンファイルを挿入 |
 | **画像貼り付け**        | macOSで `Cmd+V` するとスクリーンショットをClaude Codeに直接貼り付け                                     |
 | **最適化レンダリング**  | AIストリーミング出力向けの250fps適応バッファリング                                                       |
@@ -60,7 +60,7 @@
 | **フルIMEサポート**  | VS Code標準の処理による日本語、中国語、韓国語入力                      |
 | **リンク検出**       | ファイルパスはVS Codeで開き、URLはブラウザで開き、メールリンクも検出   |
 | **Alt+クリック**     | VS Code標準のカーソル位置指定                                          |
-| **パネルナビゲーション** | Zellij風の高速ターミナル切り替えモード                               |
+| **パネルナビゲーション** | オプトイン式のZellij風高速ターミナル切り替えモード                   |
 | **マウストラッキング** | TUIアプリ対応（vim、htop、zellij）、自動マウスモード                  |
 | **フルクリップボード** | Ctrl/Cmd+C/V、画像貼り付け対応                                       |
 | **クロスプラットフォーム** | Windows、macOS、Linux -- 9つのプラットフォーム別ビルド             |
@@ -84,12 +84,14 @@
 | `Cmd+Up/Down` (Mac) / `Ctrl+Up/Down`          | 前/次のコマンドにスクロール                         |
 | `Alt+Cmd+Left/Right` (Mac) / `Alt+Left/Right` | 前/次のターミナルにフォーカス                       |
 | `Cmd+Alt+1..5` (Mac) / `Alt+1..5`             | インデックスでターミナルにフォーカス                |
-| `Ctrl+P`                                      | パネルナビゲーションモードの切り替え (Zellij風)     |
+| `Ctrl+P`                                      | パネルナビゲーションモードの切り替え (要設定有効化) |
 | `Cmd+R` / `Ctrl+R`                            | 最近のコマンドを実行                                |
 | `Cmd+A` / `Ctrl+A`                            | ターミナルの全コンテンツを選択                      |
 | `Ctrl+Shift+D`                                | デバッグパネルの切り替え                            |
 
 ### パネルナビゲーションモード (Zellij風)
+
+> **注意**: パネルナビゲーションはターミナルマルチプレクサ（zellij、tmux、screen）との競合を避けるため、**デフォルトで無効**です。設定で有効化してください: `"secondaryTerminal.panelNavigation.enabled": true`
 
 `Ctrl+P` を使用して、専用のナビゲーションモードに入ります（macOSでは `Cmd+P` はVS Code Quick Open用に予約されています）。有効な間：
 - `h`, `j`, `k`, `l` または `矢印キー` を使用して、分割されたターミナル間を切り替えることができます。
@@ -123,6 +125,9 @@
   // 分割ビュー
   "secondaryTerminal.maxSplitTerminals": 5,
   "secondaryTerminal.dynamicSplitDirection": true,
+
+  // パネルナビゲーション (Zellij風 Ctrl+P)
+  "secondaryTerminal.panelNavigation.enabled": false,
 
   // シェル統合
   "secondaryTerminal.shellIntegration.enabled": true,

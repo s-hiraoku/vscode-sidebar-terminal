@@ -19,6 +19,7 @@ import {
   TerminalOperationsService,
   ScrollDirection,
 } from './input/services/TerminalOperationsService';
+import { isMacPlatform } from '../utils/PlatformUtils';
 
 // ============================================================================
 // Constants
@@ -122,6 +123,7 @@ export class InputManager extends BaseManager implements IInputManager {
   private agentInteractionMode = false;
   // Zellij-style panel navigation mode (Ctrl+P to toggle)
   private panelNavigationMode = false;
+  private panelNavigationEnabled = false;
   private panelNavigationIndicator: HTMLElement | null = null;
 
   /**
@@ -745,17 +747,35 @@ export class InputManager extends BaseManager implements IInputManager {
     // Save disposables for terminal-specific cleanup
     this.terminalDisposables.set(terminalId, disposables);
 
-    // Set up focus handling - xterm.js doesn't have onFocus/onBlur, comment out
-    // terminal.onFocus(() => {
-    //   this.logger(`Terminal ${terminalId} focused`);
-    //   manager.setActiveTerminalId(terminalId);
-    //   this.emitTerminalInteractionEvent('focus', terminalId, undefined, manager);
-    // });
-
-    // Set up blur handling - xterm.js doesn't have onFocus/onBlur, comment out
-    // terminal.onBlur(() => {
-    //   this.logger(`Terminal ${terminalId} blurred`);
-    // });
+    // Focus/blur handling via DOM events on the terminal container
+    // Sends terminalFocused/terminalBlurred messages to extension for context key management
+    const focusInHandler = (): void => {
+      this.logger(`Terminal ${terminalId} focused (focusin)`);
+      manager.postMessageToExtension({
+        command: 'terminalFocused',
+        terminalId,
+        timestamp: Date.now(),
+      });
+    };
+    const focusOutHandler = (event: FocusEvent): void => {
+      // Only send blur if focus moves outside this terminal container
+      if (!container.contains(event.relatedTarget as Node | null)) {
+        this.logger(`Terminal ${terminalId} blurred (focusout)`);
+        manager.postMessageToExtension({
+          command: 'terminalBlurred',
+          terminalId,
+          timestamp: Date.now(),
+        });
+      }
+    };
+    container.addEventListener('focusin', focusInHandler);
+    container.addEventListener('focusout', focusOutHandler);
+    disposables.push({
+      dispose: () => {
+        container.removeEventListener('focusin', focusInHandler);
+        container.removeEventListener('focusout', focusOutHandler);
+      },
+    });
 
     const shouldIgnoreActivationTarget = (event: MouseEvent | PointerEvent): boolean => {
       const target = event.target as HTMLElement | null;
@@ -1020,7 +1040,20 @@ export class InputManager extends BaseManager implements IInputManager {
     return fallbackTerminalId || null;
   }
 
+  public setPanelNavigationEnabled(enabled: boolean): void {
+    this.panelNavigationEnabled = enabled;
+    document.body.classList.toggle('panel-navigation-enabled', enabled);
+    if (!enabled && this.panelNavigationMode) {
+      this.setPanelNavigationMode(false);
+    }
+    this.logger(`Panel navigation enabled: ${enabled}`);
+  }
+
   private handlePanelNavigationKey(event: KeyboardEvent, manager: IManagerCoordinator): boolean {
+    if (!this.panelNavigationEnabled) {
+      return false;
+    }
+
     const normalizedKey = event.key.length === 1 ? event.key.toLowerCase() : event.key;
     const isToggleShortcut =
       !event.shiftKey &&
@@ -1265,7 +1298,7 @@ export class InputManager extends BaseManager implements IInputManager {
     // - Image paste: Send \x16 to trigger Claude Code's native clipboard read
     // We don't intercept keydown here because the paste event needs to fire for clipboard access
     // Use userAgentData if available (modern), fallback to userAgent (deprecated navigator.platform)
-    const isMac = (navigator as any).userAgentData?.platform === 'macOS' || /Mac/.test(navigator.userAgent);
+    const isMac = isMacPlatform();
     if (event.key === 'v') {
       if (isMac && event.metaKey) {
         // macOS Cmd+V: Let paste event handler deal with it
@@ -1345,7 +1378,7 @@ export class InputManager extends BaseManager implements IInputManager {
     manager: IManagerCoordinator
   ): boolean {
     // Use userAgentData if available (modern), fallback to userAgent (deprecated navigator.platform)
-    const isMac = (navigator as any).userAgentData?.platform === 'macOS' || /Mac/.test(navigator.userAgent);
+    const isMac = isMacPlatform();
     const ctrlOrCmd = isMac ? event.metaKey : event.ctrlKey;
 
     // NEVER intercept these - they must go to shell:

@@ -55,6 +55,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    */
   private static readonly CONTEXT_KEYS = {
     PANEL_LOCATION: 'secondaryTerminal.panelLocation',
+    FOCUS: 'secondaryTerminalFocus',
   } as const;
 
   private _terminalIdMapping?: Map<string, string>;
@@ -289,6 +290,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       this._registerWebviewMessageListener(webviewView);
       this._initializeWebviewContent(webviewView);
 
+      // Note: secondaryTerminalFocus context is driven solely by terminalFocused/terminalBlurred
+      // WebView messages. We do not set it here because the panel may be visible but not focused.
+
       return;
     }
 
@@ -314,6 +318,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       // Track initialization completion
       this._lifecycleManager.trackInitializationComplete(startTime);
       this._lifecycleManager.logPerformanceMetrics();
+
+      // Note: secondaryTerminalFocus context is driven solely by terminalFocused/terminalBlurred
+      // WebView messages from the actual DOM focus state. We do not set it unconditionally here.
 
       log('✅ [PROVIDER] WebView setup completed successfully');
       log('🚀 [PROVIDER] === WEBVIEW VIEW RESOLUTION COMPLETE ===');
@@ -424,6 +431,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private _handleWebviewVisible(): void {
     log('🔄 [VISIBILITY] Handling WebView visible event');
 
+    // Note: secondaryTerminalFocus context is NOT set here. Visibility does not imply DOM focus.
+    // The WebView's terminalFocused/terminalBlurred messages are the sole source of truth.
+
     // Guard: Skip panel location detection on simple visibility restore.
     // Only detect on first visibility to prevent unnecessary setContext calls
     // that can cancel VS Code's secondary sidebar maximize state.
@@ -446,7 +456,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
   private _handleWebviewHidden(): void {
     log('🔄 [VISIBILITY] Handling WebView hidden event');
-    // Future: Implement state saving if needed
+    // Clear focus context when WebView is hidden
+    void vscode.commands.executeCommand('setContext', 'secondaryTerminalFocus', false);
   }
 
   private _initializeWebviewContent(webviewView: vscode.WebviewView): void {
@@ -643,6 +654,22 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         command: 'terminalInteraction',
         handler: async (msg: WebviewMessage) =>
           await this._terminalCommandHandlers.handleTerminalInteraction(msg),
+        category: 'terminal' as const,
+      },
+      {
+        command: 'terminalFocused',
+        handler: async (msg: WebviewMessage) => {
+          log(`🎯 [PROVIDER] Terminal focused: ${msg.terminalId}`);
+          await vscode.commands.executeCommand('setContext', 'secondaryTerminalFocus', true);
+        },
+        category: 'terminal' as const,
+      },
+      {
+        command: 'terminalBlurred',
+        handler: async (msg: WebviewMessage) => {
+          log(`🎯 [PROVIDER] Terminal blurred: ${msg.terminalId}`);
+          await vscode.commands.executeCommand('setContext', 'secondaryTerminalFocus', false);
+        },
         category: 'terminal' as const,
       },
       {
@@ -1668,6 +1695,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
   dispose(): void {
     log('🔧 [DEBUG] SecondaryTerminalProvider disposing resources...');
+
+    // Clear context keys
+    void vscode.commands.executeCommand('setContext', 'secondaryTerminalFocus', false);
 
     // Send cleanup message to WebView
     const view = this._lifecycleManager.getView();

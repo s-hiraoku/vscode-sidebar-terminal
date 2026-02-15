@@ -5,6 +5,29 @@ All notable changes to the "Secondary Terminal" extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.27] - 2026-02-15
+
+### Fixed
+
+- **Extension Keybindings Not Working**:
+  - Replaced `terminalFocus` (VS Code native terminal only) with custom `secondaryTerminalFocus` context key in all keybinding `when` conditions.
+  - Added `setContext('secondaryTerminalFocus', true/false)` in `SecondaryTerminalProvider` on WebView resolve, visibility changes, and `terminalFocused`/`terminalBlurred` messages.
+  - Added `attachCustomKeyEventHandler` in `TerminalCreationService` to bypass xterm.js for `Ctrl+P` and panel navigation keys, preventing `^P` from being sent to the shell.
+
+### Changed
+
+- **Panel Navigation Mode Now Opt-In (Default: Disabled)**:
+  - Added `secondaryTerminal.panelNavigation.enabled` setting (default: `false`).
+  - `Ctrl+P` panel navigation toggle is only active when the setting is enabled, preventing conflicts with terminal multiplexers (zellij, tmux, screen) running inside the terminal.
+  - Keybindings for navigation mode keys (`h/j/k/l`, arrow keys, `Escape`) are also gated by this setting.
+  - Removed redundant `secondaryTerminal.multiplexerMode` setting.
+  - Configuration changes are synchronized to WebView in real-time via `panelNavigationEnabledChanged` message.
+
+- **Gemini CLI 0.28.2 Support**:
+  - Confirmed compatibility with the latest Gemini CLI 0.28.2.
+  - Added detection support for new subcommands: `mcp`, `skills`, `extensions`, and `hooks`.
+  - Updated startup detection patterns to handle the latest Gemini CLI output.
+
 ## [0.2.26] - 2026-02-14
 
 ### Added

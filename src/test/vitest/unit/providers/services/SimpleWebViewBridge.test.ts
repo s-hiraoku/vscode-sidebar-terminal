@@ -37,6 +37,7 @@ describe('SimpleWebViewBridge', () => {
       onResize: vi.fn(),
       onDeleteRequest: vi.fn(),
       onTerminalFocused: vi.fn(),
+      onTerminalBlurred: vi.fn(),
       onTitleChange: vi.fn(),
     };
   });
@@ -85,6 +86,18 @@ describe('SimpleWebViewBridge', () => {
       const handler = mockWebview.onDidReceiveMessage.mock.calls[0][0];
       handler({ command: 'input', terminalId: 't1', data: 'abc' });
       expect(mockCallbacks.onInput).toHaveBeenCalledWith('t1', 'abc');
+    });
+
+    it('should dispatch terminalFocused to callbacks', () => {
+      const handler = mockWebview.onDidReceiveMessage.mock.calls[0][0];
+      handler({ command: 'terminalFocused', terminalId: 't1' });
+      expect(mockCallbacks.onTerminalFocused).toHaveBeenCalledWith('t1');
+    });
+
+    it('should dispatch terminalBlurred to callbacks', () => {
+      const handler = mockWebview.onDidReceiveMessage.mock.calls[0][0];
+      handler({ command: 'terminalBlurred', terminalId: 't1' });
+      expect(mockCallbacks.onTerminalBlurred).toHaveBeenCalledWith('t1');
     });
 
     it('should handle unknown commands gracefully', () => {
