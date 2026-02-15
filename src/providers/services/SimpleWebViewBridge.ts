@@ -47,6 +47,7 @@ export type WebViewMessage =
   | { command: 'resize'; terminalId: string; cols: number; rows: number; timestamp?: number }
   | { command: 'deleteTerminal'; terminalId: string; source: string; timestamp?: number }
   | { command: 'terminalFocused'; terminalId: string; timestamp?: number }
+  | { command: 'terminalBlurred'; terminalId: string; timestamp?: number }
   | { command: 'titleChange'; terminalId: string; title: string; timestamp?: number };
 
 /**
@@ -60,6 +61,7 @@ export interface SimpleWebViewCallbacks {
   onResize: (terminalId: string, cols: number, rows: number) => void;
   onDeleteRequest: (terminalId: string, source: string) => void;
   onTerminalFocused: (terminalId: string) => void;
+  onTerminalBlurred: (terminalId: string) => void;
   onTitleChange?: (terminalId: string, title: string) => void;
 }
 
@@ -171,6 +173,10 @@ export class SimpleWebViewBridge {
 
       case 'terminalFocused':
         this._callbacks?.onTerminalFocused(message.terminalId);
+        break;
+
+      case 'terminalBlurred':
+        this._callbacks?.onTerminalBlurred(message.terminalId);
         break;
 
       case 'titleChange':

@@ -583,6 +583,22 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       this.openSettings();
     });
 
+    // WebView window focus/blur: Notify extension for secondaryTerminalFocus context key
+    window.addEventListener('focus', () => {
+      this.postMessageToExtension({
+        command: 'terminalFocused',
+        terminalId: this.getActiveTerminalId() || '',
+        timestamp: Date.now(),
+      });
+    });
+    window.addEventListener('blur', () => {
+      this.postMessageToExtension({
+        command: 'terminalBlurred',
+        terminalId: this.getActiveTerminalId() || '',
+        timestamp: Date.now(),
+      });
+    });
+
     // ページライフサイクル
     this.eventHandlerManager.onPageUnload(() => {
       this.dispose();

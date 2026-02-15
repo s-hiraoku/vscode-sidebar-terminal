@@ -20,6 +20,41 @@ export class KeyboardShortcutService {
   constructor(terminalManager: TerminalManager) {
     this._terminalManager = terminalManager;
     this.registerCommands();
+    this._initializePanelNavigationEnabled();
+  }
+
+  /**
+   * Initialize panel navigation enabled context key from settings and watch for changes
+   */
+  private _initializePanelNavigationEnabled(): void {
+    const config = vscode.workspace.getConfiguration('secondaryTerminal');
+    const enabled = config.get<boolean>('panelNavigation.enabled', false);
+    void vscode.commands.executeCommand(
+      'setContext',
+      'secondaryTerminal.panelNavigation.enabled',
+      enabled
+    );
+    log(`🧭 [KEYBOARD] Panel navigation enabled: ${enabled}`);
+
+    this._disposables.add(
+      vscode.workspace.onDidChangeConfiguration((e) => {
+        if (e.affectsConfiguration('secondaryTerminal.panelNavigation.enabled')) {
+          const newConfig = vscode.workspace.getConfiguration('secondaryTerminal');
+          const newEnabled = newConfig.get<boolean>('panelNavigation.enabled', false);
+          void vscode.commands.executeCommand(
+            'setContext',
+            'secondaryTerminal.panelNavigation.enabled',
+            newEnabled
+          );
+          // Send to WebView so InputManager knows
+          this.sendWebviewMessage({
+            command: 'panelNavigationEnabledChanged',
+            enabled: newEnabled,
+          });
+          log(`🧭 [KEYBOARD] Panel navigation enabled changed: ${newEnabled}`);
+        }
+      })
+    );
   }
 
   /**
@@ -437,6 +472,14 @@ export class KeyboardShortcutService {
   public setWebviewProvider(provider: SecondaryTerminalProvider): void {
     this._webviewProvider = provider;
     log('🔗 [KEYBOARD] Webview provider connected');
+
+    // Send initial panel navigation enabled state to WebView
+    const config = vscode.workspace.getConfiguration('secondaryTerminal');
+    const enabled = config.get<boolean>('panelNavigation.enabled', false);
+    this.sendWebviewMessage({
+      command: 'panelNavigationEnabledChanged',
+      enabled,
+    });
   }
 
   /**
@@ -447,6 +490,7 @@ export class KeyboardShortcutService {
       void vscode.commands.executeCommand('setContext', 'secondaryTerminal.panelNavigationMode', false);
       this._panelNavigationMode = false;
     }
+    void vscode.commands.executeCommand('setContext', 'secondaryTerminal.panelNavigation.enabled', false);
     this._disposables.dispose();
     this._searchBox?.dispose();
     log('🧹 [KEYBOARD] Service disposed');

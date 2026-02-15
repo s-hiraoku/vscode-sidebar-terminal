@@ -16,7 +16,7 @@ Your sidebar, your terminal, your AI agents -- all in one place. A full-featured
 ## Why Secondary Terminal?
 
 - **Sidebar-native terminal** -- Keep your terminal visible while editing. No more toggling the bottom panel.
-- **AI agent aware** -- Auto-detects Claude Code, Copilot, Gemini, Codex. Shows real-time connection status and optimizes rendering for AI streaming output (up to 250fps).
+- **AI agent aware** -- Auto-detects Claude Code, Copilot, Gemini (v0.28.2+), Codex. Shows real-time connection status and optimizes rendering for AI streaming output (up to 250fps).
 - **Full-featured** -- Split views, session persistence, shell integration, find-in-terminal, command decorations, 90 configurable settings. Not a toy -- a production terminal.
 
 ## Quick Start
@@ -32,7 +32,7 @@ Your sidebar, your terminal, your AI agents -- all in one place. A full-featured
 
 |                         |                                                                                                         |
 | ----------------------- | ------------------------------------------------------------------------------------------------------- |
-| **Auto-detection**      | Real-time status indicators for Claude Code, Codex CLI, Gemini CLI, GitHub Copilot CLI                  |
+| **Auto-detection**      | Real-time status indicators for Claude Code, Codex CLI, Gemini CLI (v0.28.2+), GitHub Copilot CLI                  |
 | **File references**     | `Cmd+Alt+L` / `Ctrl+Alt+L` inserts current file path; `Cmd+Alt+A` / `Ctrl+Alt+A` inserts all open files |
 | **Image paste**         | `Cmd+V` on macOS pastes screenshots directly into Claude Code                                           |
 | **Optimized rendering** | 250fps adaptive buffering for AI streaming output                                                       |
@@ -60,7 +60,7 @@ Your sidebar, your terminal, your AI agents -- all in one place. A full-featured
 | **Full IME support** | Japanese, Chinese, Korean input with VS Code standard handling         |
 | **Link detection**   | File paths open in VS Code, URLs open in browser, email links detected |
 | **Alt+Click**        | VS Code-standard cursor positioning                                    |
-| **Panel Navigation** | Zellij-style mode for quick terminal switching                         |
+| **Panel Navigation** | Opt-in Zellij-style mode for quick terminal switching                  |
 | **Mouse tracking**   | TUI app support (vim, htop, zellij) with automatic mouse mode          |
 | **Full clipboard**   | Ctrl/Cmd+C/V with image paste support                                  |
 | **Cross-platform**   | Windows, macOS, Linux -- 9 platform-specific builds                    |
@@ -84,12 +84,14 @@ Your sidebar, your terminal, your AI agents -- all in one place. A full-featured
 | `Cmd+Up/Down` (Mac) / `Ctrl+Up/Down`          | Scroll to previous/next command                     |
 | `Alt+Cmd+Left/Right` (Mac) / `Alt+Left/Right` | Focus previous/next terminal                        |
 | `Cmd+Alt+1..5` (Mac) / `Alt+1..5`             | Focus terminal by index                             |
-| `Ctrl+P`                                      | Toggle Panel Navigation Mode (Zellij-style)         |
+| `Ctrl+P`                                      | Toggle Panel Navigation Mode (opt-in, see below)    |
 | `Cmd+R` / `Ctrl+R`                            | Run recent command                                  |
 | `Cmd+A` / `Ctrl+A`                            | Select all terminal content                         |
 | `Ctrl+Shift+D`                                | Toggle debug panel                                  |
 
 ### Panel Navigation Mode (Zellij-style)
+
+> **Note**: Panel navigation is **disabled by default** to avoid conflicts with terminal multiplexers (zellij, tmux, screen). Enable it in settings: `"secondaryTerminal.panelNavigation.enabled": true`
 
 Use `Ctrl+P` to enter a dedicated navigation mode (`Cmd+P` on macOS is reserved for VS Code Quick Open). While active:
 - Use `h`, `j`, `k`, `l` or `Arrow keys` to switch between split terminals.
@@ -123,6 +125,9 @@ The extension has 90 settings. Here are the most impactful ones to customize:
   // Split view
   "secondaryTerminal.maxSplitTerminals": 5,
   "secondaryTerminal.dynamicSplitDirection": true,
+
+  // Panel navigation (Zellij-style Ctrl+P)
+  "secondaryTerminal.panelNavigation.enabled": false,
 
   // Shell integration
   "secondaryTerminal.shellIntegration.enabled": true,

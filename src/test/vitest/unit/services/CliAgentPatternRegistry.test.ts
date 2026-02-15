@@ -48,6 +48,10 @@ describe('CliAgentPatternRegistry', () => {
     it('should match Gemini startup messages', () => {
       expect(registry.matchStartupOutput('Welcome to Gemini')).toBe('gemini');
       expect(registry.matchStartupOutput('Gemini model initialized')).toBe('gemini');
+      expect(registry.matchStartupOutput('gemini mcp')).toBe('gemini');
+      expect(registry.matchStartupOutput('gemini skills')).toBe('gemini');
+      expect(registry.matchStartupOutput('gemini extensions')).toBe('gemini');
+      expect(registry.matchStartupOutput('gemini hooks')).toBe('gemini');
     });
 
     it('should match GitHub Copilot startup banner with version', () => {

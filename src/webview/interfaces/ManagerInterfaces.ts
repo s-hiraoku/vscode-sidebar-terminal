@@ -281,6 +281,7 @@ export interface IInputManager {
     allowMnemonics?: boolean;
   }): void;
   setPanelNavigationMode?(enabled: boolean): void;
+  setPanelNavigationEnabled?(enabled: boolean): void;
   dispose(): void;
 }
 

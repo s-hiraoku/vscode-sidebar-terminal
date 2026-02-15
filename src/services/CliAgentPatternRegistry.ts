@@ -105,6 +105,10 @@ export class CliAgentPatternRegistry {
         'Usage: gemini',
         'gemini >',
         'gemini:',
+        'gemini mcp',
+        'gemini skills',
+        'gemini extensions',
+        'gemini hooks',
       ],
       startupRegexPatterns: [
         /You are running Gemini CLI.*directory/i,
@@ -120,6 +124,7 @@ export class CliAgentPatternRegistry {
         /gemini-exp/i,
         /gemini.*context left/i,
         /google.*gemini.*chat/i,
+        /gemini\s+(?:mcp|skills|extensions|hooks)/i,
       ],
       activityKeywords: ['gemini', 'google', 'google ai'],
       terminationPatterns: ['Agent powering down. Goodbye!'],

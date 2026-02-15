@@ -75,6 +75,9 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
     registry.set('newTerminal', (msg, coord) => this.handleNewTerminal(msg, coord));
     registry.set('focusTerminal', (msg, coord) => this.handleFocusTerminal(msg, coord));
     registry.set('panelNavigationMode', (msg, coord) => this.handlePanelNavigationMode(msg, coord));
+    registry.set('panelNavigationEnabledChanged', (msg, coord) =>
+      this.handlePanelNavigationEnabledChanged(msg, coord)
+    );
     registry.set('terminalRemoved', (msg, coord) => this.handleTerminalRemoved(msg, coord));
     registry.set('setRestoringSession', (msg, coord) => this.handleSetRestoringSession(msg, coord));
 
@@ -154,6 +157,14 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
   private handlePanelNavigationMode(msg: MessageCommand, coordinator: IManagerCoordinator): void {
     const enabled = Boolean((msg as { enabled?: unknown }).enabled);
     coordinator.inputManager?.setPanelNavigationMode?.(enabled);
+  }
+
+  private handlePanelNavigationEnabledChanged(
+    msg: MessageCommand,
+    coordinator: IManagerCoordinator
+  ): void {
+    const enabled = Boolean((msg as { enabled?: unknown }).enabled);
+    coordinator.inputManager?.setPanelNavigationEnabled?.(enabled);
   }
 
   /**

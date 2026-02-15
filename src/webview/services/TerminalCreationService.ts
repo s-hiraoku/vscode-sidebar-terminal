@@ -649,14 +649,34 @@ export class TerminalCreationService implements Disposable {
     terminal: Terminal,
     terminalContent: HTMLElement
   ): void {
-    // Block xterm.js keydown handling for paste shortcuts
+    // Block xterm.js keydown handling for shortcuts that should be handled by InputManager
     terminal.attachCustomKeyEventHandler((event: KeyboardEvent) => {
       const isMac = (navigator as any).userAgentData?.platform === 'macOS' || /Mac/.test(navigator.userAgent);
+
+      // Paste shortcuts
       if ((isMac && event.metaKey && event.key === 'v') ||
           (event.ctrlKey && event.key === 'v' && !event.shiftKey)) {
         terminalLogger.info(`📋 Paste keydown - bypassing xterm.js key handler`);
         return false;
       }
+
+      // Ctrl+P: Panel navigation mode toggle (bypass xterm.js so InputManager handles it)
+      if (document.body.classList.contains('panel-navigation-enabled') &&
+          event.ctrlKey && !event.shiftKey && !event.altKey && !event.metaKey &&
+          event.key.toLowerCase() === 'p') {
+        return false;
+      }
+
+      // Panel navigation mode keys: let InputManager handle them
+      if (document.body.classList.contains('panel-navigation-mode')) {
+        const key = event.key.toLowerCase();
+        if (key === 'h' || key === 'j' || key === 'k' || key === 'l' ||
+            key === 'arrowleft' || key === 'arrowright' || key === 'arrowup' || key === 'arrowdown' ||
+            key === 'escape') {
+          return false;
+        }
+      }
+
       return true;
     });
 

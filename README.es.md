@@ -32,7 +32,7 @@ Tu barra lateral, tu terminal, tus agentes de IA — todo en un solo lugar. Un t
 
 |                              |                                                                                                          |
 | ---------------------------- | -------------------------------------------------------------------------------------------------------- |
-| **Detección automática**     | Indicadores de estado en tiempo real para Claude Code, Codex CLI, Gemini CLI, GitHub Copilot CLI         |
+| **Detección automática** | Indicadores de estado en tiempo real para Claude Code, Codex CLI, Gemini CLI (v0.28.2+), GitHub Copilot CLI         |
 | **Referencias de archivos**  | `Cmd+Alt+L` / `Ctrl+Alt+L` inserta la ruta del archivo actual; `Cmd+Alt+A` / `Ctrl+Alt+A` inserta todos los archivos abiertos |
 | **Pegado de imágenes**       | `Cmd+V` en macOS pega capturas de pantalla directamente en Claude Code                                   |
 | **Renderizado optimizado**   | Buffering adaptativo de 250 fps para salida de streaming de IA                                            |
