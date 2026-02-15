@@ -290,8 +290,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       this._registerWebviewMessageListener(webviewView);
       this._initializeWebviewContent(webviewView);
 
-      // Restore focus context after panel movement
-      void vscode.commands.executeCommand('setContext', 'secondaryTerminalFocus', true);
+      // Note: secondaryTerminalFocus context is driven solely by terminalFocused/terminalBlurred
+      // WebView messages. We do not set it here because the panel may be visible but not focused.
 
       return;
     }
@@ -319,8 +319,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       this._lifecycleManager.trackInitializationComplete(startTime);
       this._lifecycleManager.logPerformanceMetrics();
 
-      // Set focus context on initial resolve (onDidChangeVisibility won't fire for initial show)
-      void vscode.commands.executeCommand('setContext', 'secondaryTerminalFocus', true);
+      // Note: secondaryTerminalFocus context is driven solely by terminalFocused/terminalBlurred
+      // WebView messages from the actual DOM focus state. We do not set it unconditionally here.
 
       log('✅ [PROVIDER] WebView setup completed successfully');
       log('🚀 [PROVIDER] === WEBVIEW VIEW RESOLUTION COMPLETE ===');
@@ -431,8 +431,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private _handleWebviewVisible(): void {
     log('🔄 [VISIBILITY] Handling WebView visible event');
 
-    // Set focus context when WebView becomes visible
-    void vscode.commands.executeCommand('setContext', 'secondaryTerminalFocus', true);
+    // Note: secondaryTerminalFocus context is NOT set here. Visibility does not imply DOM focus.
+    // The WebView's terminalFocused/terminalBlurred messages are the sole source of truth.
 
     // Guard: Skip panel location detection on simple visibility restore.
     // Only detect on first visibility to prevent unnecessary setContext calls

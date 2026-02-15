@@ -43,6 +43,7 @@ import { terminalLogger } from '../utils/ManagerLogger';
 import { TerminalHeaderElements } from '../factories/HeaderFactory';
 import { DOMUtils } from '../utils/DOMUtils';
 import { getWebviewTheme } from '../utils/WebviewThemeUtils';
+import { isMacPlatform } from '../utils/PlatformUtils';
 
 // Extracted services
 import {
@@ -651,10 +652,10 @@ export class TerminalCreationService implements Disposable {
   ): void {
     // Block xterm.js keydown handling for shortcuts that should be handled by InputManager
     terminal.attachCustomKeyEventHandler((event: KeyboardEvent) => {
-      const isMac = (navigator as any).userAgentData?.platform === 'macOS' || /Mac/.test(navigator.userAgent);
+      const mac = isMacPlatform();
 
       // Paste shortcuts
-      if ((isMac && event.metaKey && event.key === 'v') ||
+      if ((mac && event.metaKey && event.key === 'v') ||
           (event.ctrlKey && event.key === 'v' && !event.shiftKey)) {
         terminalLogger.info(`📋 Paste keydown - bypassing xterm.js key handler`);
         return false;

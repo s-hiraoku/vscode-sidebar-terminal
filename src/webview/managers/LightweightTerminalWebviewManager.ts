@@ -122,6 +122,8 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   private terminalLifecycleManager: TerminalLifecycleCoordinator;
   private cliAgentStateManager: CliAgentStateManager;
   private eventHandlerManager: EventHandlerManager;
+  private _onWindowFocus: (() => void) | null = null;
+  private _onWindowBlur: (() => void) | null = null;
   public shellIntegrationManager: IShellIntegrationBridge;
   public findInTerminalManager: FindInTerminalManager;
   public profileManager: ProfileManager;
@@ -584,20 +586,22 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     });
 
     // WebView window focus/blur: Notify extension for secondaryTerminalFocus context key
-    window.addEventListener('focus', () => {
+    this._onWindowFocus = () => {
       this.postMessageToExtension({
         command: 'terminalFocused',
         terminalId: this.getActiveTerminalId() || '',
         timestamp: Date.now(),
       });
-    });
-    window.addEventListener('blur', () => {
+    };
+    this._onWindowBlur = () => {
       this.postMessageToExtension({
         command: 'terminalBlurred',
         terminalId: this.getActiveTerminalId() || '',
         timestamp: Date.now(),
       });
-    });
+    };
+    window.addEventListener('focus', this._onWindowFocus);
+    window.addEventListener('blur', this._onWindowBlur);
 
     // ページライフサイクル
     this.eventHandlerManager.onPageUnload(() => {
@@ -1959,6 +1963,16 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     try {
       // 設定を保存
       this.saveSettings();
+
+      // Window focus/blur listeners cleanup
+      if (this._onWindowFocus) {
+        window.removeEventListener('focus', this._onWindowFocus);
+        this._onWindowFocus = null;
+      }
+      if (this._onWindowBlur) {
+        window.removeEventListener('blur', this._onWindowBlur);
+        this._onWindowBlur = null;
+      }
 
       // 専門マネージャーのクリーンアップ
       this.eventHandlerManager.dispose();

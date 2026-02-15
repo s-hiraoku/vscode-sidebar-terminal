@@ -19,6 +19,7 @@ import {
   TerminalOperationsService,
   ScrollDirection,
 } from './input/services/TerminalOperationsService';
+import { isMacPlatform } from '../utils/PlatformUtils';
 
 // ============================================================================
 // Constants
@@ -1297,7 +1298,7 @@ export class InputManager extends BaseManager implements IInputManager {
     // - Image paste: Send \x16 to trigger Claude Code's native clipboard read
     // We don't intercept keydown here because the paste event needs to fire for clipboard access
     // Use userAgentData if available (modern), fallback to userAgent (deprecated navigator.platform)
-    const isMac = (navigator as any).userAgentData?.platform === 'macOS' || /Mac/.test(navigator.userAgent);
+    const isMac = isMacPlatform();
     if (event.key === 'v') {
       if (isMac && event.metaKey) {
         // macOS Cmd+V: Let paste event handler deal with it
@@ -1377,7 +1378,7 @@ export class InputManager extends BaseManager implements IInputManager {
     manager: IManagerCoordinator
   ): boolean {
     // Use userAgentData if available (modern), fallback to userAgent (deprecated navigator.platform)
-    const isMac = (navigator as any).userAgentData?.platform === 'macOS' || /Mac/.test(navigator.userAgent);
+    const isMac = isMacPlatform();
     const ctrlOrCmd = isMac ? event.metaKey : event.ctrlKey;
 
     // NEVER intercept these - they must go to shell:

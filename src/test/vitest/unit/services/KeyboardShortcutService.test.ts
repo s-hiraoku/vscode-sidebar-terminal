@@ -196,7 +196,7 @@ describe('KeyboardShortcutService', () => {
         affectsConfiguration: (key: string) =>
           key === 'secondaryTerminal.panelNavigation.enabled',
       };
-      configChangeListeners.forEach((listener) => listener(event));
+      configChangeListeners.forEach((listener) => { listener(event); });
 
       expect(mocks.mockCommands.executeCommand).toHaveBeenCalledWith(
         'setContext',
@@ -211,7 +211,7 @@ describe('KeyboardShortcutService', () => {
       const event = {
         affectsConfiguration: (key: string) => key === 'editor.fontSize',
       };
-      configChangeListeners.forEach((listener) => listener(event));
+      configChangeListeners.forEach((listener) => { listener(event); });
 
       expect(mocks.mockCommands.executeCommand).not.toHaveBeenCalledWith(
         'setContext',
