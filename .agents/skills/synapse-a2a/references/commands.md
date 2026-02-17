@@ -16,6 +16,7 @@ synapse list
   - WAITING = cyan (awaiting user input - selection, confirmation)
   - PROCESSING = yellow (busy handling a task)
   - DONE = blue (task completed, auto-clears after 10s)
+  - SHUTTING_DOWN = red (graceful shutdown in progress)
 - Flicker-free updates
 - **Interactive row selection**: Press 1-9 or ↑/↓ to select an agent row and view full paths in a detail panel
 - **Terminal Jump**: Press `Enter` or `j` to jump directly to the selected agent's terminal
@@ -36,7 +37,7 @@ synapse list
 - **TYPE**: Agent type (claude, gemini, codex, opencode, copilot)
 - **ID**: Full agent ID (e.g., `synapse-claude-8100`)
 - **ROLE**: Role description if set
-- **STATUS**: READY / WAITING / PROCESSING / DONE
+- **STATUS**: READY / WAITING / PROCESSING / DONE / SHUTTING_DOWN
 - **CURRENT**: Current task preview (truncated to 30 chars) - shows what agent is working on
 - **TRANSPORT**: Communication method during inter-agent messages
   - `UDS→` / `TCP→`: Sending via UDS/TCP
@@ -59,6 +60,9 @@ synapse copilot
 
 # With custom name and role
 synapse claude --name my-claude --role "code reviewer"
+
+# Delegate/coordinator mode (no file editing, delegates via synapse send)
+synapse claude --delegate-mode --name coordinator --role "task manager"
 
 # Skip interactive name/role setup
 synapse claude --no-setup
@@ -84,7 +88,31 @@ synapse copilot -- --continue
 # Background mode
 synapse start claude --port 8100
 synapse start claude --port 8100 --foreground  # for debugging
+
+# With SSL/HTTPS
+synapse start claude --port 8100 --ssl-cert cert.pem --ssl-key key.pem
 ```
+
+### Spawn Single Agent
+
+Spawn a single agent in a new terminal pane or window.
+
+```bash
+synapse spawn claude                          # Spawn Claude in a new pane
+synapse spawn gemini --port 8115              # Spawn with explicit port
+synapse spawn claude --name Tester --role "test writer"  # With name/role
+synapse spawn claude --terminal tmux          # Use specific terminal
+
+# Pass tool-specific arguments after '--'
+synapse spawn claude -- --dangerously-skip-permissions
+```
+
+**Headless Mode:**
+When an agent is started via `synapse spawn`, it automatically runs with the `--headless` flag. This skips all interactive setup (name/role prompts, startup animations, and initial instruction approval prompts) to allow for smooth programmatic orchestration. The A2A server remains active, and initial instructions are still sent to enable communication.
+
+**Note:** The spawning agent is responsible for the lifecycle of the spawned agent. Ensure you terminate spawned agents using `synapse kill <target> -f` when their task is complete.
+
+**Pane Auto-Close:** Spawned panes close automatically when the agent process terminates in all supported terminals (tmux, zellij, iTerm2, Terminal.app, Ghostty).
 
 ### Stop Agents
 
@@ -102,7 +130,7 @@ synapse stop claude --all
 ### Kill Agents
 
 ```bash
-# Kill by custom name (highest priority)
+# Graceful shutdown (default): sends A2A shutdown request, waits 30s, then SIGTERM
 synapse kill my-claude
 
 # Kill by agent ID
@@ -111,9 +139,15 @@ synapse kill synapse-claude-8100
 # Kill by agent type (only if single instance)
 synapse kill claude
 
-# Force kill without confirmation
+# Force kill (immediate SIGKILL, skip graceful shutdown)
 synapse kill my-claude -f
 ```
+
+**Graceful shutdown flow:**
+1. Sends `shutdown_request` A2A message to agent
+2. Waits up to 30s (configurable via `shutdown.timeout_seconds` setting)
+3. If no response, sends SIGTERM
+4. With `-f`: sends SIGKILL immediately (previous behavior)
 
 ### Jump to Terminal
 
@@ -177,14 +211,17 @@ If `[REPLY EXPECTED]` marker is present, you **MUST** reply using `synapse reply
 **Replying to messages:**
 
 ```bash
-# Use the reply command (--from is required in sandboxed environments)
+# Use the reply command (auto-routes to last sender)
+synapse reply "<your reply>"
+
+# In sandboxed environments (like Codex), specify your agent ID
 synapse reply "<your reply>" --from <your_agent_id>
 ```
 
 **Example - Question received (MUST reply):**
 ```
 Received: A2A: [REPLY EXPECTED] What is the project structure?
-Reply:    synapse reply "The project has src/, tests/..." --from synapse-codex-8121
+Reply:    synapse reply "The project has src/, tests/..."
 ```
 
 **Example - Delegation received (no reply needed):**
@@ -221,6 +258,9 @@ synapse send <target> "<message>" [--from <sender>] [--priority <1-5>] [--respon
   - 5: Critical/emergency (sends SIGINT first)
 - `--response`: Roundtrip mode - sender waits, receiver MUST reply
 - `--no-response`: Oneway mode - fire and forget, no reply expected
+- `--message-file`: Read message from file (use `-` for stdin)
+- `--stdin`: Read message from stdin
+- `--attach`: Attach file(s) to message (repeatable)
 
 **Choosing --response vs --no-response:**
 
@@ -252,6 +292,22 @@ synapse send claude-8100 "What is your status?" --response --from synapse-gemini
 synapse send codex "STOP" --priority 5 --from synapse-claude-8100
 ```
 
+**Sending long messages or files:**
+```bash
+# Send message from file (avoids ARG_MAX shell limits)
+synapse send claude --message-file /tmp/review.txt --no-response
+
+# Read message from stdin
+echo "long message" | synapse send claude --stdin --no-response
+synapse send claude --message-file - --no-response   # '-' reads from stdin
+
+# Attach files to message
+synapse send claude "Review this" --attach src/main.py --no-response
+synapse send claude "Review these" --attach src/a.py --attach src/b.py --no-response
+```
+
+Messages >100KB are automatically written to temp files (configurable via `SYNAPSE_SEND_MESSAGE_THRESHOLD`).
+
 **Important:** Always use `--from` with your agent ID (format: `synapse-<type>-<port>`).
 
 ### Reply Command
@@ -259,19 +315,19 @@ synapse send codex "STOP" --priority 5 --from synapse-claude-8100
 Reply to the last received message:
 
 ```bash
-synapse reply "<message>" --from <your_agent_id>
+synapse reply "<message>"
 ```
 
-Synapse automatically knows who to reply to based on tracked senders. The `--from` flag is required in sandboxed environments (like Codex).
+Synapse automatically knows who to reply to based on tracked senders. The `--from` flag is only needed in sandboxed environments (like Codex).
 
 If multiple senders are pending, list and choose explicitly:
 
 ```bash
 # Show tracked sender IDs
-synapse reply --list-targets --from <your_agent_id>
+synapse reply --list-targets
 
 # Reply to a specific sender
-synapse reply "<message>" --from <your_agent_id> --to <sender_id>
+synapse reply "<message>" --to <sender_id>
 ```
 
 ### Broadcast Command
@@ -313,9 +369,9 @@ For advanced use cases or external scripts:
 ```bash
 python -m synapse.tools.a2a send --target <AGENT> [--priority <1-5>] "<MESSAGE>"
 python -m synapse.tools.a2a broadcast [--priority <1-5>] [--from <AGENT>] [--response | --no-response] "<MESSAGE>"  # Broadcast to cwd agents
-python -m synapse.tools.a2a reply "<MESSAGE>" --from <AGENT>  # Reply to last received message
-python -m synapse.tools.a2a reply --list-targets --from <AGENT>
-python -m synapse.tools.a2a reply "<MESSAGE>" --from <AGENT> --to <SENDER_ID>
+python -m synapse.tools.a2a reply "<MESSAGE>"  # Reply to last received message
+python -m synapse.tools.a2a reply --list-targets
+python -m synapse.tools.a2a reply "<MESSAGE>" --to <SENDER_ID>
 python -m synapse.tools.a2a list                # List agents
 python -m synapse.tools.a2a cleanup             # Cleanup stale entries
 ```
@@ -387,7 +443,23 @@ synapse history cleanup --days 30
 
 # Keep database under 100MB
 synapse history cleanup --max-size 100
+
+# Preview what would be deleted
+synapse history cleanup --days 30 --dry-run
+
+# Skip VACUUM after deletion (faster)
+synapse history cleanup --days 30 --no-vacuum
 ```
+
+### Trace Task
+
+Trace a task across history and file modifications:
+
+```bash
+synapse trace <task_id>
+```
+
+Shows task history combined with file-safety records for the specified task.
 
 ## Settings Management
 
@@ -411,6 +483,9 @@ Creates `.synapse/` directory with all template files (settings.json, default.md
 # Interactive TUI for editing settings
 synapse config
 
+# Use legacy questionary-based interface instead of Rich TUI
+synapse config --no-rich
+
 # Edit specific scope directly (skip scope selection prompt)
 synapse config --scope user     # Edit ~/.synapse/settings.json
 synapse config --scope project  # Edit ./.synapse/settings.json
@@ -429,12 +504,6 @@ synapse config show --scope project    # Show project settings only
 - **Resume Flags**: CLI flags that indicate session resume mode
 - **List Display**: Configure `synapse list` columns
 
-### Reset Settings
-
-```bash
-synapse reset
-```
-
 ### Settings File Format
 
 `.synapse/settings.json`:
@@ -446,6 +515,17 @@ synapse reset
     "SYNAPSE_FILE_SAFETY_DB_PATH": ".synapse/file_safety.db"
   },
   "approvalMode": "required",
+  "hooks": {
+    "on_idle": "",
+    "on_task_completed": ""
+  },
+  "shutdown": {
+    "timeout_seconds": 30,
+    "graceful_enabled": true
+  },
+  "delegate_mode": {
+    "deny_file_locks": true
+  },
   "list": {
     "columns": ["ID", "NAME", "STATUS", "CURRENT", "TRANSPORT", "WORKING_DIR"]
   }
@@ -464,9 +544,12 @@ synapse reset
 | `SYNAPSE_LONG_MESSAGE_THRESHOLD` | Character threshold for file storage | `200` |
 | `SYNAPSE_LONG_MESSAGE_TTL` | TTL for message files (seconds) | `3600` |
 | `SYNAPSE_LONG_MESSAGE_DIR` | Directory for message files | System temp |
+| `SYNAPSE_TASK_BOARD_ENABLED` | Enable shared task board | `true` |
+| `SYNAPSE_TASK_BOARD_DB_PATH` | Task board DB path | `.synapse/task_board.db` |
 | `SYNAPSE_REGISTRY_DIR` | Local registry directory | `~/.a2a/registry` |
 | `SYNAPSE_EXTERNAL_REGISTRY_DIR` | External registry directory | `~/.a2a/external` |
 | `SYNAPSE_HISTORY_DB_PATH` | History database path | `~/.synapse/history/history.db` |
+| `SYNAPSE_SKILLS_DIR` | Central skill store directory | `~/.synapse/skills` |
 
 Deprecated key:
 - `delegation` was removed in v0.3.19. Use `synapse send` for inter-agent communication.
@@ -481,7 +564,7 @@ Configure which columns to display in `synapse list`:
 | `NAME` | Custom name if set |
 | `TYPE` | Agent type (claude, gemini, etc.) |
 | `ROLE` | Role description |
-| `STATUS` | READY/WAITING/PROCESSING/DONE |
+| `STATUS` | READY/WAITING/PROCESSING/DONE/SHUTTING_DOWN |
 | `CURRENT` | Current task preview |
 | `TRANSPORT` | UDS/TCP communication status |
 | `WORKING_DIR` | Working directory |
@@ -658,13 +741,167 @@ synapse reset --scope both -f
 - `--scope`: Which settings to reset (`user`, `project`, or `both`)
 - `-f, --force`: Skip confirmation prompt
 
-Resets `settings.json` to defaults and re-copies skills from `.claude` to `.codex`.
+Resets `settings.json` to defaults and re-copies skills from `.claude` to `.agents`.
+
+## Shared Task Board
+
+Coordinate tasks across agents with dependency tracking.
+
+```bash
+# List all tasks
+synapse tasks list
+
+# Filter by status or agent
+synapse tasks list --status pending
+synapse tasks list --agent claude
+
+# Create a task
+synapse tasks create "Implement auth module" -d "OAuth2 flow with JWT tokens"
+
+# Create with dependency (blocked until blocker completes)
+synapse tasks create "Write integration tests" --blocked-by <task_id>
+
+# Claim/assign a task
+synapse tasks assign <task_id> claude
+
+# Complete a task (auto-unblocks dependents)
+synapse tasks complete <task_id>
+```
+
+**Storage:** `.synapse/task_board.db` (SQLite with WAL mode)
+
+## Plan Approval
+
+Review and approve agent plans before implementation.
+
+```bash
+# Approve a plan
+synapse approve <task_id>
+
+# Reject with reason
+synapse reject <task_id> --reason "Use OAuth instead of JWT"
+```
+
+**Plan mode:** When `metadata.plan_mode = true` is set in a send request, the agent creates a plan without implementing.
+
+## Team Start (Auto-Spawn Panes)
+
+Start multiple agents in split terminal panes.
+
+**Default behavior:** The 1st agent takes over the current terminal (handoff via `os.execvp`), and remaining agents start in new panes. Use `--all-new` to start all agents in new panes (current terminal stays).
+
+Agent specs use `profile[:name[:role[:skill_set]]]` format. When extra fields are provided, `--no-setup` is added automatically.
+
+```bash
+# Default: claude=current terminal, gemini=new pane
+synapse team start claude gemini
+
+# With names, roles, and skill sets
+synapse team start claude:Reviewer:code-review:reviewer gemini:Searcher
+
+# All agents in new panes (current terminal remains)
+synapse team start claude gemini --all-new
+
+# Horizontal layout
+synapse team start claude gemini --layout horizontal
+
+# Pass tool-specific arguments after '--' (applied to all agents)
+synapse team start claude gemini -- --dangerously-skip-permissions
+```
+
+**Supported terminals:** tmux, iTerm2, Terminal.app (tabs), zellij. Falls back to sequential start if unsupported.
+
+### Team Start via A2A API
+
+Agents can spawn teams programmatically via the `/team/start` endpoint:
+
+```bash
+curl -X POST http://localhost:8100/team/start \
+  -H "Content-Type: application/json" \
+  -d '{"agents": ["gemini", "codex"], "layout": "split"}'
+
+# With tool_args (passed through to underlying CLI tool)
+curl -X POST http://localhost:8100/team/start \
+  -H "Content-Type: application/json" \
+  -d '{"agents": ["gemini", "codex"], "tool_args": ["--dangerously-skip-permissions"]}'
+```
+
+### Spawn via A2A API
+
+Agents can spawn other agents programmatically via the `/spawn` endpoint:
+
+```bash
+curl -X POST http://localhost:8100/spawn \
+  -H "Content-Type: application/json" \
+  -d '{"profile": "gemini", "name": "Helper"}'
+# Response: {"agent_id": "synapse-gemini-8110", "port": 8110, "terminal_used": "tmux", "status": "submitted"}
+
+# With tool_args
+curl -X POST http://localhost:8100/spawn \
+  -H "Content-Type: application/json" \
+  -d '{"profile": "gemini", "tool_args": ["--dangerously-skip-permissions"]}'
+```
+
+## Skill Management
+
+Manage skills across scopes with a central store (`~/.synapse/skills/`).
+
+### Interactive TUI
+
+```bash
+synapse skills
+```
+
+### Non-Interactive Commands
+
+```bash
+# List and browse
+synapse skills list                                # All scopes
+synapse skills list --scope synapse                # Central store only
+synapse skills show <name>                         # Skill details
+
+# Manage
+synapse skills delete <name> [--force]
+synapse skills move <name> --to <scope>
+
+# Central store operations
+synapse skills import <name> [--from user|project] # Import to ~/.synapse/skills/
+synapse skills deploy <name> --agent claude,codex --scope user  # Deploy from central store
+synapse skills add <repo>                          # Install from repo (npx skills wrapper)
+synapse skills create [--name <name>]              # Create new skill template
+
+# Skill sets (named groups)
+synapse skills set list
+synapse skills set show <name>
+```
+
+**Skill Set in Initial Instructions:** When an agent starts with a skill set (via `--skill-set` or interactive selection), the skill set details (name, description, included skills) are automatically included in the agent's initial instructions. This allows the agent to understand its assigned capabilities.
+
+### Skill Scopes
+
+| Scope | Location | Description |
+|-------|----------|-------------|
+| **Synapse** | `~/.synapse/skills/` | Central store (deploy to agents from here) |
+| **User** | `~/.claude/skills/`, `~/.agents/skills/` | User-wide skills |
+| **Project** | `./.claude/skills/`, `./.agents/skills/` | Project-local skills |
+| **Plugin** | `./plugins/*/skills/` | Read-only plugin skills |
+
+### Agent Skill Directories
+
+| Agent | Directory |
+|-------|-----------|
+| Claude | `.claude/skills/` |
+| Codex | `.agents/skills/` |
+| Gemini | `.gemini/skills/` |
+| OpenCode | `.agents/skills/` |
+| Copilot | `.agents/skills/` |
 
 ## Storage Locations
 
 ```text
 ~/.a2a/registry/     # Running agents (auto-cleaned)
 ~/.a2a/external/     # External A2A agents (persistent)
+~/.synapse/skills/   # Central skill store
 ~/.synapse/          # User-level settings and logs
 .synapse/            # Project-level settings
 /tmp/synapse-a2a/    # Unix Domain Sockets (UDS) for inter-agent communication

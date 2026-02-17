@@ -30,7 +30,7 @@ STEP 3: AFTER EDIT COMPLETE
 Record and release the lock:
 
 ```bash
-synapse file-safety record <file_path> {{agent_id}} <task_id> --type MODIFY --intent "what you changed"
+synapse file-safety record <file_path> {{agent_id}} --type MODIFY --intent "what you changed"
 synapse file-safety unlock <file_path> {{agent_id}}
 ```
 
@@ -62,7 +62,7 @@ QUICK REFERENCE TABLE
 | Lock file       | synapse file-safety lock FILE {{agent_id}}           |
 | Unlock file     | synapse file-safety unlock FILE {{agent_id}}         |
 | Check locks     | synapse file-safety locks                            |
-| Record change   | synapse file-safety record FILE {{agent_id}} TASK_ID --type MODIFY |
+| Record change   | synapse file-safety record FILE {{agent_id}} --type MODIFY |
 
 ================================================================================
 EXAMPLE WORKFLOW
@@ -78,7 +78,7 @@ synapse file-safety locks  # Verify lock acquired
 AFTER EDITING src/foo.py:
 
 ```bash
-synapse file-safety record src/foo.py {{agent_id}} <task_id> --type MODIFY --intent "Added null check"
+synapse file-safety record src/foo.py {{agent_id}} --type MODIFY --intent "Added null check"
 synapse file-safety unlock src/foo.py {{agent_id}}
 ```
 
