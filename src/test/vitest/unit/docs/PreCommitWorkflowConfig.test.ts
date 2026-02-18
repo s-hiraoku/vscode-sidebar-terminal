@@ -5,7 +5,6 @@ import path from 'path';
 type PackageJson = {
   scripts?: Record<string, string>;
   devDependencies?: Record<string, string>;
-  'lint-staged'?: Record<string, string[]>;
   [key: string]: unknown;
 };
 
@@ -43,23 +42,48 @@ describe('Pre-commit workflow configuration (#272)', () => {
     expect(devDeps).toHaveProperty('@commitlint/config-conventional');
   });
 
-  it('registers prepare script and lint-staged config in package.json', () => {
-    // Given: package.json scripts and lint-staged config
+  it('registers prepare script in package.json', () => {
+    // Given: package.json scripts
     // When: checking hook registration
-    // Then: prepare script runs husky and lint-staged config exists
+    // Then: prepare script runs husky
     expect(pkg!.scripts?.prepare).toBe('husky');
-    expect(pkg).toHaveProperty('lint-staged');
   });
 
-  it('lint-staged runs type check before lint and format', () => {
-    // Given: lint-staged config for TypeScript files
-    const tsCommands = pkg!['lint-staged']?.['*.{ts,tsx}'] ?? [];
+  it('uses external lint-staged config file instead of package.json key', () => {
+    // Given: lint-staged configuration
+    // When: checking config location
+    // Then: config lives in lint-staged.config.cjs, not package.json
+    expect(pkg).not.toHaveProperty('lint-staged');
+    expect(fs.existsSync(path.join(repoRoot, 'lint-staged.config.cjs'))).toBe(true);
+  });
 
-    // When: checking command order
-    // Then: tsc --noEmit runs before eslint and prettier
-    expect(tsCommands[0]).toContain('tsc --noEmit');
-    expect(tsCommands).toContain('eslint --fix');
-    expect(tsCommands).toContain('prettier --write');
+  it('lint-staged config runs tsc --noEmit before lint and format', () => {
+    // Given: lint-staged config for TypeScript files
+    const configText = readText('lint-staged.config.cjs');
+
+    // When: checking type check command
+    // Then: tsc --noEmit is present
+    expect(configText).toContain('tsc --noEmit');
+  });
+
+  it('lint-staged config includes eslint and prettier commands', () => {
+    // Given: lint-staged config for TypeScript files
+    const configText = readText('lint-staged.config.cjs');
+
+    // When: checking lint and format commands
+    // Then: eslint --fix and prettier --write are present
+    expect(configText).toContain('eslint --fix');
+    expect(configText).toContain('prettier --write');
+  });
+
+  it('lint-staged uses function form for TypeScript to avoid file path appending', () => {
+    // Given: lint-staged config
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const config = require(path.join(repoRoot, 'lint-staged.config.cjs'));
+
+    // When: checking TypeScript pattern config type
+    // Then: it is a function (prevents lint-staged from appending staged file paths)
+    expect(typeof config['*.{ts,tsx}']).toBe('function');
   });
 
   it('creates husky hooks for pre-commit and commit-msg', () => {

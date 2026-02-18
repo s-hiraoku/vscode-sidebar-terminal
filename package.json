@@ -1194,16 +1194,6 @@
     "docs:clean": "rm -rf docs/api",
     "rebuild:fast": "npm rebuild node-pty"
   },
-  "lint-staged": {
-    "*.{ts,tsx}": [
-      "bash -c 'tsc --noEmit'",
-      "eslint --fix",
-      "prettier --write"
-    ],
-    "*.{js,jsx,json,md,yml,yaml}": [
-      "prettier --write"
-    ]
-  },
   "devDependencies": {
     "@commitlint/cli": "^20.1.0",
     "@commitlint/config-conventional": "^20.0.0",
