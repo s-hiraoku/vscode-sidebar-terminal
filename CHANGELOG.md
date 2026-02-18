@@ -18,6 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Extended `TerminalCommandHandlers.handleTerminalInteraction()` to support `create-terminal` and `kill-terminal` message types.
   - Updated `TerminalCreationService` custom key event handler to allow `r`, `d`, `x` keys through to panel navigation.
 
+### Fixed
+
+- **HeaderFactory Timer Safety**:
+  - Added guard checks to avoid accessing `document` when unavailable in delayed timer callbacks.
+  - Prevents runtime errors during teardown/reload timing windows.
+
 ## [0.2.27] - 2026-02-15
 
 ### Fixed
