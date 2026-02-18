@@ -796,6 +796,9 @@ export class HeaderFactory {
         if (!isEditing) {
           return;
         }
+        if (typeof document === 'undefined') {
+          return;
+        }
         if (document.activeElement !== input) {
           input.focus();
           input.select();
