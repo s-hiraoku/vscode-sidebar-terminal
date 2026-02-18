@@ -49,6 +49,15 @@ const InputTimings = {
  */
 const PREVIOUS_NAVIGATION_KEYS = new Set(['h', 'k', 'ArrowLeft', 'ArrowUp']);
 const NEXT_NAVIGATION_KEYS = new Set(['j', 'l', 'ArrowRight', 'ArrowDown']);
+/**
+ * Action keys for panel navigation mode (create/kill terminal).
+ * Maps key to its action label for logging.
+ */
+const PANEL_ACTION_KEYS = new Map<string, string>([
+  ['r', 'create terminal'],
+  ['d', 'create terminal'],
+  ['x', 'kill terminal'],
+]);
 
 export class InputManager extends BaseManager implements IInputManager {
   // Event handler registry for centralized event management
@@ -1087,6 +1096,24 @@ export class InputManager extends BaseManager implements IInputManager {
       interactionType = 'switch-previous';
     } else if (NEXT_NAVIGATION_KEYS.has(normalizedKey)) {
       interactionType = 'switch-next';
+    } else if (PANEL_ACTION_KEYS.has(normalizedKey)) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.logger(`Panel navigation ${PANEL_ACTION_KEYS.get(normalizedKey)}: ${event.key}`);
+
+      if (normalizedKey === 'r' || normalizedKey === 'd') {
+        this.emitTerminalInteractionEvent('create-terminal', '', undefined, manager);
+      } else if (normalizedKey === 'x') {
+        const activeTerminalId = this.resolveNavigationTerminalId(manager);
+        this.emitTerminalInteractionEvent(
+          'kill-terminal',
+          activeTerminalId || '',
+          undefined,
+          manager
+        );
+      }
+
+      return true;
     } else {
       // Block non-navigation keys from reaching the terminal while in panel navigation mode
       event.preventDefault();
@@ -1123,7 +1150,7 @@ export class InputManager extends BaseManager implements IInputManager {
 
     const indicator = document.createElement('div');
     indicator.className = 'panel-navigation-indicator';
-    indicator.textContent = 'PANEL MODE (h/j/k/l, arrows, Esc)';
+    indicator.textContent = 'PANEL MODE (h/j/k/l, r/d:new, x:close, Esc)';
     Object.assign(indicator.style, {
       position: 'fixed',
       top: '8px',

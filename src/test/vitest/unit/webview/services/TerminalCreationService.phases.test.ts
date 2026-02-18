@@ -428,6 +428,27 @@ describe('TerminalCreationService - Phase Decomposition', () => {
       expect(terminal!.attachCustomKeyEventHandler).toHaveBeenCalled();
     });
 
+    it('should bypass xterm key handling for r/d/x while panel navigation mode is active', async () => {
+      const terminal = await service.createTerminal('terminal-1', 'Test Terminal');
+
+      const keyHandler = terminal!.attachCustomKeyEventHandler.mock.calls[0][0] as (
+        event: KeyboardEvent
+      ) => boolean;
+      document.body.classList.add('panel-navigation-mode');
+
+      expect(
+        keyHandler(new dom.window.KeyboardEvent('keydown', { key: 'r' }))
+      ).toBe(false);
+      expect(
+        keyHandler(new dom.window.KeyboardEvent('keydown', { key: 'd' }))
+      ).toBe(false);
+      expect(
+        keyHandler(new dom.window.KeyboardEvent('keydown', { key: 'x' }))
+      ).toBe(false);
+
+      document.body.classList.remove('panel-navigation-mode');
+    });
+
     it('should apply visual settings when UI manager is available', async () => {
       await service.createTerminal('terminal-1', 'Test Terminal');
 

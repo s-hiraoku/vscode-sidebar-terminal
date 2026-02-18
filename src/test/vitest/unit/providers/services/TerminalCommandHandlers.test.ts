@@ -153,6 +153,38 @@ describe('TerminalCommandHandlers', () => {
       );
     });
 
+    it('should handle terminalInteraction create-terminal', async () => {
+      await handlers.handleTerminalInteraction({
+        command: 'terminalInteraction',
+        type: 'create-terminal',
+        terminalId: '',
+      } as any);
+
+      expect(mockTerminalManager.createTerminal).toHaveBeenCalled();
+      expect(mockTerminalManager.setActiveTerminal).toHaveBeenCalledWith('t-new');
+      expect(mockCommService.sendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ command: 'stateUpdate' })
+      );
+    });
+
+    it('should handle terminalInteraction kill-terminal', async () => {
+      mockTerminalManager.getActiveTerminalId.mockReturnValue('t1');
+
+      await handlers.handleTerminalInteraction({
+        command: 'terminalInteraction',
+        type: 'kill-terminal',
+        terminalId: 't1',
+      } as any);
+
+      expect(mockTerminalManager.killTerminal).toHaveBeenCalledWith('t1');
+      expect(mockCommService.sendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ command: 'terminalRemoved', terminalId: 't1' })
+      );
+      expect(mockCommService.sendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ command: 'stateUpdate' })
+      );
+    });
+
     it('should handle terminal input', () => {
       handlers.handleTerminalInput({ command: 'input', terminalId: 't1', data: 'ls\n' });
       expect(mockTerminalManager.sendInput).toHaveBeenCalledWith('ls\n', 't1');

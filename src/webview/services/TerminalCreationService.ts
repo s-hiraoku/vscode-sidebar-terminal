@@ -673,7 +673,7 @@ export class TerminalCreationService implements Disposable {
         const key = event.key.toLowerCase();
         if (key === 'h' || key === 'j' || key === 'k' || key === 'l' ||
             key === 'arrowleft' || key === 'arrowright' || key === 'arrowup' || key === 'arrowdown' ||
-            key === 'escape') {
+            key === 'escape' || key === 'r' || key === 'd' || key === 'x') {
           return false;
         }
       }

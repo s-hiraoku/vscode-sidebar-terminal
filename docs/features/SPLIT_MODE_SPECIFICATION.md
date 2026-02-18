@@ -93,10 +93,13 @@ After: 4 terminals, each 25% size
 
 **Behaviors**:
 - While active, regular keyboard input is intercepted and mapped to navigation commands.
-- Visual indicator: A badge appears in the top-right corner showing "PANEL MODE (h/j/k/l, arrows, Esc)".
+- Visual indicator: A badge appears in the top-right corner showing "PANEL MODE (h/j/k/l, r/d:new, x:close, Esc)".
 - Navigation Keys:
   - `h` / `ArrowLeft` / `k` / `ArrowUp`: Switch to previous terminal.
   - `j` / `ArrowDown` / `l` / `ArrowRight`: Switch to next terminal.
+- Action Keys:
+  - `r` / `d`: Create a new terminal.
+  - `x`: Close (kill) the current terminal.
 - Terminal focus follows the navigation (tab highlighted and cursor focused).
 
 **Test Cases**:
@@ -104,6 +107,9 @@ After: 4 terminals, each 25% size
 - TC-9.2: Press `l` in mode → Focus moves to next terminal.
 - TC-9.3: Press `Escape` → Mode exits, indicator hidden.
 - TC-9.4: Typing normal characters in mode → No input sent to terminal.
+- TC-9.5: Press `r` in mode → New terminal is created.
+- TC-9.6: Press `d` in mode → New terminal is created.
+- TC-9.7: Press `x` in mode → Current terminal is closed.
 
 ### REQ-3: Adding Terminal in Fullscreen Mode
 **Description**: When adding a new terminal while in fullscreen mode, system must transition to split mode first, then add new terminal.
