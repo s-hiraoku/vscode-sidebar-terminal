@@ -58,6 +58,12 @@ synapse file-safety locks --agent claude
 # Acquire lock
 synapse file-safety lock /path/to/file.py claude --intent "Refactoring" --duration 300
 
+# Wait for lock if held by another agent
+synapse file-safety lock /path/to/file.py claude --wait
+
+# Wait with timeout and custom retry interval
+synapse file-safety lock /path/to/file.py claude --wait --wait-timeout 60 --wait-interval 5
+
 # Release lock
 synapse file-safety unlock /path/to/file.py claude
 ```
@@ -164,7 +170,7 @@ Error: File is locked by gemini (expires: 2026-01-09T12:00:00)
 **Solutions:**
 1. Wait for lock to expire
 2. Work on different files first
-3. Coordinate with lock holder: `@gemini What's your progress?`
+3. Coordinate with lock holder: `synapse send gemini "What's your progress on src/auth.py?" --response --from <your_agent_id>`
 
 ## Why This Matters
 

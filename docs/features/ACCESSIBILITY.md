@@ -98,6 +98,8 @@ Provides a high-efficiency alternative for switching between split terminals wit
 - **Ctrl+P** - Toggle navigation mode (Cmd+P is reserved for VS Code Quick Open on macOS)
 - **h / j / k / l** - Switch terminal (vim-style)
 - **Arrow keys** - Switch terminal
+- **r / d** - Create new terminal
+- **x** - Close current terminal
 - **Escape** - Exit mode
 
 ### 3. Screen Reader Support

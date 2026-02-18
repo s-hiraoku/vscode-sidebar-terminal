@@ -324,6 +324,75 @@ describe('InputManager', () => {
       expect(mockCoordinator.postMessageToExtension).not.toHaveBeenCalled();
     });
 
+    it.each([
+      ['r', 'create-terminal'],
+      ['d', 'create-terminal'],
+      ['x', 'kill-terminal'],
+    ])(
+      'should handle %s key in panel navigation mode and emit %s',
+      (key, expectedType) => {
+      manager.initialize();
+      manager.setPanelNavigationEnabled(true);
+      manager.setupKeyboardShortcuts(mockCoordinator);
+
+      // Enter panel navigation mode
+      dom.window.document.dispatchEvent(new dom.window.KeyboardEvent('keydown', {
+        key: 'p', ctrlKey: true, bubbles: true, cancelable: true,
+      }));
+      mockCoordinator.postMessageToExtension.mockClear();
+
+      const keyEvent = new dom.window.KeyboardEvent('keydown', {
+        key, bubbles: true, cancelable: true,
+      });
+      vi.spyOn(keyEvent, 'preventDefault');
+      vi.spyOn(keyEvent, 'stopPropagation');
+      dom.window.document.dispatchEvent(keyEvent);
+
+      expect(keyEvent.preventDefault).toHaveBeenCalled();
+      expect(keyEvent.stopPropagation).toHaveBeenCalled();
+      expect(mockCoordinator.postMessageToExtension).toHaveBeenCalledWith(
+        expect.objectContaining({
+          command: 'terminalInteraction',
+          type: expectedType,
+        })
+      );
+    });
+
+    it('should allow r/d/x keys to pass to terminal when panel mode is OFF', () => {
+      manager.initialize();
+      manager.setPanelNavigationEnabled(true);
+      manager.setupKeyboardShortcuts(mockCoordinator);
+
+      // Do NOT enter panel navigation mode
+
+      // Press r/d/x keys — they should NOT be intercepted
+      for (const key of ['r', 'd', 'x']) {
+        const event = new dom.window.KeyboardEvent('keydown', {
+          key, bubbles: true, cancelable: true,
+        });
+        vi.spyOn(event, 'preventDefault');
+        vi.spyOn(event, 'stopPropagation');
+        dom.window.document.dispatchEvent(event);
+
+        // Should NOT be blocked (these are normal character keys)
+        expect(event.preventDefault).not.toHaveBeenCalled();
+        expect(event.stopPropagation).not.toHaveBeenCalled();
+      }
+    });
+
+    it('should show updated indicator text with r/d and x hints', () => {
+      manager.initialize();
+      (manager as any).setPanelNavigationMode(true);
+
+      const indicator = dom.window.document.querySelector(
+        '.panel-navigation-indicator'
+      ) as HTMLElement | null;
+
+      expect(indicator).not.toBeNull();
+      expect(indicator?.textContent).toContain('r/d:new');
+      expect(indicator?.textContent).toContain('x:close');
+    });
+
     it('should not send navigation events when no active terminal', () => {
       manager.initialize();
       manager.setPanelNavigationEnabled(true);

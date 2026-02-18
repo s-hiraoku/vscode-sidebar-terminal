@@ -188,10 +188,25 @@ export class TerminalCommandHandlers {
   }
 
   /**
-   * Handle terminal interaction events (switch-next / switch-previous)
+   * Handle terminal interaction events (switch-next / switch-previous / create-terminal / kill-terminal)
    */
   public async handleTerminalInteraction(message: WebviewMessage): Promise<void> {
     const interactionType = message.type;
+    if (interactionType === 'create-terminal') {
+      await this.handleCreateTerminal(message);
+      return;
+    }
+
+    if (interactionType === 'kill-terminal') {
+      const targetTerminalId = message.terminalId || this.deps.terminalManager.getActiveTerminalId();
+      if (!targetTerminalId) {
+        return;
+      }
+
+      await this.performKillTerminal(targetTerminalId);
+      return;
+    }
+
     if (interactionType !== 'switch-next' && interactionType !== 'switch-previous') {
       return;
     }

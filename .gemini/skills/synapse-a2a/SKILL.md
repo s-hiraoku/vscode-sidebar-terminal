@@ -1,6 +1,6 @@
 ---
 name: synapse-a2a
-description: This skill provides comprehensive guidance for inter-agent communication using the Synapse A2A framework. Use this skill when sending messages to other agents, routing @agent patterns, understanding priority levels, handling A2A protocol operations, managing task history, configuring settings, or using File Safety features for multi-agent coordination. Automatically triggered when agent communication, A2A protocol tasks, history operations, or file safety operations are detected.
+description: This skill provides comprehensive guidance for inter-agent communication using the Synapse A2A framework. Use this skill when sending messages to other agents via synapse send/reply commands, understanding priority levels, handling A2A protocol operations, managing task history, configuring settings, or using File Safety features for multi-agent coordination. Automatically triggered when agent communication, A2A protocol tasks, history operations, or file safety operations are detected.
 ---
 
 # Synapse A2A Communication
@@ -15,12 +15,13 @@ Inter-agent communication framework via Google A2A Protocol.
 | Send message | `synapse send <target> "<message>" --from <sender>` |
 | Broadcast to cwd agents | `synapse broadcast "<message>" --from <sender>` |
 | Wait for reply | `synapse send <target> "<message>" --response --from <sender>` |
-| Reply to last message | `synapse reply "<response>" --from <agent>` |
-| Reply to specific sender | `synapse reply "<response>" --from <agent> --to <sender_id>` |
-| List reply targets | `synapse reply --list-targets --from <agent>` |
+| Reply to last message | `synapse reply "<response>"` |
+| Reply to specific sender | `synapse reply "<response>" --to <sender_id>` |
+| List reply targets | `synapse reply --list-targets` |
 | Emergency stop | `synapse send <target> "STOP" --priority 5 --from <sender>` |
 | Stop agent | `synapse stop <profile\|id>` |
-| Kill agent | `synapse kill <target>` (with confirmation, use `-f` to force) |
+| Kill agent (graceful) | `synapse kill <target>` (sends shutdown request, 30s timeout, then SIGTERM) |
+| Kill agent (force) | `synapse kill <target> -f` (immediate SIGKILL) |
 | Jump to terminal | `synapse jump <target>` |
 | Rename agent | `synapse rename <target> --name <name> --role <role>` |
 | Check file locks | `synapse file-safety locks` |
@@ -37,8 +38,30 @@ Inter-agent communication framework via Google A2A Protocol.
 | External agent info | `synapse external info <alias>` |
 | Send to external | `synapse external send <alias> "<message>" [--wait]` |
 | Remove external agent | `synapse external remove <alias>` |
+| Skill Manager (TUI) | `synapse skills` |
+| List skills | `synapse skills list [--scope synapse\|user\|project\|plugin]` |
+| Show skill detail | `synapse skills show <name>` |
+| Deploy skill | `synapse skills deploy <name> --agent claude,codex --scope user` |
+| Import skill | `synapse skills import <name>` |
+| Install from repo | `synapse skills add <repo>` |
+| Create skill | `synapse skills create` |
+| Delete skill | `synapse skills delete <name> [--force]` |
+| Move skill | `synapse skills move <name> --to <scope>` |
+| List skill sets | `synapse skills set list` |
+| Show skill set detail | `synapse skills set show <name>` |
+| Trace task | `synapse trace <task_id>` |
 | Auth setup | `synapse auth setup` (generate keys + instructions) |
 | Generate API key | `synapse auth generate-key [-n <count>] [-e]` |
+| List task board | `synapse tasks list [--status pending] [--agent claude]` |
+| Create task | `synapse tasks create "subject" -d "description" [--blocked-by ID]` |
+| Assign task | `synapse tasks assign <task_id> <agent>` |
+| Complete task | `synapse tasks complete <task_id>` |
+| Approve plan | `synapse approve <task_id>` |
+| Reject plan | `synapse reject <task_id> --reason "reason"` |
+| Start team (CLI) | `synapse team start <spec...> [--layout ...] [--all-new]` (1st=handoff, rest=new panes; `--all-new` for all new) |
+| Start team (API) | `POST /team/start` with `{"agents": [...], "layout": "split"}` |
+| Spawn agent | `synapse spawn <profile> [--port] [--name] [--role] [--skill-set] [--terminal]` |
+| Delegate mode | `synapse claude --delegate-mode [--name coordinator]` |
 | Version info | `synapse --version` |
 
 **Tip:** Run `synapse list` before sending to verify the target agent is READY.
@@ -88,8 +111,8 @@ For request-response patterns:
 # Sender: Wait for response (blocks until reply received)
 synapse send gemini "Analyze this data" --response --from synapse-claude-8100
 
-# Receiver: Reply to sender
-synapse reply "Analysis result: ..." --from synapse-gemini-8110
+# Receiver: Reply to sender (auto-routes via reply tracking)
+synapse reply "Analysis result: ..."
 ```
 
 The `--response` flag makes the sender wait. The receiver should reply using the `synapse reply` command.
@@ -118,7 +141,7 @@ synapse broadcast "FYI: Build completed" --no-response --from synapse-claude-810
 When you receive an A2A message, it appears with the `A2A:` prefix:
 
 **Message Formats:**
-```text
+```
 A2A: [REPLY EXPECTED] <message>   <- Reply is REQUIRED
 A2A: <message>                    <- Reply is optional (one-way notification)
 ```
@@ -130,23 +153,25 @@ If `[REPLY EXPECTED]` marker is present, you **MUST** reply using `synapse reply
 **Replying to messages:**
 
 ```bash
-# Use the reply command
-# --from: Use your agent ID (synapse-<type>-<port>)
-synapse reply "Here is my analysis..." --from <your_agent_id>
+# Use the reply command (auto-routes to last sender)
+synapse reply "Here is my analysis..."
 
 # When multiple senders are pending, inspect and choose target
-synapse reply --list-targets --from <your_agent_id>
-synapse reply "Here is my analysis..." --from <your_agent_id> --to <sender_id>
+synapse reply --list-targets
+synapse reply "Here is my analysis..." --to <sender_id>
+
+# In sandboxed environments (like Codex), specify your agent ID
+synapse reply "Here is my analysis..." --from <your_agent_id>
 ```
 
 **Example - Question received (MUST reply):**
-```text
+```
 Received: A2A: [REPLY EXPECTED] What is the project structure?
-Reply:    synapse reply "The project has src/, tests/..." --from synapse-codex-8121
+Reply:    synapse reply "The project has src/, tests/..."
 ```
 
 **Example - Delegation received (no reply needed):**
-```text
+```
 Received: A2A: Run the tests and fix failures
 Action:   Just do the task. No reply needed unless you have questions.
 ```
@@ -181,6 +206,7 @@ synapse send codex "STOP" --priority 5 --from synapse-claude-8100
 | WAITING | Awaiting user input (selection, confirmation) | Cyan |
 | PROCESSING | Busy handling a task | Yellow |
 | DONE | Task completed (auto-clears after 10s) | Blue |
+| SHUTTING_DOWN | Graceful shutdown in progress | Red |
 
 **Verify before sending:** Run `synapse list` and confirm the target agent's Status column shows `READY`:
 
@@ -219,7 +245,7 @@ In `synapse list`, you can interact with agents:
 - Ghostty (macOS) - Activates application
 - VS Code integrated terminal - Opens to working directory
 - tmux - Switches to agent's session
-- Zellij - Focuses agent's terminal pane
+- Zellij - Activates terminal app (direct pane focus not supported via CLI)
 
 **Use case:** When an agent shows `WAITING` status, use terminal jump to quickly respond to its selection prompt.
 
@@ -318,8 +344,34 @@ To inject instructions later: `synapse instructions send <agent>`.
 - **File Safety**: Lock files to prevent conflicts (`synapse file-safety`); active locks shown in `synapse list` EDITING_FILE column
 - **External Agents**: Connect to external A2A agents (`synapse external`)
 - **Authentication**: API key-based security (`synapse auth`)
+- **Skill Management**: Central skill store, deploy, import, create, skill sets (`synapse skills`). Skill set details (name, description, skills) are included in agent initial instructions when selected.
 - **Settings**: Configure via `settings.json` (`synapse init`)
 - **Approval Mode**: Control initial instruction approval (`approvalMode` in settings)
+- **Shared Task Board**: Create, claim, and complete tasks with dependency tracking (`synapse tasks`)
+- **Quality Gates**: Configurable hooks (`on_idle`, `on_task_completed`) that gate status transitions
+- **Plan Approval**: Plan-mode workflow with `synapse approve/reject` for review
+- **Graceful Shutdown**: `synapse kill` sends shutdown request before SIGTERM (30s timeout)
+- **Delegate Mode**: `--delegate-mode` creates a coordinator that delegates instead of editing files
+- **Auto-Spawn Panes**: `synapse team start` — 1st agent takes over current terminal (handoff), others in new panes. `--all-new` for all new panes. Supports `profile:name:role:skill_set` spec (tmux/iTerm2/Terminal.app/zellij)
+- **Spawn Single Agent**: `synapse spawn <profile>` — Spawn a single agent in a new terminal pane or window. Automatically uses `--headless` mode.
+
+## Spawning Agents
+
+Spawn a single agent in a new terminal pane or window.
+
+```bash
+synapse spawn claude                          # Spawn Claude in a new pane
+synapse spawn gemini --port 8115              # Spawn with explicit port
+synapse spawn claude --name Tester --role "test writer"  # With name/role
+synapse spawn claude --terminal tmux          # Use specific terminal
+```
+
+**Headless Mode:**
+When an agent is started via `synapse spawn`, it automatically runs with the `--headless` flag. This skips all interactive setup (name/role prompts, startup animations, and initial instruction approval prompts) to allow for smooth programmatic orchestration. The A2A server remains active, and initial instructions are still sent to enable communication.
+
+**Note:** The spawning agent is responsible for the lifecycle of the spawned agent. Ensure you terminate spawned agents using `synapse kill <target> -f` when their task is complete.
+
+**Pane Auto-Close:** When an agent process terminates, the pane/tab/window closes automatically in all supported terminals. Zellij uses `--close-on-exit`; iTerm2, Terminal.app, and Ghostty use `exec` to replace the shell process; tmux `split-window` closes natively on process exit.
 
 ## Path Overrides
 
@@ -328,6 +380,7 @@ When running multiple environments or tests, override storage paths via env vars
 - `SYNAPSE_REGISTRY_DIR` (default: `~/.a2a/registry`)
 - `SYNAPSE_EXTERNAL_REGISTRY_DIR` (default: `~/.a2a/external`)
 - `SYNAPSE_HISTORY_DB_PATH` (default: `~/.synapse/history/history.db`)
+- `SYNAPSE_SKILLS_DIR` (default: `~/.synapse/skills`)
 
 ## References
 

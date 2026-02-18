@@ -95,6 +95,8 @@ Your sidebar, your terminal, your AI agents -- all in one place. A full-featured
 
 Use `Ctrl+P` to enter a dedicated navigation mode (`Cmd+P` on macOS is reserved for VS Code Quick Open). While active:
 - Use `h`, `j`, `k`, `l` or `Arrow keys` to switch between split terminals.
+- Press `r` or `d` to create a new terminal.
+- Press `x` to close the current terminal.
 - Press `Ctrl+P` again or `Escape` to exit.
 - A visual indicator appears in the top-right corner while in navigation mode.
 

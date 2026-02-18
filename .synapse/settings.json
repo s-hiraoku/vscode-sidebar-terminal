@@ -35,6 +35,6 @@
     "copilot": ["--continue", "-c"]
   },
   "list": {
-    "columns": ["ID", "NAME", "STATUS", "CURRENT", "TRANSPORT", "WORKING_DIR", "EDITING_FILE"]
+    "columns": ["ID", "NAME", "STATUS", "TRANSPORT", "WORKING_DIR", "EDITING_FILE"]
   }
 }

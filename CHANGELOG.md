@@ -5,6 +5,19 @@ All notable changes to the "Secondary Terminal" extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.28] - 2026-02-18
+
+### Added
+
+- **Panel Mode Terminal Create/Delete Actions**:
+  - Press `r` or `d` in panel navigation mode to create a new terminal.
+  - Press `x` in panel navigation mode to close (kill) the current terminal.
+  - Added VS Code keybindings for `r`, `d`, `x` keys gated by `secondaryTerminal.panelNavigationMode` context.
+  - Consolidated action keys into `PANEL_ACTION_KEYS` map for extensibility.
+  - Updated panel mode indicator text to `"PANEL MODE (h/j/k/l, r/d:new, x:close, Esc)"`.
+  - Extended `TerminalCommandHandlers.handleTerminalInteraction()` to support `create-terminal` and `kill-terminal` message types.
+  - Updated `TerminalCreationService` custom key event handler to allow `r`, `d`, `x` keys through to panel navigation.
+
 ## [0.2.27] - 2026-02-15
 
 ### Fixed

@@ -18,9 +18,9 @@ A2A: <message content>
 Use `synapse reply` to respond:
 
 ```bash
-synapse reply "<your response>" --from <your_agent_id>
-synapse reply --list-targets --from <your_agent_id>
-synapse reply "<your response>" --from <your_agent_id> --to <sender_id>
+synapse reply "<your response>"
+synapse reply --list-targets
+synapse reply "<your response>" --to <sender_id>
 ```
 
 The framework automatically handles routing - you don't need to know where the message came from.
@@ -47,6 +47,34 @@ The framework automatically handles routing - you don't need to know where the m
 | `/reply-stack/list` | GET | List sender IDs available for reply (`synapse reply --list-targets`) |
 | `/reply-stack/get` | GET | Get sender info without removing (supports `?sender_id=`) |
 | `/reply-stack/pop` | GET | Pop sender info from reply map (supports `?sender_id=`) |
+
+### Agent Teams Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/tasks/board` | GET | List shared task board |
+| `/tasks/board` | POST | Create task on board |
+| `/tasks/board/{id}/claim` | POST | Claim task atomically |
+| `/tasks/board/{id}/complete` | POST | Complete task (auto-unblocks dependents) |
+| `/tasks/{id}/approve` | POST | Approve a plan |
+| `/tasks/{id}/reject` | POST | Reject a plan with reason |
+| `/team/start` | POST | Start multiple agents in terminal panes (agent-initiated) |
+| `/spawn` | POST | Spawn a single agent in a new terminal pane |
+
+### Webhook Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/webhooks` | POST | Register a webhook for task notifications |
+| `/webhooks` | GET | List all registered webhooks |
+| `/webhooks` | DELETE | Unregister a webhook (query param: `url`) |
+| `/webhooks/deliveries` | GET | Get recent webhook delivery attempts |
+
+### SSE Streaming
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/tasks/{id}/subscribe` | GET | Subscribe to task updates via Server-Sent Events |
 
 ### External Agent Endpoints
 
