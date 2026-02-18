@@ -1196,6 +1196,7 @@
   },
   "lint-staged": {
     "*.{ts,tsx}": [
+      "bash -c 'tsc --noEmit'",
       "eslint --fix",
       "prettier --write"
     ],
