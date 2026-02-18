@@ -29,6 +29,12 @@ describe('Release documentation', () => {
     expect(content).not.toMatch(/quality:(check|fix)/);
   });
 
+  it('documents standard-version in CLAUDE.md', () => {
+    const content = readDoc('CLAUDE.md');
+
+    expect(content).toContain('standard-version');
+  });
+
   it('avoids deprecated safe release scripts in emergency rollback guidance', () => {
     const content = readDoc('docs/operations/EMERGENCY_ROLLBACK.md');
 

@@ -88,52 +88,35 @@ npm run pre-release:check   # Comprehensive pre-release validation
 
 ### Release Management
 
-#### Automated GitHub Actions Release (RECOMMENDED - New Safe Procedure)
+#### Automated Release with standard-version (RECOMMENDED)
+
+CHANGELOG.md is auto-generated from conventional commits via `standard-version`.
+The `.versionrc.cjs` config skips tag/push so you control when to tag.
 
 ```bash
-# Step 1: Update version and commit changes (WITHOUT tag)
-npm version patch --no-git-tag-version  # or minor/major
-# Update CHANGELOG.md and README.md with release notes
-git add -A && git commit -m "v{version}: Release description"
+# Step 1: Bump version + auto-generate CHANGELOG
+npm run release:patch        # 0.0.x bump (uses standard-version)
+npm run release:minor        # 0.x.0 bump
+npm run release:major        # x.0.0 bump
+
+# Step 2: Review the generated CHANGELOG.md, then push
 git push
 
-# Step 2: Wait for CI to pass
+# Step 3: Wait for CI to pass
 # Check GitHub Actions: https://github.com/s-hiraoku/vscode-sidebar-terminal/actions
-# Verify all platform builds succeed
 
-# Step 3: Create and push git tag ONLY after CI success
-git tag v{version}           # e.g., v0.1.107
+# Step 4: Create and push git tag ONLY after CI success
+git tag v{version}           # e.g., v0.2.29
 git push origin v{version}   # Triggers automated release workflow
 
-# This automatically:
-# - Runs TDD quality gate and pre-release checks
-# - Builds packages for 9 platforms (Windows/macOS/Linux variants)
-# - Creates GitHub Release with auto-generated notes
-# - Publishes to VS Code Marketplace with all platform variants
-# - Publishes to Open VSX Registry (if OVSX_PAT secret is configured)
-
-# Benefits of this approach:
-# ✅ Prevents wasting version numbers on failed builds
-# ✅ No need to delete tags and re-release
-# ✅ Clean git history without tag pollution
-# ✅ CI failures can be fixed without version confusion
+# Preview CHANGELOG without bumping version
+npm run changelog
 ```
 
-#### Legacy Release Procedure (Deprecated)
+#### Safe Release with Quality Gate (Fallback)
 
 ```bash
-# Old method: Tag immediately (NOT RECOMMENDED)
-# This was problematic because CI failures required tag deletion
-npm version patch --no-git-tag-version
-git add -A && git commit -m "v{version}: Release description"
-git tag v{version} && git push origin v{version} && git push
-# ❌ Problem: If CI fails, must delete tag and increment version
-```
-
-#### Manual Release (Fallback)
-
-```bash
-# Safe releases (with automatic backup and quality checks)
+# Pre-release quality check + standard-version bump
 npm run release:patch:safe   # 0.0.x version bump
 npm run release:minor:safe   # 0.x.0 version bump
 npm run release:major:safe   # x.0.0 version bump
