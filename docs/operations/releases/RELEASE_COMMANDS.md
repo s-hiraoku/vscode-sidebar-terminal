@@ -32,11 +32,19 @@ npm run release:major
 
 ## 🔍 実行される処理
 
-- 事前チェック (`npm run pre-release:check`) を実行
-- `package.json` のバージョン更新
-- Git タグ作成
-- タグを含めて `origin` に push
+`standard-version` によりコンベンショナルコミットから CHANGELOG を自動生成します。
 
+- `package.json` のバージョン更新
+- `CHANGELOG.md` の自動生成（コミット履歴から）
+- バージョンコミット作成
+- **タグ・push は自動実行しない**（`.versionrc.cjs` で `skip.tag` / `skip.push` を設定済み）
+
+```bash
+# CHANGELOG のプレビューのみ（バージョン変更なし）
+npm run changelog
+```
+
+push 後、CI が通ったらタグを作成して push します。
 GitHub Actions がタグを検知してビルド・リリースを進めます。
 
 ## 🛠️ うまくいかない場合
