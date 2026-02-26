@@ -85,7 +85,7 @@ jobs:
 
       - name: Upload VRT Report
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: vrt-report-${{ matrix.os }}
           path: |
@@ -95,7 +95,7 @@ jobs:
 
       - name: Upload Baseline Screenshots
         if: ${{ github.event.inputs.update_baselines == 'true' }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: vrt-baselines-${{ matrix.os }}
           path: src/test/e2e/__screenshots__/
@@ -123,7 +123,7 @@ jobs:
 
       - name: Upload Diff Screenshots on Failure
         if: failure()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: vrt-diffs-${{ matrix.os }}
           path: |
