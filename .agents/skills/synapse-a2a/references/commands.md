@@ -13,10 +13,14 @@ synapse list
 - Auto-refresh when agent status changes (via file watcher)
 - Color-coded status display:
   - READY = green (idle, waiting for input)
-  - WAITING = cyan (awaiting user input - selection, confirmation)
+  - WAITING = cyan (awaiting user input - selection, confirmation; auto-expires after `waiting_expiry`, default 10s)
   - PROCESSING = yellow (busy handling a task)
   - DONE = blue (task completed, auto-clears after 10s)
   - SHUTTING_DOWN = red (graceful shutdown in progress)
+- **Compound signal detection**: Status uses multiple signals beyond PTY output:
+  - `task_active` flag: suppresses READY during active A2A tasks (`task_protection_timeout`, default 30s)
+  - File locks: agents holding locks remain PROCESSING even when PTY is idle
+  - WAITING auto-expiry: auto-clears after `waiting_expiry` seconds (default 10s)
 - Flicker-free updates
 - **Interactive row selection**: Press 1-9 or ↑/↓ to select an agent row and view full paths in a detail panel
 - **Terminal Jump**: Press `Enter` or `j` to jump directly to the selected agent's terminal
@@ -27,7 +31,7 @@ synapse list
 **Terminal Jump Supported Terminals:**
 - iTerm2 (macOS) - Switches to correct tab/pane
 - Terminal.app (macOS) - Switches to correct tab
-- Ghostty (macOS) - Activates application
+- Ghostty (macOS) - Activates application. **Note:** Ghostty uses AppleScript to target the focused tab. Do not switch tabs during spawn or team start.
 - VS Code integrated terminal - Activates/focuses VS Code window
 - tmux - Switches to agent's session/pane
 - Zellij - Activates terminal app (direct pane focus not supported via CLI)
@@ -35,18 +39,18 @@ synapse list
 **Output columns:**
 - **NAME**: Custom name if set, otherwise agent type (e.g., `my-claude` or `claude`)
 - **TYPE**: Agent type (claude, gemini, codex, opencode, copilot)
-- **ID**: Full agent ID (e.g., `synapse-claude-8100`)
+- **ID**: Full Runtime ID (e.g., `synapse-claude-8100`)
 - **ROLE**: Role description if set
 - **STATUS**: READY / WAITING / PROCESSING / DONE / SHUTTING_DOWN
-- **CURRENT**: Current task preview (truncated to 30 chars) - shows what agent is working on
+- **CURRENT**: Current task preview (truncated to 30 chars) with elapsed time (e.g., `Review code (2m 15s)`) - shows what agent is working on and for how long
 - **TRANSPORT**: Communication method during inter-agent messages
   - `UDS→` / `TCP→`: Sending via UDS/TCP
   - `→UDS` / `→TCP`: Receiving via UDS/TCP
   - `-`: No active communication
-- **WORKING_DIR**: Working directory (truncated in TUI, full path in detail panel)
+- **WORKING_DIR**: Working directory (truncated in TUI, full path in detail panel). Also included in non-TTY text output for scripting (e.g., `synapse list | grep my-project`).
 - **EDITING FILE** (when File Safety enabled): Currently locked file name
 
-**Name vs ID:** Display shows name if set, internal operations use agent ID (`synapse-claude-8100`).
+**Name vs ID:** Display shows name if set, internal operations use Runtime ID (`synapse-claude-8100`).
 
 ### Start Agents
 
@@ -61,8 +65,23 @@ synapse copilot
 # With custom name and role
 synapse claude --name my-claude --role "code reviewer"
 
-# Delegate/coordinator mode (no file editing, delegates via synapse send)
-synapse claude --delegate-mode --name coordinator --role "task manager"
+# With skill set
+synapse claude --skill-set dev-set
+
+# With saved agent definition (--agent / -A)
+synapse claude --agent calm-lead
+synapse claude --agent calm-lead --role "override role"  # CLI args override saved values
+
+# With role from file (@prefix reads file content as role)
+synapse claude --name reviewer --role "@./roles/reviewer.md"
+synapse gemini --role "@~/my-roles/analyst.md"
+
+# Delegate/manager mode (no file editing, delegates via synapse send)
+synapse claude --delegate-mode --name manager --role "task manager"
+
+# Worktree isolation in current terminal (Synapse-native, all agent types)
+synapse claude --worktree my-feature              # Start in worktree in current terminal
+synapse gemini --worktree review --name Reviewer --role "code reviewer"
 
 # Skip interactive name/role setup
 synapse claude --no-setup
@@ -76,6 +95,15 @@ SYNAPSE_HISTORY_ENABLED=false synapse claude
 
 # With File Safety enabled
 SYNAPSE_FILE_SAFETY_ENABLED=true synapse claude
+
+# With Learning Mode: prompt improvement feedback
+SYNAPSE_LEARNING_MODE_ENABLED=true synapse claude
+
+# With Learning Mode: Japanese-to-English translation
+SYNAPSE_LEARNING_MODE_TRANSLATION=true synapse claude
+
+# With both Learning Mode flags (prompt improvement + translation)
+SYNAPSE_LEARNING_MODE_ENABLED=true SYNAPSE_LEARNING_MODE_TRANSLATION=true synapse claude
 
 # Resume mode (skip initial instructions)
 # Note: Claude/Gemini use --resume flag, Codex uses resume subcommand, OpenCode/Copilot use --continue
@@ -95,24 +123,53 @@ synapse start claude --port 8100 --ssl-cert cert.pem --ssl-key key.pem
 
 ### Spawn Single Agent
 
-Spawn a single agent in a new terminal pane or window.
+Spawn a single agent in a new terminal pane or window. Accepts profile names or saved agent IDs/names.
+
+**Workflow:** Spawn is sub-agent delegation — the parent spawns children to offload subtasks while preserving its own context. The full lifecycle is: spawn → send task → evaluate result → (re-send if needed) → kill. If the user specifies the number of agents, follow that exactly; otherwise the parent decides based on task structure. See `references/examples.md` → "Sub-Agent Delegation Patterns" for concrete patterns.
 
 ```bash
 synapse spawn claude                          # Spawn Claude in a new pane
 synapse spawn gemini --port 8115              # Spawn with explicit port
 synapse spawn claude --name Tester --role "test writer"  # With name/role
+synapse spawn claude --skill-set dev-set      # With skill set
 synapse spawn claude --terminal tmux          # Use specific terminal
+synapse spawn claude -n Tester -r "reviewer" -S backend-tools  # Short options
 
-# Pass tool-specific arguments after '--'
-synapse spawn claude -- --dangerously-skip-permissions
+# Spawn from saved agent definition (by ID or display name)
+synapse spawn sharp-checker                    # Spawn by saved Agent ID
+synapse spawn Claud                           # Spawn by saved agent display name
+synapse spawn sharp-checker --role "temporary override"  # Override saved values
+
+# Worktree isolation (Synapse-level flag, before '--'; works for ALL agent types)
+synapse spawn claude --name Impl --role "implementer" --worktree            # auto-named worktree
+synapse spawn gemini --name Analyst -w feat-auth                            # named worktree
+synapse spawn codex --name Coder --worktree                                 # Codex in worktree
+
+# Pass tool-specific arguments after '--' (permission skip flags per CLI)
+synapse spawn claude -- --dangerously-skip-permissions   # Claude: skip all prompts
+synapse spawn gemini -- -y                               # Gemini: yolo mode
+synapse spawn codex -- --full-auto                       # Codex: sandboxed auto-approve
+synapse spawn copilot -- --allow-all-tools               # Copilot: allow all tools
+
+# Combine worktree + tool args (worktree before '--', tool args after '--')
+synapse spawn claude --name Impl --worktree -- --dangerously-skip-permissions
 ```
 
+**Worktree Isolation (`--worktree` / `-w`, Synapse-native flag):**
+`--worktree` is a Synapse-level flag placed **before** `--`. It creates an isolated git worktree for any agent type under `.synapse/worktrees/<name>/` with a branch named `worktree-<name>`. Each worktree gets its own branch and working directory, preventing file conflicts when multiple agents edit the same codebase. `synapse list` shows a `[WT]` prefix in the WORKING_DIR column for worktree agents. Environment variables `SYNAPSE_WORKTREE_PATH`, `SYNAPSE_WORKTREE_BRANCH`, and `SYNAPSE_WORKTREE_BASE_BRANCH` are set automatically. The base branch is determined via a 3-step fallback: `git symbolic-ref` -> `origin/main` -> `HEAD`. Note: `.gitignore`-listed files (`.env`, `.venv/`, `node_modules/`) are not copied -- run dependency install or copy `.env` if needed. On exit, cleanup checks for both uncommitted changes and new commits (vs. the base branch); worktrees with neither are auto-deleted, worktrees with either prompt to keep or remove. The registry stores `worktree_base_branch` so cleanup can detect new commits accurately. `synapse kill` also handles worktree cleanup. Consider adding `.synapse/worktrees/` to your `.gitignore` to avoid untracked worktree files appearing in `git status`.
+
 **Headless Mode:**
-When an agent is started via `synapse spawn`, it automatically runs with the `--headless` flag. This skips all interactive setup (name/role prompts, startup animations, and initial instruction approval prompts) to allow for smooth programmatic orchestration. The A2A server remains active, and initial instructions are still sent to enable communication.
+When an agent is started via `synapse spawn` or `synapse team start`, `--no-setup --headless` are always added. This skips all interactive setup (name/role prompts, startup animations, and initial instruction approval prompts) to allow for smooth programmatic orchestration. The A2A server remains active, and initial instructions are still sent to enable communication.
+
+**Readiness Warning:** After spawning, `synapse spawn` waits for the agent to register and warns with concrete `synapse send` command examples if the agent is not yet ready. Additionally, a server-side Readiness Gate blocks `/tasks/send` until initialization completes (HTTP 503 + `Retry-After: 5` if not ready within 30s; priority 5 and replies bypass).
+
+**Tool Args Guardrail:** Synapse flags (`--port`, `--name`, `--role`, etc.) placed after `--` are detected and trigger a warning, since they should go before `--`.
 
 **Note:** The spawning agent is responsible for the lifecycle of the spawned agent. Ensure you terminate spawned agents using `synapse kill <target> -f` when their task is complete.
 
 **Pane Auto-Close:** Spawned panes close automatically when the agent process terminates in all supported terminals (tmux, zellij, iTerm2, Terminal.app, Ghostty).
+
+**Known Limitation:** Spawned agents cannot use `synapse reply` because PTY-injected messages don't register sender info. Use `synapse send <target> "message"` instead (`--from` is auto-detected) ([#237](https://github.com/s-hiraoku/synapse-a2a/issues/237)).
 
 ### Stop Agents
 
@@ -130,10 +187,10 @@ synapse stop claude --all
 ### Kill Agents
 
 ```bash
-# Graceful shutdown (default): sends A2A shutdown request, waits 30s, then SIGTERM
+# Graceful shutdown (default): multi-phase — SHUTTING_DOWN → HTTP request → grace → SIGTERM → SIGKILL
 synapse kill my-claude
 
-# Kill by agent ID
+# Kill by Runtime ID
 synapse kill synapse-claude-8100
 
 # Kill by agent type (only if single instance)
@@ -143,11 +200,12 @@ synapse kill claude
 synapse kill my-claude -f
 ```
 
-**Graceful shutdown flow:**
-1. Sends `shutdown_request` A2A message to agent
-2. Waits up to 30s (configurable via `shutdown.timeout_seconds` setting)
-3. If no response, sends SIGTERM
-4. With `-f`: sends SIGKILL immediately (previous behavior)
+**Graceful shutdown flow** (total budget: `shutdown.timeout_seconds`, default 30s):
+1. Sets agent status to `SHUTTING_DOWN`
+2. Sends `shutdown_request` A2A message (HTTP, up to `min(10s, total budget)`)
+3. Waits grace period (`min(max(1, remaining // 3), remaining)` — targets 1/3 of remaining budget, capped to `remaining`; **0s when budget ≤ 10s**), then sends SIGTERM
+4. Waits escalation period (budget remaining after step 3), then sends SIGKILL if process is still alive
+5. With `-f`: sends SIGKILL immediately, skipping all phases
 
 ### Jump to Terminal
 
@@ -155,7 +213,7 @@ synapse kill my-claude -f
 # Jump by custom name
 synapse jump my-claude
 
-# Jump by agent ID
+# Jump by Runtime ID
 synapse jump synapse-claude-8100
 
 # Jump by agent type (only if single instance)
@@ -181,8 +239,88 @@ synapse rename my-claude --clear
 
 **Name vs ID:**
 - Custom names are for **display and user-facing operations** (prompts, `synapse list` output)
-- Agent ID (`synapse-claude-8100`) is used **internally** for registry and processing
+- Runtime ID (`synapse-claude-8100`) is used **internally** for registry and processing
 - Target resolution: name has highest priority when matching
+
+### Show Agent Status
+
+Show detailed status for a single agent, including agent info, current task with elapsed time, recent messages, file locks, and task board assignments.
+
+```bash
+# Human-readable output
+synapse status my-claude
+synapse status synapse-claude-8100
+synapse status claude              # Only if single instance
+
+# Machine-readable JSON
+synapse status my-claude --json
+```
+
+**Text output sections:**
+- **Agent Info**: ID, type, name, role, port, status, PID, working directory, uptime
+- **Current Task**: Task preview with elapsed time (e.g., `Review code (2m 15s)`)
+- **Recent Messages**: Last 5 messages from history (task ID, direction, sender, preview)
+- **File Locks**: Files currently locked by this agent (if File Safety is enabled)
+- **Task Board**: Tasks assigned to this agent (if Task Board is active)
+
+**JSON output** includes all the same data in structured format, with `uptime_seconds` and `current_task.elapsed_seconds` as numeric values for programmatic use.
+
+**Use cases:**
+- Checking what an agent is currently working on and how long it has been running
+- Debugging why an agent is stuck in PROCESSING (check file locks, task board)
+- Reviewing recent communication history for a specific agent
+
+### Saved Agent Definitions
+
+Manage reusable agent definitions that persist across sessions. Saved agents are stored as `.agent` files in project (`.synapse/agents/`) or user (`~/.synapse/agents/`) scope.
+
+IDs must use Agent ID format (e.g., `sharp-checker`).
+
+```bash
+# List all saved agent definitions
+synapse agents list
+
+# Show details for a saved agent (by ID or display name)
+synapse agents show <id-or-name>
+
+# Add or update a saved agent definition
+synapse agents add <id> --name <name> --profile <profile> [--role <role>] [--skill-set <set>] [--scope project|user]
+
+# Delete a saved agent definition
+synapse agents delete <id-or-name>
+```
+
+**Examples:**
+
+```bash
+# Save a codex agent with role from file
+synapse agents add sharp-checker --name Reviewer --profile codex --role @./roles/reviewer.md --skill-set architect --scope project
+
+# List saved agents (Rich TUI table when interactive)
+synapse agents list
+
+# Show saved agent details
+synapse agents show sharp-checker
+synapse agents show Reviewer          # Also resolves by display name
+
+# Delete a saved agent
+synapse agents delete sharp-checker
+```
+
+**Output columns** (in `synapse agents list`):
+- **ID**: Agent ID identifier (e.g., `sharp-checker`)
+- **NAME**: Display name
+- **PROFILE**: Agent type (claude, codex, gemini, opencode, copilot)
+- **ROLE**: Role description (or `-` if not set)
+- **SKILL_SET**: Skill set name (or `-` if not set)
+- **SCOPE**: Storage scope (`project` or `user`)
+
+**Resolution order:** When resolving `<id-or-name>`, exact ID match is checked first, then display name match. An error is raised if the query matches multiple entries.
+
+**Storage:**
+- Project scope: `.synapse/agents/<id>.agent`
+- User scope: `~/.synapse/agents/<id>.agent`
+- Project-scoped definitions take precedence over user-scoped when IDs collide.
 
 ### Port Ranges
 
@@ -196,15 +334,23 @@ synapse rename my-claude --clear
 
 ## Receiving Messages
 
-When you receive an A2A message, it appears with the `A2A:` prefix:
+When you receive an A2A message, it appears with the `A2A:` prefix that includes optional sender identification and reply expectations:
 
 **Message Formats:**
 ```
-A2A: [REPLY EXPECTED] <message>   <- Reply is REQUIRED
-A2A: <message>                    <- Reply is optional (one-way notification)
+A2A: [From: NAME (SENDER_ID)] [REPLY EXPECTED] <message content>
 ```
 
+- **From**: Identifies the sender's display name and Runtime ID.
+- **REPLY EXPECTED**: Indicates that the sender is waiting for a response (blocking).
+
+If sender information is not available, it falls back to:
+- `A2A: [From: SENDER_ID] <message content>`
+- `A2A: <message content>` (backward compatible format)
+
 If `[REPLY EXPECTED]` marker is present, you **MUST** reply using `synapse reply`.
+
+**IMPORTANT:** Do NOT manually include `[REPLY EXPECTED]` in your messages. Synapse adds this marker automatically when `--wait` is used. Manually adding it causes duplication.
 
 **Reply Tracking:** Synapse automatically tracks senders who expect a reply (`[REPLY EXPECTED]` messages). Use `synapse reply` for responses - it automatically knows who to reply to.
 
@@ -214,19 +360,19 @@ If `[REPLY EXPECTED]` marker is present, you **MUST** reply using `synapse reply
 # Use the reply command (auto-routes to last sender)
 synapse reply "<your reply>"
 
-# In sandboxed environments (like Codex), specify your agent ID
-synapse reply "<your reply>" --from <your_agent_id>
+# In sandboxed environments (like Codex), specify your Runtime ID
+synapse reply "<your reply>" --from $SYNAPSE_AGENT_ID
 ```
 
 **Example - Question received (MUST reply):**
 ```
-Received: A2A: [REPLY EXPECTED] What is the project structure?
+Received: A2A: [From: Claude (synapse-claude-8100)] [REPLY EXPECTED] What is the project structure?
 Reply:    synapse reply "The project has src/, tests/..."
 ```
 
 **Example - Delegation received (no reply needed):**
 ```
-Received: A2A: Run the tests and fix failures
+Received: A2A: [From: Gemini (synapse-gemini-8110)] Run the tests and fix failures
 Action:   Just do the task. No reply needed unless you have questions.
 ```
 
@@ -237,7 +383,7 @@ Action:   Just do the task. No reply needed unless you have questions.
 **Use this command for inter-agent communication.** Works from any environment including sandboxed agents.
 
 ```bash
-synapse send <target> "<message>" [--from <sender>] [--priority <1-5>] [--response | --no-response]
+synapse send <target> "<message>" [--from <sender>] [--priority <1-5>] [--wait | --notify | --silent] [--callback "<command>"] [--force]
 ```
 
 **Target Formats (in priority order):**
@@ -250,65 +396,105 @@ synapse send <target> "<message>" [--from <sender>] [--priority <1-5>] [--respon
 | Agent type | `claude` | Only when single instance exists |
 
 **Parameters:**
-- `--from, -f`: Sender agent ID (for reply identification) - **always include this**
+- `--from, -f`: Sender Runtime ID (for reply identification) - **auto-detected** from `SYNAPSE_AGENT_ID` env var. Usually omittable; specify explicitly in sandboxed environments (e.g., Codex). When using, always provide the Runtime ID format (`synapse-<type>-<port>`). Note: `-f` means `--force` in other subcommands (e.g., `synapse kill -f`); prefer the long form `--from` to avoid confusion.
 - `--priority, -p`: Priority level 1-5 (default: 3)
   - 1-2: Low priority, background tasks
   - 3: Normal tasks
   - 4: Urgent follow-ups
   - 5: Critical/emergency (sends SIGINT first)
-- `--response`: Roundtrip mode - sender waits, receiver MUST reply
-- `--no-response`: Oneway mode - fire and forget, no reply expected
+- `--wait`: Synchronous blocking - wait for receiver to reply with `synapse reply`
+- `--notify`: Async notification - get notified when task completes (default)
+- `--silent`: Fire and forget - no reply or notification needed
+- `--callback`: Shell command to run on sender after task completion (requires `--silent`)
 - `--message-file`: Read message from file (use `-` for stdin)
 - `--stdin`: Read message from stdin
 - `--attach`: Attach file(s) to message (repeatable)
+- `--force`: Bypass the working directory mismatch check (send to agents in different directories)
 
-**Choosing --response vs --no-response:**
+**Working Directory Check:** Before sending, `synapse send` verifies that your current working directory matches the target agent's working directory. If they differ, the command prints a warning (listing agents in your current directory or suggesting `synapse spawn`) and exits with code 1. Use `--force` to skip this check.
 
-Analyze the message content and determine if a reply is expected:
-- If the message expects or benefits from a reply → use `--response`
-- If the message is purely informational with no reply needed → use `--no-response`
-- **If unsure, use `--response`** (safer default)
+**Choosing response mode:**
 
-| Message Type | Flag | Example |
+Analyze the message content and determine if you need immediate results:
+- If you need immediate results and want to block until reply → use `--wait`
+- If you want to be notified when the task is done (async) → use `--notify` (default)
+- If the message is purely informational with no notification needed → use `--silent`
+
+| Message Type | Mode | Example |
 |--------------|------|---------|
-| Question | `--response` | "What is the status?" |
-| Request for analysis | `--response` | "Please review this code" |
-| Status check | `--response` | "Are you ready?" |
-| Notification | `--no-response` | "FYI: Build completed" |
-| Delegated task | `--no-response` | "Run tests and commit" |
+| Question | `--wait` | "What is the status?" |
+| Request for analysis | `--wait` | "Please review this code" |
+| Status check | `--wait` | "Are you ready?" |
+| Task with result expected | `--notify` | "Run tests and report the results" |
+| Delegated task (fire-and-forget) | `--silent` | "Fix this bug and commit" |
+| Notification | `--silent` | "FYI: Build completed" |
 
 **Examples:**
 ```bash
-# Question - needs reply
-synapse send gemini "What is the best approach?" --response --from synapse-codex-8121
+# Question - immediate reply needed (blocking)
+synapse send gemini "What is the best approach?" --wait
 
-# Delegation - no reply needed
-synapse send codex "Fix this bug and commit" --from synapse-claude-8100
+# Task with result expected (async notification - default)
+synapse send codex "Run pytest and report the results" --notify
+
+# Delegation with no result needed - fire and forget
+synapse send codex "Fix this bug and commit" --silent
 
 # Send to specific instance with status check
-synapse send claude-8100 "What is your status?" --response --from synapse-gemini-8110
+synapse send claude-8100 "What is your status?" --wait
 
 # Emergency interrupt
-synapse send codex "STOP" --priority 5 --from synapse-claude-8100
+synapse send codex "STOP" --priority 5
+
+# Send to agent in a different working directory (bypasses working_dir check)
+synapse send my-claude "Cross-project info" --force
 ```
 
 **Sending long messages or files:**
 ```bash
 # Send message from file (avoids ARG_MAX shell limits)
-synapse send claude --message-file /tmp/review.txt --no-response
+synapse send claude --message-file /tmp/review.txt --silent
 
 # Read message from stdin
-echo "long message" | synapse send claude --stdin --no-response
-synapse send claude --message-file - --no-response   # '-' reads from stdin
+echo "long message" | synapse send claude --stdin --silent
+synapse send claude --message-file - --silent   # '-' reads from stdin
 
 # Attach files to message
-synapse send claude "Review this" --attach src/main.py --no-response
-synapse send claude "Review these" --attach src/a.py --attach src/b.py --no-response
+synapse send claude "Review this" --attach src/main.py --silent
+synapse send claude "Review these" --attach src/a.py --attach src/b.py --silent
 ```
 
 Messages >100KB are automatically written to temp files (configurable via `SYNAPSE_SEND_MESSAGE_THRESHOLD`).
 
-**Important:** Always use `--from` with your agent ID (format: `synapse-<type>-<port>`).
+**Important:** `--from` is auto-detected from `$SYNAPSE_AGENT_ID` (set at startup, expands to `synapse-<type>-<port>`). You can usually omit it. If you specify it explicitly, never hardcode Runtime IDs -- always use `$SYNAPSE_AGENT_ID`.
+
+### Interrupt Command
+
+Shorthand for sending a priority-4, fire-and-forget message:
+
+```bash
+synapse interrupt <target> "<message>" [--from <sender>] [--force]
+```
+
+Equivalent to `synapse send <target> "<message>" -p 4 --silent [--from <sender>]`.
+
+**Parameters:**
+- `target`: Target agent (name, ID, type-port, or agent type)
+- `message`: Interrupt message to send
+- `--from, -f`: Sender Runtime ID (auto-detected from `SYNAPSE_AGENT_ID` env var)
+- `--force`: Bypass the working directory mismatch check
+
+**Examples:**
+```bash
+# Interrupt an agent with an urgent message
+synapse interrupt claude "Stop and review"
+
+# With explicit sender (usually not needed)
+synapse interrupt gemini "Check status" --from $SYNAPSE_AGENT_ID
+
+# Interrupt agent in a different working directory
+synapse interrupt claude "Stop" --force
+```
 
 ### Reply Command
 
@@ -335,31 +521,32 @@ synapse reply "<message>" --to <sender_id>
 Send a message to all agents in the current working directory:
 
 ```bash
-synapse broadcast "<message>" [--from <sender>] [--priority <1-5>] [--response | --no-response]
+synapse broadcast "<message>" [--from <sender>] [--priority <1-5>] [--wait | --notify | --silent]
 ```
 
 **Parameters:**
 - `message`: Message to broadcast to all cwd agents
-- `--from, -f`: Sender agent ID (for reply identification)
+- `--from, -f`: Sender Runtime ID (auto-detected from `SYNAPSE_AGENT_ID` env var)
 - `--priority, -p`: Priority level 1-5 (default: 1)
-- `--response`: Wait for responses from all agents
-- `--no-response`: Fire-and-forget broadcast
+- `--wait`: Synchronous wait for all agents
+- `--notify`: Async notification from each agent (default)
+- `--silent`: Fire-and-forget broadcast
 
 **Scope:** Only targets agents sharing the same working directory as the sender.
 
 **Examples:**
 ```bash
 # Broadcast status check
-synapse broadcast "Status check" --from synapse-claude-8100
+synapse broadcast "Status check"
 
 # Urgent broadcast with priority
-synapse broadcast "Stop current work" --priority 4 --from synapse-claude-8100
+synapse broadcast "Stop current work" --priority 4
 
 # Fire-and-forget notification
-synapse broadcast "FYI: Build completed" --no-response --from synapse-claude-8100
+synapse broadcast "FYI: Build completed" --silent
 
 # Wait for responses from all agents
-synapse broadcast "What are you working on?" --response --from synapse-claude-8100
+synapse broadcast "What are you working on?" --wait
 ```
 
 ### A2A Tool (Advanced)
@@ -368,7 +555,7 @@ For advanced use cases or external scripts:
 
 ```bash
 python -m synapse.tools.a2a send --target <AGENT> [--priority <1-5>] "<MESSAGE>"
-python -m synapse.tools.a2a broadcast [--priority <1-5>] [--from <AGENT>] [--response | --no-response] "<MESSAGE>"  # Broadcast to cwd agents
+python -m synapse.tools.a2a broadcast [--priority <1-5>] [--from <AGENT>] [--wait | --silent] "<MESSAGE>"  # Broadcast to cwd agents
 python -m synapse.tools.a2a reply "<MESSAGE>"  # Reply to last received message
 python -m synapse.tools.a2a reply --list-targets
 python -m synapse.tools.a2a reply "<MESSAGE>" --to <SENDER_ID>
@@ -421,6 +608,8 @@ synapse history stats
 # Per-agent statistics
 synapse history stats --agent gemini
 ```
+
+When token data exists in observation metadata, the output includes a TOKEN USAGE section showing input/output token counts and estimated cost (per-agent breakdown when available). Token data is populated by agent-specific parsers in `synapse/token_parser.py` (skeleton -- no parsers shipped yet).
 
 ### Export Data
 
@@ -475,7 +664,7 @@ synapse init
 #     Project scope (./.synapse/)
 ```
 
-Creates `.synapse/` directory with all template files (settings.json, default.md, gemini.md, file-safety.md).
+Creates or updates `.synapse/` directory by merging all files from `synapse/templates/.synapse/` into the target. User-generated data (agents/, databases, sessions/, workflows/, worktrees/) is preserved — only template files are overwritten.
 
 ### Edit Settings (Interactive TUI)
 
@@ -497,7 +686,7 @@ synapse config show --scope project    # Show project settings only
 ```
 
 **TUI Categories:**
-- **Environment Variables**: `SYNAPSE_HISTORY_ENABLED`, `SYNAPSE_FILE_SAFETY_ENABLED`, etc.
+- **Environment Variables**: `SYNAPSE_HISTORY_ENABLED`, `SYNAPSE_FILE_SAFETY_ENABLED`, `SYNAPSE_LEARNING_MODE_ENABLED`, `SYNAPSE_LEARNING_MODE_TRANSLATION`, etc.
 - **Instructions**: Agent-specific initial instruction files
 - **Approval Mode**: `required` (prompt before sending) or `auto` (no prompt)
 - **A2A Protocol**: `flow` mode (auto/roundtrip/oneway)
@@ -546,7 +735,12 @@ synapse config show --scope project    # Show project settings only
 | `SYNAPSE_LONG_MESSAGE_DIR` | Directory for message files | System temp |
 | `SYNAPSE_TASK_BOARD_ENABLED` | Enable shared task board | `true` |
 | `SYNAPSE_TASK_BOARD_DB_PATH` | Task board DB path | `.synapse/task_board.db` |
+| `SYNAPSE_SHARED_MEMORY_ENABLED` | Enable shared memory | `true` |
+| `SYNAPSE_SHARED_MEMORY_DB_PATH` | Shared memory DB path | `.synapse/memory.db` |
+| `SYNAPSE_LEARNING_MODE_ENABLED` | Enable prompt improvement feedback (independent flag) | `false` |
+| `SYNAPSE_LEARNING_MODE_TRANSLATION` | Enable Japanese-to-English translation (independent flag) | `false` |
 | `SYNAPSE_REGISTRY_DIR` | Local registry directory | `~/.a2a/registry` |
+| `SYNAPSE_REPLY_TARGET_DIR` | Reply target persistence directory | `~/.a2a/reply` |
 | `SYNAPSE_EXTERNAL_REGISTRY_DIR` | External registry directory | `~/.a2a/external` |
 | `SYNAPSE_HISTORY_DB_PATH` | History database path | `~/.synapse/history/history.db` |
 | `SYNAPSE_SKILLS_DIR` | Central skill store directory | `~/.synapse/skills` |
@@ -560,7 +754,7 @@ Configure which columns to display in `synapse list`:
 
 | Column | Description |
 |--------|-------------|
-| `ID` | Agent ID (e.g., `synapse-claude-8100`) |
+| `ID` | Runtime ID (e.g., `synapse-claude-8100`) |
 | `NAME` | Custom name if set |
 | `TYPE` | Agent type (claude, gemini, etc.) |
 | `ROLE` | Role description |
@@ -598,11 +792,15 @@ synapse instructions send claude
 # Preview what would be sent without actually sending
 synapse instructions send claude --preview
 
-# Send to specific agent ID
+# Send to specific Runtime ID
 synapse instructions send synapse-claude-8100
 ```
 
 **Use case:** If you started an agent with `--resume` (which skips initial instructions) and later need the A2A protocol information, use `synapse instructions send <agent>` to inject the instructions.
+
+**Optional instruction files:** Additional instruction files are automatically appended based on settings:
+- `file-safety.md` — appended when `SYNAPSE_FILE_SAFETY_ENABLED=true`
+- `learning.md` — appended when either `SYNAPSE_LEARNING_MODE_ENABLED=true` or `SYNAPSE_LEARNING_MODE_TRANSLATION=true` is set (the two flags are independent). `SYNAPSE_LEARNING_MODE_ENABLED` adds a PROMPT IMPROVEMENT section; `SYNAPSE_LEARNING_MODE_TRANSLATION` adds a JP-to-EN LEARNING section (English pattern template, slot mapping, assembled prompt with JP paraphrase, quick alternatives). Either flag alone or both together enable `learning.md` injection and TIPS. The RESPONSE section uses normal formatting (no separators or section headers); structured format (━━━ separators, numbered sub-sections) is only for the learning feedback sections (PROMPT IMPROVEMENT / JP → EN LEARNING / TIPS). Template uses `{{#learning_mode}}`/`{{#learning_translation}}` Mustache conditionals for layout switching.
 
 ## Logs
 
@@ -743,6 +941,92 @@ synapse reset --scope both -f
 
 Resets `settings.json` to defaults and re-copies skills from `.claude` to `.agents`.
 
+## Shared Memory
+
+Cross-agent knowledge sharing via a project-local SQLite database (`.synapse/memory.db`).
+
+Enabled by default (`SYNAPSE_SHARED_MEMORY_ENABLED=true`). To disable: `SYNAPSE_SHARED_MEMORY_ENABLED=false`.
+
+### Save Memory
+
+```bash
+# Save a knowledge entry (UPSERT on key — updates if key already exists)
+synapse memory save auth-pattern "Use OAuth2 with PKCE flow"
+
+# Save with tags for categorization
+synapse memory save auth-pattern "Use OAuth2 with PKCE flow" --tags auth,security
+
+# Save and broadcast notification to all cwd agents
+synapse memory save auth-pattern "Use OAuth2 with PKCE flow" --notify
+```
+
+**Parameters:**
+- `key`: Unique key for this memory (e.g., `auth-pattern`). Used as the UPSERT key.
+- `content`: Memory content text.
+- `--tags`: Comma-separated tags for categorization.
+- `--notify`: After saving, broadcast a notification to all agents in the current working directory.
+
+**Author:** Automatically set to `$SYNAPSE_AGENT_ID` (the agent's own ID).
+
+### List Memories
+
+```bash
+# List all memories (most recently updated first)
+synapse memory list
+
+# Filter by author
+synapse memory list --author synapse-claude-8100
+
+# Filter by tags
+synapse memory list --tags arch,security
+
+# Limit results
+synapse memory list --limit 10
+```
+
+### Show Memory Details
+
+```bash
+# Show full details of a memory by key or ID
+synapse memory show auth-pattern
+synapse memory show <uuid>
+```
+
+### Search Memories
+
+```bash
+# Search across key, content, and tags (LIKE matching)
+# Results are bounded (default limit: 100, ordered by most recently updated)
+synapse memory search "OAuth2"
+synapse memory search "database"
+```
+
+### Delete Memory
+
+```bash
+# Delete with confirmation prompt
+synapse memory delete auth-pattern
+
+# Delete without confirmation
+synapse memory delete auth-pattern --force
+```
+
+### Memory Statistics
+
+```bash
+# Show total count, per-author, and per-tag breakdown
+synapse memory stats
+```
+
+### Configuration
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `SYNAPSE_SHARED_MEMORY_ENABLED` | Enable shared memory | `true` |
+| `SYNAPSE_SHARED_MEMORY_DB_PATH` | Database file path | `.synapse/memory.db` |
+
+**Storage:** `.synapse/memory.db` (SQLite with WAL mode, project-local)
+
 ## Shared Task Board
 
 Coordinate tasks across agents with dependency tracking.
@@ -768,6 +1052,65 @@ synapse tasks assign <task_id> claude
 synapse tasks complete <task_id>
 ```
 
+### Task Failure and Recovery
+
+```bash
+# Report task failure (only works on in_progress tasks you own)
+synapse tasks fail <task_id> --reason "Test suite failed"
+
+# Reopen a completed or failed task (returns to pending, clears assignee)
+synapse tasks reopen <task_id>
+```
+
+### Task Priority
+
+Tasks have priority 1-5 (default 3). Higher priority tasks are served first by `get_available_tasks()`.
+
+```bash
+# Create task with priority
+synapse tasks create "Critical fix" -d "Fix auth bug" --priority 5
+
+# Priority ordering in available tasks
+synapse tasks list --status pending
+# Returns: priority 5 first, then 4, 3, 2, 1
+```
+
+### Task Board Workflow (Kanban Pattern)
+
+The manager agent (delegate-mode) monitors TaskBoard and orchestrates worker agents:
+
+```bash
+# Step 1: Manager creates task chain
+# synapse tasks create prints "Created task: <id> - <subject> (priority=N)"
+# Use awk to extract the task ID (short UUID)
+T1=$(synapse tasks create "Write tests" --priority 5 | awk '{print $3}')
+T2=$(synapse tasks create "Implement" --blocked-by $T1 --priority 4 | awk '{print $3}')
+T3=$(synapse tasks create "Review" --blocked-by $T2 --priority 3 | awk '{print $3}')
+
+# Step 2: Manager assigns available tasks and notifies worker
+synapse tasks assign $T1 claude
+synapse send claude "Write tests for auth module" --silent
+
+# Step 3: Worker reports completion
+synapse tasks complete $T1
+# → $T2 becomes available (unblocked)
+
+# Step 4: Handle failure
+synapse tasks fail $T2 --reason "Missing dependency"
+synapse tasks reopen $T2   # Back to pending for retry
+```
+
+### A2A API Endpoints
+
+```
+POST /tasks/board                          # Create task
+GET  /tasks/board                          # List tasks
+POST /tasks/board/{task_id}/claim          # Claim task
+POST /tasks/board/{task_id}/complete       # Complete task
+POST /tasks/board/{task_id}/fail           # Fail task (preserves assignee, no unblock)
+POST /tasks/board/{task_id}/reopen         # Reopen completed/failed task to pending
+```
+
 **Storage:** `.synapse/task_board.db` (SQLite with WAL mode)
 
 ## Plan Approval
@@ -790,7 +1133,7 @@ Start multiple agents in split terminal panes.
 
 **Default behavior:** The 1st agent takes over the current terminal (handoff via `os.execvp`), and remaining agents start in new panes. Use `--all-new` to start all agents in new panes (current terminal stays).
 
-Agent specs use `profile[:name[:role[:skill_set]]]` format. When extra fields are provided, `--no-setup` is added automatically.
+Agent specs use `profile[:name[:role[:skill_set[:port]]]]` format. `--no-setup --headless` are always added to spawned agents. Ports are pre-allocated by the parent process to avoid race conditions when multiple agents of the same type start simultaneously.
 
 ```bash
 # Default: claude=current terminal, gemini=new pane
@@ -805,11 +1148,19 @@ synapse team start claude gemini --all-new
 # Horizontal layout
 synapse team start claude gemini --layout horizontal
 
-# Pass tool-specific arguments after '--' (applied to all agents)
-synapse team start claude gemini -- --dangerously-skip-permissions
+# Pass tool-specific arguments after '--' (approval-skip should be the default)
+# Keep teams homogeneous when forwarding CLI-specific flags to all agents.
+synapse team start claude claude -- --dangerously-skip-permissions
+synapse team start gemini gemini -- --approval-mode=yolo
+synapse team start codex codex -- --full-auto
+synapse team start copilot copilot -- --allow-all-tools
+
+# Worktree isolation (Synapse-level flag, before '--'; creates per-agent worktrees for ALL agent types)
+synapse team start claude gemini --worktree
+synapse team start claude gemini codex -w my-feature  # Named prefix: my-feature-claude-0, my-feature-gemini-1, etc.
 ```
 
-**Supported terminals:** tmux, iTerm2, Terminal.app (tabs), zellij. Falls back to sequential start if unsupported.
+**Supported terminals:** tmux, iTerm2, Terminal.app (tabs), Ghostty (split panes via Cmd+D), zellij. Falls back to sequential start if unsupported. **Ghostty Note:** Ghostty uses AppleScript to target the focused tab. Do not switch tabs while the team is being spawned.
 
 ### Team Start via A2A API
 
@@ -820,10 +1171,12 @@ curl -X POST http://localhost:8100/team/start \
   -H "Content-Type: application/json" \
   -d '{"agents": ["gemini", "codex"], "layout": "split"}'
 
-# With tool_args (passed through to underlying CLI tool)
+# With tool_args (passed through to the underlying CLI tool; approval-skip is recommended by default)
 curl -X POST http://localhost:8100/team/start \
   -H "Content-Type: application/json" \
-  -d '{"agents": ["gemini", "codex"], "tool_args": ["--dangerously-skip-permissions"]}'
+  -d '{"agents": ["gemini", "gemini"], "tool_args": ["--approval-mode=yolo"]}'
+# Note: tool_args are passed to ALL agents. Keep teams homogeneous when using CLI-specific flags:
+# Claude: ["--dangerously-skip-permissions"], Gemini: ["--approval-mode=yolo"], Codex: ["--full-auto"], Copilot: ["--allow-all-tools"]
 ```
 
 ### Spawn via A2A API
@@ -836,10 +1189,220 @@ curl -X POST http://localhost:8100/spawn \
   -d '{"profile": "gemini", "name": "Helper"}'
 # Response: {"agent_id": "synapse-gemini-8110", "port": 8110, "terminal_used": "tmux", "status": "submitted"}
 
-# With tool_args
+# With skill_set and tool_args
 curl -X POST http://localhost:8100/spawn \
   -H "Content-Type: application/json" \
-  -d '{"profile": "gemini", "tool_args": ["--dangerously-skip-permissions"]}'
+  -d '{"profile": "gemini", "skill_set": "dev-set", "tool_args": ["--approval-mode=yolo"]}'
+# Per-CLI tool_args: Claude ["--dangerously-skip-permissions"], Gemini ["--approval-mode=yolo"], Codex ["--full-auto"], Copilot ["--allow-all-tools"]
+
+# With worktree isolation (works for all agent types)
+curl -X POST http://localhost:8100/spawn \
+  -H "Content-Type: application/json" \
+  -d '{"profile": "gemini", "name": "Worker", "worktree": true}'
+# Named worktree:
+curl -X POST http://localhost:8100/spawn \
+  -H "Content-Type: application/json" \
+  -d '{"profile": "claude", "name": "Impl", "worktree": "feat-auth"}'
+# Response with worktree: {"agent_id": "...", "port": ..., "terminal_used": "...", "status": "submitted", "worktree_path": ".synapse/worktrees/feat-auth", "worktree_branch": "worktree-feat-auth", "worktree_base_branch": "origin/main"}
+
+# On failure: {"status": "failed", "reason": "No available port"}
+```
+
+## Session Save/Restore
+
+Save running team configurations as named snapshots and restore them later. Each session captures agent profiles, names, roles, skill sets, worktree settings, and `session_id` (CLI conversation identifier) as a JSON file.
+
+### Save Session
+
+```bash
+# Save all agents in current directory as a session (project scope by default)
+synapse session save my-team
+
+# Save to user scope (~/.synapse/sessions/)
+synapse session save my-team --user
+
+# Save agents matching a specific working directory
+synapse session save my-team --workdir /path/to/project
+```
+
+**Scope filter behavior:**
+- Default (project): captures agents whose `working_dir` matches `CWD`, saves to `.synapse/sessions/`
+- `--user`: captures all running agents regardless of directory, saves to `~/.synapse/sessions/`
+- `--workdir DIR`: captures agents matching the specified directory, saves to `DIR/.synapse/sessions/`
+
+**`session_id` capture:** Each agent's CLI conversation identifier (if available) is read from the registry and stored in the session JSON. This enables `--resume` during restore to target the exact conversation.
+
+### List Sessions
+
+```bash
+# List all saved sessions (project + user)
+synapse session list
+
+# List user-scope sessions only
+synapse session list --user
+
+# List project-scope sessions only
+synapse session list --project
+```
+
+Output columns: NAME, AGENTS (count), SCOPE, WORKING_DIR, CREATED. Rich table in TTY, plain text otherwise.
+
+### Show Session Details
+
+```bash
+synapse session show my-team
+```
+
+Displays session name, scope, working directory, creation timestamp, agent count, and per-agent details (profile, name, role, skill_set, worktree, session_id).
+
+### Restore Session
+
+```bash
+# Restore a saved session (spawns all agents)
+synapse session restore my-team
+
+# Override worktree setting for all agents
+synapse session restore my-team --worktree
+synapse session restore my-team -w
+
+# Resume each agent's previous CLI session (conversation history)
+synapse session restore my-team --resume
+
+# Combine resume with worktree and tool args
+synapse session restore my-team --resume --worktree -- --dangerously-skip-permissions
+
+# Pass tool args to spawned agents (after '--')
+synapse session restore my-team -- --dangerously-skip-permissions
+```
+
+Each agent in the session is spawned via `spawn_agent()`. The `--worktree` / `-w` flag overrides the saved worktree setting for all agents. Tool args after `--` are passed through to the underlying CLI.
+
+**`--resume` flag:**
+
+When `--resume` is specified, each agent receives CLI-specific resume arguments built from `build_resume_args()`. If the session snapshot includes a `session_id` for an agent, the resume targets that specific conversation; otherwise, the latest session is resumed.
+
+| Profile | With `session_id` | Without `session_id` |
+|---------|-------------------|---------------------|
+| claude | `--resume <id>` | `--continue` |
+| gemini | `--resume <id>` | `--resume` |
+| codex | `resume <id>` | `resume --last` |
+| copilot | `--resume` | `--resume` |
+| opencode | *(no support)* | *(no support)* |
+
+**Shell-level fallback:** If the resume command exits with a non-zero status within 10 seconds (e.g., session ID not found), the agent is automatically retried without resume args. This prevents a missing session from blocking the entire restore. Failures after 10 seconds (e.g., a long-running agent crashing) do not trigger the fallback.
+
+### Delete Session
+
+```bash
+# Delete with confirmation prompt
+synapse session delete my-team
+
+# Delete without confirmation
+synapse session delete my-team --force
+synapse session delete my-team -f
+```
+
+### Session Name Rules
+
+Session names must start with an alphanumeric character and contain only alphanumeric characters, dots, hyphens, or underscores (same rules as worktree names).
+
+### Storage
+
+```text
+.synapse/sessions/<name>.json        # Project scope (default)
+~/.synapse/sessions/<name>.json      # User scope (--user)
+DIR/.synapse/sessions/<name>.json    # Custom project scope (--workdir DIR)
+```
+
+## Workflow Automation
+
+Define multi-step agent workflows as YAML files and execute them sequentially.
+
+### Create Workflow Template
+
+```bash
+# Generate a template YAML file
+synapse workflow create review-and-test
+```
+
+Creates a starter YAML at the project scope (`.synapse/workflows/review-and-test.yaml`) with example steps that you can customize.
+
+### List Workflows
+
+```bash
+# List all saved workflows (project + user)
+synapse workflow list
+
+# List project-scope workflows only
+synapse workflow list --project
+
+# List user-scope workflows only
+synapse workflow list --user
+```
+
+### Show Workflow Details
+
+```bash
+# Show step-by-step details of a workflow
+synapse workflow show review-and-test
+```
+
+Displays workflow name, description, scope, and each step's target, message, priority, and response mode.
+
+### Run Workflow
+
+```bash
+# Execute all steps sequentially
+synapse workflow run review-and-test
+
+# Preview steps without executing
+synapse workflow run review-and-test --dry-run
+
+# Continue executing remaining steps even if one fails
+synapse workflow run review-and-test --continue-on-error
+```
+
+Steps are executed in order. Each step sends a message to the specified target agent using the configured priority and response mode. By default, execution stops on the first failure unless `--continue-on-error` is set.
+
+### Delete Workflow
+
+```bash
+# Delete with confirmation prompt
+synapse workflow delete review-and-test
+
+# Delete without confirmation
+synapse workflow delete review-and-test --force
+```
+
+### YAML Format
+
+```yaml
+name: review-and-test
+description: "Send review to Claude, then tests to Gemini"
+steps:
+  - target: claude
+    message: "Review the changes"
+    priority: 4
+    response_mode: wait
+  - target: gemini
+    message: "Write tests"
+    response_mode: silent
+```
+
+**Step fields:**
+
+| Field | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `target` | Yes | — | Agent target (name, type, ID) |
+| `message` | Yes | — | Message to send |
+| `priority` | No | `3` | Priority level (1-5) |
+| `response_mode` | No | `notify` | `wait`, `notify`, or `silent` |
+
+### Storage
+
+```text
+.synapse/workflows/<name>.yaml        # Project scope (default)
+~/.synapse/workflows/<name>.yaml      # User scope
 ```
 
 ## Skill Management
@@ -873,7 +1436,36 @@ synapse skills create [--name <name>]              # Create new skill template
 # Skill sets (named groups)
 synapse skills set list
 synapse skills set show <name>
+
+### Apply Skill Set to Running Agent
+
+Apply a skill set to a running agent. This command copies skill files to the agent's skill directory, updates the registry, and re-injects skill set information via A2A.
+
+```bash
+synapse skills apply <target> <set_name> [--dry-run]
 ```
+
+**Parameters:**
+- `target`: Target agent (name, ID, type-port, or agent type)
+- `set_name`: Name of the skill set to apply (e.g., `developer`, `architect`)
+- `--dry-run`: Preview changes without applying them
+
+**Example:**
+```bash
+synapse skills apply my-claude manager
+synapse skills apply gemini-8110 developer --dry-run
+```
+
+**Default Skill Sets (6):**
+
+| Set | Description | Skills (+ synapse-a2a base) |
+|-----|-------------|----------------------------|
+| `architect` | System architecture and design — design docs, API contracts, code review | system-design, api-design, code-review, project-docs |
+| `developer` | Implementation and quality — test-first development, refactoring, code simplification | test-first, refactoring, code-simplifier, agent-memory |
+| `reviewer` | Code review and security — structured reviews, security audits, code simplification | code-review, security-audit, code-simplifier |
+| `frontend` | Frontend development — React/Next.js performance, component composition, design systems, accessibility | react-performance, frontend-design, react-composition, web-accessibility |
+| `manager` | Multi-agent management — task delegation, progress monitoring, quality verification, cross-review orchestration, re-instruction | synapse-manager, task-planner, agent-memory, code-review, synapse-reinst |
+| `documentation` | Documentation expert — audit, restructure, synchronize, and maintain project documentation | project-docs, doc-organizer, api-design, agent-memory |
 
 **Skill Set in Initial Instructions:** When an agent starts with a skill set (via `--skill-set` or interactive selection), the skill set details (name, description, included skills) are automatically included in the agent's initial instructions. This allows the agent to understand its assigned capabilities.
 
@@ -892,19 +1484,176 @@ synapse skills set show <name>
 |-------|-----------|
 | Claude | `.claude/skills/` |
 | Codex | `.agents/skills/` |
-| Gemini | `.gemini/skills/` |
+| Gemini | `.agents/skills/` |
 | OpenCode | `.agents/skills/` |
 | Copilot | `.agents/skills/` |
+
+## CI Monitoring and Auto-Fix Skills
+
+Automated hooks and companion skills for monitoring CI, merge conflicts, and code reviews.
+
+### CI Monitoring Hooks
+
+PostToolUse hooks in `.claude/hooks/` automatically launch background monitors after `git push` or `gh pr create`:
+
+- **`check-ci-trigger.sh`**: Detects `git push` and `gh pr create` in Bash tool invocations, then launches:
+  - **`poll-ci.sh`**: Polls GitHub Actions until the run completes. Reports pass/fail via `systemMessage`. On failure, suggests `/fix-ci` (up to 2 auto-fix attempts before recommending manual intervention).
+  - **`poll-pr-status.sh`**: Checks PR mergeable state (conflict detection) and waits for CodeRabbit review. Reports merge conflicts (suggests `/fix-conflict`) and classifies review comments by severity (suggests `/fix-review` for actionable issues).
+
+### Check CI Status
+
+```
+/check-ci          # Show CI checks + merge conflict state + CodeRabbit review
+/check-ci --fix    # Show status and suggest fix commands for issues found
+/check-ci --wait   # Report if CI is still running
+```
+
+Reports:
+- GitHub Actions check results (pass/fail/running/pending)
+- Merge conflict state (MERGEABLE / CONFLICTING / computing)
+- CodeRabbit review comment count and classification
+
+With `--fix`, suggests `/fix-conflict`, `/fix-ci`, or `/fix-review` in priority order.
+
+### Fix CI Failures
+
+```
+/fix-ci             # Auto-diagnose and fix CI failures
+/fix-ci --dry-run   # Preview fixes without applying
+```
+
+Workflow: fetch failed logs -> categorize (format/lint/type/test) -> apply targeted fixes -> verify locally -> commit and push. Max 1 retry per failure category.
+
+### Fix Merge Conflicts
+
+```
+/fix-conflict             # Auto-resolve merge conflicts
+/fix-conflict --dry-run   # Show conflicts without resolving
+```
+
+Workflow: fetch base branch -> test merge -> identify conflicts -> analyze both sides -> resolve -> verify (ruff + pytest) -> commit and push. Aborts on binary conflicts or >10 conflicting files.
+
+### Fix CodeRabbit Review Comments
+
+```
+/fix-review             # Auto-fix actionable CodeRabbit comments
+/fix-review --dry-run   # Preview without applying
+/fix-review --all       # Also attempt suggestion-category fixes
+```
+
+Workflow: fetch PR reviews from `coderabbitai[bot]` -> classify comments (Bug/Security, Style, Suggestion) -> apply fixes for actionable categories -> verify locally -> commit and push.
+
+**Comment Classification:**
+- **Bug/Security** (auto-fix): issues with `⚠️ Potential issue`, `🐛 Bug`, `🔒 Security` headers or bug-related keywords
+- **Style** (auto-fix): nitpicks, formatting, naming issues; delegates to `ruff check --fix` and `ruff format` when applicable
+- **Suggestion** (report only): refactoring ideas, performance hints; only auto-fixed with `--all` flag
+
+## Canvas Board
+
+Canvas is a shared visual dashboard where agents post rich content cards rendered in the browser. The UI is a single-page application (SPA) with two views navigated via hash routing:
+
+- **`#/`** (Canvas view) — Spotlight layout showing the latest card prominently
+- **`#/dashboard`** (Dashboard view) — Grid layout with filters, live feed, and system panel
+
+### Post Cards
+
+```bash
+# Post a Mermaid diagram
+synapse canvas post mermaid "graph TD; A-->B" --title "Architecture" --pinned
+
+# Post markdown
+synapse canvas post markdown "## Summary\nAll tests pass" --title "Report"
+
+# Post a table
+synapse canvas post table '{"headers":["Test","Status"],"rows":[["auth","pass"],["api","pass"]]}' --title "Results"
+
+# Post code with language hint (syntax highlighted via highlight.js)
+synapse canvas post code "def hello(): pass" --lang python --title "Snippet"
+
+# Post a Chart.js chart (supports bar, line, pie, doughnut, radar, polarArea, scatter, bubble)
+synapse canvas post chart '{"type":"bar","data":{"labels":["A","B"],"datasets":[{"data":[10,20]}]}}' --title "Metrics"
+synapse canvas post chart '{"type":"pie","data":{"labels":["Pass","Fail"],"datasets":[{"data":[95,5]}]}}' --title "Results"
+
+# Post a diff (rendered as side-by-side comparison)
+synapse canvas post diff "@@ -1 +1 @@\n-old\n+new" --title "Changes"
+
+# Post HTML (rendered in sandboxed iframe with auto-height)
+synapse canvas post html "<h1>Hello</h1><p>Rich content</p>" --title "HTML Card"
+
+# Read body from file
+synapse canvas post mermaid "" --file diagram.mmd --title "From File"
+
+# Upsert: update an existing card by ID (or create if not found)
+synapse canvas post markdown "Updated content" --title "Report" --card-id my-report-1
+
+# Add tags for categorisation
+synapse canvas post markdown "Notes" --title "Review" --tags "review,auth"
+
+# Override agent display name
+synapse canvas post markdown "Hello" --title "Greeting" --agent-name "Reviewer"
+
+# Post raw JSON (composite cards with multiple content blocks)
+synapse canvas post-raw '{"type":"render","agent_id":"cli","content":[{"format":"markdown","body":"# Title"},{"format":"code","body":"x=1","lang":"python"}],"title":"Composite"}'
+```
+
+**Supported formats (18):** mermaid, markdown, html, table, json, diff, code, chart, image, log, status, metric, checklist, timeline, alert, file-preview, trace, task-board
+
+### Rendering Details
+
+| Format | Renderer | Notes |
+|--------|----------|-------|
+| code | highlight.js 11.x | Syntax highlighting; set `--lang` for best results |
+| chart | Chart.js 4.x | All chart types: bar, line, pie, doughnut, radar, polarArea, scatter, bubble |
+| diff | Side-by-side | Parsed into left (deletions) / right (additions) columns |
+| html | Sandboxed iframe | `allow-scripts`; auto-resizes to content height |
+| image | `<img>` tag | PNG, JPEG, SVG, GIF, WebP via URL or Base64 data URI (up to 2MB) |
+| mermaid | Mermaid 11.x | Diagrams rendered client-side |
+
+### Manage Cards
+
+```bash
+synapse canvas list                      # List all cards
+synapse canvas list --agent-id claude    # Filter by agent
+synapse canvas list --type markdown      # Filter by content type
+synapse canvas list --search "Auth"      # Search by title
+synapse canvas delete <card_id> --agent-id <id>  # Delete own card
+synapse canvas clear                     # Clear all cards
+synapse canvas clear --agent-id <id>     # Clear agent's cards
+```
+
+### Server Management
+
+```bash
+synapse canvas serve [--port 3000]       # Start server foreground
+synapse canvas open                      # Open in browser (auto-starts server)
+synapse canvas status                    # Show server status
+synapse canvas logs [-n 50] [-f]         # View server logs
+synapse canvas stop                      # Stop server
+```
+
+**Auto-start:** The server starts automatically when you post the first card. Cards are auto-cleaned after 1 hour (pinned cards are exempt).
+
+**Canvas proxy:** Each agent's A2A server exposes `/canvas/cards` endpoints, so agents can post cards through their own port without knowing the Canvas server port.
 
 ## Storage Locations
 
 ```text
 ~/.a2a/registry/     # Running agents (auto-cleaned)
+~/.a2a/reply/        # Reply target persistence (auto-cleaned per agent)
 ~/.a2a/external/     # External A2A agents (persistent)
 ~/.synapse/skills/   # Central skill store
+~/.synapse/sessions/ # Saved sessions (user scope)
+~/.synapse/workflows/ # Saved workflows (user scope)
+~/.synapse/agents/   # Saved agent definitions (user scope)
 ~/.synapse/          # User-level settings and logs
 .synapse/            # Project-level settings
+.synapse/sessions/   # Saved sessions (project scope)
+.synapse/workflows/  # Saved workflows (project scope)
+.synapse/memory.db   # Shared memory knowledge base (project-local)
+.synapse/canvas.db   # Canvas card storage (project-local)
+.synapse/worktrees/  # Git worktrees for isolated agent workspaces (auto-managed)
 /tmp/synapse-a2a/    # Unix Domain Sockets (UDS) for inter-agent communication
+/tmp/.synapse-ci/    # CI monitoring state (fix counters, report dedup)
 ```
 
 **Note:** UDS socket location can be customized with `SYNAPSE_UDS_DIR` environment variable.

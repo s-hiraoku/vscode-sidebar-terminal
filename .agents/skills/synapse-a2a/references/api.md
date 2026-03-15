@@ -32,7 +32,7 @@ The framework automatically handles routing - you don't need to know where the m
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/.well-known/agent.json` | GET | Agent Card |
-| `/tasks/send` | POST | Send message |
+| `/tasks/send` | POST | Send message (subject to Readiness Gate) |
 | `/tasks/{id}` | GET | Get task status |
 | `/tasks` | GET | List tasks |
 | `/tasks/{id}/cancel` | POST | Cancel task |
@@ -42,8 +42,8 @@ The framework automatically handles routing - you don't need to know where the m
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/tasks/send-priority` | POST | Send with priority (1-5, 5=interrupt) |
-| `/tasks/create` | POST | Create task without PTY send (for `--response`) |
+| `/tasks/send-priority` | POST | Send with priority (1-5, 5=interrupt; subject to Readiness Gate) |
+| `/tasks/create` | POST | Create task without PTY send (for `--wait`) |
 | `/reply-stack/list` | GET | List sender IDs available for reply (`synapse reply --list-targets`) |
 | `/reply-stack/get` | GET | Get sender info without removing (supports `?sender_id=`) |
 | `/reply-stack/pop` | GET | Pop sender info from reply map (supports `?sender_id=`) |
@@ -53,13 +53,25 @@ The framework automatically handles routing - you don't need to know where the m
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/tasks/board` | GET | List shared task board |
-| `/tasks/board` | POST | Create task on board |
+| `/tasks/board` | POST | Create task on board (supports `priority` field, default 3) |
 | `/tasks/board/{id}/claim` | POST | Claim task atomically |
 | `/tasks/board/{id}/complete` | POST | Complete task (auto-unblocks dependents) |
+| `/tasks/board/{id}/fail` | POST | Fail task (preserves assignee, does NOT unblock dependents) |
+| `/tasks/board/{id}/reopen` | POST | Reopen completed/failed task (clears assignee, returns to pending) |
 | `/tasks/{id}/approve` | POST | Approve a plan |
 | `/tasks/{id}/reject` | POST | Reject a plan with reason |
 | `/team/start` | POST | Start multiple agents in terminal panes (agent-initiated) |
-| `/spawn` | POST | Spawn a single agent in a new terminal pane |
+| `/spawn` | POST | Spawn a single agent in a new terminal pane (supports `worktree` field for isolation) |
+
+### Shared Memory Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/memory/list` | GET | List memories (query params: `author`, `tags`, `limit`) |
+| `/memory/save` | POST | Save/update memory (`{key, content, tags?, notify?}`) |
+| `/memory/search` | GET | Search memories (query param: `q`) |
+| `/memory/{id_or_key}` | GET | Get memory by ID or key |
+| `/memory/{id_or_key}` | DELETE | Delete memory by ID or key |
 
 ### Webhook Endpoints
 
@@ -86,9 +98,9 @@ The framework automatically handles routing - you don't need to know where the m
 | `/external/agents/{alias}` | DELETE | Remove external agent |
 | `/external/agents/{alias}/send` | POST | Send message to external agent |
 
-## Roundtrip Communication (`--response` Flow)
+## Roundtrip Communication (`--wait` Flow)
 
-When `--response` is used, the sender waits for a reply:
+When `--wait` is used, the sender waits for a reply:
 
 1. **Sender** calls `/tasks/create` to create a task without PTY send (stores task context)
 2. **Sender** calls `/tasks/send` on the target agent with `[REPLY EXPECTED]` marker
@@ -98,6 +110,27 @@ When `--response` is used, the sender waits for a reply:
 
 This flow ensures reliable request-response patterns between agents.
 
+## Readiness Gate
+
+The `/tasks/send` and `/tasks/send-priority` endpoints enforce a **Readiness Gate** that blocks incoming messages until the agent has finished initialization (first READY state).
+
+| Condition | Behavior |
+|-----------|----------|
+| Agent initializing (not yet READY) | Waits up to `AGENT_READY_TIMEOUT` (default: 30s) for the agent to become ready |
+| Agent still not ready after timeout | Returns **HTTP 503** with `Retry-After: 5` header |
+| Priority 5 (emergency interrupt) | **Bypasses** the gate entirely |
+| Reply messages (`in_reply_to` set) | **Bypasses** the gate (replies are routed before the check) |
+
+**Caller behavior on 503:**
+- CLI callers (`synapse send`) handle retries automatically
+- Direct API callers should respect the `Retry-After` header and retry after the indicated seconds
+
+**Configuration:**
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `AGENT_READY_TIMEOUT` | Seconds to wait for agent readiness before returning 503 | `30` |
+
 ## Priority Levels
 
 | Priority | Use Case |
@@ -105,7 +138,7 @@ This flow ensures reliable request-response patterns between agents.
 | 1-2 | Low priority, background tasks |
 | 3 | Normal tasks (`send` default) |
 | 4 | Urgent follow-ups |
-| 5 | Emergency interrupt (sends SIGINT first) |
+| 5 | Emergency interrupt (sends SIGINT first, bypasses Readiness Gate) |
 
 **Note:** `broadcast` defaults to priority 1 (low), while `send` defaults to priority 3 (normal).
 
@@ -144,6 +177,26 @@ Error: No agent found matching 'xyz'
 Error: Ambiguous target 'codex'. Multiple agents found.
 ```
 **Solution:** Use custom name (e.g., `my-codex`) or specific identifier (e.g., `codex-8120`).
+
+### Agent Not Ready (Initializing)
+
+```text
+HTTP 503: Agent not ready (initializing). Retry after a few seconds.
+Retry-After: 5
+```
+**Solution:** The agent is still starting up. Wait a few seconds and retry. Priority 5 messages bypass this check. See "Readiness Gate" section above for details.
+
+### Working Directory Mismatch
+
+```text
+Warning: Target agent "my-claude" is in a different directory:
+  Sender:  /home/user/project-a
+  Target:  /home/user/project-b
+Agents in current directory:
+  gemini (gemini) - READY
+Use --force to send anyway.
+```
+**Solution:** The target agent is working in a different directory. Either send to an agent in your current directory, use `--force` to bypass the check, or spawn a new agent with `synapse spawn`.
 
 ### Agent Not Responding
 
