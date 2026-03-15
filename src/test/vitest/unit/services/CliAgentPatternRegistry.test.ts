@@ -240,9 +240,9 @@ describe('CliAgentPatternRegistry', () => {
       expect(registry.cleanAnsiEscapeSequences(raw)).toBe('Green and Bold');
     });
 
-    it('should remove carriage returns and control chars', () => {
+    it('should remove carriage returns and control chars while preserving line boundaries', () => {
       const raw = 'line1\r\nline2\x07';
-      expect(registry.cleanAnsiEscapeSequences(raw)).toBe('line1line2');
+      expect(registry.cleanAnsiEscapeSequences(raw)).toBe('line1\nline2');
     });
 
     it('should handle complex OSC sequences', () => {
