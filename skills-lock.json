@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "skills": {
+    "synapse-a2a": {
+      "source": "s-hiraoku/synapse-a2a",
+      "sourceType": "github",
+      "computedHash": "852cebff53870066d311073368fd687bec7dcfbcef9e29e9927e7d4c394f256e"
+    },
+    "synapse-manager": {
+      "source": "s-hiraoku/synapse-a2a",
+      "sourceType": "github",
+      "computedHash": "7b89e33552a337de9496e2f40f97d301f9157268d8e3d553b53e441b61f6c8a0"
+    },
+    "synapse-reinst": {
+      "source": "s-hiraoku/synapse-a2a",
+      "sourceType": "github",
+      "computedHash": "2f6fb1f5351ce293406da962c3fcc9a218df03e23bd4c7e3d6b2c4e5db2dd854"
+    }
+  }
+}
