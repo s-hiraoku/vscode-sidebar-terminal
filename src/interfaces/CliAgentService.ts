@@ -100,7 +100,7 @@ export interface ICliAgentDetectionService {
    * Get currently connected CLI Agent across all terminals
    * @returns Connected agent info or null if none connected
    */
-  getConnectedAgent(): { terminalId: string; type: string } | null;
+  getConnectedAgent(): { terminalId: string; type: AgentType } | null;
 
   /**
    * Get all disconnected agents
@@ -117,7 +117,7 @@ export interface ICliAgentDetectionService {
     success: boolean;
     reason?: string;
     newStatus: 'connected' | 'disconnected' | 'none';
-    agentType: string | null;
+    agentType: AgentType | null;
   };
 
   // =================== Event Management ===================
@@ -129,8 +129,26 @@ export interface ICliAgentDetectionService {
   readonly onCliAgentStatusChange: vscode.Event<{
     terminalId: string;
     status: 'connected' | 'disconnected' | 'none';
-    type: string | null;
+    type: AgentType | null;
     terminalName?: string;
+  }>;
+
+  // =================== Waiting State Detection ===================
+
+  /**
+   * Detect if agent is in a waiting state from terminal output
+   * @param terminalId Terminal ID
+   * @param data Terminal output data
+   */
+  detectWaitingState(terminalId: string, data: string): void;
+
+  /**
+   * Agent waiting state change event
+   */
+  readonly onAgentWaitingChange: vscode.Event<{
+    terminalId: string;
+    isWaiting: boolean;
+    waitingType?: 'input' | 'approval';
   }>;
 
   // =================== Lifecycle Management ===================
@@ -146,7 +164,7 @@ export interface ICliAgentDetectionService {
    */
   dispose(): void;
 
-  // =================== 🚨 NEW: Enhanced State Management ===================
+  // =================== Enhanced State Management ===================
 
   /**
    * Start heartbeat mechanism for state validation
@@ -180,7 +198,7 @@ export interface ICliAgentDetectionService {
   clearDetectionError(terminalId: string): boolean;
 
   /**
-   * 🔄 BACKWARD COMPATIBILITY: Set agent connected (delegates to state manager)
+   * Set agent connected (backward compatibility, delegates to state manager)
    * This method maintains compatibility with existing tests and legacy code
    * @param terminalId Terminal ID to set as connected
    * @param type Agent type
@@ -304,7 +322,7 @@ export interface ICliAgentStateManager {
   readonly onStatusChange: vscode.Event<{
     terminalId: string;
     status: 'connected' | 'disconnected' | 'none';
-    type: string | null;
+    type: AgentType | null;
     terminalName?: string;
   }>;
 
@@ -319,18 +337,18 @@ export interface ICliAgentStateManager {
   dispose(): void;
 
   /**
-   * 🚨 NEW: Validate connected agent state (heartbeat mechanism)
+   * Validate connected agent state (heartbeat mechanism)
    */
   validateConnectedAgentState(): void;
 
   /**
-   * 🚨 NEW: Force refresh connected agent state (fallback recovery)
+   * Force refresh connected agent state (fallback recovery)
    * @returns True if connected agent state is valid after refresh
    */
   refreshConnectedAgentState(): boolean;
 
   /**
-   * 🔧 NEW: Promote a DISCONNECTED agent to CONNECTED for legitimate user actions
+   * Promote a DISCONNECTED agent to CONNECTED for legitimate user actions
    * This bypasses the blocking logic in setConnectedAgent for explicit user operations like toggle button clicks
    * @param terminalId Terminal ID of the DISCONNECTED agent to promote
    */
