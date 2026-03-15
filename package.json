@@ -2,7 +2,7 @@
   "name": "vscode-sidebar-terminal",
   "displayName": "Secondary Terminal",
   "description": "Production-ready VS Code extension with TypeScript-compliant terminal in sidebar, ProcessState/InteractionState management, and comprehensive session management.",
-  "version": "0.2.28",
+  "version": "0.3.0",
   "publisher": "s-hiraoku",
   "sideEffects": false,
   "engines": {
@@ -473,6 +473,30 @@
           "type": "boolean",
           "default": true,
           "description": "Enable file reference shortcuts: Use Cmd+Option+L (Mac) or Alt+Ctrl+L (Linux/Windows) to insert file references"
+        },
+        "secondaryTerminal.agentWaitingNotification.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Play a sound when a CLI agent is waiting for input or approval"
+        },
+        "secondaryTerminal.agentWaitingNotification.soundFile": {
+          "type": "string",
+          "default": "",
+          "description": "Path to custom sound file (empty = system default)"
+        },
+        "secondaryTerminal.agentWaitingNotification.volume": {
+          "type": "number",
+          "default": 50,
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Notification sound volume (0-100)"
+        },
+        "secondaryTerminal.agentWaitingNotification.cooldownMs": {
+          "type": "number",
+          "default": 5000,
+          "minimum": 1000,
+          "maximum": 60000,
+          "description": "Minimum interval between notifications per terminal (ms)"
         },
         "secondaryTerminal.enableTerminalHeaderEnhancements": {
           "type": "boolean",

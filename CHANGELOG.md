@@ -5,6 +5,31 @@ All notable changes to the "Secondary Terminal" extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v0.2.27...v0.3.0) (2026-03-15)
+
+
+### Fixed
+
+* address CI review comments for pre-commit hooks ([5b60c34](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/5b60c34a15b3cc81e0e281aba99b944901f1478b))
+* guard against document undefined in HeaderFactory timer ([e40226a](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/e40226aca9d49ebe1d8ea33ca9bbdbdb82e6d179))
+
+
+### Added
+
+* add agent waiting notification settings schema ([b084d9b](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/b084d9b919e85f402c58fa5d6f6f85861eefef58))
+* add AudioNotificationService and CliAgentWaitingDetector ([77c7c96](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/77c7c961c4a0dd283566d5ebdc9042103acf0003))
+* add waiting pattern detection and harden ANSI stripping ([b994888](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/b99488884705900528e5d3b5b5207b2e635b3473))
+* add waiting state support to CliAgentStateStore ([5950e15](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/5950e15286a5ccc7d3fcdfcfcbefbee99a2bebf4))
+* automate CHANGELOG generation with standard-version ([#273](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/273)) ([3fde685](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/3fde685e7523acb9e4d00ffbb95357644690f254))
+* extend ICliAgentDetectionService with waiting state detection ([9790e5d](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/9790e5dd79d8bd57ff324a12a7f08c1d5f4eb9b4))
+* integrate waiting detection and audio notification pipeline ([1d12767](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/1d12767378e2e6cc90d87b3aaded7288d7f7a246))
+
+
+### Changed
+
+* extract lint-staged config to external file with function form ([315bdb9](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/315bdb9fd54ea7b81d1a7d38bc8ae83d6657fe1d))
+* remove unsafe type assertions in TerminalDataBufferManager ([1f5b33f](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/1f5b33f66b62a39b1cfec6e5db1417f759ae941d))
+
 ## [0.2.28] - 2026-02-18
 
 ### Added
