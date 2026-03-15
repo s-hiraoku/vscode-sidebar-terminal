@@ -1,68 +1,28 @@
-/**
- * CLI Agent State Store
- *
- * Centralized state management for CLI Agents with Observer pattern support.
- * Consolidates state management from:
- * - services/CliAgentStateManager
- * - webview/managers/CliAgentStateManager
- *
- * Benefits:
- * - Single source of truth for agent state
- * - Observer pattern for reactive state updates
- * - Reduced code duplication
- * - Improved maintainability and consistency
- */
-
 import * as vscode from 'vscode';
 import { terminal as log } from '../utils/logger';
 import type { AgentType } from '../types/shared';
 
-/**
- * Agent state status
- */
 export type AgentStatus = 'connected' | 'disconnected' | 'none';
 
-/**
- * Agent state information
- */
 export interface AgentState {
-  /** Terminal ID */
   terminalId: string;
-
-  /** Agent status */
   status: AgentStatus;
-
-  /** Agent type */
   agentType: AgentType | null;
-
-  /** Terminal name (optional) */
   terminalName?: string;
-
-  /** Whether to preserve scroll position */
   preserveScrollPosition: boolean;
-
-  /** Whether agent is displaying choices */
   isDisplayingChoices: boolean;
-
-  /** Timestamp of last choice detection */
   lastChoiceDetected?: number;
-
-  /** Start time for disconnected agents */
   startTime?: Date;
+  isWaitingForInput: boolean;
+  waitingType?: 'input' | 'approval';
 }
 
-/**
- * Disconnected agent information
- */
 export interface DisconnectedAgentInfo {
   type: AgentType;
   startTime: Date;
   terminalName?: string;
 }
 
-/**
- * State change event
- */
 export interface StateChangeEvent {
   terminalId: string;
   status: AgentStatus;
@@ -70,61 +30,42 @@ export interface StateChangeEvent {
   terminalName?: string;
 }
 
-/**
- * Observer callback for state changes
- */
+export interface WaitingChangeEvent {
+  terminalId: string;
+  isWaiting: boolean;
+  waitingType?: 'input' | 'approval';
+}
+
 export type StateChangeObserver = (event: StateChangeEvent) => void;
 
-/**
- * Centralized CLI Agent State Store
- */
 export class CliAgentStateStore {
-  // State storage
   private readonly agentStates = new Map<string, AgentState>();
   private connectedAgentTerminalId: string | null = null;
   private connectedAgentType: AgentType | null = null;
   private readonly disconnectedAgents = new Map<string, DisconnectedAgentInfo>();
 
-  // Event emitters for VS Code integration
   private readonly statusChangeEmitter = new vscode.EventEmitter<StateChangeEvent>();
   public readonly onStatusChange: vscode.Event<StateChangeEvent> = this.statusChangeEmitter.event;
 
-  // Observer pattern support
-  private readonly observers: Set<StateChangeObserver> = new Set();
+  private readonly waitingChangeEmitter = new vscode.EventEmitter<WaitingChangeEvent>();
+  public readonly onAgentWaitingChange: vscode.Event<WaitingChangeEvent> =
+    this.waitingChangeEmitter.event;
 
-  // Configuration
+  private readonly observers = new Set<StateChangeObserver>();
   private readonly DISCONNECT_GRACE_PERIOD_MS = 2000;
 
-  constructor() {
-    log('🏪 [STATE-STORE] Initialized CLI Agent State Store');
-  }
-
-  /**
-   * Register an observer for state changes
-   * @param observer Callback function to be called on state changes
-   * @returns Disposable to unregister the observer
-   */
   public subscribe(observer: StateChangeObserver): vscode.Disposable {
     this.observers.add(observer);
-    log(`👀 [STATE-STORE] Observer registered (total: ${this.observers.size})`);
 
     return {
       dispose: () => {
         this.observers.delete(observer);
-        log(`👋 [STATE-STORE] Observer unregistered (total: ${this.observers.size})`);
       },
     };
   }
 
-  /**
-   * Notify all observers of a state change
-   * @param event State change event
-   */
   private notifyObservers(event: StateChangeEvent): void {
-    // Emit VS Code event
     this.statusChangeEmitter.fire(event);
-
-    // Notify observers
     this.observers.forEach((observer) => {
       try {
         observer(event);
@@ -134,18 +75,9 @@ export class CliAgentStateStore {
     });
   }
 
-  /**
-   * Set agent as connected
-   * @param terminalId Terminal ID
-   * @param agentType Agent type
-   * @param terminalName Terminal name (optional)
-   */
   public setConnectedAgent(terminalId: string, agentType: AgentType, terminalName?: string): void {
     // Prevent unnecessary state changes
     if (this.connectedAgentTerminalId === terminalId && this.connectedAgentType === agentType) {
-      log(
-        `ℹ️ [STATE-STORE] Agent ${agentType} in terminal ${terminalId} already CONNECTED, skipping`
-      );
       return;
     }
 
@@ -155,15 +87,8 @@ export class CliAgentStateStore {
       const timeSinceDisconnect = Date.now() - disconnectedInfo.startTime.getTime();
 
       if (timeSinceDisconnect < this.DISCONNECT_GRACE_PERIOD_MS) {
-        log(
-          `🚨 [STATE-STORE] BLOCKED: Attempt to promote DISCONNECTED agent ${agentType} in terminal ${terminalId} (old output, ${timeSinceDisconnect}ms)`
-        );
         return;
       }
-
-      log(
-        `🔄 [STATE-STORE] Allowing promotion from DISCONNECTED to CONNECTED (${timeSinceDisconnect}ms since disconnect)`
-      );
     }
 
     // Handle previous connected agent
@@ -196,14 +121,9 @@ export class CliAgentStateStore {
     };
 
     this.notifyObservers(event);
-    log(`🎯 [STATE-STORE] Set terminal ${terminalId} as CONNECTED (${agentType})`);
 
     // Handle previous connected agent (move to disconnected)
     if (previousConnectedId && previousConnectedId !== terminalId && previousType) {
-      log(
-        `📝 [STATE-STORE] Moving previous CONNECTED agent ${previousType} in terminal ${previousConnectedId} to DISCONNECTED`
-      );
-
       this.disconnectedAgents.set(previousConnectedId, {
         type: previousType,
         startTime: new Date(),
@@ -224,40 +144,24 @@ export class CliAgentStateStore {
         type: previousType,
         terminalName,
       });
-
-      log(`📝 [STATE-STORE] Terminal ${previousConnectedId} moved to DISCONNECTED`);
     }
   }
 
-  /**
-   * Set agent as terminated
-   * @param terminalId Terminal ID
-   */
   public setAgentTerminated(terminalId: string): void {
     let wasConnected = false;
     let wasDisconnected = false;
-    let agentType: AgentType | null = null;
 
     // Handle connected agent termination
     if (this.connectedAgentTerminalId === terminalId) {
-      agentType = this.connectedAgentType;
       this.connectedAgentTerminalId = null;
       this.connectedAgentType = null;
       wasConnected = true;
-
-      log(`🔄 [STATE-STORE] Connected terminal ${terminalId} (${agentType}) terminated`);
     }
 
     // Handle disconnected agent termination
     if (this.disconnectedAgents.has(terminalId)) {
-      const agentInfo = this.disconnectedAgents.get(terminalId)!;
-      agentType = agentInfo.type;
       this.disconnectedAgents.delete(terminalId);
       wasDisconnected = true;
-
-      log(
-        `🔻 [STATE-STORE] Disconnected agent ${agentInfo.type} in terminal ${terminalId} terminated`
-      );
     }
 
     // Update agent state to 'none'
@@ -276,8 +180,6 @@ export class CliAgentStateStore {
         type: null,
       });
 
-      log(`❌ [STATE-STORE] Terminal ${terminalId} (${agentType}) status set to NONE`);
-
       // Promote latest disconnected agent if connected agent was terminated
       if (wasConnected) {
         this.promoteLatestDisconnectedAgent();
@@ -285,25 +187,44 @@ export class CliAgentStateStore {
     }
   }
 
-  /**
-   * Completely remove terminal state
-   * @param terminalId Terminal ID
-   */
+  public setAgentWaiting(
+    terminalId: string,
+    isWaiting: boolean,
+    waitingType?: 'input' | 'approval'
+  ): void {
+    const state = this.agentStates.get(terminalId);
+    if (!state || state.status !== 'connected') {
+      return;
+    }
+
+    // Prevent redundant updates
+    if (state.isWaitingForInput === isWaiting && state.waitingType === waitingType) {
+      return;
+    }
+
+    state.isWaitingForInput = isWaiting;
+    state.waitingType = isWaiting ? waitingType : undefined;
+
+    const event: WaitingChangeEvent = {
+      terminalId,
+      isWaiting,
+      waitingType,
+    };
+
+    this.waitingChangeEmitter.fire(event);
+  }
+
   public removeTerminalCompletely(terminalId: string): void {
     let wasConnected = false;
     let wasDisconnected = false;
-    let agentType: AgentType | null = null;
 
     if (this.connectedAgentTerminalId === terminalId) {
-      agentType = this.connectedAgentType;
       this.connectedAgentTerminalId = null;
       this.connectedAgentType = null;
       wasConnected = true;
     }
 
     if (this.disconnectedAgents.has(terminalId)) {
-      const agentInfo = this.disconnectedAgents.get(terminalId);
-      agentType = agentInfo?.type || agentType;
       this.disconnectedAgents.delete(terminalId);
       wasDisconnected = true;
     }
@@ -318,8 +239,6 @@ export class CliAgentStateStore {
         type: null,
       });
 
-      log(`🗑️ [STATE-STORE] Terminal ${terminalId} completely removed (${agentType} agent)`);
-
       // Promote latest disconnected agent if needed
       if (wasConnected) {
         this.promoteLatestDisconnectedAgent();
@@ -327,12 +246,8 @@ export class CliAgentStateStore {
     }
   }
 
-  /**
-   * Promote latest disconnected agent to connected
-   */
   private promoteLatestDisconnectedAgent(): void {
     if (this.disconnectedAgents.size === 0) {
-      log('ℹ️ [STATE-STORE] No DISCONNECTED agents to promote');
       return;
     }
 
@@ -371,18 +286,9 @@ export class CliAgentStateStore {
         type: info.type,
         terminalName: info.terminalName,
       });
-
-      log(
-        `🚀 [STATE-STORE] Promoted terminal ${terminalId} (${info.type}) from DISCONNECTED to CONNECTED`
-      );
     }
   }
 
-  /**
-   * Update agent state in the store
-   * @param terminalId Terminal ID
-   * @param updates Partial state updates
-   */
   private updateAgentState(terminalId: string, updates: Partial<AgentState>): void {
     const currentState = this.agentStates.get(terminalId);
     const newState: AgentState = {
@@ -391,6 +297,7 @@ export class CliAgentStateStore {
       agentType: null,
       preserveScrollPosition: false,
       isDisplayingChoices: false,
+      isWaitingForInput: false,
       ...currentState,
       ...updates,
     };
@@ -398,70 +305,35 @@ export class CliAgentStateStore {
     this.agentStates.set(terminalId, newState);
   }
 
-  /**
-   * Get agent state for a terminal
-   * @param terminalId Terminal ID
-   * @returns Agent state or null if not found
-   */
   public getAgentState(terminalId: string): AgentState | null {
     return this.agentStates.get(terminalId) || null;
   }
 
-  /**
-   * Get all agent states
-   * @returns Map of all agent states
-   */
   public getAllAgentStates(): Map<string, AgentState> {
     return new Map(this.agentStates);
   }
 
-  /**
-   * Check if agent is connected in terminal
-   * @param terminalId Terminal ID
-   * @returns True if agent is connected
-   */
   public isAgentConnected(terminalId: string): boolean {
     return this.connectedAgentTerminalId === terminalId;
   }
 
-  /**
-   * Get connected agent terminal ID
-   * @returns Terminal ID or null
-   */
   public getConnectedAgentTerminalId(): string | null {
     return this.connectedAgentTerminalId;
   }
 
-  /**
-   * Get connected agent type
-   * @returns Agent type or null
-   */
   public getConnectedAgentType(): AgentType | null {
     return this.connectedAgentType;
   }
 
-  /**
-   * Get disconnected agents
-   * @returns Map of disconnected agents
-   */
   public getDisconnectedAgents(): Map<string, DisconnectedAgentInfo> {
     return new Map(this.disconnectedAgents);
   }
 
-  /**
-   * Force reconnect an agent (for manual user actions)
-   * @param terminalId Terminal ID
-   * @param agentType Agent type
-   * @param terminalName Terminal name (optional)
-   * @returns True if successful
-   */
   public forceReconnectAgent(
     terminalId: string,
     agentType: AgentType,
     terminalName?: string
   ): boolean {
-    log(`🔄 [STATE-STORE] Force reconnecting ${agentType} in terminal ${terminalId}`);
-
     const previousConnectedId = this.connectedAgentTerminalId;
     const previousType = this.connectedAgentType;
     const previousState = previousConnectedId ? this.agentStates.get(previousConnectedId) : null;
@@ -515,19 +387,10 @@ export class CliAgentStateStore {
         terminalName: previousTerminalName,
       });
     }
-
-    log(`🚀 [STATE-STORE] Successfully force-reconnected ${agentType} in terminal ${terminalId}`);
     return true;
   }
 
-  /**
-   * Clear detection error for a terminal
-   * @param terminalId Terminal ID
-   * @returns True if error was cleared
-   */
   public clearDetectionError(terminalId: string): boolean {
-    log(`🧹 [STATE-STORE] Clearing detection error for terminal ${terminalId}`);
-
     let hadState = false;
 
     // Clear connected state
@@ -558,31 +421,18 @@ export class CliAgentStateStore {
         status: 'none',
         type: null,
       });
-
-      log(`✅ [STATE-STORE] Reset terminal ${terminalId} to 'none' state`);
       return true;
     }
-
-    log(`⚠️ [STATE-STORE] No state to clear for terminal ${terminalId}`);
     return false;
   }
 
-  /**
-   * Clear all state
-   */
   public clearAllState(): void {
     this.connectedAgentTerminalId = null;
     this.connectedAgentType = null;
     this.disconnectedAgents.clear();
     this.agentStates.clear();
-
-    log('🧹 [STATE-STORE] All state cleared');
   }
 
-  /**
-   * Get state statistics
-   * @returns State statistics
-   */
   public getStateStats(): {
     totalAgents: number;
     connectedAgents: number;
@@ -606,14 +456,10 @@ export class CliAgentStateStore {
     };
   }
 
-  /**
-   * Dispose of resources
-   */
   public dispose(): void {
     this.clearAllState();
     this.observers.clear();
     this.statusChangeEmitter.dispose();
-
-    log('🧹 [STATE-STORE] Disposed');
+    this.waitingChangeEmitter.dispose();
   }
 }
