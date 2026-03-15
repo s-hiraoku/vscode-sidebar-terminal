@@ -892,6 +892,17 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
   // =================== HEARTBEAT AND MONITORING TESTS ===================
 
   describe('💓 Heartbeat and Monitoring Tests', () => {
+    it('should keep heartbeat startup idempotent', () => {
+      const setIntervalSpy = vi.spyOn(global, 'setInterval');
+      const clearIntervalSpy = vi.spyOn(global, 'clearInterval');
+
+      detectionService.startHeartbeat();
+      detectionService.startHeartbeat();
+
+      expect(setIntervalSpy).toHaveBeenCalledTimes(2);
+      expect(clearIntervalSpy).toHaveBeenCalledTimes(1);
+    });
+
     it('should provide agent state refresh functionality', () => {
       // ARRANGE: Setup disconnected agent
       detectionService.detectFromOutput('term1', 'Welcome to Claude Code!');
