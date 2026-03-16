@@ -10,7 +10,10 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { JSDOM } from 'jsdom';
 
 import { CliAgentStatusService } from '../../../../../../webview/managers/ui/CliAgentStatusService';
-import { HeaderFactory, TerminalHeaderElements } from '../../../../../../webview/factories/HeaderFactory';
+import {
+  HeaderFactory,
+  TerminalHeaderElements,
+} from '../../../../../../webview/factories/HeaderFactory';
 
 describe('CliAgentStatusService', () => {
   let cliAgentStatusService: CliAgentStatusService;

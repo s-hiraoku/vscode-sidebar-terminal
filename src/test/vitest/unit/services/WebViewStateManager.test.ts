@@ -1,4 +1,3 @@
-
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { WebViewStateManager } from '../../../../services/WebViewStateManager';
 
@@ -103,23 +102,25 @@ describe('WebViewStateManager', () => {
 
     it('should initialize WebView successfully', async () => {
       mockTerminalManager.getTerminals.mockReturnValue([{ id: 't1', name: 'T1' }]);
-      
+
       await stateManager.initializeWebView();
 
       expect(stateManager.isInitialized()).toBe(true);
-      expect(mockSendMessage).toHaveBeenCalledWith(expect.objectContaining({
-        command: 'init'
-      }));
+      expect(mockSendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          command: 'init',
+        })
+      );
     });
 
     it('should skip duplicate initialization', async () => {
       mockTerminalManager.getTerminals.mockReturnValue([{ id: 't1', name: 'T1' }]);
-      
+
       await stateManager.initializeWebView();
       const calls = mockSendMessage.mock.calls.length;
-      
+
       await stateManager.initializeWebView();
-      
+
       expect(mockSendMessage.mock.calls.length).toBe(calls);
     });
 
@@ -137,7 +138,7 @@ describe('WebViewStateManager', () => {
     it('should trigger session restore if session info exists', async () => {
       mockSessionManager.getSessionInfo.mockReturnValue({
         exists: true,
-        terminals: [{ id: 'restored' }]
+        terminals: [{ id: 'restored' }],
       });
       mockSessionManager.restoreSession.mockResolvedValue({ success: true, restoredCount: 1 });
 
@@ -145,30 +146,33 @@ describe('WebViewStateManager', () => {
 
       // Flush queued timers and microtasks
       await vi.runAllTimersAsync();
-      
+
       expect(mockSessionManager.restoreSession).toHaveBeenCalledWith(true);
     });
 
     it('should schedule initial terminal creation if no session data', async () => {
       mockSessionManager.getSessionInfo.mockReturnValue(null);
-      
+
       await stateManager.initializeWebView();
-      
+
       // Advance timers to trigger setTimeout inside _scheduleInitialTerminalCreation
       await vi.advanceTimersByTimeAsync(200);
-      
+
       expect(mockTerminalManager.createTerminal).toHaveBeenCalled();
     });
 
     it('should schedule initial terminal creation if restore fails', async () => {
-      mockSessionManager.getSessionInfo.mockReturnValue({ exists: true, terminals: [{ id: 't1' }] });
+      mockSessionManager.getSessionInfo.mockReturnValue({
+        exists: true,
+        terminals: [{ id: 't1' }],
+      });
       mockSessionManager.restoreSession.mockRejectedValue(new Error('Fail'));
-      
+
       await stateManager.initializeWebView();
 
       // Process restore failure and scheduled terminal creation
       await vi.runAllTimersAsync();
-      
+
       expect(mockTerminalManager.createTerminal).toHaveBeenCalled();
     });
   });
@@ -176,18 +180,18 @@ describe('WebViewStateManager', () => {
   describe('Terminal Management', () => {
     it('should ensure minimum terminals creates one if none exist', async () => {
       mockTerminalManager.getTerminals.mockReturnValue([]);
-      
+
       await stateManager.ensureMinimumTerminals();
-      
+
       expect(mockTerminalManager.createTerminal).toHaveBeenCalled();
       expect(mockTerminalManager.setActiveTerminal).toHaveBeenCalledWith('new-terminal-id');
     });
 
     it('should not create terminal if one exists', async () => {
       mockTerminalManager.getTerminals.mockReturnValue([{ id: 't1' }]);
-      
+
       await stateManager.ensureMinimumTerminals();
-      
+
       expect(mockTerminalManager.createTerminal).not.toHaveBeenCalled();
     });
   });
@@ -195,19 +199,21 @@ describe('WebViewStateManager', () => {
   describe('Visibility & Panel Location', () => {
     it('should request panel location detection when visible', async () => {
       await stateManager.handleVisibilityChange(true);
-      
+
       await vi.advanceTimersByTimeAsync(500);
-      
-      expect(mockSendMessage).toHaveBeenCalledWith(expect.objectContaining({
-        command: 'requestPanelLocationDetection'
-      }));
+
+      expect(mockSendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          command: 'requestPanelLocationDetection',
+        })
+      );
     });
 
     it('should not request panel location when hidden', async () => {
       await stateManager.handleVisibilityChange(false);
-      
+
       await vi.advanceTimersByTimeAsync(500);
-      
+
       expect(mockSendMessage).not.toHaveBeenCalled();
     });
 
@@ -218,12 +224,12 @@ describe('WebViewStateManager', () => {
         mockSessionManager,
         () => Promise.reject(new Error('Fail'))
       );
-      
+
       stateManagerFaulty.requestPanelLocationDetection();
 
       // Allow promise rejection handling to run
       await Promise.resolve();
-      
+
       // Should call fallback executeCommand
       expect(mocks.executeCommandMock).toHaveBeenCalledWith(
         'setContext',
@@ -237,7 +243,7 @@ describe('WebViewStateManager', () => {
     it('should clear state on dispose', async () => {
       await stateManager.initializeWebView();
       expect(stateManager.isInitialized()).toBe(true);
-      
+
       stateManager.dispose();
       expect(stateManager.isInitialized()).toBe(false);
     });

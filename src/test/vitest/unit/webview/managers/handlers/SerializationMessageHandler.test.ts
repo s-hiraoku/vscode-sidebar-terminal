@@ -388,9 +388,7 @@ describe('SerializationMessageHandler', () => {
 
       const msg = {
         command: 'restoreTerminalSerialization',
-        terminalData: [
-          { id: 'terminal-1', serializedContent: 'line1\nline2', isActive: false },
-        ],
+        terminalData: [{ id: 'terminal-1', serializedContent: 'line1\nline2', isActive: false }],
         requestId: 'req-1',
       };
 
@@ -415,9 +413,7 @@ describe('SerializationMessageHandler', () => {
 
       const msg = {
         command: 'restoreTerminalSerialization',
-        terminalData: [
-          { id: 'terminal-1', serializedContent: 'content', isActive: true },
-        ],
+        terminalData: [{ id: 'terminal-1', serializedContent: 'content', isActive: true }],
       };
 
       await handler.handleMessage(msg as any, mockCoordinator);
@@ -455,9 +451,7 @@ describe('SerializationMessageHandler', () => {
 
       const msg = {
         command: 'restoreTerminalSerialization',
-        terminalData: [
-          { id: 'terminal-1', serializedContent: 'content', isActive: false },
-        ],
+        terminalData: [{ id: 'terminal-1', serializedContent: 'content', isActive: false }],
       };
 
       await handler.handleMessage(msg as any, mockCoordinator);
@@ -480,9 +474,7 @@ describe('SerializationMessageHandler', () => {
 
       const msg = {
         command: 'restoreTerminalSerialization',
-        terminalData: [
-          { id: 'terminal-1', serializedContent: 'content', isActive: false },
-        ],
+        terminalData: [{ id: 'terminal-1', serializedContent: 'content', isActive: false }],
       };
 
       await handler.handleMessage(msg as any, mockCoordinator);

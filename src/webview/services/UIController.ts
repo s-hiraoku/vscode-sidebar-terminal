@@ -249,7 +249,8 @@ export class UIController extends BaseManager implements IUIController {
     const display = document.getElementById(ElementIds.TERMINAL_COUNT_DISPLAY);
     if (display) {
       display.textContent = `${count}/${maxCount}`;
-      display.className = count >= maxCount ? CssClasses.TERMINAL_COUNT_FULL : CssClasses.TERMINAL_COUNT_NORMAL;
+      display.className =
+        count >= maxCount ? CssClasses.TERMINAL_COUNT_FULL : CssClasses.TERMINAL_COUNT_NORMAL;
     }
   }
 

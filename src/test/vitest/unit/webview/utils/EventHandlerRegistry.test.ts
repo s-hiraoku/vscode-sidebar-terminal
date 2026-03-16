@@ -13,7 +13,9 @@ describe('EventHandlerRegistry', () => {
   let element: HTMLElement;
 
   beforeEach(() => {
-    dom = new JSDOM('<!DOCTYPE html><html><body><div id="test" class="test-class"></div></body></html>');
+    dom = new JSDOM(
+      '<!DOCTYPE html><html><body><div id="test" class="test-class"></div></body></html>'
+    );
     vi.stubGlobal('window', dom.window);
     vi.stubGlobal('document', dom.window.document);
     vi.stubGlobal('HTMLElement', dom.window.HTMLElement);
@@ -126,7 +128,7 @@ describe('EventHandlerRegistry', () => {
 
       registry.registerMultiple([
         { key: 'e1', element, type: 'click', listener: h1 },
-        { key: 'e2', element, type: 'keydown', listener: h2 }
+        { key: 'e2', element, type: 'keydown', listener: h2 },
       ]);
 
       expect(registry.getRegisteredCount()).toBe(2);

@@ -495,7 +495,9 @@ describe('TerminalCoordinator Service', () => {
     });
 
     it('should handle event listener errors gracefully', async () => {
-      const errorListener = vi.fn().mockImplementation(() => { throw new Error('Listener error'); });
+      const errorListener = vi.fn().mockImplementation(() => {
+        throw new Error('Listener error');
+      });
       const goodListener = vi.fn();
 
       coordinator.addEventListener('onTerminalCreated', errorListener);
@@ -550,7 +552,7 @@ describe('TerminalCoordinator Service', () => {
 
       // Attempt to create should fail silently or throw (implementation specific, original test expected failure but didn't assert specific error)
       // Actually, original test caught error and expected it.
-      
+
       try {
         await coordinator.createTerminal();
         // If it doesn't throw, we might want to check it returned null/undefined or something indicating failure
@@ -587,7 +589,9 @@ describe('TerminalCoordinator Service', () => {
       const terminal = coordinator.getTerminal(terminalId);
 
       // Mock dispose to throw
-      vi.spyOn(terminal!, 'dispose').mockImplementation(() => { throw new Error('Dispose failed'); });
+      vi.spyOn(terminal!, 'dispose').mockImplementation(() => {
+        throw new Error('Dispose failed');
+      });
 
       const removed = await coordinator.removeTerminal(terminalId);
 

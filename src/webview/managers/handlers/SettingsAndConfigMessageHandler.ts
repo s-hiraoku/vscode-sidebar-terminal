@@ -161,7 +161,11 @@ export class SettingsAndConfigMessageHandler implements IMessageHandler {
 
     // Update UI components (header, borders, tabs)
     const managers = coordinator.getManagers();
-    if (managers.ui && 'updateTheme' in managers.ui && typeof managers.ui.updateTheme === 'function') {
+    if (
+      managers.ui &&
+      'updateTheme' in managers.ui &&
+      typeof managers.ui.updateTheme === 'function'
+    ) {
       managers.ui.updateTheme(vsCodeTheme);
     }
 
@@ -186,13 +190,20 @@ export class SettingsAndConfigMessageHandler implements IMessageHandler {
 
     // Build theme from VS Code CSS variables
     return {
-      background: getCssVar('--vscode-terminal-background',
-                   getCssVar('--vscode-editor-background', baseTheme.background)),
-      foreground: getCssVar('--vscode-terminal-foreground',
-                   getCssVar('--vscode-editor-foreground', baseTheme.foreground)),
+      background: getCssVar(
+        '--vscode-terminal-background',
+        getCssVar('--vscode-editor-background', baseTheme.background)
+      ),
+      foreground: getCssVar(
+        '--vscode-terminal-foreground',
+        getCssVar('--vscode-editor-foreground', baseTheme.foreground)
+      ),
       cursor: getCssVar('--vscode-terminalCursor-foreground', baseTheme.cursor),
       cursorAccent: baseTheme.cursorAccent,
-      selectionBackground: getCssVar('--vscode-terminal-selectionBackground', baseTheme.selectionBackground),
+      selectionBackground: getCssVar(
+        '--vscode-terminal-selectionBackground',
+        baseTheme.selectionBackground
+      ),
       // ANSI colors from VS Code
       black: getCssVar('--vscode-terminal-ansiBlack', baseTheme.black),
       red: getCssVar('--vscode-terminal-ansiRed', baseTheme.red),

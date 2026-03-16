@@ -43,7 +43,9 @@ describe('TerminalCliAgentIntegrationService', () => {
       setAgentConnected: vi.fn(),
     };
 
-    service = new TerminalCliAgentIntegrationService(mockCliAgentService as unknown as ICliAgentDetectionService);
+    service = new TerminalCliAgentIntegrationService(
+      mockCliAgentService as unknown as ICliAgentDetectionService
+    );
   });
 
   afterEach(() => {
@@ -73,7 +75,10 @@ describe('TerminalCliAgentIntegrationService', () => {
 
   describe('isCliAgentConnected', () => {
     it('should return true when agent is connected', () => {
-      mockCliAgentService.getAgentState.mockReturnValue({ status: 'connected', agentType: 'claude' });
+      mockCliAgentService.getAgentState.mockReturnValue({
+        status: 'connected',
+        agentType: 'claude',
+      });
 
       const result = service.isCliAgentConnected('terminal1');
 
@@ -82,7 +87,10 @@ describe('TerminalCliAgentIntegrationService', () => {
     });
 
     it('should return false when agent is disconnected', () => {
-      mockCliAgentService.getAgentState.mockReturnValue({ status: 'disconnected', agentType: 'claude' });
+      mockCliAgentService.getAgentState.mockReturnValue({
+        status: 'disconnected',
+        agentType: 'claude',
+      });
 
       const result = service.isCliAgentConnected('terminal1');
 
@@ -110,7 +118,10 @@ describe('TerminalCliAgentIntegrationService', () => {
 
   describe('isCliAgentRunning', () => {
     it('should return true when agent is connected', () => {
-      mockCliAgentService.getAgentState.mockReturnValue({ status: 'connected', agentType: 'claude' });
+      mockCliAgentService.getAgentState.mockReturnValue({
+        status: 'connected',
+        agentType: 'claude',
+      });
 
       const result = service.isCliAgentRunning('terminal1');
 
@@ -118,7 +129,10 @@ describe('TerminalCliAgentIntegrationService', () => {
     });
 
     it('should return true when agent is disconnected but running', () => {
-      mockCliAgentService.getAgentState.mockReturnValue({ status: 'disconnected', agentType: 'claude' });
+      mockCliAgentService.getAgentState.mockReturnValue({
+        status: 'disconnected',
+        agentType: 'claude',
+      });
 
       const result = service.isCliAgentRunning('terminal1');
 
@@ -238,7 +252,10 @@ describe('TerminalCliAgentIntegrationService', () => {
 
   describe('getAgentType', () => {
     it('should return agent type', () => {
-      mockCliAgentService.getAgentState.mockReturnValue({ status: 'connected', agentType: 'claude' });
+      mockCliAgentService.getAgentState.mockReturnValue({
+        status: 'connected',
+        agentType: 'claude',
+      });
 
       const result = service.getAgentType('terminal1');
 
@@ -517,7 +534,10 @@ describe('TerminalCliAgentIntegrationService', () => {
       expect(mockCliAgentService.detectFromInput).toHaveBeenCalled();
 
       // Check connection status
-      mockCliAgentService.getAgentState.mockReturnValue({ status: 'connected', agentType: 'claude' });
+      mockCliAgentService.getAgentState.mockReturnValue({
+        status: 'connected',
+        agentType: 'claude',
+      });
       expect(service.isCliAgentConnected('terminal1')).toBe(true);
 
       // Handle terminal removal

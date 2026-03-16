@@ -78,7 +78,11 @@ export class UnifiedConfigurationService {
       defaultDirectory: this._getWithDefault(config, 'defaultDirectory', undefined),
 
       // Terminal limits
-      maxTerminals: this._getWithDefault(config, 'maxTerminals', TERMINAL_CONSTANTS.MAX_TERMINAL_COUNT),
+      maxTerminals: this._getWithDefault(
+        config,
+        'maxTerminals',
+        TERMINAL_CONSTANTS.MAX_TERMINAL_COUNT
+      ),
       minTerminalCount: this._getWithDefault(config, 'minTerminalCount', 1),
       protectLastTerminal: this._getWithDefault(config, 'protectLastTerminal', true),
 
@@ -273,7 +277,9 @@ export class UnifiedConfigurationService {
 
       // Validate max terminals
       if (config.maxTerminals < 1 || config.maxTerminals > TERMINAL_CONSTANTS.MAX_TERMINAL_COUNT) {
-        warnings.push(`maxTerminals should be between 1 and ${TERMINAL_CONSTANTS.MAX_TERMINAL_COUNT} for optimal performance`);
+        warnings.push(
+          `maxTerminals should be between 1 and ${TERMINAL_CONSTANTS.MAX_TERMINAL_COUNT} for optimal performance`
+        );
       }
 
       // Validate shell configuration

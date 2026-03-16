@@ -69,11 +69,7 @@ const Validators = {
   /**
    * Validates a string is in an allowed list, returns value or default
    */
-  stringInList<T extends string>(
-    value: unknown,
-    allowedValues: readonly T[],
-    defaultValue: T
-  ): T {
+  stringInList<T extends string>(value: unknown, allowedValues: readonly T[], defaultValue: T): T {
     if (typeof value === 'string' && allowedValues.includes(value as T)) {
       return value as T;
     }
@@ -329,12 +325,16 @@ export class ConfigManager implements IConfigManager {
     // Prefer FontSettingsService (single source of truth)
     if (this.fontSettingsService) {
       const settings = this.fontSettingsService.getCurrentSettings();
-      log(`🔤 [CONFIG] getCurrentFontSettings from FontSettingsService: ${settings.fontFamily}, ${settings.fontSize}px`);
+      log(
+        `🔤 [CONFIG] getCurrentFontSettings from FontSettingsService: ${settings.fontFamily}, ${settings.fontSize}px`
+      );
       return settings;
     }
 
     // Fallback for backward compatibility
-    log(`🔤 [CONFIG] getCurrentFontSettings FALLBACK: ${this.fallbackFontSettings.fontFamily}, ${this.fallbackFontSettings.fontSize}px`);
+    log(
+      `🔤 [CONFIG] getCurrentFontSettings FALLBACK: ${this.fallbackFontSettings.fontFamily}, ${this.fallbackFontSettings.fontSize}px`
+    );
     return { ...this.fallbackFontSettings };
   }
 
@@ -468,9 +468,10 @@ export class ConfigManager implements IConfigManager {
   /**
    * Validate cursor settings object
    */
-  private validateCursorSettings(
-    cursor: PartialTerminalSettings['cursor']
-  ): { style: 'block' | 'underline' | 'bar'; blink: boolean } {
+  private validateCursorSettings(cursor: PartialTerminalSettings['cursor']): {
+    style: 'block' | 'underline' | 'bar';
+    blink: boolean;
+  } {
     if (cursor && typeof cursor === 'object') {
       return {
         style: Validators.stringInList(

@@ -32,24 +32,24 @@ describe('RenderingOptimizer', () => {
     // Create mock container using a real element for DOM compatibility
     mockContainer = document.createElement('div');
     mockContainer.className = 'terminal-container';
-    
+
     // Add required internal structure for resetXtermInlineStyles
     const terminalContent = document.createElement('div');
     terminalContent.className = 'terminal-content';
     mockContainer.appendChild(terminalContent);
-    
+
     const xterm = document.createElement('div');
     xterm.className = 'xterm';
     terminalContent.appendChild(xterm);
-    
+
     const viewport = document.createElement('div');
     viewport.className = 'xterm-viewport';
     xterm.appendChild(viewport);
-    
+
     const screen = document.createElement('div');
     screen.className = 'xterm-screen';
     xterm.appendChild(screen);
-    
+
     const canvas = document.createElement('canvas');
     screen.appendChild(canvas);
 
@@ -190,9 +190,11 @@ describe('RenderingOptimizer', () => {
 
     it('should handle errors in updateSmoothScrollDuration', () => {
       const faultyTerminal = {
-        get options() { throw new Error('Faulty'); }
+        get options() {
+          throw new Error('Faulty');
+        },
       } as any;
-      
+
       expect(() => optimizer.updateSmoothScrollDuration(faultyTerminal, 100)).not.toThrow();
     });
 
@@ -209,16 +211,16 @@ describe('RenderingOptimizer', () => {
 
     it('should update duration when wheel event is triggered', () => {
       optimizer.setupSmoothScrolling(mockTerminal, mockContainer, 'test-terminal');
-      
+
       // Simulate wheel event (deltaMode 1 = lines/mouse)
-      const wheelEvent = new CustomEvent('wheel', { 
-        bubbles: true, 
-        cancelable: true 
+      const wheelEvent = new CustomEvent('wheel', {
+        bubbles: true,
+        cancelable: true,
       }) as any;
       wheelEvent.deltaMode = 1;
-      
+
       mockContainer.dispatchEvent(wheelEvent);
-      
+
       expect(mockTerminal.options.smoothScrollDuration).toBe(125);
     });
   });
@@ -259,9 +261,9 @@ describe('RenderingOptimizer', () => {
     it('should dispose webglAddon if present', () => {
       const mockAddon = { dispose: vi.fn() };
       (optimizer as any).webglAddon = mockAddon;
-      
+
       optimizer.dispose();
-      
+
       expect(mockAddon.dispose).toHaveBeenCalled();
     });
   });

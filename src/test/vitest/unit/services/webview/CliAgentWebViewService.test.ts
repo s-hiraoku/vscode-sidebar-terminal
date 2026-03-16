@@ -78,7 +78,9 @@ describe('CliAgentWebViewService', () => {
     });
 
     it('should handle sendMessage errors gracefully', async () => {
-      (mockContext.sendMessage as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Send message error'));
+      (mockContext.sendMessage as ReturnType<typeof vi.fn>).mockRejectedValue(
+        new Error('Send message error')
+      );
 
       // Should not throw
       service.sendStatusUpdate('Terminal 1', 'connected', 'claude', mockContext);
@@ -147,8 +149,12 @@ describe('CliAgentWebViewService', () => {
     });
 
     it('should handle no connected agent', () => {
-      (mockContext.terminalManager.getConnectedAgentTerminalId as ReturnType<typeof vi.fn>).mockReturnValue(null);
-      (mockContext.terminalManager.getConnectedAgentType as ReturnType<typeof vi.fn>).mockReturnValue(null);
+      (
+        mockContext.terminalManager.getConnectedAgentTerminalId as ReturnType<typeof vi.fn>
+      ).mockReturnValue(null);
+      (
+        mockContext.terminalManager.getConnectedAgentType as ReturnType<typeof vi.fn>
+      ).mockReturnValue(null);
 
       service.sendFullStateSync(mockContext);
 
@@ -175,7 +181,9 @@ describe('CliAgentWebViewService', () => {
     });
 
     it('should handle sendMessage errors gracefully', async () => {
-      (mockContext.sendMessage as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Send message error'));
+      (mockContext.sendMessage as ReturnType<typeof vi.fn>).mockRejectedValue(
+        new Error('Send message error')
+      );
 
       // Should not throw
       service.sendFullStateSync(mockContext);
@@ -201,7 +209,9 @@ describe('CliAgentWebViewService', () => {
     });
 
     it('should handle listener setup errors gracefully', () => {
-      (mockContext.terminalManager.onCliAgentStatusChange as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      (
+        mockContext.terminalManager.onCliAgentStatusChange as ReturnType<typeof vi.fn>
+      ).mockImplementation(() => {
         throw new Error('Listener setup error');
       });
 
@@ -215,9 +225,9 @@ describe('CliAgentWebViewService', () => {
   describe('clearListeners', () => {
     it('should clear all listeners', () => {
       const mockDisposable = { dispose: vi.fn() };
-      (mockContext.terminalManager.onCliAgentStatusChange as ReturnType<typeof vi.fn>).mockReturnValue(
-        mockDisposable
-      );
+      (
+        mockContext.terminalManager.onCliAgentStatusChange as ReturnType<typeof vi.fn>
+      ).mockReturnValue(mockDisposable);
 
       // Set up listeners
       service.setupListeners(mockContext);
@@ -234,9 +244,9 @@ describe('CliAgentWebViewService', () => {
           throw new Error('Dispose error');
         }),
       };
-      (mockContext.terminalManager.onCliAgentStatusChange as ReturnType<typeof vi.fn>).mockReturnValue(
-        mockDisposable
-      );
+      (
+        mockContext.terminalManager.onCliAgentStatusChange as ReturnType<typeof vi.fn>
+      ).mockReturnValue(mockDisposable);
 
       // Set up listeners
       service.setupListeners(mockContext);
@@ -263,7 +273,9 @@ describe('CliAgentWebViewService', () => {
     });
 
     it('should handle failed AI agent switch', async () => {
-      (mockContext.terminalManager.switchAiAgentConnection as ReturnType<typeof vi.fn>).mockReturnValue({
+      (
+        mockContext.terminalManager.switchAiAgentConnection as ReturnType<typeof vi.fn>
+      ).mockReturnValue({
         success: false,
         reason: 'No agent available',
         newStatus: 'none',
@@ -281,7 +293,9 @@ describe('CliAgentWebViewService', () => {
     });
 
     it('should handle switchAiAgentConnection errors', async () => {
-      (mockContext.terminalManager.switchAiAgentConnection as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      (
+        mockContext.terminalManager.switchAiAgentConnection as ReturnType<typeof vi.fn>
+      ).mockImplementation(() => {
         throw new Error('Switch error');
       });
 
@@ -324,7 +338,9 @@ describe('CliAgentWebViewService', () => {
     });
 
     it('should handle errors gracefully', () => {
-      (mockContext.terminalManager.getConnectedAgentTerminalId as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      (
+        mockContext.terminalManager.getConnectedAgentTerminalId as ReturnType<typeof vi.fn>
+      ).mockImplementation(() => {
         throw new Error('Debug error');
       });
 

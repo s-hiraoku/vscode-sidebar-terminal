@@ -449,7 +449,13 @@ export class HeaderFactory {
       DOMUtils.appendChildren(controlsSection, aiAgentToggleButton, closeButton);
     }
 
-    DOMUtils.appendChildren(container, processingIndicator, titleSection, statusSection, controlsSection);
+    DOMUtils.appendChildren(
+      container,
+      processingIndicator,
+      titleSection,
+      statusSection,
+      controlsSection
+    );
 
     log(`🏗️ [HeaderFactory] Created unified header for terminal: ${terminalId}`);
 
@@ -483,7 +489,8 @@ export class HeaderFactory {
       updates: { newName?: string; indicatorColor?: string }
     ) => void;
   }): void {
-    const { terminalId, container, titleSection, nameSpan, onRenameSubmit, onHeaderUpdate } = params;
+    const { terminalId, container, titleSection, nameSpan, onRenameSubmit, onHeaderUpdate } =
+      params;
     let isEditing = false;
     let isPaletteInteracting = false;
     let currentIndicatorColor = params.initialIndicatorColor;
@@ -587,7 +594,9 @@ export class HeaderFactory {
       });
 
       const refreshSelection = (): void => {
-        const options = palette.querySelectorAll<HTMLButtonElement>('.terminal-header-color-option');
+        const options = palette.querySelectorAll<HTMLButtonElement>(
+          '.terminal-header-color-option'
+        );
         options.forEach((option) => {
           const isSelected = option.dataset.indicatorColor === currentIndicatorColor;
           option.style.outline = isSelected ? '2px solid var(--vscode-focusBorder)' : 'none';
@@ -612,7 +621,8 @@ export class HeaderFactory {
           colorButton.style.border = '1px solid rgba(127, 127, 127, 0.6)';
           colorButton.style.padding = '0';
           colorButton.style.cursor = 'pointer';
-          colorButton.style.transition = 'transform 0.15s ease, opacity 0.15s ease, outline 0.15s ease';
+          colorButton.style.transition =
+            'transform 0.15s ease, opacity 0.15s ease, outline 0.15s ease';
           if (color === 'transparent') {
             colorButton.textContent = 'OFF';
             colorButton.style.width = '26px';
@@ -649,7 +659,9 @@ export class HeaderFactory {
             refreshSelection();
 
             // Flash processing indicator for visual feedback
-            const indicator = container.querySelector('.terminal-processing-indicator') as HTMLElement;
+            const indicator = container.querySelector(
+              '.terminal-processing-indicator'
+            ) as HTMLElement;
             if (indicator) {
               const flow = container.querySelector(
                 '.terminal-processing-indicator-flow'

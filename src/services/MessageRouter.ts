@@ -89,10 +89,7 @@ export class MessageRouter {
     const startTime = performance.now();
 
     if (this.disposed) {
-      return this.createErrorResult<TResponse>(
-        'MessageRouter is disposed',
-        0
-      );
+      return this.createErrorResult<TResponse>('MessageRouter is disposed', 0);
     }
 
     const messageId = `msg-${++this.messageCounter}`;
@@ -287,9 +284,10 @@ export class MessageRouterFactory {
 /**
  * Abstract base class for message handlers
  */
-export abstract class BaseMessageHandler<TData = any, TResponse = any>
-  implements MessageHandler<TData, TResponse>
-{
+export abstract class BaseMessageHandler<TData = any, TResponse = any> implements MessageHandler<
+  TData,
+  TResponse
+> {
   protected readonly handlerName: string;
 
   constructor(handlerName: string) {

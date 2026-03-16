@@ -101,10 +101,7 @@ describe('TerminalDataBufferManager', () => {
     bufferManager.flushBuffer('terminal-1');
 
     expect(cliAgentService.detectFromOutput).toHaveBeenCalledWith('terminal-1', 'user@host:~$ ');
-    expect(cliAgentService.detectTermination).toHaveBeenCalledWith(
-      'terminal-1',
-      'user@host:~$ '
-    );
+    expect(cliAgentService.detectTermination).toHaveBeenCalledWith('terminal-1', 'user@host:~$ ');
 
     bufferManager.dispose();
   });
@@ -125,7 +122,10 @@ describe('TerminalDataBufferManager', () => {
     bufferManager.bufferData('terminal-1', 'plain shell output');
     bufferManager.flushBuffer('terminal-1');
 
-    expect(cliAgentService.detectFromOutput).toHaveBeenCalledWith('terminal-1', 'plain shell output');
+    expect(cliAgentService.detectFromOutput).toHaveBeenCalledWith(
+      'terminal-1',
+      'plain shell output'
+    );
     expect(cliAgentService.detectTermination).not.toHaveBeenCalled();
 
     bufferManager.dispose();
@@ -153,10 +153,7 @@ describe('TerminalDataBufferManager', () => {
     bufferManager.bufferData('terminal-1', 'user@host:~$ ');
     bufferManager.flushBuffer('terminal-1');
 
-    expect(cliAgentService.detectTermination).toHaveBeenCalledWith(
-      'terminal-1',
-      'user@host:~$ '
-    );
+    expect(cliAgentService.detectTermination).toHaveBeenCalledWith('terminal-1', 'user@host:~$ ');
 
     bufferManager.dispose();
   });

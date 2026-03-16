@@ -7,10 +7,7 @@
 
 import { containerLogger } from '../../utils/ManagerLogger';
 import { SPLIT_LAYOUT_CONSTANTS } from '../../constants/webview';
-import {
-  calculateDistribution,
-  getGridTemplateColumns,
-} from '../../utils/GridLayoutCalculator';
+import { calculateDistribution, getGridTemplateColumns } from '../../utils/GridLayoutCalculator';
 
 /**
  * Interface for coordinator with updateSplitResizers method
@@ -88,7 +85,9 @@ export class SplitLayoutService {
     containerLogger.info(
       '🎨 [LAYOUT] ==================== ACTIVATING SPLIT LAYOUT ===================='
     );
-    containerLogger.info(`🎨 [LAYOUT] Terminal count: ${terminalCount}, direction: ${splitDirection}`);
+    containerLogger.info(
+      `🎨 [LAYOUT] Terminal count: ${terminalCount}, direction: ${splitDirection}`
+    );
 
     // Panel (horizontal) -> row, Sidebar (vertical) -> column
     const flexDirection = splitDirection === 'horizontal' ? 'row' : 'column';

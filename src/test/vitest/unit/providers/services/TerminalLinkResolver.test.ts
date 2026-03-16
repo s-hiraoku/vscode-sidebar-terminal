@@ -41,9 +41,24 @@ vi.mock('vscode', () => ({
       revealRange: vi.fn(),
     }),
   },
-  Position: class { constructor(public line: number, public character: number) {} },
-  Selection: class { constructor(public anchor: any, public active: any) {} },
-  Range: class { constructor(public start: any, public end: any) {} },
+  Position: class {
+    constructor(
+      public line: number,
+      public character: number
+    ) {}
+  },
+  Selection: class {
+    constructor(
+      public anchor: any,
+      public active: any
+    ) {}
+  },
+  Range: class {
+    constructor(
+      public start: any,
+      public end: any
+    ) {}
+  },
   TextEditorRevealType: { InCenter: 1 },
 }));
 
@@ -86,37 +101,37 @@ describe('TerminalLinkResolver', () => {
       await resolver.handleOpenTerminalLink({
         command: 'openTerminalLink',
         linkType: 'url',
-        url: 'https://github.com'
+        url: 'https://github.com',
       });
-      
+
       expect(vscode.env.openExternal).toHaveBeenCalled();
     });
 
     it('should handle file links with line numbers', async () => {
       // Mock file exists
       mockFs.stat.mockResolvedValue({ isFile: () => true });
-      
+
       await resolver.handleOpenTerminalLink({
         command: 'openTerminalLink',
         linkType: 'file',
         filePath: 'test.ts',
         lineNumber: 10,
-        columnNumber: 5
+        columnNumber: 5,
       });
-      
+
       expect(vscode.workspace.openTextDocument).toHaveBeenCalled();
       expect(vscode.window.showTextDocument).toHaveBeenCalled();
     });
 
     it('should show error if file not found', async () => {
       mockFs.stat.mockRejectedValue({ code: 'ENOENT' });
-      
+
       await resolver.handleOpenTerminalLink({
         command: 'openTerminalLink',
         linkType: 'file',
-        filePath: 'missing.ts'
+        filePath: 'missing.ts',
       });
-      
+
       const { showError } = await import('../../../../../utils/feedback');
       expect(showError).toHaveBeenCalledWith(expect.stringContaining('Unable to locate file'));
     });
@@ -126,14 +141,14 @@ describe('TerminalLinkResolver', () => {
     it('should include terminal CWD if provided', () => {
       mockGetTerminal.mockReturnValue({ cwd: '/terminal/cwd' });
       const candidates = resolver.buildPathCandidates('rel.txt', 't1');
-      
+
       expect(candidates).toContain(path.resolve('/terminal/cwd', 'rel.txt'));
     });
 
     it('should use absolute path directly', () => {
       const abs = path.resolve('/abs/path.txt');
       const candidates = resolver.buildPathCandidates(abs);
-      
+
       expect(candidates).toEqual([abs]);
     });
   });

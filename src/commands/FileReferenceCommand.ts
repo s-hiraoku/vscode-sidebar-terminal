@@ -145,7 +145,9 @@ export class FileReferenceCommand {
       void vscode.window.showInformationMessage(
         `✅ Sent ${openFiles.length} file references to ${agentTypes}`
       );
-      log(`✅ [DEBUG] ${openFiles.length} file references sent to ${connectedAgents.length} CLI agents`);
+      log(
+        `✅ [DEBUG] ${openFiles.length} file references sent to ${connectedAgents.length} CLI agents`
+      );
     } catch (error) {
       log('❌ [ERROR] Error in handleSendAllOpenFiles:', error);
       void vscode.window.showErrorMessage(`Failed to send file references: ${String(error)}`);

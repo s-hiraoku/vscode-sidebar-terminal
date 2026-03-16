@@ -33,11 +33,11 @@ vi.mock('../../../../../webview/addons/ShellIntegrationAddon', () => ({
     constructor(manager: any) {
       this.manager = manager;
     }
-    
+
     activate(_term: any) {
       // no-op
     }
-    
+
     dispose() {
       // no-op
     }
@@ -61,7 +61,7 @@ vi.mock('../../../../../webview/addons/ShellIntegrationAddon', () => ({
     clearHistory() {
       this.history = [];
     }
-  }
+  },
 }));
 
 describe('ShellIntegrationManager', () => {
@@ -102,9 +102,9 @@ describe('ShellIntegrationManager', () => {
     it('should initialize shell integration for a terminal', () => {
       const termId = 't1';
       manager.initializeTerminalShellIntegration(mockTerminal, termId);
-      
+
       expect(mockTerminal.loadAddon).toHaveBeenCalled();
-      
+
       // Verify state initialization
       const state = manager.getShellIntegrationState(termId);
       expect(state).toBeDefined();
@@ -128,30 +128,30 @@ describe('ShellIntegrationManager', () => {
 
     it('should handle command start', () => {
       const command = { command: 'ls', cwd: '/test', timestamp: Date.now() };
-      
+
       // Mock finding terminal ID (simplified in manager implementation to look up addon)
-      // Since we can't easily mock the private map search without intrusive mocks, 
+      // Since we can't easily mock the private map search without intrusive mocks,
       // we rely on the fallback behavior or mock the addon's getCurrentCommand if needed.
       // However, the manager uses `findTerminalIdForCommand` which iterates addons.
       // We need the mock addon to return the command we are passing.
-      
+
       // Access the mock addon instance if possible or assume the fallback works (first terminal)
       // Since 't1' is the only terminal, it should be found as fallback or match.
-      
+
       manager.onCommandStart(command);
-      
+
       // Verify status update via side effect (e.g. status indicator or logging)
       // Ideally we check internal state or coordinator calls
       // The manager updates statusMap and calls updateStatusIndicator
       // We can check if statusMap was updated by checking getShellIntegrationState?
       // getShellIntegrationState pulls from addon mostly, but also statusMap for exitCode.
-      
+
       // Let's check if we can verify via updateShellStatus side effects (e.g. UI)
       // But UI elements are created on demand.
-      
+
       // We can check if `updateShellStatus` was called effectively.
       // Since `updateShellStatus` is public, we can spy on it? No, it's on the same instance.
-      
+
       // We can verify by checking if the visual indicator was created/updated.
       // We need to mock the DOM structure for the terminal header.
       const header = document.createElement('div');
@@ -160,9 +160,9 @@ describe('ShellIntegrationManager', () => {
       container.setAttribute('data-terminal-id', termId);
       container.appendChild(header);
       document.body.appendChild(container);
-      
+
       manager.onCommandStart(command);
-      
+
       const indicator = header.querySelector('.shell-status-indicator');
       expect(indicator).not.toBeNull();
       expect(indicator?.className).toContain('executing');
@@ -179,10 +179,10 @@ describe('ShellIntegrationManager', () => {
       document.body.appendChild(container);
 
       manager.onCommandEnd(command, 0); // Success
-      
+
       const indicator = header.querySelector('.shell-status-indicator');
       expect(indicator?.className).toContain('success');
-      
+
       const state = manager.getShellIntegrationState(termId);
       expect(state?.lastExitCode).toBe(0);
     });
@@ -198,15 +198,17 @@ describe('ShellIntegrationManager', () => {
       document.body.appendChild(container);
 
       manager.onCommandEnd(command, 1); // Error
-      
+
       const indicator = header.querySelector('.shell-status-indicator');
       expect(indicator?.className).toContain('error');
-      
+
       // Should show notification via coordinator
-      expect(mockCoordinator.postMessageToExtension).toHaveBeenCalledWith(expect.objectContaining({
-        command: 'showNotification',
-        type: 'warning'
-      }));
+      expect(mockCoordinator.postMessageToExtension).toHaveBeenCalledWith(
+        expect.objectContaining({
+          command: 'showNotification',
+          type: 'warning',
+        })
+      );
     });
 
     it('should auto-reset status to ready after delay', () => {
@@ -221,9 +223,9 @@ describe('ShellIntegrationManager', () => {
 
       manager.onCommandEnd(command, 0);
       expect(header.querySelector('.shell-status-indicator')?.className).toContain('success');
-      
+
       vi.advanceTimersByTime(2000);
-      
+
       expect(header.querySelector('.shell-status-indicator')?.className).toContain('ready');
     });
   });
@@ -278,7 +280,7 @@ describe('ShellIntegrationManager', () => {
       manager.handleMessage({
         command: 'updateShellStatus',
         terminalId: termId,
-        status: 'error'
+        status: 'error',
       } as any);
 
       const indicator = document.querySelector('.shell-status-indicator');
@@ -298,7 +300,7 @@ describe('ShellIntegrationManager', () => {
       manager.handleMessage({
         command: 'updateCwd',
         terminalId: termId,
-        cwd: '/new/cwd'
+        cwd: '/new/cwd',
       } as any);
 
       const cwdDisplay = document.querySelector('.shell-cwd-display');
@@ -310,7 +312,7 @@ describe('ShellIntegrationManager', () => {
     it('should dispose terminal resources', () => {
       const termId = 't1';
       manager.initializeTerminalShellIntegration(mockTerminal, termId);
-      
+
       // Setup UI elements to verify removal
       const header = document.createElement('div');
       header.className = 'terminal-header';
@@ -318,11 +320,11 @@ describe('ShellIntegrationManager', () => {
       container.setAttribute('data-terminal-id', termId);
       container.appendChild(header);
       document.body.appendChild(container);
-      
+
       manager.updateShellStatus(termId, 'ready'); // Creates indicator
-      
+
       manager.disposeTerminal(termId);
-      
+
       expect(document.querySelector('.shell-status-indicator')).toBeNull(); // Should be removed
       const state = manager.getShellIntegrationState(termId);
       expect(state).toBeUndefined();
@@ -331,9 +333,9 @@ describe('ShellIntegrationManager', () => {
     it('should dispose all resources', () => {
       manager.initializeTerminalShellIntegration(mockTerminal, 't1');
       manager.initializeTerminalShellIntegration(mockTerminal, 't2');
-      
+
       manager.dispose();
-      
+
       expect(manager.getShellIntegrationState('t1')).toBeUndefined();
       expect(manager.getShellIntegrationState('t2')).toBeUndefined();
     });

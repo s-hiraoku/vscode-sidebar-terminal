@@ -1,10 +1,9 @@
-
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { MessageRouter, MessageRouterFactory } from '../../../../services/MessageRouter';
 
 describe('MessageRouter', () => {
   let router: MessageRouter;
-  
+
   beforeEach(() => {
     vi.useFakeTimers();
     // Default config
@@ -12,7 +11,7 @@ describe('MessageRouter', () => {
       enableLogging: false,
       enableValidation: true,
       timeoutMs: 1000,
-      maxConcurrentHandlers: 5
+      maxConcurrentHandlers: 5,
     });
   });
 
@@ -79,8 +78,8 @@ describe('MessageRouter', () => {
     });
 
     it('should return error when handler fails', async () => {
-      const handler = { 
-        handle: vi.fn().mockRejectedValue(new Error('Handler failed')) 
+      const handler = {
+        handle: vi.fn().mockRejectedValue(new Error('Handler failed')),
       };
       router.registerHandler('test', handler);
 
@@ -91,15 +90,15 @@ describe('MessageRouter', () => {
     });
 
     it('should handle timeout', async () => {
-      const handler = { 
-        handle: () => new Promise(resolve => setTimeout(resolve, 2000)) 
+      const handler = {
+        handle: () => new Promise((resolve) => setTimeout(resolve, 2000)),
       };
       router.registerHandler('slow', handler as any);
 
       const promise = router.routeMessage('slow');
-      
+
       vi.advanceTimersByTime(1100); // Exceeds 1000ms timeout
-      
+
       const result = await promise;
       expect(result.success).toBe(false);
       expect(result.error).toContain('timeout');
@@ -111,20 +110,20 @@ describe('MessageRouter', () => {
       // Create a router with limit 1
       const limitedRouter = MessageRouterFactory.create({
         maxConcurrentHandlers: 1,
-        timeoutMs: 1000
+        timeoutMs: 1000,
       });
 
       const slowHandler = {
-        handle: () => new Promise(resolve => setTimeout(resolve, 100))
+        handle: () => new Promise((resolve) => setTimeout(resolve, 100)),
       };
       limitedRouter.registerHandler('slow', slowHandler as any);
 
       // Start one request
       const p1 = limitedRouter.routeMessage('slow');
-      
+
       // Start second request immediately (should fail)
       const result2 = await limitedRouter.routeMessage('slow');
-      
+
       expect(result2.success).toBe(false);
       expect(result2.error).toContain('Maximum concurrent handlers reached');
 
@@ -134,7 +133,7 @@ describe('MessageRouter', () => {
 
     it('should track active handler count', async () => {
       const handler = {
-        handle: () => new Promise(resolve => setTimeout(resolve, 100))
+        handle: () => new Promise((resolve) => setTimeout(resolve, 100)),
       };
       router.registerHandler('test', handler as any);
 

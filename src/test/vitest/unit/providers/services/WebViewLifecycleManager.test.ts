@@ -26,7 +26,7 @@ describe('WebViewLifecycleManager', () => {
 
   beforeEach(() => {
     mockContext = {
-      extensionUri: { fsPath: '/test/path' }
+      extensionUri: { fsPath: '/test/path' },
     };
     mockHtmlService = {
       generateFallbackHtml: vi.fn().mockReturnValue('<html>fallback</html>'),
@@ -40,7 +40,7 @@ describe('WebViewLifecycleManager', () => {
       visible: true,
       onDidChangeVisibility: vi.fn().mockReturnValue({ dispose: vi.fn() }),
     };
-    
+
     manager = new WebViewLifecycleManager(mockContext, mockHtmlService);
   });
 
@@ -67,9 +67,11 @@ describe('WebViewLifecycleManager', () => {
   describe('Configuration', () => {
     it('should configure webview options', () => {
       manager.configureWebview(mockWebviewView);
-      
+
       expect(mockWebviewView.webview.options.enableScripts).toBe(true);
-      expect(mockWebviewView.webview.options.localResourceRoots).toContain(mockContext.extensionUri);
+      expect(mockWebviewView.webview.options.localResourceRoots).toContain(
+        mockContext.extensionUri
+      );
     });
   });
 
@@ -77,7 +79,7 @@ describe('WebViewLifecycleManager', () => {
     it('should set HTML successfully', () => {
       const content = '<html>test</html>';
       manager.setWebviewHtml(mockWebviewView, content);
-      
+
       expect(mockWebviewView.webview.html).toBe(content);
       expect(manager.getPerformanceMetrics().htmlSetOperations).toBe(1);
     });
@@ -90,9 +92,11 @@ describe('WebViewLifecycleManager', () => {
     it('should handle setup error gracefully', () => {
       const error = new Error('Setup failed');
       manager.handleSetupError(mockWebviewView, error);
-      
+
       expect(mockWebviewView.webview.html).toBe('<html>error</html>');
-      expect(mockHtmlService.generateErrorHtml).toHaveBeenCalledWith(expect.objectContaining({ error }));
+      expect(mockHtmlService.generateErrorHtml).toHaveBeenCalledWith(
+        expect.objectContaining({ error })
+      );
     });
   });
 
@@ -100,16 +104,16 @@ describe('WebViewLifecycleManager', () => {
     it('should register visibility listener and trigger callbacks', () => {
       const onVisible = vi.fn();
       const onHidden = vi.fn();
-      
+
       manager.registerVisibilityListener(mockWebviewView, onVisible, onHidden);
-      
+
       const callback = mockWebviewView.onDidChangeVisibility.mock.calls[0][0];
-      
+
       // Trigger visible
       mockWebviewView.visible = true;
       callback();
       expect(onVisible).toHaveBeenCalled();
-      
+
       // Trigger hidden
       mockWebviewView.visible = false;
       callback();
@@ -126,15 +130,15 @@ describe('WebViewLifecycleManager', () => {
     it('should track various timings', () => {
       vi.useFakeTimers();
       const start = manager.trackResolveStart();
-      
+
       vi.advanceTimersByTime(150);
       manager.trackPanelMovement(start);
       expect(manager.getPerformanceMetrics().lastPanelMovementTime).toBe(150);
-      
+
       vi.advanceTimersByTime(50);
       manager.trackInitializationComplete(start);
       expect(manager.getPerformanceMetrics().totalInitializationTime).toBe(200);
-      
+
       vi.useRealTimers();
     });
 
@@ -152,7 +156,7 @@ describe('WebViewLifecycleManager', () => {
     it('should reset for new view', () => {
       manager.setBodyRendered(true);
       manager.resetForNewView();
-      
+
       // htmlSet should be reset, but bodyRendered should remain (as per impl)
       expect(manager.isBodyRendered()).toBe(true);
     });
@@ -160,7 +164,7 @@ describe('WebViewLifecycleManager', () => {
     it('should clear state on dispose', () => {
       manager.setBodyRendered(true);
       manager.dispose();
-      
+
       expect(manager.isBodyRendered()).toBe(false);
       expect(manager.getView()).toBeUndefined();
     });

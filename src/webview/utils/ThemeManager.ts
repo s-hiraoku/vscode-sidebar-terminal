@@ -100,7 +100,10 @@ export class ThemeManager {
       background: colors.background,
       foreground: colors.foreground,
       cursor: this.getVSCodeColor('--vscode-terminalCursor-foreground', DARK_THEME.cursor),
-      selectionBackground: this.getVSCodeColor('--vscode-terminal-selectionBackground', DARK_THEME.selectionBackground),
+      selectionBackground: this.getVSCodeColor(
+        '--vscode-terminal-selectionBackground',
+        DARK_THEME.selectionBackground
+      ),
     };
 
     return { ...defaultTheme, ...overrides };

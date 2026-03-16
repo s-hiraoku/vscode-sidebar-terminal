@@ -130,9 +130,7 @@ export class ProviderSessionService {
           });
         }
 
-        await new Promise((resolve) =>
-          setTimeout(resolve, TIMING_CONSTANTS.WEBVIEW_INIT_DELAY_MS)
-        );
+        await new Promise((resolve) => setTimeout(resolve, TIMING_CONSTANTS.WEBVIEW_INIT_DELAY_MS));
 
         // Restore scrollback
         for (const mapping of terminalMappings) {

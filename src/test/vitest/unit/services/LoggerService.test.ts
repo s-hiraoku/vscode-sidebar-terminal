@@ -26,7 +26,7 @@ describe('LoggerService', () => {
     // Setup VS Code mocks
     (vscode.window.createOutputChannel as any).mockReturnValue(mockOutputChannel);
     (vscode.workspace.getConfiguration as any).mockReturnValue(mockConfig);
-    
+
     // Reset callbacks
     onDidChangeConfigurationCallbacks = [];
     (vscode.workspace.onDidChangeConfiguration as any).mockImplementation((callback: Function) => {
@@ -95,7 +95,7 @@ describe('LoggerService', () => {
         if (key === 'enableContext') return true;
         return defaultValue;
       });
-      
+
       // Force reload config by simulating change or just creating new instance if mocking works right
       // Since we mock getConfiguration, we need to make sure loadConfig is called.
       // But loadConfig is called in constructor.
@@ -140,7 +140,7 @@ describe('LoggerService', () => {
 
     it('should update configuration when changed', () => {
       const logger = LoggerService.getInstance();
-      
+
       // Change mock to return new value
       mockConfig.get.mockImplementation((key: string, defaultValue: any) => {
         if (key === 'level') return 'error';
@@ -149,9 +149,9 @@ describe('LoggerService', () => {
 
       // Simulate change event
       const event = {
-        affectsConfiguration: (section: string) => section === 'secondaryTerminal.logging'
+        affectsConfiguration: (section: string) => section === 'secondaryTerminal.logging',
       };
-      
+
       onDidChangeConfigurationCallbacks.forEach((cb) => {
         cb(event);
       });

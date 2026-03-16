@@ -203,7 +203,11 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       {
         getTerminal: (id) => this._terminalManager.getTerminal(id),
         initializeShellForTerminal: (id, pty, safe) =>
-          this._terminalManager.initializeShellForTerminal(id, pty as import('node-pty').IPty, safe),
+          this._terminalManager.initializeShellForTerminal(
+            id,
+            pty as import('node-pty').IPty,
+            safe
+          ),
         telemetryService: this._telemetryService,
       },
       SecondaryTerminalProvider.ACK_WATCHDOG_OPTIONS,
@@ -250,7 +254,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         });
         log(`🎨 [THEME] Sent themeChanged message to WebView: ${newTheme}`);
       } else {
-        log('⚠️ [THEME] WebView not available, theme change will be applied on next initialization');
+        log(
+          '⚠️ [THEME] WebView not available, theme change will be applied on next initialization'
+        );
       }
     });
 
@@ -1354,7 +1360,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    */
   private async _sendSettingsUpdateToWebView(): Promise<void> {
     const settings = this._settingsService.getCurrentSettings();
-    log(`📤 [PROVIDER] Sending settings update to WebView: activeBorderMode=${settings.activeBorderMode}`);
+    log(
+      `📤 [PROVIDER] Sending settings update to WebView: activeBorderMode=${settings.activeBorderMode}`
+    );
     await this._sendMessage({
       command: 'settingsResponse',
       settings,
@@ -1596,11 +1604,13 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
         // 🎯 FIX: Notify WebView about the newly created terminal
         log('🎯 [ENSURE] About to call _initializeTerminal...');
-        void this._initializeTerminal().then(() => {
-          log('🎯 [ENSURE] _initializeTerminal completed');
-        }).catch((err) => {
-          log(`❌ [ENSURE] _initializeTerminal failed: ${err}`);
-        });
+        void this._initializeTerminal()
+          .then(() => {
+            log('🎯 [ENSURE] _initializeTerminal completed');
+          })
+          .catch((err) => {
+            log(`❌ [ENSURE] _initializeTerminal failed: ${err}`);
+          });
         log('🎯 [ENSURE] Called _initializeTerminal (async)');
       } else {
         log(`✅ [ENSURE] Sufficient terminals already exist: ${currentTerminals}`);
@@ -1687,7 +1697,6 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       log('⚠️ [PROVIDER] Failed to register initialization watchdogs:', error);
     }
   }
-
 
   public getPerformanceMetrics() {
     return this._lifecycleManager.getPerformanceMetrics();

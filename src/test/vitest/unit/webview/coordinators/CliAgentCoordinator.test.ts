@@ -140,11 +140,7 @@ describe('CliAgentCoordinator', () => {
         terminalName: 'Terminal terminal-1',
         agentType: 'claude',
       });
-      expect(deps.updateCliAgentStatusUI).toHaveBeenCalledWith(
-        'terminal-1',
-        'connected',
-        'claude'
-      );
+      expect(deps.updateCliAgentStatusUI).toHaveBeenCalledWith('terminal-1', 'connected', 'claude');
     });
 
     it('should find terminal by name and update', () => {
@@ -187,11 +183,7 @@ describe('CliAgentCoordinator', () => {
         status: 'connected',
         agentType: 'gemini',
       });
-      expect(deps.updateCliAgentStatusUI).toHaveBeenCalledWith(
-        'terminal-2',
-        'connected',
-        'gemini'
-      );
+      expect(deps.updateCliAgentStatusUI).toHaveBeenCalledWith('terminal-2', 'connected', 'gemini');
     });
   });
 });

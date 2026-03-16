@@ -98,11 +98,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
       const terminalState = this.stateStore.getAgentState(terminalId);
       const currentAgentType = terminalState?.agentType ?? undefined;
 
-      const result = this.detectionEngine.detectTermination(
-        terminalId,
-        data,
-        currentAgentType
-      );
+      const result = this.detectionEngine.detectTermination(terminalId, data, currentAgentType);
 
       if (result.isTerminated) {
         this.stateStore.setAgentTerminated(terminalId);
@@ -231,11 +227,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     return this.stateStore.getConnectedAgentTerminalId() !== null;
   }
 
-  setAgentConnected(
-    terminalId: string,
-    type: AgentType,
-    terminalName?: string
-  ): void {
+  setAgentConnected(terminalId: string, type: AgentType, terminalName?: string): void {
     this.stateStore.setConnectedAgent(terminalId, type, terminalName);
   }
 

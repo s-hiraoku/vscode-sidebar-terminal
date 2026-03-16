@@ -33,6 +33,12 @@ export interface TerminalCommandHandlersDeps {
   getSplitDirection: () => SplitDirection;
 }
 
+type TerminalNavigationInteraction = 'switch-next' | 'switch-previous';
+type TerminalHeaderUpdates = {
+  newName?: string;
+  indicatorColor?: string;
+};
+
 /**
  * TerminalCommandHandlers
  *
@@ -129,10 +135,7 @@ export class TerminalCommandHandlers {
       log(`✅ [HANDLER] Terminal created: ${terminalId}`);
 
       this.deps.terminalManager.setActiveTerminal(terminalId);
-      await this.deps.communicationService.sendMessage({
-        command: 'stateUpdate',
-        state: this.deps.terminalManager.getCurrentState(),
-      });
+      await this.sendStateUpdate();
     } catch (error) {
       log('❌ [HANDLER] Failed to create terminal:', error);
       TerminalErrorHandler.handleWebviewError(error);
@@ -154,10 +157,7 @@ export class TerminalCommandHandlers {
         log(`📊 [HANDLER] Terminals already exist (${currentTerminals.length}), skipping creation`);
       }
 
-      await this.deps.communicationService.sendMessage({
-        command: 'stateUpdate',
-        state: this.deps.terminalManager.getCurrentState(),
-      });
+      await this.sendStateUpdate();
     } catch (error) {
       log('❌ [HANDLER] Failed to handle initial terminal request:', error);
     }
@@ -198,7 +198,8 @@ export class TerminalCommandHandlers {
     }
 
     if (interactionType === 'kill-terminal') {
-      const targetTerminalId = message.terminalId || this.deps.terminalManager.getActiveTerminalId();
+      const targetTerminalId =
+        message.terminalId || this.deps.terminalManager.getActiveTerminalId();
       if (!targetTerminalId) {
         return;
       }
@@ -207,38 +208,17 @@ export class TerminalCommandHandlers {
       return;
     }
 
-    if (interactionType !== 'switch-next' && interactionType !== 'switch-previous') {
+    if (!this.isNavigationInteraction(interactionType)) {
       return;
     }
 
-    const terminals = this.deps.terminalManager.getTerminals();
-    if (terminals.length === 0) {
-      return;
-    }
-
-    const terminalIds = terminals.map((terminal) => terminal.id);
-    const currentTerminalId = this.deps.terminalManager.getActiveTerminalId() || message.terminalId;
-    const currentIndex = currentTerminalId ? terminalIds.indexOf(currentTerminalId) : 0;
-    const normalizedIndex = currentIndex >= 0 ? currentIndex : 0;
-    const offset = interactionType === 'switch-next' ? 1 : -1;
-    const targetIndex = (normalizedIndex + offset + terminalIds.length) % terminalIds.length;
-    const targetTerminalId = terminalIds[targetIndex];
-
+    const targetTerminalId = this.getNavigationTargetTerminalId(message, interactionType);
     if (!targetTerminalId) {
       return;
     }
 
     try {
-      this.deps.terminalManager.setActiveTerminal(targetTerminalId);
-      await this.deps.communicationService.sendMessage({
-        command: 'focusTerminal',
-        terminalId: targetTerminalId,
-        timestamp: Date.now(),
-      });
-      await this.deps.communicationService.sendMessage({
-        command: 'stateUpdate',
-        state: this.deps.terminalManager.getCurrentState(),
-      });
+      await this.focusTerminal(targetTerminalId);
     } catch (error) {
       TerminalErrorHandler.handleWebviewError(error);
     }
@@ -265,36 +245,14 @@ export class TerminalCommandHandlers {
    * Handle kill terminal command
    */
   public async handleKillTerminal(message: WebviewMessage): Promise<void> {
-    if (!hasTerminalId(message)) {
-      log('⚠️ [HANDLER] Kill terminal message missing terminalId');
-      return;
-    }
-
-    try {
-      log(`🗑️ [HANDLER] Killing terminal: ${message.terminalId}`);
-      await this.performKillTerminal(message.terminalId);
-    } catch (error) {
-      log('❌ [HANDLER] Failed to kill terminal:', error);
-      TerminalErrorHandler.handleWebviewError(error);
-    }
+    await this.handleTerminalRemoval(message, 'Kill');
   }
 
   /**
    * Handle delete terminal command
    */
   public async handleDeleteTerminal(message: WebviewMessage): Promise<void> {
-    if (!hasTerminalId(message)) {
-      log('⚠️ [HANDLER] Delete terminal message missing terminalId');
-      return;
-    }
-
-    try {
-      log(`🗑️ [HANDLER] Deleting terminal: ${message.terminalId}`);
-      await this.performKillTerminal(message.terminalId);
-    } catch (error) {
-      log('❌ [HANDLER] Failed to delete terminal:', error);
-      TerminalErrorHandler.handleWebviewError(error);
-    }
+    await this.handleTerminalRemoval(message, 'Delete');
   }
 
   /**
@@ -324,10 +282,7 @@ export class TerminalCommandHandlers {
       terminalId: terminalId,
     });
 
-    await this.deps.communicationService.sendMessage({
-      command: 'stateUpdate',
-      state: this.deps.terminalManager.getCurrentState(),
-    });
+    await this.sendStateUpdate();
 
     log(`✅ [HANDLER] Terminal killed: ${terminalId}`);
   }
@@ -375,10 +330,7 @@ export class TerminalCommandHandlers {
         return;
       }
 
-      await this.deps.communicationService.sendMessage({
-        command: 'stateUpdate',
-        state: this.deps.terminalManager.getCurrentState(),
-      });
+      await this.sendStateUpdate();
 
       log(`✅ [HANDLER] Terminal renamed: ${message.terminalId} -> ${nextName.trim()}`);
     } catch (error) {
@@ -395,56 +347,23 @@ export class TerminalCommandHandlers {
       return;
     }
 
-    const rawName = (message as any)?.newName;
-    const nextName =
-      typeof rawName === 'string' && rawName.trim().length > 0 ? rawName.trim() : undefined;
-    const rawIndicatorColor = (message as any)?.indicatorColor;
-    const normalizedIndicatorColor =
-      typeof rawIndicatorColor === 'string' ? rawIndicatorColor.trim() : undefined;
-    const indicatorColor =
-      typeof normalizedIndicatorColor === 'string' &&
-      /^#[0-9A-Fa-f]{6}$/.test(normalizedIndicatorColor)
-        ? normalizedIndicatorColor.toUpperCase()
-        : normalizedIndicatorColor?.toLowerCase() === 'transparent'
-          ? 'transparent'
-          : undefined;
-
-    if (!nextName && !indicatorColor) {
+    const updates = this.getTerminalHeaderUpdates(message);
+    if (!updates) {
       log('⚠️ [HANDLER] updateTerminalHeader called without valid updates');
       return;
     }
 
     try {
-      const manager = this.deps.terminalManager as unknown as {
-        updateTerminalHeader?: (
-          terminalId: string,
-          updates: { newName?: string; indicatorColor?: string }
-        ) => boolean;
-      };
-
-      let updated = false;
-      if (typeof manager.updateTerminalHeader === 'function') {
-        updated = manager.updateTerminalHeader(message.terminalId, {
-          ...(nextName ? { newName: nextName } : {}),
-          ...(indicatorColor ? { indicatorColor } : {}),
-        });
-      } else if (nextName) {
-        // Backward compatibility when updateTerminalHeader is unavailable
-        updated = this.deps.terminalManager.renameTerminal(message.terminalId, nextName);
-      }
-
+      const updated = this.applyTerminalHeaderUpdates(message.terminalId, updates);
       if (!updated) {
         log(`⚠️ [HANDLER] updateTerminalHeader failed for terminalId=${message.terminalId}`);
         return;
       }
 
-      await this.deps.communicationService.sendMessage({
-        command: 'stateUpdate',
-        state: this.deps.terminalManager.getCurrentState(),
-      });
+      await this.sendStateUpdate();
 
       log(
-        `✅ [HANDLER] Terminal header updated: ${message.terminalId} (name=${nextName ?? 'unchanged'}, color=${indicatorColor ?? 'unchanged'})`
+        `✅ [HANDLER] Terminal header updated: ${message.terminalId} (name=${updates.newName ?? 'unchanged'}, color=${updates.indicatorColor ?? 'unchanged'})`
       );
     } catch (error) {
       log('❌ [HANDLER] Failed to update terminal header:', error);
@@ -616,16 +535,19 @@ export class TerminalCommandHandlers {
       await fs.promises.writeFile(tempFilePath, imageBuffer);
 
       // Schedule cleanup after 5 minutes (Claude Code should have read it by then)
-      setTimeout(() => {
-        try {
-          if (fs.existsSync(tempFilePath)) {
-            fs.unlinkSync(tempFilePath);
-            log(`🧹 [HANDLER] Cleaned up temp image: ${tempFilePath}`);
+      setTimeout(
+        () => {
+          try {
+            if (fs.existsSync(tempFilePath)) {
+              fs.unlinkSync(tempFilePath);
+              log(`🧹 [HANDLER] Cleaned up temp image: ${tempFilePath}`);
+            }
+          } catch {
+            // Ignore cleanup errors
           }
-        } catch {
-          // Ignore cleanup errors
-        }
-      }, 5 * 60 * 1000);
+        },
+        5 * 60 * 1000
+      );
 
       log(`🖼️ [HANDLER] Saved image to temp file: ${tempFilePath}`);
 
@@ -658,7 +580,12 @@ export class TerminalCommandHandlers {
       const forceReconnect = action === 'force-reconnect' || (message as any)?.forceReconnect;
       const agentType = (message as any)?.agentType || 'claude';
 
-      let result: { success: boolean; reason?: string; newStatus: string; agentType: string | null };
+      let result: {
+        success: boolean;
+        reason?: string;
+        newStatus: string;
+        agentType: string | null;
+      };
 
       if (forceReconnect) {
         // Force reconnect: works even in 'none' state
@@ -787,5 +714,112 @@ export class TerminalCommandHandlers {
     });
 
     log('✅ [HANDLER] Terminal initialization complete');
+  }
+
+  private isNavigationInteraction(
+    interactionType: WebviewMessage['type']
+  ): interactionType is TerminalNavigationInteraction {
+    return interactionType === 'switch-next' || interactionType === 'switch-previous';
+  }
+
+  private getNavigationTargetTerminalId(
+    message: WebviewMessage,
+    interactionType: TerminalNavigationInteraction
+  ): string | undefined {
+    const terminalIds = this.deps.terminalManager.getTerminals().map((terminal) => terminal.id);
+    if (terminalIds.length === 0) {
+      return undefined;
+    }
+
+    const currentTerminalId = this.deps.terminalManager.getActiveTerminalId() ?? message.terminalId;
+    const currentIndex = currentTerminalId ? terminalIds.indexOf(currentTerminalId) : -1;
+    const normalizedIndex = currentIndex >= 0 ? currentIndex : 0;
+    const offset = interactionType === 'switch-next' ? 1 : -1;
+    const targetIndex = (normalizedIndex + offset + terminalIds.length) % terminalIds.length;
+
+    return terminalIds[targetIndex];
+  }
+
+  private async focusTerminal(terminalId: string): Promise<void> {
+    this.deps.terminalManager.setActiveTerminal(terminalId);
+    await this.deps.communicationService.sendMessage({
+      command: 'focusTerminal',
+      terminalId,
+      timestamp: Date.now(),
+    });
+    await this.sendStateUpdate();
+  }
+
+  private async handleTerminalRemoval(
+    message: WebviewMessage,
+    action: 'Kill' | 'Delete'
+  ): Promise<void> {
+    if (!hasTerminalId(message)) {
+      log(`⚠️ [HANDLER] ${action} terminal message missing terminalId`);
+      return;
+    }
+
+    const presentTenseAction = action === 'Delete' ? 'deleting' : 'killing';
+    const failureAction = action === 'Delete' ? 'delete' : 'kill';
+
+    try {
+      log(`🗑️ [HANDLER] ${presentTenseAction} terminal: ${message.terminalId}`);
+      await this.performKillTerminal(message.terminalId);
+    } catch (error) {
+      log(`❌ [HANDLER] Failed to ${failureAction} terminal:`, error);
+      TerminalErrorHandler.handleWebviewError(error);
+    }
+  }
+
+  private getTerminalHeaderUpdates(message: WebviewMessage): TerminalHeaderUpdates | undefined {
+    const rawName = (message as { newName?: unknown }).newName;
+    const newName =
+      typeof rawName === 'string' && rawName.trim().length > 0 ? rawName.trim() : undefined;
+    const indicatorColor = this.normalizeIndicatorColor(
+      (message as { indicatorColor?: unknown }).indicatorColor
+    );
+
+    if (!newName && !indicatorColor) {
+      return undefined;
+    }
+
+    return {
+      ...(newName ? { newName } : {}),
+      ...(indicatorColor ? { indicatorColor } : {}),
+    };
+  }
+
+  private normalizeIndicatorColor(rawIndicatorColor: unknown): string | undefined {
+    if (typeof rawIndicatorColor !== 'string') {
+      return undefined;
+    }
+
+    const normalizedIndicatorColor = rawIndicatorColor.trim();
+    if (/^#[0-9A-Fa-f]{6}$/.test(normalizedIndicatorColor)) {
+      return normalizedIndicatorColor.toUpperCase();
+    }
+
+    return normalizedIndicatorColor.toLowerCase() === 'transparent' ? 'transparent' : undefined;
+  }
+
+  private applyTerminalHeaderUpdates(terminalId: string, updates: TerminalHeaderUpdates): boolean {
+    const manager = this.deps.terminalManager as unknown as {
+      updateTerminalHeader?: (terminalId: string, updates: TerminalHeaderUpdates) => boolean;
+    };
+
+    if (typeof manager.updateTerminalHeader === 'function') {
+      return manager.updateTerminalHeader(terminalId, updates);
+    }
+
+    return updates.newName
+      ? this.deps.terminalManager.renameTerminal(terminalId, updates.newName)
+      : false;
+  }
+
+  private async sendStateUpdate(): Promise<void> {
+    await this.deps.communicationService.sendMessage({
+      command: 'stateUpdate',
+      state: this.deps.terminalManager.getCurrentState(),
+    });
   }
 }
