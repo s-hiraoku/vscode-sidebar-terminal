@@ -50,11 +50,14 @@ describe('TerminalMessageHandlers', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    dependencies = null as unknown as TerminalMessageHandlerDependencies;
   });
 
   it('creates terminals with the requested options', async () => {
+    // Given
     const handler = new CreateTerminalHandler(dependencies);
 
+    // When
     await expect(
       handler.handle({
         profile: 'zsh',
@@ -63,6 +66,7 @@ describe('TerminalMessageHandlers', () => {
       })
     ).resolves.toEqual({ terminalId: 'terminal-2' });
 
+    // Then
     expect(dependencies.terminalManager.createTerminal).toHaveBeenCalledWith({
       profile: 'zsh',
       workingDirectory: '/workspace',
@@ -71,33 +75,43 @@ describe('TerminalMessageHandlers', () => {
   });
 
   it('wraps create-terminal failures with handler context', async () => {
+    // Given
     const handler = new CreateTerminalHandler(dependencies);
     vi.mocked(dependencies.terminalManager.createTerminal).mockRejectedValueOnce(new Error('boom'));
 
+    // When / Then
     await expect(handler.handle({})).rejects.toThrow('Terminal creation failed: Error: boom');
   });
 
   it('requires a terminal id before deleting', async () => {
+    // Given
     const handler = new DeleteTerminalHandler(dependencies);
     const invokeWithPartialPayload = (
       data: Partial<Parameters<DeleteTerminalHandler['handle']>[0]>
     ) => handler.handle(data as Parameters<DeleteTerminalHandler['handle']>[0]);
 
+    // When / Then
     await expect(invokeWithPartialPayload({})).rejects.toThrow(
       "Required field 'terminalId' is missing or null"
     );
   });
 
   it('passes input and terminal id in the runtime order expected by terminalManager', () => {
+    // Given
     const handler = new TerminalInputHandler(dependencies);
 
+    // When
     expect(handler.handle({ terminalId: 'terminal-1', input: 'pwd' })).toEqual({ success: true });
+
+    // Then
     expect(dependencies.terminalManager.sendInput).toHaveBeenCalledWith('pwd', 'terminal-1');
   });
 
   it('rejects resize requests with non-positive dimensions', () => {
+    // Given
     const handler = new TerminalResizeHandler(dependencies);
 
+    // When / Then
     expect(() =>
       handler.handle({
         terminalId: 'terminal-1',
@@ -108,8 +122,10 @@ describe('TerminalMessageHandlers', () => {
   });
 
   it('delegates valid resize requests to terminalManager', () => {
+    // Given
     const handler = new TerminalResizeHandler(dependencies);
 
+    // When
     expect(
       handler.handle({
         terminalId: 'terminal-1',
@@ -117,40 +133,53 @@ describe('TerminalMessageHandlers', () => {
         rows: 30,
       })
     ).toEqual({ success: true });
+
+    // Then
     expect(dependencies.terminalManager.resize).toHaveBeenCalledWith('terminal-1', 120, 30);
   });
 
   it('returns current settings through the settings handler', () => {
+    // Given
     const handler = new GetSettingsHandler(dependencies);
 
+    // When
     expect(handler.handle()).toEqual({ settings: { theme: 'light' } });
+
+    // Then
     expect(dependencies.configService.getCurrentSettings).toHaveBeenCalledTimes(1);
   });
 
   it('wraps settings update errors', async () => {
+    // Given
     const handler = new UpdateSettingsHandler(dependencies);
     vi.mocked(dependencies.configService.updateSettings).mockRejectedValueOnce(new Error('nope'));
 
+    // When / Then
     await expect(handler.handle({ settings: { theme: 'dark' } })).rejects.toThrow(
       'Settings update failed: Error: nope'
     );
   });
 
   it('returns persisted session data for restoration', async () => {
+    // Given
     const handler = new SessionRestorationHandler(dependencies);
 
+    // When / Then
     await expect(handler.handle()).resolves.toEqual({
       sessionData: { terminals: ['terminal-1'] },
     });
   });
 
   it('uses the active terminal working directory when creating a split terminal', async () => {
+    // Given
     const handler = new SplitTerminalHandler(dependencies);
 
+    // When
     await expect(handler.handle({ direction: 'vertical' })).resolves.toEqual({
       terminalId: 'terminal-2',
     });
 
+    // Then
     expect(dependencies.terminalManager.getWorkingDirectory).toHaveBeenCalledWith('terminal-1');
     expect(dependencies.terminalManager.createTerminal).toHaveBeenCalledWith({
       workingDirectory: '/tmp/worktree',
@@ -158,22 +187,27 @@ describe('TerminalMessageHandlers', () => {
   });
 
   it('falls back to safeProcessCwd when the active terminal cwd cannot be resolved', async () => {
+    // Given
     const handler = new SplitTerminalHandler(dependencies);
     vi.mocked(dependencies.terminalManager.getWorkingDirectory).mockRejectedValueOnce(
       new Error('cwd unavailable')
     );
 
+    // When
     await handler.handle({});
 
+    // Then
     expect(dependencies.terminalManager.createTerminal).toHaveBeenCalledWith({
       workingDirectory: safeProcessCwd(),
     });
   });
 
   it('creates and registers the full handler set', () => {
+    // Given
     const handlers = TerminalMessageHandlerFactory.createAllHandlers(dependencies);
     const router = MessageRouterFactory.create({ enableLogging: false });
 
+    // When / Then
     expect(Array.from(handlers.keys()).sort()).toEqual([
       'createTerminal',
       'deleteTerminal',
@@ -186,8 +220,10 @@ describe('TerminalMessageHandlers', () => {
       'updateSettings',
     ]);
 
+    // When
     TerminalMessageHandlerFactory.registerAllHandlers(router, dependencies);
 
+    // Then
     expect(router.getRegisteredCommands().sort()).toEqual([
       'createTerminal',
       'deleteTerminal',
