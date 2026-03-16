@@ -7,17 +7,23 @@ vi.mock('../../../../utils/logger', () => ({
 }));
 
 describe('InputDetectionProcessor', () => {
+  type StrategyRegistryStub = {
+    getAllStrategies: ReturnType<typeof vi.fn>;
+    getSupportedAgentTypes: ReturnType<typeof vi.fn>;
+    dispose: ReturnType<typeof vi.fn>;
+  };
+  type InputDetectionProcessorTestAccess = InputDetectionProcessor & {
+    strategyRegistry: StrategyRegistryStub;
+  };
+
   let processor: InputDetectionProcessor;
+  let processorTestAccess: InputDetectionProcessorTestAccess;
   let stateManager: {
     isAgentConnected: ReturnType<typeof vi.fn>;
     getConnectedAgentType: ReturnType<typeof vi.fn>;
     setConnectedAgent: ReturnType<typeof vi.fn>;
   };
-  let strategyRegistry: {
-    getAllStrategies: ReturnType<typeof vi.fn>;
-    getSupportedAgentTypes: ReturnType<typeof vi.fn>;
-    dispose: ReturnType<typeof vi.fn>;
-  };
+  let strategyRegistry: StrategyRegistryStub;
 
   beforeEach(() => {
     stateManager = {
@@ -27,6 +33,7 @@ describe('InputDetectionProcessor', () => {
     };
 
     processor = new InputDetectionProcessor(stateManager as never);
+    processorTestAccess = processor as InputDetectionProcessorTestAccess;
 
     strategyRegistry = {
       getAllStrategies: vi.fn().mockReturnValue([]),
@@ -34,7 +41,7 @@ describe('InputDetectionProcessor', () => {
       dispose: vi.fn(),
     };
 
-    (processor as any).strategyRegistry = strategyRegistry;
+    processorTestAccess.strategyRegistry = strategyRegistry;
   });
 
   afterEach(() => {
