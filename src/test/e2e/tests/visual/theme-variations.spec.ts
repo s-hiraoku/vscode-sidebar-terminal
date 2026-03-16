@@ -33,11 +33,13 @@ test.describe('Theme Variations @visual-regression', () => {
     await vrtHelper.setTheme('dark');
 
     // Inject sample content
-    await vrtHelper.injectTerminalContent([
-      'user@host:~$ npm run build',
-      `${ANSI.GREEN}✓${ANSI.RESET} Build completed successfully`,
-      'user@host:~$ _',
-    ].join('\n'));
+    await vrtHelper.injectTerminalContent(
+      [
+        'user@host:~$ npm run build',
+        `${ANSI.GREEN}✓${ANSI.RESET} Build completed successfully`,
+        'user@host:~$ _',
+      ].join('\n')
+    );
 
     // Assert: Full page screenshot
     await expect(page).toHaveScreenshot('theme-dark-full-layout.png', {
@@ -56,11 +58,13 @@ test.describe('Theme Variations @visual-regression', () => {
     await vrtHelper.setTheme('light');
 
     // Inject sample content
-    await vrtHelper.injectTerminalContent([
-      'user@host:~$ npm run build',
-      `${ANSI.GREEN}✓${ANSI.RESET} Build completed successfully`,
-      'user@host:~$ _',
-    ].join('\n'));
+    await vrtHelper.injectTerminalContent(
+      [
+        'user@host:~$ npm run build',
+        `${ANSI.GREEN}✓${ANSI.RESET} Build completed successfully`,
+        'user@host:~$ _',
+      ].join('\n')
+    );
 
     // Assert: Full page screenshot
     await expect(page).toHaveScreenshot('theme-light-full-layout.png', {
@@ -79,11 +83,13 @@ test.describe('Theme Variations @visual-regression', () => {
     await vrtHelper.setTheme('high-contrast');
 
     // Inject sample content
-    await vrtHelper.injectTerminalContent([
-      'user@host:~$ npm run build',
-      `${ANSI.GREEN}✓${ANSI.RESET} Build completed successfully`,
-      'user@host:~$ _',
-    ].join('\n'));
+    await vrtHelper.injectTerminalContent(
+      [
+        'user@host:~$ npm run build',
+        `${ANSI.GREEN}✓${ANSI.RESET} Build completed successfully`,
+        'user@host:~$ _',
+      ].join('\n')
+    );
 
     // Assert: Full page screenshot
     await expect(page).toHaveScreenshot('theme-high-contrast-full-layout.png', {

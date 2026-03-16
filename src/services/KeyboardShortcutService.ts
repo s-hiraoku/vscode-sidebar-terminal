@@ -461,7 +461,10 @@ export class KeyboardShortcutService {
       return;
     }
 
-    log(`⚠️ [KEYBOARD] No webview provider available for command: ${String(message.command)}`, message);
+    log(
+      `⚠️ [KEYBOARD] No webview provider available for command: ${String(message.command)}`,
+      message
+    );
   }
 
   /**
@@ -487,10 +490,18 @@ export class KeyboardShortcutService {
    */
   public dispose(): void {
     if (this._panelNavigationMode) {
-      void vscode.commands.executeCommand('setContext', 'secondaryTerminal.panelNavigationMode', false);
+      void vscode.commands.executeCommand(
+        'setContext',
+        'secondaryTerminal.panelNavigationMode',
+        false
+      );
       this._panelNavigationMode = false;
     }
-    void vscode.commands.executeCommand('setContext', 'secondaryTerminal.panelNavigation.enabled', false);
+    void vscode.commands.executeCommand(
+      'setContext',
+      'secondaryTerminal.panelNavigation.enabled',
+      false
+    );
     this._disposables.dispose();
     this._searchBox?.dispose();
     log('🧹 [KEYBOARD] Service disposed');

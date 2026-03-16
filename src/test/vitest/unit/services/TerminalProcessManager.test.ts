@@ -1,4 +1,3 @@
-
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { TerminalProcessManager } from '../../../../services/TerminalProcessManager';
 import { TerminalInstance } from '../../../../types/shared';
@@ -46,7 +45,7 @@ describe('TerminalProcessManager', () => {
   describe('writeToPty', () => {
     it('should write data to pty successfully', () => {
       const result = manager.writeToPty(terminal, 'test data');
-      
+
       expect(result.success).toBe(true);
       expect(mockPty.write).toHaveBeenCalledWith('test data');
     });
@@ -54,18 +53,20 @@ describe('TerminalProcessManager', () => {
     it('should fail if pty is not ready', () => {
       terminal.ptyProcess = undefined;
       terminal.pty = undefined;
-      
+
       const result = manager.writeToPty(terminal, 'test');
-      
+
       expect(result.success).toBe(false);
       expect(result.reason).toContain('PTY not ready');
     });
 
     it('should fail if pty write throws', () => {
-      mockPty.write.mockImplementation(() => { throw new Error('Write error'); });
-      
+      mockPty.write.mockImplementation(() => {
+        throw new Error('Write error');
+      });
+
       const result = manager.writeToPty(terminal, 'test');
-      
+
       expect(result.success).toBe(false);
       expect(result.reason).toContain('Write error');
     });
@@ -73,7 +74,7 @@ describe('TerminalProcessManager', () => {
     it('should fail if pty process is killed', () => {
       mockPty.killed = true;
       const result = manager.writeToPty(terminal, 'test');
-      
+
       expect(result.success).toBe(false);
       expect(result.reason).toContain('PTY instance missing write method or process killed');
     });
@@ -82,7 +83,7 @@ describe('TerminalProcessManager', () => {
   describe('resizePty', () => {
     it('should resize pty successfully', () => {
       const result = manager.resizePty(terminal, 80, 24);
-      
+
       expect(result.success).toBe(true);
       expect(mockPty.resize).toHaveBeenCalledWith(80, 24);
     });
@@ -107,7 +108,9 @@ describe('TerminalProcessManager', () => {
     });
 
     it('should fail if pty throws during resize', () => {
-      mockPty.resize.mockImplementation(() => { throw new Error('Resize error'); });
+      mockPty.resize.mockImplementation(() => {
+        throw new Error('Resize error');
+      });
       const result = manager.resizePty(terminal, 80, 24);
       expect(result.success).toBe(false);
       expect(result.reason).toContain('Resize error');
@@ -137,7 +140,9 @@ describe('TerminalProcessManager', () => {
     });
 
     it('should fail if kill throws', () => {
-      mockPty.kill.mockImplementation(() => { throw new Error('Kill error'); });
+      mockPty.kill.mockImplementation(() => {
+        throw new Error('Kill error');
+      });
       const result = manager.killPty(terminal);
       expect(result.success).toBe(false);
       expect(result.reason).toContain('Kill error');
@@ -176,14 +181,16 @@ describe('TerminalProcessManager', () => {
     it('should retry and succeed', async () => {
       vi.useFakeTimers();
       mockPty.write
-        .mockImplementationOnce(() => { throw new Error('Fail 1'); })
+        .mockImplementationOnce(() => {
+          throw new Error('Fail 1');
+        })
         .mockImplementationOnce(() => {}); // Success
 
       const promise = manager.retryWrite(terminal, 'test');
-      
+
       // Advance timers to trigger retry
       await vi.advanceTimersByTimeAsync(1000);
-      
+
       const result = await promise;
       expect(result.success).toBe(true);
       expect(mockPty.write).toHaveBeenCalledTimes(2);
@@ -191,12 +198,14 @@ describe('TerminalProcessManager', () => {
 
     it('should fail after max retries', async () => {
       vi.useFakeTimers();
-      mockPty.write.mockImplementation(() => { throw new Error('Fail'); });
+      mockPty.write.mockImplementation(() => {
+        throw new Error('Fail');
+      });
 
       const promise = manager.retryWrite(terminal, 'test', 2);
-      
+
       await vi.advanceTimersByTimeAsync(2000);
-      
+
       const result = await promise;
       expect(result.success).toBe(false);
       expect(result.reason).toContain('after 2 attempts');
@@ -207,14 +216,18 @@ describe('TerminalProcessManager', () => {
   describe('attemptRecovery', () => {
     it('should recover using alternative pty reference', () => {
       // Simulate ptyProcess broken but pty works
-      const brokenPty = { write: () => { throw new Error('Broken'); } };
+      const brokenPty = {
+        write: () => {
+          throw new Error('Broken');
+        },
+      };
       const workingPty = { write: vi.fn(), pid: 123 };
-      
+
       terminal.ptyProcess = brokenPty;
       terminal.pty = workingPty;
 
       const result = manager.attemptRecovery(terminal);
-      
+
       expect(result.success).toBe(true);
       expect(workingPty.write).toHaveBeenCalledWith('');
       // Should fix reference
@@ -222,11 +235,19 @@ describe('TerminalProcessManager', () => {
     });
 
     it('should fail if all alternatives fail', () => {
-      terminal.ptyProcess = { write: () => { throw new Error('Fail 1'); } };
-      terminal.pty = { write: () => { throw new Error('Fail 2'); } };
+      terminal.ptyProcess = {
+        write: () => {
+          throw new Error('Fail 1');
+        },
+      };
+      terminal.pty = {
+        write: () => {
+          throw new Error('Fail 2');
+        },
+      };
 
       const result = manager.attemptRecovery(terminal);
-      
+
       expect(result.success).toBe(false);
       expect(result.reason).toContain('All recovery attempts failed');
     });

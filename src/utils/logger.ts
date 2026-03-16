@@ -42,8 +42,7 @@ class Logger implements Disposable {
     if (typeof window === 'undefined') return false;
 
     const isDevHost =
-      window.location?.hostname === 'localhost' ||
-      window.location?.protocol === 'vscode-webview:';
+      window.location?.hostname === 'localhost' || window.location?.protocol === 'vscode-webview:';
 
     const hasDebugFlag =
       window.location?.search?.includes('debug=true') ||
@@ -174,27 +173,67 @@ class Logger implements Disposable {
     }
   }
 
-  terminal(...args: unknown[]): void { this.logDebug('TERMINAL', '✨', ...args); }
-  webview(...args: unknown[]): void { this.logDebug('WEBVIEW', '🌐', ...args); }
-  provider(...args: unknown[]): void { this.logDebug('PROVIDER', '📡', ...args); }
-  extension(...args: unknown[]): void { this.logDebug('EXTENSION', '🔧', ...args); }
-  performance(...args: unknown[]): void { this.logDebug('PERF', '⚡', ...args); }
-  message(...args: unknown[]): void { this.logDebug('MESSAGE', '📨', ...args); }
-  ui(...args: unknown[]): void { this.logDebug('UI', '🎨', ...args); }
-  config(...args: unknown[]): void { this.logDebug('CONFIG', '⚙️', ...args); }
-  input(...args: unknown[]): void { this.logDebug('INPUT', '⌨️', ...args); }
-  output(...args: unknown[]): void { this.logDebug('OUTPUT', '📤', ...args); }
-  debug_category(...args: unknown[]): void { this.logDebug('DEBUG', '🔍', ...args); }
-  file(...args: unknown[]): void { this.logDebug('FILE', '📁', ...args); }
-  network(...args: unknown[]): void { this.logDebug('NETWORK', '🌐', ...args); }
-  state(...args: unknown[]): void { this.logDebug('STATE', '🔄', ...args); }
-  scrollback(...args: unknown[]): void { this.logDebug('SCROLLBACK', '📜', ...args); }
+  terminal(...args: unknown[]): void {
+    this.logDebug('TERMINAL', '✨', ...args);
+  }
+  webview(...args: unknown[]): void {
+    this.logDebug('WEBVIEW', '🌐', ...args);
+  }
+  provider(...args: unknown[]): void {
+    this.logDebug('PROVIDER', '📡', ...args);
+  }
+  extension(...args: unknown[]): void {
+    this.logDebug('EXTENSION', '🔧', ...args);
+  }
+  performance(...args: unknown[]): void {
+    this.logDebug('PERF', '⚡', ...args);
+  }
+  message(...args: unknown[]): void {
+    this.logDebug('MESSAGE', '📨', ...args);
+  }
+  ui(...args: unknown[]): void {
+    this.logDebug('UI', '🎨', ...args);
+  }
+  config(...args: unknown[]): void {
+    this.logDebug('CONFIG', '⚙️', ...args);
+  }
+  input(...args: unknown[]): void {
+    this.logDebug('INPUT', '⌨️', ...args);
+  }
+  output(...args: unknown[]): void {
+    this.logDebug('OUTPUT', '📤', ...args);
+  }
+  debug_category(...args: unknown[]): void {
+    this.logDebug('DEBUG', '🔍', ...args);
+  }
+  file(...args: unknown[]): void {
+    this.logDebug('FILE', '📁', ...args);
+  }
+  network(...args: unknown[]): void {
+    this.logDebug('NETWORK', '🌐', ...args);
+  }
+  state(...args: unknown[]): void {
+    this.logDebug('STATE', '🔄', ...args);
+  }
+  scrollback(...args: unknown[]): void {
+    this.logDebug('SCROLLBACK', '📜', ...args);
+  }
 
-  session(...args: unknown[]): void { this.logInfo('SESSION', '💾', ...args); }
-  lifecycle(...args: unknown[]): void { this.logInfo('LIFECYCLE', '🔄', ...args); }
-  success(...args: unknown[]): void { this.logInfo('SUCCESS', '✅', ...args); }
-  startup(...args: unknown[]): void { this.logInfo('STARTUP', '🚀', ...args); }
-  agent(...args: unknown[]): void { this.logInfo('AGENT', '🤖', ...args); }
+  session(...args: unknown[]): void {
+    this.logInfo('SESSION', '💾', ...args);
+  }
+  lifecycle(...args: unknown[]): void {
+    this.logInfo('LIFECYCLE', '🔄', ...args);
+  }
+  success(...args: unknown[]): void {
+    this.logInfo('SUCCESS', '✅', ...args);
+  }
+  startup(...args: unknown[]): void {
+    this.logInfo('STARTUP', '🚀', ...args);
+  }
+  agent(...args: unknown[]): void {
+    this.logInfo('AGENT', '🤖', ...args);
+  }
 
   error_category(...args: unknown[]): void {
     if (this.level <= LogLevel.ERROR) {

@@ -41,7 +41,10 @@ export class AudioNotificationService implements vscode.Disposable {
       enabled: config.get<boolean>('agentWaitingNotification.enabled', true),
       soundFile: config.get<string>('agentWaitingNotification.soundFile', ''),
       volume: config.get<number>('agentWaitingNotification.volume', 50),
-      cooldownMs: Math.max(1000, Math.min(60000, config.get<number>('agentWaitingNotification.cooldownMs', 5000))),
+      cooldownMs: Math.max(
+        1000,
+        Math.min(60000, config.get<number>('agentWaitingNotification.cooldownMs', 5000))
+      ),
     };
   }
 

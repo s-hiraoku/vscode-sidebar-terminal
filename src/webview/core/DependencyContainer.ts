@@ -456,7 +456,8 @@ export class DependencyContainer {
     // Rough estimation using named constants
     return (
       this.services.size * DEPENDENCY_CONTAINER_CONSTANTS.SERVICE_MEMORY_OVERHEAD_BYTES +
-      this.initializationOrder.length * DEPENDENCY_CONTAINER_CONSTANTS.ORDER_TRACKING_OVERHEAD_BYTES +
+      this.initializationOrder.length *
+        DEPENDENCY_CONTAINER_CONSTANTS.ORDER_TRACKING_OVERHEAD_BYTES +
       this.getResolvedServices().size * DEPENDENCY_CONTAINER_CONSTANTS.INSTANCE_OVERHEAD_BYTES
     );
   }

@@ -49,7 +49,7 @@ describe('CliAgentDetectionEngine', () => {
     it('should use cache for repeated inputs', () => {
       // First call
       engine.detectFromInput(terminalId, 'claude code');
-      
+
       // Spy on Date.now or registry if needed, but here we just check correctness
       const result = engine.detectFromInput(terminalId, 'claude code');
       expect(result.isDetected).toBe(true);
@@ -57,10 +57,10 @@ describe('CliAgentDetectionEngine', () => {
 
     it('should expire cache after TTL', () => {
       engine.detectFromInput(terminalId, 'claude code');
-      
+
       // Advance time beyond 5s TTL
       vi.advanceTimersByTime(6000);
-      
+
       const result = engine.detectFromInput(terminalId, 'claude code');
       expect(result.isDetected).toBe(true);
     });
@@ -89,7 +89,7 @@ describe('CliAgentDetectionEngine', () => {
     it('should detect startup patterns in multi-line output', () => {
       const output = 'Some unrelated text\nWelcome to Claude Code\nMore text';
       const result = engine.detectFromOutput(terminalId, output);
-      
+
       expect(result.isDetected).toBe(true);
       expect(result.agentType).toBe('claude');
       expect(result.detectedLine).toContain('Welcome to Claude Code');
@@ -99,7 +99,7 @@ describe('CliAgentDetectionEngine', () => {
       // Line with ANSI colors and Unicode box characters
       const line = '\x1b[32m│\x1b[0m Welcome to Claude Code \x1b[32m│\x1b[0m';
       const result = engine.detectFromOutput(terminalId, line);
-      
+
       expect(result.isDetected).toBe(true);
       expect(result.agentType).toBe('claude');
     });
@@ -167,7 +167,11 @@ describe('CliAgentDetectionEngine', () => {
     });
 
     it('should detect Gemini farewell as termination', () => {
-      const result = engine.detectTermination(terminalId, 'Agent powering down. Goodbye!', 'gemini');
+      const result = engine.detectTermination(
+        terminalId,
+        'Agent powering down. Goodbye!',
+        'gemini'
+      );
       expect(result.isTerminated).toBe(true);
       expect(result.confidence).toBe(1.0);
       expect(result.reason).toBe('Explicit termination pattern');
@@ -237,7 +241,11 @@ describe('CliAgentDetectionEngine', () => {
     it('should detect termination when Ctrl+C is followed by decorated zsh prompt', () => {
       engine.detectFromInput(terminalId, '\x03');
       engine.detectFromOutput(terminalId, 'Claude is thinking...');
-      const result = engine.detectTermination(terminalId, '^C\n➜ myproject git:(main) ✗ ', 'claude');
+      const result = engine.detectTermination(
+        terminalId,
+        '^C\n➜ myproject git:(main) ✗ ',
+        'claude'
+      );
 
       expect(result.isTerminated).toBe(true);
       expect(result.reason).toContain('Interrupt');
@@ -291,16 +299,16 @@ describe('CliAgentDetectionEngine', () => {
     it('should detect termination via timeout-based lenient check', () => {
       // 1. Simulate AI activity
       engine.detectFromOutput(terminalId, 'Some AI output');
-      
+
       // 2. Advance time by 31 seconds (beyond 30s timeout)
       vi.advanceTimersByTime(31000);
-      
+
       // 3. Check with a prompt-like character but not a standard prompt
       // Using a character that triggers the timeout-based check but NOT the standard prompt check
       // Standard prompt check usually requires more structure or specific patterns
       // Here we provide a line that contains '>' but doesn't look like AI output
       const result = engine.detectTermination(terminalId, '> ');
-      
+
       expect(result.isTerminated).toBe(true);
       expect(result.confidence).toBe(0.6); // Matches shell prompt pattern
       expect(result.reason).toBe('Shell prompt detected');
@@ -329,7 +337,7 @@ describe('CliAgentDetectionEngine', () => {
       // Mock detectionCache to throw on forEach
       const cache = (engine as any).detectionCache;
       vi.spyOn(cache, 'clear');
-      
+
       // Use any to force iteration error if we can, or just clear
       engine.clearTerminalCache(terminalId);
       expect(cache.clear).toBeDefined();
@@ -340,7 +348,7 @@ describe('CliAgentDetectionEngine', () => {
     it('should validate termination signal with different confidence levels', () => {
       // High confidence always valid
       expect((engine as any).validateTerminationSignal(terminalId, 0.9)).toBe(true);
-      
+
       // Low confidence without time passed
       expect((engine as any).validateTerminationSignal(terminalId, 0.1)).toBe(false);
     });

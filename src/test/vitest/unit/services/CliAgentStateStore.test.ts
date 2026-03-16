@@ -7,7 +7,9 @@ describe('CliAgentStateStore', () => {
       const store = new CliAgentStateStore();
 
       const events: Array<{ terminalId: string; status: string; type: string | null }> = [];
-      store.subscribe((e) => events.push({ terminalId: e.terminalId, status: e.status, type: e.type }));
+      store.subscribe((e) =>
+        events.push({ terminalId: e.terminalId, status: e.status, type: e.type })
+      );
 
       store.setConnectedAgent('t1', 'claude', 'Terminal 1');
       expect(store.getConnectedAgentTerminalId()).toBe('t1');
@@ -33,4 +35,3 @@ describe('CliAgentStateStore', () => {
     });
   });
 });
-

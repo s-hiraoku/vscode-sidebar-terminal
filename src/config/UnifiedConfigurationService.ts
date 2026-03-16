@@ -289,11 +289,7 @@ export class UnifiedConfigurationService implements Disposable {
         blink: this.get(section, CONFIG_KEYS.CURSOR_BLINK, true),
       },
       enableCliAgentIntegration: this.get(section, 'enableCliAgentIntegration', true),
-      enableTerminalHeaderEnhancements: this.get(
-        section,
-        'enableTerminalHeaderEnhancements',
-        true
-      ),
+      enableTerminalHeaderEnhancements: this.get(section, 'enableTerminalHeaderEnhancements', true),
       activeBorderMode: this.get(section, 'activeBorderMode', 'multipleOnly'),
     };
   }
@@ -701,7 +697,13 @@ export class UnifiedConfigurationService implements Disposable {
       case 'dynamicSplitDirection':
         return this.get(CONFIG_SECTIONS.SIDEBAR_TERMINAL, 'dynamicSplitDirection', true);
       case 'activeBorderMode':
-        return (this.get(CONFIG_SECTIONS.SIDEBAR_TERMINAL, 'activeBorderMode', 'multipleOnly') as string) !== 'none';
+        return (
+          (this.get(
+            CONFIG_SECTIONS.SIDEBAR_TERMINAL,
+            'activeBorderMode',
+            'multipleOnly'
+          ) as string) !== 'none'
+        );
       default:
         log(`⚠️ [UnifiedConfig] Unknown feature: ${featureName}`);
         return false;

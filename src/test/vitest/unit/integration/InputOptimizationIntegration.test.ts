@@ -425,9 +425,7 @@ describe('Input Optimization Integration', () => {
       const _performanceStats = performanceManager.getBufferStats();
 
       // Should have pending operations
-      expect(messageStats.queueSize + (messageStats.highPriorityQueueSize || 0)).toBeGreaterThan(
-        0
-      );
+      expect(messageStats.queueSize + (messageStats.highPriorityQueueSize || 0)).toBeGreaterThan(0);
 
       // Dispose all managers
       inputManager.dispose();

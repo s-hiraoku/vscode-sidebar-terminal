@@ -1065,11 +1065,7 @@ export class InputManager extends BaseManager implements IInputManager {
 
     const normalizedKey = event.key.length === 1 ? event.key.toLowerCase() : event.key;
     const isToggleShortcut =
-      !event.shiftKey &&
-      !event.altKey &&
-      normalizedKey === 'p' &&
-      event.ctrlKey &&
-      !event.metaKey;
+      !event.shiftKey && !event.altKey && normalizedKey === 'p' && event.ctrlKey && !event.metaKey;
 
     if (isToggleShortcut) {
       this.setPanelNavigationMode(!this.panelNavigationMode);

@@ -163,7 +163,9 @@ export class SessionRestoreManager {
           }
         }
 
-        log(`[RESTORATION] Scrollback restored for terminal: ${terminalId} (${linesRestored} lines)`);
+        log(
+          `[RESTORATION] Scrollback restored for terminal: ${terminalId} (${linesRestored} lines)`
+        );
       }
 
       // Mark as processed to prevent duplicate restoration

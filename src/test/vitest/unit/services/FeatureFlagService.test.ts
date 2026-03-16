@@ -47,7 +47,6 @@ describe('FeatureFlagService', () => {
     featureFlagService = new FeatureFlagService();
   });
 
-
   afterEach(() => {
     featureFlagService.dispose();
     configChangeEmitter.dispose();
@@ -57,7 +56,9 @@ describe('FeatureFlagService', () => {
   describe('Feature Flag Retrieval', () => {
     it('should return default feature flags when no configuration is set', () => {
       // Given: No configuration set - mock returns the default value (second argument)
-      mockConfiguration.get.mockImplementation((_key: string, defaultValue?: unknown) => defaultValue);
+      mockConfiguration.get.mockImplementation(
+        (_key: string, defaultValue?: unknown) => defaultValue
+      );
 
       // When: Get feature flags
       const flags = featureFlagService.getFeatureFlags();
@@ -75,13 +76,20 @@ describe('FeatureFlagService', () => {
       // Given: Configuration set with custom values
       mockConfiguration.get.mockImplementation((key: string) => {
         switch (key) {
-          case 'enhancedScrollbackPersistence': return true;
-          case 'scrollbackLineLimit': return 2000;
-          case 'vscodeStandardIME': return true;
-          case 'vscodeKeyboardShortcuts': return false;
-          case 'vscodeStandardCursor': return true;
-          case 'fullANSISupport': return false;
-          default: return undefined;
+          case 'enhancedScrollbackPersistence':
+            return true;
+          case 'scrollbackLineLimit':
+            return 2000;
+          case 'vscodeStandardIME':
+            return true;
+          case 'vscodeKeyboardShortcuts':
+            return false;
+          case 'vscodeStandardCursor':
+            return true;
+          case 'fullANSISupport':
+            return false;
+          default:
+            return undefined;
         }
       });
 
@@ -121,7 +129,9 @@ describe('FeatureFlagService', () => {
         if (key === 'scrollbackLineLimit') return 100;
         return undefined;
       });
-      const showWarningStub = vi.spyOn(vscode.window, 'showWarningMessage').mockResolvedValue(undefined);
+      const showWarningStub = vi
+        .spyOn(vscode.window, 'showWarningMessage')
+        .mockResolvedValue(undefined);
 
       // When: Get scrollback limit
       const limit = featureFlagService.getScrollbackLineLimit();
@@ -138,7 +148,9 @@ describe('FeatureFlagService', () => {
         if (key === 'scrollbackLineLimit') return 5000;
         return undefined;
       });
-      const showWarningStub = vi.spyOn(vscode.window, 'showWarningMessage').mockResolvedValue(undefined);
+      const showWarningStub = vi
+        .spyOn(vscode.window, 'showWarningMessage')
+        .mockResolvedValue(undefined);
 
       // When: Get scrollback limit
       const limit = featureFlagService.getScrollbackLineLimit();
@@ -155,7 +167,9 @@ describe('FeatureFlagService', () => {
         if (key === 'scrollbackLineLimit') return 1500;
         return undefined;
       });
-      const showWarningStub = vi.spyOn(vscode.window, 'showWarningMessage').mockResolvedValue(undefined);
+      const showWarningStub = vi
+        .spyOn(vscode.window, 'showWarningMessage')
+        .mockResolvedValue(undefined);
 
       // When: Get scrollback limit
       const limit = featureFlagService.getScrollbackLineLimit();
@@ -167,7 +181,9 @@ describe('FeatureFlagService', () => {
 
     it('should handle edge case scrollback limits (200 and 3000)', () => {
       // Given: Exact boundary values
-      const showWarningStub = vi.spyOn(vscode.window, 'showWarningMessage').mockResolvedValue(undefined);
+      const showWarningStub = vi
+        .spyOn(vscode.window, 'showWarningMessage')
+        .mockResolvedValue(undefined);
 
       // When: Test minimum boundary
       mockConfiguration.get.mockImplementation((key: string) => {
@@ -339,10 +355,14 @@ describe('FeatureFlagService', () => {
       // Given: Feature flags configured
       mockConfiguration.get.mockImplementation((key: string) => {
         switch (key) {
-          case 'enhancedScrollbackPersistence': return true;
-          case 'scrollbackLineLimit': return 2000;
-          case 'vscodeStandardIME': return false;
-          default: return undefined;
+          case 'enhancedScrollbackPersistence':
+            return true;
+          case 'scrollbackLineLimit':
+            return 2000;
+          case 'vscodeStandardIME':
+            return false;
+          default:
+            return undefined;
         }
       });
 

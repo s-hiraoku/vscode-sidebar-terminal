@@ -701,7 +701,9 @@ export class TerminalTabManager implements TerminalTabEvents {
     }
 
     if ('deleteTerminalSafely' in this.coordinator) {
-      (this.coordinator as unknown as { deleteTerminalSafely: (id: string) => void }).deleteTerminalSafely(tabId);
+      (
+        this.coordinator as unknown as { deleteTerminalSafely: (id: string) => void }
+      ).deleteTerminalSafely(tabId);
     } else {
       this.coordinator.closeTerminal(tabId);
     }

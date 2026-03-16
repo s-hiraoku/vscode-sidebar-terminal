@@ -1,4 +1,3 @@
-
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MessageProcessor } from '../../../../../../messaging/patterns/core/MessageProcessor';
 import { LogLevel } from '../../../../../../messaging/patterns/core/MessageLogger';
@@ -34,7 +33,11 @@ describe('MessageProcessor', () => {
     });
 
     it('should return error if no handler found', async () => {
-      const result = await processor.processMessage({ command: 'unknown', id: '1', timestamp: 123 });
+      const result = await processor.processMessage({
+        command: 'unknown',
+        id: '1',
+        timestamp: 123,
+      });
       expect(result.success).toBe(false);
       expect(result.error).toContain('No handler found');
     });
@@ -51,8 +54,12 @@ describe('MessageProcessor', () => {
       processor.registerHandler(handler);
       expect(processor.hasHandler('testCommand')).toBe(true);
 
-      const result = await processor.processMessage({ command: 'testCommand', id: '1', timestamp: 123 });
-      
+      const result = await processor.processMessage({
+        command: 'testCommand',
+        id: '1',
+        timestamp: 123,
+      });
+
       expect(result.success).toBe(true);
       expect(result.handledBy).toBe('TestHandler');
       expect(handler.handle).toHaveBeenCalled();
@@ -65,21 +72,25 @@ describe('MessageProcessor', () => {
         getPriority: () => 1,
         getSupportedCommands: () => ['cmd'],
         canHandle: () => true,
-        handle: async () => { log.push('low'); },
+        handle: async () => {
+          log.push('low');
+        },
       };
       const highPriorityHandler: IMessageHandler = {
         getName: () => 'High',
         getPriority: () => 10,
         getSupportedCommands: () => ['cmd'],
         canHandle: () => true,
-        handle: async () => { log.push('high'); },
+        handle: async () => {
+          log.push('high');
+        },
       };
 
       processor.registerHandler(lowPriorityHandler);
       processor.registerHandler(highPriorityHandler);
 
       await processor.processMessage({ command: 'cmd', id: '1', timestamp: 123 });
-      
+
       expect(log).toEqual(['high']); // Highest priority handles first and stops chain if successful
     });
 
@@ -89,7 +100,9 @@ describe('MessageProcessor', () => {
         getPriority: () => 10,
         getSupportedCommands: () => ['cmd'],
         canHandle: () => true,
-        handle: async () => { throw new Error('First failed'); },
+        handle: async () => {
+          throw new Error('First failed');
+        },
       };
       const fallbackHandler: IMessageHandler = {
         getName: () => 'Fallback',
@@ -103,7 +116,7 @@ describe('MessageProcessor', () => {
       processor.registerHandler(fallbackHandler);
 
       const result = await processor.processMessage({ command: 'cmd', id: '1', timestamp: 123 });
-      
+
       expect(result.success).toBe(true);
       expect(result.handledBy).toBe('Fallback');
       expect(fallbackHandler.handle).toHaveBeenCalled();
@@ -111,12 +124,12 @@ describe('MessageProcessor', () => {
 
     it('should handle timeouts', async () => {
       vi.useFakeTimers();
-      
+
       // Re-create processor with short timeout
       const timeoutProcessor = new MessageProcessor({
         handlerTimeout: 100,
         logLevel: LogLevel.DEBUG,
-        enableValidation: false
+        enableValidation: false,
       });
       await timeoutProcessor.initialize(mockCoordinator);
 
@@ -134,14 +147,18 @@ describe('MessageProcessor', () => {
 
       timeoutProcessor.registerHandler(slowHandler);
 
-      const processPromise = timeoutProcessor.processMessage({ command: 'slowCmd', id: '1', timestamp: 123 });
-      
+      const processPromise = timeoutProcessor.processMessage({
+        command: 'slowCmd',
+        id: '1',
+        timestamp: 123,
+      });
+
       await vi.advanceTimersByTimeAsync(200);
-      
+
       const result = await processPromise;
       expect(result.success).toBe(false);
       expect(result.error).toContain('No suitable handler found');
-      
+
       vi.useRealTimers();
     });
   });
@@ -149,17 +166,23 @@ describe('MessageProcessor', () => {
   describe('Validation', () => {
     it('should validate messages if enabled', async () => {
       const validator = {
-        validate: vi.fn().mockImplementation(() => { throw new Error('Invalid'); })
+        validate: vi.fn().mockImplementation(() => {
+          throw new Error('Invalid');
+        }),
       };
       const validationProcessor = new MessageProcessor({
         enableValidation: true,
         validator: validator as any,
-        logLevel: LogLevel.NONE
+        logLevel: LogLevel.NONE,
       });
       await validationProcessor.initialize(mockCoordinator);
 
-      const result = await validationProcessor.processMessage({ command: 'any', id: '1', timestamp: 123 });
-      
+      const result = await validationProcessor.processMessage({
+        command: 'any',
+        id: '1',
+        timestamp: 123,
+      });
+
       expect(result.success).toBe(false);
       expect(result.error).toContain('Validation failed: Invalid');
       expect(validator.validate).toHaveBeenCalled();

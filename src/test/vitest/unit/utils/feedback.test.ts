@@ -11,7 +11,7 @@ import {
   showSuccess,
   showError,
   showWarning,
-  TerminalErrorHandler
+  TerminalErrorHandler,
 } from '../../../../utils/feedback';
 
 // Mock VS Code API
@@ -42,7 +42,7 @@ vi.mock('vscode', () => {
     },
     env: {
       openExternal: vi.fn().mockResolvedValue(true),
-    }
+    },
   };
 });
 
@@ -81,7 +81,7 @@ describe('Feedback Utilities', () => {
       it('should handle actions in notifications', async () => {
         const action = vi.fn();
         const options = {
-          actions: [{ title: 'Fix it', action }]
+          actions: [{ title: 'Fix it', action }],
         };
 
         // Mock user selecting the action
@@ -90,7 +90,7 @@ describe('Feedback Utilities', () => {
         showSuccess('Error with fix', options);
 
         // Wait for async notification handling
-        await new Promise(resolve => setTimeout(resolve, 10));
+        await new Promise((resolve) => setTimeout(resolve, 10));
 
         expect(action).toHaveBeenCalled();
       });
@@ -100,11 +100,11 @@ describe('Feedback Utilities', () => {
         (vscode.window.showErrorMessage as any).mockResolvedValue('Retry');
 
         showError('Failed', {
-          actions: [{ title: 'Retry', action: actionFn }]
+          actions: [{ title: 'Retry', action: actionFn }],
         });
 
         // Wait for async notification handling
-        await new Promise(resolve => setTimeout(resolve, 10));
+        await new Promise((resolve) => setTimeout(resolve, 10));
 
         expect(actionFn).toHaveBeenCalled();
       });

@@ -409,9 +409,7 @@ describe('EventBus', () => {
 
       eventBus.dispose();
 
-      expect(() => eventBus.subscribe(TestEvent, () => {})).toThrow(
-        'Cannot use disposed EventBus'
-      );
+      expect(() => eventBus.subscribe(TestEvent, () => {})).toThrow('Cannot use disposed EventBus');
     });
 
     it('should allow multiple dispose calls', () => {

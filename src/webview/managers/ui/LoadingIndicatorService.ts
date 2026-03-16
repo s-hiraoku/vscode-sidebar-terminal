@@ -95,7 +95,9 @@ export class LoadingIndicatorService {
   /**
    * Create loading indicator for terminal operations
    */
-  public showLoadingIndicator(message: string = PlaceholderContent.DEFAULT_LOADING_MESSAGE): HTMLElement {
+  public showLoadingIndicator(
+    message: string = PlaceholderContent.DEFAULT_LOADING_MESSAGE
+  ): HTMLElement {
     const indicator = document.createElement('div');
     indicator.className = CssClasses.LOADING_INDICATOR;
 

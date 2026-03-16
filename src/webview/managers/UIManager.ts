@@ -9,7 +9,11 @@
 
 import { Terminal } from '@xterm/xterm';
 import { PartialTerminalSettings, WebViewFontSettings, ActiveBorderMode } from '../../types/shared';
-import { getWebviewTheme, WEBVIEW_THEME_CONSTANTS, TerminalTheme } from '../utils/WebviewThemeUtils';
+import {
+  getWebviewTheme,
+  WEBVIEW_THEME_CONSTANTS,
+  TerminalTheme,
+} from '../utils/WebviewThemeUtils';
 import { IUIManager } from '../interfaces/ManagerInterfaces';
 import { TerminalHeaderElements } from '../factories/HeaderFactory';
 import { DOMUtils } from '../utils/DOMUtils';
@@ -203,12 +207,14 @@ export class UIManager extends BaseManager implements IUIManager {
     const style = getComputedStyle(document.documentElement);
 
     // Get header colors from VS Code CSS variables
-    const headerBg = style.getPropertyValue('--vscode-sideBarSectionHeader-background').trim()
-      || style.getPropertyValue('--vscode-editor-background').trim()
-      || '';
-    const headerFg = style.getPropertyValue('--vscode-sideBarSectionHeader-foreground').trim()
-      || style.getPropertyValue('--vscode-editor-foreground').trim()
-      || '';
+    const headerBg =
+      style.getPropertyValue('--vscode-sideBarSectionHeader-background').trim() ||
+      style.getPropertyValue('--vscode-editor-background').trim() ||
+      '';
+    const headerFg =
+      style.getPropertyValue('--vscode-sideBarSectionHeader-foreground').trim() ||
+      style.getPropertyValue('--vscode-editor-foreground').trim() ||
+      '';
 
     log(`🎨 [UI] Header theme colors: bg=${headerBg}, fg=${headerFg}`);
 
@@ -310,7 +316,9 @@ export class UIManager extends BaseManager implements IUIManager {
     terminal.options.theme = theme;
     this.currentTheme = theme.background || null;
     this.themeApplied = true;
-    uiLogger.info(`🎨 [THEME] Applied theme to terminal: bg=${theme.background}, fg=${theme.foreground}`);
+    uiLogger.info(
+      `🎨 [THEME] Applied theme to terminal: bg=${theme.background}, fg=${theme.foreground}`
+    );
 
     // Force terminal to redraw with new theme colors
     // This is necessary for xterm.js to update the rendered text and cursor
@@ -345,9 +353,7 @@ export class UIManager extends BaseManager implements IUIManager {
     // Update tabs via callback
     if (this.tabThemeUpdater) {
       // Pass adjusted foreground for light theme
-      const adjustedTheme = isLightTheme
-        ? { ...theme, foreground: headerForeground }
-        : theme;
+      const adjustedTheme = isLightTheme ? { ...theme, foreground: headerForeground } : theme;
       this.tabThemeUpdater(adjustedTheme);
     }
   }
@@ -409,14 +415,18 @@ export class UIManager extends BaseManager implements IUIManager {
 
         if (terminalContainer) {
           // Update only this terminal's content element
-          const terminalContent = terminalContainer.querySelector<HTMLElement>(`.${CssClasses.TERMINAL_CONTENT}`);
+          const terminalContent = terminalContainer.querySelector<HTMLElement>(
+            `.${CssClasses.TERMINAL_CONTENT}`
+          );
           if (terminalContent) {
             terminalContent.style.backgroundColor = backgroundColor;
           }
         }
 
         // Update xterm-viewport within this terminal
-        const xtermViewport = terminalElement.querySelector<HTMLElement>(`.${CssClasses.XTERM_VIEWPORT}`);
+        const xtermViewport = terminalElement.querySelector<HTMLElement>(
+          `.${CssClasses.XTERM_VIEWPORT}`
+        );
         if (xtermViewport) {
           xtermViewport.style.backgroundColor = backgroundColor;
         }
@@ -429,13 +439,17 @@ export class UIManager extends BaseManager implements IUIManager {
       }
 
       // Fallback: Update all terminal-content elements (for global theme changes)
-      const terminalContents = document.querySelectorAll<HTMLElement>(`.${CssClasses.TERMINAL_CONTENT}`);
+      const terminalContents = document.querySelectorAll<HTMLElement>(
+        `.${CssClasses.TERMINAL_CONTENT}`
+      );
       terminalContents.forEach((element) => {
         element.style.backgroundColor = backgroundColor;
       });
 
       // Update all xterm-viewport elements
-      const xtermViewports = document.querySelectorAll<HTMLElement>(`.${CssClasses.XTERM_VIEWPORT}`);
+      const xtermViewports = document.querySelectorAll<HTMLElement>(
+        `.${CssClasses.XTERM_VIEWPORT}`
+      );
       xtermViewports.forEach((element) => {
         element.style.backgroundColor = backgroundColor;
       });
@@ -582,11 +596,7 @@ export class UIManager extends BaseManager implements IUIManager {
    * Update terminal header title
    * Delegates to HeaderService
    */
-  public updateTerminalHeader(
-    terminalId: string,
-    newName?: string,
-    indicatorColor?: string
-  ): void {
+  public updateTerminalHeader(terminalId: string, newName?: string, indicatorColor?: string): void {
     this.headerService.updateTerminalHeader(terminalId, newName, indicatorColor);
   }
 

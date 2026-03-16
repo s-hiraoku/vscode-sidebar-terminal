@@ -13,10 +13,10 @@ describe('ContainerVisibilityService', () => {
     // Setup DOM
     terminalBody = document.createElement('div');
     terminalBody.id = 'terminal-body';
-    
+
     terminalsWrapper = document.createElement('div');
     terminalsWrapper.id = 'terminals-wrapper';
-    
+
     document.body.appendChild(terminalBody);
     document.body.appendChild(terminalsWrapper);
   });
@@ -66,11 +66,11 @@ describe('ContainerVisibilityService', () => {
       const t1 = document.createElement('div');
       t1.className = 'terminal-container';
       t1.setAttribute('data-terminal-id', 'term-1');
-      
+
       const t2 = document.createElement('div');
       t2.className = 'terminal-container';
       t2.setAttribute('data-terminal-id', 'term-2');
-      
+
       terminalBody.appendChild(t1);
       terminalBody.appendChild(t2);
 
@@ -82,7 +82,7 @@ describe('ContainerVisibilityService', () => {
 
       expect(t2.style.display).toBe('none');
       expect(t2.classList.contains('hidden-mode')).toBe(true);
-      
+
       const storage = document.getElementById('terminal-hidden-storage');
       expect(storage?.contains(t2)).toBe(true);
     });
@@ -118,9 +118,9 @@ describe('ContainerVisibilityService', () => {
       const t1 = document.createElement('div');
       t1.style.display = 'none';
       t1.classList.add('hidden-mode');
-      
+
       service.showContainer(t1);
-      
+
       expect(t1.style.display).toBe('flex');
       expect(t1.classList.contains('hidden-mode')).toBe(false);
     });
@@ -128,9 +128,9 @@ describe('ContainerVisibilityService', () => {
     it('hideContainer should move to storage', () => {
       const t1 = document.createElement('div');
       terminalsWrapper.appendChild(t1);
-      
+
       service.hideContainer(t1, terminalBody);
-      
+
       expect(t1.style.display).toBe('none');
       expect(t1.classList.contains('hidden-mode')).toBe(true);
       const storage = document.getElementById('terminal-hidden-storage');

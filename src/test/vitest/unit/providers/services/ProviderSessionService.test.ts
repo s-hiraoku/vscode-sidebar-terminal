@@ -14,9 +14,7 @@ function createMockDeps(): IProviderSessionDependencies {
       saveCurrentSession: vi.fn().mockResolvedValue({ success: true }),
       restoreSession: vi.fn().mockResolvedValue(null),
     },
-    getTerminals: vi.fn().mockReturnValue([
-      { id: 'terminal-1', name: 'Terminal 1', cwd: '/home' },
-    ]),
+    getTerminals: vi.fn().mockReturnValue([{ id: 'terminal-1', name: 'Terminal 1', cwd: '/home' }]),
     getActiveTerminalId: vi.fn().mockReturnValue('terminal-1'),
     createTerminal: vi.fn().mockReturnValue('terminal-new'),
     sendMessage: vi.fn().mockResolvedValue(undefined),
@@ -155,7 +153,8 @@ describe('ProviderSessionService', () => {
 
         expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 321);
       } finally {
-        (TIMING_CONSTANTS as { WEBVIEW_INIT_DELAY_MS: number }).WEBVIEW_INIT_DELAY_MS = originalDelay;
+        (TIMING_CONSTANTS as { WEBVIEW_INIT_DELAY_MS: number }).WEBVIEW_INIT_DELAY_MS =
+          originalDelay;
         vi.useRealTimers();
       }
     });

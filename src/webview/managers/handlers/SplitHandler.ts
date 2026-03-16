@@ -105,7 +105,9 @@ export class SplitHandler implements IMessageHandler {
       if (mode === 'normal' && 'setForceNormalModeForNextCreate' in coordinator) {
         try {
           (
-            coordinator as unknown as { setForceNormalModeForNextCreate: (enabled: boolean) => void }
+            coordinator as unknown as {
+              setForceNormalModeForNextCreate: (enabled: boolean) => void;
+            }
           ).setForceNormalModeForNextCreate(true);
         } catch (error) {
           this.logger.warn('⚠️ [WEBVIEW] Failed to set force normal mode flag', error);

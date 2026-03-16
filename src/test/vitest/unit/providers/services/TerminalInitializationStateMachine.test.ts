@@ -3,7 +3,10 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { TerminalInitializationStateMachine, TerminalInitializationState } from '../../../../../providers/services/TerminalInitializationStateMachine';
+import {
+  TerminalInitializationStateMachine,
+  TerminalInitializationState,
+} from '../../../../../providers/services/TerminalInitializationStateMachine';
 
 // Mock logger
 vi.mock('../../../../../utils/logger', () => ({
@@ -54,14 +57,14 @@ describe('TerminalInitializationStateMachine', () => {
     it('should ignore regressions by default', () => {
       stateMachine.markPtySpawned(terminalId);
       stateMachine.markViewReady(terminalId); // Attempt regression
-      
+
       expect(stateMachine.getState(terminalId)).toBe(TerminalInitializationState.PtySpawned);
     });
 
     it('should allow regression to Failed state', () => {
       stateMachine.markPromptReady(terminalId);
       stateMachine.markFailed(terminalId);
-      
+
       expect(stateMachine.getState(terminalId)).toBe(TerminalInitializationState.Failed);
     });
   });
@@ -75,7 +78,7 @@ describe('TerminalInitializationStateMachine', () => {
     it('should preserve state while incrementing retry', () => {
       stateMachine.markPtySpawned(terminalId);
       stateMachine.incrementRetry(terminalId);
-      
+
       expect(stateMachine.getState(terminalId)).toBe(TerminalInitializationState.PtySpawned);
     });
   });
@@ -84,7 +87,7 @@ describe('TerminalInitializationStateMachine', () => {
     it('should clear state on reset', () => {
       stateMachine.markPtySpawned(terminalId);
       stateMachine.reset(terminalId);
-      
+
       expect(stateMachine.getState(terminalId)).toBe(TerminalInitializationState.Idle);
     });
   });

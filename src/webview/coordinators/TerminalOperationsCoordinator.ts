@@ -53,7 +53,11 @@ export interface ITerminalOperationsDependencies {
   setActiveTerminalId(terminalId: string | null): void;
   getTerminalInstance(terminalId: string): TerminalInstance | undefined;
   getAllTerminalInstances(): Map<string, TerminalInstance>;
-  getTerminalStats(): { totalTerminals: number; activeTerminalId: string | null; terminalIds: string[] };
+  getTerminalStats(): {
+    totalTerminals: number;
+    activeTerminalId: string | null;
+    terminalIds: string[];
+  };
   postMessageToExtension(message: unknown): void;
   showWarning(message: string): void;
 
@@ -70,7 +74,10 @@ export interface ITerminalOperationsDependencies {
   getTerminalCount(): number;
   ensureSplitModeBeforeCreation(): Promise<void>;
   refreshSplitLayout(): void;
-  prepareDisplayForDeletion(terminalId: string, stats: { totalTerminals: number; activeTerminalId: string | null; terminalIds: string[] }): void;
+  prepareDisplayForDeletion(
+    terminalId: string,
+    stats: { totalTerminals: number; activeTerminalId: string | null; terminalIds: string[] }
+  ): void;
 
   // UI更新
   updateTerminalBorders(terminalId: string): void;
@@ -114,8 +121,7 @@ export class TerminalOperationsCoordinator {
    * ターミナル作成が可能か確認
    */
   public canCreateTerminal(): boolean {
-    const maxTerminals =
-      this.currentTerminalState?.maxTerminals ?? SPLIT_CONSTANTS.MAX_TERMINALS;
+    const maxTerminals = this.currentTerminalState?.maxTerminals ?? SPLIT_CONSTANTS.MAX_TERMINALS;
     const localCount = this.deps.getTerminalCount();
     const pending = this.pendingTerminalCreations.size;
 
@@ -174,8 +180,7 @@ export class TerminalOperationsCoordinator {
       // 作成可能チェック
       if (!this.canCreateTerminal() && requestSource !== 'extension') {
         const localCount = this.deps.getTerminalCount();
-        const maxCount =
-          this.currentTerminalState?.maxTerminals ?? SPLIT_CONSTANTS.MAX_TERMINALS;
+        const maxCount = this.currentTerminalState?.maxTerminals ?? SPLIT_CONSTANTS.MAX_TERMINALS;
         log(`❌ Terminal creation blocked (local=${localCount}, max=${maxCount})`);
         this.deps.showWarning(`Terminal limit reached (${localCount}/${maxCount})`);
         return null;

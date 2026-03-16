@@ -17,7 +17,10 @@ import { ManagerLogger } from '../../../../../../webview/utils/ManagerLogger';
 class TestMessageHandler extends BaseMessageHandler {
   protected readonly supportedCommands = ['testCommand1', 'testCommand2', 'testCommand3'];
 
-  public async handleMessage(msg: MessageCommand, _coordinator: IManagerCoordinator): Promise<void> {
+  public async handleMessage(
+    msg: MessageCommand,
+    _coordinator: IManagerCoordinator
+  ): Promise<void> {
     const command = this.getCommand(msg);
 
     if (!this.validate(msg)) {
@@ -173,7 +176,9 @@ describe('BaseMessageHandler', () => {
     it('should log validation error', async () => {
       const msg = { command: 'unsupportedCommand' } as MessageCommand;
       await handler.handleMessage(msg, mockCoordinator);
-      expect(loggerWarnSpy).toHaveBeenCalledWith('Validation failed for command: unsupportedCommand');
+      expect(loggerWarnSpy).toHaveBeenCalledWith(
+        'Validation failed for command: unsupportedCommand'
+      );
     });
   });
 
@@ -268,7 +273,9 @@ describe('BaseMessageHandler', () => {
       const msg = { command: 'test' } as MessageCommand;
       const terminalId = handler.testGetRequiredProperty<string>(msg, 'terminalId');
       expect(terminalId).toBeUndefined();
-      expect(loggerWarnSpy).toHaveBeenCalledWith("Required property 'terminalId' missing from message");
+      expect(loggerWarnSpy).toHaveBeenCalledWith(
+        "Required property 'terminalId' missing from message"
+      );
     });
   });
 

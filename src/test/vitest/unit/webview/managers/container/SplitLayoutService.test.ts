@@ -43,7 +43,7 @@ describe('SplitLayoutService', () => {
     it('should create wrapper with correct attributes', () => {
       const terminalId = 't1';
       const wrapper = service.createSplitWrapper(terminalId, 'vertical');
-      
+
       expect(wrapper.className).toBe('terminal-split-wrapper');
       expect(wrapper.getAttribute('data-terminal-wrapper-id')).toBe(terminalId);
       expect(wrapper.style.display).toBe('flex');
@@ -66,27 +66,24 @@ describe('SplitLayoutService', () => {
       t1.id = 'container-1';
       const t2 = document.createElement('div');
       t2.id = 'container-2';
-      
+
       const containers = new Map([
         ['term-1', t1],
-        ['term-2', t2]
+        ['term-2', t2],
       ]);
 
-      service.activateSplitLayout(
-        terminalBody,
-        ['term-1', 'term-2'],
-        'horizontal',
-        (id) => containers.get(id)
+      service.activateSplitLayout(terminalBody, ['term-1', 'term-2'], 'horizontal', (id) =>
+        containers.get(id)
       );
 
       const wrapper = document.getElementById('terminals-wrapper')!;
       expect(wrapper.style.flexDirection).toBe('row'); // horizontal split -> row
-      
+
       const wrappers = wrapper.querySelectorAll('.terminal-split-wrapper');
       expect(wrappers.length).toBe(2);
       expect(wrappers[0].contains(t1)).toBe(true);
       expect(wrappers[1].contains(t2)).toBe(true);
-      
+
       expect(t1.classList.contains('terminal-container--split')).toBe(true);
     });
 
@@ -101,11 +98,8 @@ describe('SplitLayoutService', () => {
         ['term-3', t3],
       ]);
 
-      service.activateSplitLayout(
-        terminalBody,
-        ['term-1', 'term-2', 'term-3'],
-        'vertical',
-        (id) => containers.get(id)
+      service.activateSplitLayout(terminalBody, ['term-1', 'term-2', 'term-3'], 'vertical', (id) =>
+        containers.get(id)
       );
 
       let wrapper = document.getElementById('terminals-wrapper')!;
@@ -116,11 +110,8 @@ describe('SplitLayoutService', () => {
       expect(resizers[1].getAttribute('data-resizer-before')).toBe('term-2');
       expect(resizers[1].getAttribute('data-resizer-after')).toBe('term-3');
 
-      service.activateSplitLayout(
-        terminalBody,
-        ['term-3', 'term-1', 'term-2'],
-        'vertical',
-        (id) => containers.get(id)
+      service.activateSplitLayout(terminalBody, ['term-3', 'term-1', 'term-2'], 'vertical', (id) =>
+        containers.get(id)
       );
 
       wrapper = document.getElementById('terminals-wrapper')!;
@@ -141,11 +132,8 @@ describe('SplitLayoutService', () => {
         ['term-2', t2],
       ]);
 
-      service.activateSplitLayout(
-        terminalBody,
-        ['term-1', 'term-2'],
-        'vertical',
-        (id) => containers.get(id)
+      service.activateSplitLayout(terminalBody, ['term-1', 'term-2'], 'vertical', (id) =>
+        containers.get(id)
       );
 
       const wrapper = document.getElementById('terminals-wrapper')!;
@@ -165,21 +153,15 @@ describe('SplitLayoutService', () => {
         ['term-2', t2],
       ]);
 
-      service.activateSplitLayout(
-        terminalBody,
-        ['term-1', 'term-2'],
-        'horizontal',
-        (id) => containers.get(id)
+      service.activateSplitLayout(terminalBody, ['term-1', 'term-2'], 'horizontal', (id) =>
+        containers.get(id)
       );
 
       const wrapper = document.getElementById('terminals-wrapper')!;
       expect(wrapper.classList.contains('terminal-split-horizontal')).toBe(true);
 
-      service.activateSplitLayout(
-        terminalBody,
-        ['term-1', 'term-2'],
-        'vertical',
-        (id) => containers.get(id)
+      service.activateSplitLayout(terminalBody, ['term-1', 'term-2'], 'vertical', (id) =>
+        containers.get(id)
       );
 
       expect(wrapper.classList.contains('terminal-split-horizontal')).toBe(false);
@@ -191,7 +173,7 @@ describe('SplitLayoutService', () => {
       const wrapper = document.createElement('div');
       wrapper.setAttribute('data-terminal-wrapper-id', 't1');
       terminalBody.appendChild(wrapper);
-      
+
       const resizer = document.createElement('div');
       resizer.className = 'split-resizer';
       terminalBody.appendChild(resizer);
@@ -239,14 +221,11 @@ describe('SplitLayoutService', () => {
 
       const containers = new Map([
         ['term-1', t1],
-        ['term-2', t2]
+        ['term-2', t2],
       ]);
 
-      service.activateSplitLayout(
-        terminalBody,
-        ['term-1', 'term-2'],
-        'vertical',
-        (id) => containers.get(id)
+      service.activateSplitLayout(terminalBody, ['term-1', 'term-2'], 'vertical', (id) =>
+        containers.get(id)
       );
 
       // Advance timers to trigger the setTimeout callback (50ms)
@@ -265,12 +244,11 @@ describe('SplitLayoutService', () => {
       const containers = new Map([['term-1', t1]]);
 
       // Should not throw even without coordinator
-      expect(() => service.activateSplitLayout(
-        terminalBody,
-        ['term-1'],
-        'vertical',
-        (id) => containers.get(id)
-      )).not.toThrow();
+      expect(() =>
+        service.activateSplitLayout(terminalBody, ['term-1'], 'vertical', (id) =>
+          containers.get(id)
+        )
+      ).not.toThrow();
     });
 
     it('should not fail if coordinator has no updateSplitResizers method', async () => {
@@ -287,12 +265,11 @@ describe('SplitLayoutService', () => {
       const containers = new Map([['term-1', t1]]);
 
       // Should not throw
-      expect(() => service.activateSplitLayout(
-        terminalBody,
-        ['term-1'],
-        'vertical',
-        (id) => containers.get(id)
-      )).not.toThrow();
+      expect(() =>
+        service.activateSplitLayout(terminalBody, ['term-1'], 'vertical', (id) =>
+          containers.get(id)
+        )
+      ).not.toThrow();
 
       vi.advanceTimersByTime(50);
       // No error should occur

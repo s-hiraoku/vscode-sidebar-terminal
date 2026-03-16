@@ -33,7 +33,7 @@ describe('PluginConfigurationService', () => {
     mockPluginManager = {
       getPlugin: vi.fn().mockReturnValue({
         configure: vi.fn(),
-        state: 'registered'
+        state: 'registered',
       }),
       activatePlugin: vi.fn().mockResolvedValue(undefined),
       deactivatePlugin: vi.fn().mockResolvedValue(undefined),
@@ -69,7 +69,7 @@ describe('PluginConfigurationService', () => {
       // We need to trigger it via initialize or call a private method if we can
       // Since it's private, we'll initialize and check effects
       service.initialize();
-      
+
       // Should stop early and not configure plugins
       expect(mockPluginManager.activatePlugin).not.toHaveBeenCalled();
     });
@@ -77,12 +77,12 @@ describe('PluginConfigurationService', () => {
     it('should activate enabled plugins', () => {
       const mockPlugin = {
         configure: vi.fn(),
-        state: 'registered'
+        state: 'registered',
       };
       mockPluginManager.getPlugin.mockReturnValue(mockPlugin);
 
       service.initialize();
-      
+
       expect(mockPlugin.configure).toHaveBeenCalled();
       expect(mockPluginManager.activatePlugin).toHaveBeenCalledWith('claude-agent');
     });
@@ -92,15 +92,15 @@ describe('PluginConfigurationService', () => {
         if (key.includes('claude.enabled')) return false;
         return true;
       });
-      
+
       const mockPlugin = {
         configure: vi.fn(),
-        state: 'active'
+        state: 'active',
       };
       mockPluginManager.getPlugin.mockReturnValue(mockPlugin);
 
       service.initialize();
-      
+
       expect(mockPluginManager.deactivatePlugin).toHaveBeenCalledWith('claude-agent');
     });
   });

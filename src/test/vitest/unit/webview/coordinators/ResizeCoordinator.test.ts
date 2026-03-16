@@ -10,7 +10,10 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { ResizeCoordinator, IResizeDependencies } from '../../../../../webview/coordinators/ResizeCoordinator';
+import {
+  ResizeCoordinator,
+  IResizeDependencies,
+} from '../../../../../webview/coordinators/ResizeCoordinator';
 
 // Mock logger
 vi.mock('../../../../../utils/logger', () => ({
@@ -116,9 +119,7 @@ describe('ResizeCoordinator', () => {
       coordinator.initialize();
 
       // Should only be called once for window resize
-      const resizeCalls = addEventListenerSpy.mock.calls.filter(
-        (call) => call[0] === 'resize'
-      );
+      const resizeCalls = addEventListenerSpy.mock.calls.filter((call) => call[0] === 'resize');
       expect(resizeCalls.length).toBe(1);
     });
   });
@@ -154,7 +155,9 @@ describe('ResizeCoordinator', () => {
       // Trigger resize observer
       if (resizeObserverCallback) {
         resizeObserverCallback(
-          [{ contentRect: { width: 800, height: 600 }, target: document.body }] as ResizeObserverEntry[],
+          [
+            { contentRect: { width: 800, height: 600 }, target: document.body },
+          ] as ResizeObserverEntry[],
           {} as ResizeObserver
         );
       }
@@ -265,7 +268,7 @@ describe('ResizeCoordinator', () => {
       const mockFit = vi.fn().mockImplementation(() => {
         fitCallOrder.push('fit');
         // Simulate fit() updating terminal dimensions on second call
-        if (fitCallOrder.filter(c => c === 'fit').length >= 2) {
+        if (fitCallOrder.filter((c) => c === 'fit').length >= 2) {
           terminalDimensions = { cols: 100, rows: 30 };
         }
       });
@@ -274,8 +277,12 @@ describe('ResizeCoordinator', () => {
 
       // Mock terminal that updates dimensions after fit
       const mockTerminal = {
-        get cols() { return terminalDimensions.cols; },
-        get rows() { return terminalDimensions.rows; },
+        get cols() {
+          return terminalDimensions.cols;
+        },
+        get rows() {
+          return terminalDimensions.rows;
+        },
       };
 
       mockTerminals.set('terminal-1', {
@@ -303,7 +310,7 @@ describe('ResizeCoordinator', () => {
 
       const mockFit = vi.fn().mockImplementation(() => {
         fitCallOrder.push('fit');
-        if (fitCallOrder.filter(c => c === 'fit').length >= 2) {
+        if (fitCallOrder.filter((c) => c === 'fit').length >= 2) {
           terminalDimensions = { cols: 80, rows: 10 };
         }
       });
@@ -312,8 +319,12 @@ describe('ResizeCoordinator', () => {
       const mockContainer = document.createElement('div');
 
       const mockTerminal = {
-        get cols() { return terminalDimensions.cols; },
-        get rows() { return terminalDimensions.rows; },
+        get cols() {
+          return terminalDimensions.cols;
+        },
+        get rows() {
+          return terminalDimensions.rows;
+        },
         refresh: mockRefresh,
       };
 
@@ -418,9 +429,7 @@ describe('ResizeCoordinator', () => {
       const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
       coordinator.initialize();
 
-      const resizeCalls = addEventListenerSpy.mock.calls.filter(
-        (call) => call[0] === 'resize'
-      );
+      const resizeCalls = addEventListenerSpy.mock.calls.filter((call) => call[0] === 'resize');
       expect(resizeCalls.length).toBe(1);
     });
   });

@@ -15,15 +15,25 @@ describe('CopilotIntegrationCommand', () => {
     const mockConfig = {
       get: vi.fn().mockReturnValue(true), // GitHub Copilot integration enabled by default
     };
-    (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockConfig);
+    (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockReturnValue(
+      mockConfig
+    );
 
     // Mock commands
-    (vscode.commands.executeCommand as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    (vscode.commands.executeCommand as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
+      undefined
+    );
 
     // Mock notifications
-    (vscode.window.showInformationMessage as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
-    (vscode.window.showErrorMessage as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
-    (vscode.window.showWarningMessage as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    (vscode.window.showInformationMessage as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
+      undefined
+    );
+    (vscode.window.showErrorMessage as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
+      undefined
+    );
+    (vscode.window.showWarningMessage as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
+      undefined
+    );
   });
 
   afterEach(() => {
@@ -59,13 +69,10 @@ describe('CopilotIntegrationCommand', () => {
     it('should activate Copilot Chat and send file reference when file is open', () => {
       copilotIntegrationCommand.handleActivateCopilot();
 
-      expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-        'workbench.action.chat.open',
-        {
-          query: '#file:src/test.ts  ',
-          isPartialQuery: true,
-        }
-      );
+      expect(vscode.commands.executeCommand).toHaveBeenCalledWith('workbench.action.chat.open', {
+        query: '#file:src/test.ts  ',
+        isPartialQuery: true,
+      });
     });
 
     it('should activate Copilot Chat without file reference when no file is open', () => {
@@ -85,7 +92,9 @@ describe('CopilotIntegrationCommand', () => {
       const mockConfig = {
         get: vi.fn().mockReturnValue(false),
       };
-      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockConfig);
+      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockReturnValue(
+        mockConfig
+      );
 
       copilotIntegrationCommand.handleActivateCopilot();
 
@@ -97,7 +106,9 @@ describe('CopilotIntegrationCommand', () => {
 
     it('should handle command execution errors gracefully', async () => {
       // Mock command failure
-      (vscode.commands.executeCommand as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Command failed'));
+      (vscode.commands.executeCommand as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(
+        new Error('Command failed')
+      );
 
       // Should handle error gracefully without throwing
       await expect(copilotIntegrationCommand.handleActivateCopilot()).resolves.not.toThrow();
@@ -165,7 +176,9 @@ describe('CopilotIntegrationCommand', () => {
       const mockConfig = {
         get: vi.fn().mockReturnValue(false),
       };
-      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockConfig);
+      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockReturnValue(
+        mockConfig
+      );
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = (copilotIntegrationCommand as any).isGitHubCopilotIntegrationEnabled();
@@ -176,7 +189,9 @@ describe('CopilotIntegrationCommand', () => {
       const mockConfig = {
         get: vi.fn().mockImplementation((key: string, defaultValue: any) => defaultValue),
       };
-      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockConfig);
+      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockReturnValue(
+        mockConfig
+      );
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = (copilotIntegrationCommand as any).isGitHubCopilotIntegrationEnabled();

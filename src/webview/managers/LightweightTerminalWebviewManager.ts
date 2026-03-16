@@ -233,42 +233,39 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   private setupPanelLocationSync(): void {
     // Panel location (sidebar/panel) changes - keep split layout direction in sync
     // Use direct window.addEventListener for custom events
-    window.addEventListener(
-      'terminal-panel-location-changed',
-      (event: Event) => {
-        const customEvent = event as CustomEvent<{ location?: unknown }>;
-        const location = customEvent.detail?.location;
-        if (location !== 'sidebar' && location !== 'panel') {
+    window.addEventListener('terminal-panel-location-changed', (event: Event) => {
+      const customEvent = event as CustomEvent<{ location?: unknown }>;
+      const location = customEvent.detail?.location;
+      if (location !== 'sidebar' && location !== 'panel') {
+        return;
+      }
+
+      this.splitManager.setPanelLocation(location);
+
+      const direction = location === 'panel' ? 'horizontal' : 'vertical';
+
+      try {
+        const terminalCount = this.splitManager.getTerminals().size;
+        const currentMode = this.displayModeManager.getCurrentMode();
+
+        // Bottom panel: if multiple terminals are visible (i.e. not fullscreen), enforce split layout immediately
+        if (location === 'panel' && terminalCount > 1 && currentMode !== 'fullscreen') {
+          this.displayModeManager.showAllTerminalsSplit();
           return;
         }
 
-        this.splitManager.setPanelLocation(location);
-
-        const direction = location === 'panel' ? 'horizontal' : 'vertical';
-
-        try {
-          const terminalCount = this.splitManager.getTerminals().size;
-          const currentMode = this.displayModeManager.getCurrentMode();
-
-          // Bottom panel: if multiple terminals are visible (i.e. not fullscreen), enforce split layout immediately
-          if (location === 'panel' && terminalCount > 1 && currentMode !== 'fullscreen') {
-            this.displayModeManager.showAllTerminalsSplit();
-            return;
-          }
-
-          // Sidebar: if already in split mode, rebuild layout to ensure vertical stacking
-          if (location === 'sidebar' && currentMode === 'split') {
-            this.displayModeManager.showAllTerminalsSplit();
-            return;
-          }
-        } catch {
-          // fall through
+        // Sidebar: if already in split mode, rebuild layout to ensure vertical stacking
+        if (location === 'sidebar' && currentMode === 'split') {
+          this.displayModeManager.showAllTerminalsSplit();
+          return;
         }
-
-        // Otherwise, just update split direction for the next activation
-        this.splitManager.updateSplitDirection(direction, location);
+      } catch {
+        // fall through
       }
-    );
+
+      // Otherwise, just update split direction for the next activation
+      this.splitManager.updateSplitDirection(direction, location);
+    });
 
     // Best-effort sync: apply the current location even if the first event fired before full UI was ready
     setTimeout(() => {
@@ -333,7 +330,10 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       refreshSplitLayout: () => this.displayModeManager?.showAllTerminalsSplit(),
       prepareDisplayForDeletion: (id, stats) => this.prepareDisplayForTerminalDeletion(id, stats),
       updateTerminalBorders: (id) =>
-        this.uiManager?.updateTerminalBorders(id, this.terminalLifecycleManager.getAllTerminalContainers()),
+        this.uiManager?.updateTerminalBorders(
+          id,
+          this.terminalLifecycleManager.getAllTerminalContainers()
+        ),
       focusTerminal: (id) => {
         const instance = this.getTerminalInstance(id);
         instance?.terminal?.focus();
@@ -824,30 +824,41 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     config: TerminalConfig | undefined,
     terminalNumber: number | undefined,
     requestSource: 'webview' | 'extension'
-  ): Promise<{ action: 'skip'; terminal: Terminal | null } | { action: 'continue'; shouldForceNormal: boolean; shouldForceFullscreen: boolean }> {
+  ): Promise<
+    | { action: 'skip'; terminal: Terminal | null }
+    | { action: 'continue'; shouldForceNormal: boolean; shouldForceFullscreen: boolean }
+  > {
     // Duplicate creation prevention
     if (this.terminalOperations.isTerminalCreationPending(terminalId)) {
-      log(`⏳ [DEBUG] Terminal ${terminalId} creation already pending (source: ${requestSource}), skipping duplicate request`);
+      log(
+        `⏳ [DEBUG] Terminal ${terminalId} creation already pending (source: ${requestSource}), skipping duplicate request`
+      );
       return { action: 'skip', terminal: this.getTerminalInstance(terminalId)?.terminal ?? null };
     }
 
     // Existing instance reuse
     const existingInstance = this.getTerminalInstance(terminalId);
     if (existingInstance) {
-      log(`🔁 [DEBUG] Terminal ${terminalId} already exists, reusing existing instance (source: ${requestSource})`);
+      log(
+        `🔁 [DEBUG] Terminal ${terminalId} already exists, reusing existing instance (source: ${requestSource})`
+      );
       this.terminalTabManager?.setActiveTab(terminalId);
       return { action: 'skip', terminal: existingInstance.terminal ?? null };
     }
 
     // Display mode resolution
-    const displayModeOverride = (config as { displayModeOverride?: string } | undefined)?.displayModeOverride;
+    const displayModeOverride = (config as { displayModeOverride?: string } | undefined)
+      ?.displayModeOverride;
     const shouldForceNormal = this.forceNormalModeForNextCreate || displayModeOverride === 'normal';
-    const shouldForceFullscreen = this.forceFullscreenModeForNextCreate || displayModeOverride === 'fullscreen';
+    const shouldForceFullscreen =
+      this.forceFullscreenModeForNextCreate || displayModeOverride === 'fullscreen';
 
     log(`🔍 [MODE-DEBUG] createTerminal mode check:`, {
-      terminalId, displayModeOverride,
+      terminalId,
+      displayModeOverride,
       forceFullscreenModeForNextCreate: this.forceFullscreenModeForNextCreate,
-      shouldForceFullscreen, shouldForceNormal,
+      shouldForceFullscreen,
+      shouldForceNormal,
       currentMode: this.displayModeManager?.getCurrentMode?.() ?? 'unknown',
     });
 
@@ -876,9 +887,13 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     // State validation
     if (this.currentTerminalState) {
       const availableSlots = this.currentTerminalState.availableSlots;
-      log(`🎯 [STATE] Terminal creation check: canCreate=${canCreate}, availableSlots=[${availableSlots.join(',')}]`);
+      log(
+        `🎯 [STATE] Terminal creation check: canCreate=${canCreate}, availableSlots=[${availableSlots.join(',')}]`
+      );
       if (terminalNumber && !availableSlots.includes(terminalNumber)) {
-        log(`⚠️ [STATE] Terminal number ${terminalNumber} not in available slots [${availableSlots.join(',')}]`);
+        log(
+          `⚠️ [STATE] Terminal number ${terminalNumber} not in available slots [${availableSlots.join(',')}]`
+        );
         this.requestLatestState();
       }
     } else {
@@ -926,11 +941,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
             }
           })
           .catch((error) => {
-            console.error(
-              'Failed to save session after terminal creation',
-              { terminalId },
-              error
-            );
+            console.error('Failed to save session after terminal creation', { terminalId }, error);
           });
       }
     }, 100);
@@ -965,8 +976,12 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
     // Split layout maintenance
     const currentMode = this.displayModeManager?.getCurrentMode?.() ?? 'normal';
-    const splitManagerActive = typeof this.splitManager?.getIsSplitMode === 'function' && this.splitManager.getIsSplitMode();
-    const shouldMaintainSplitLayout = !shouldForceNormal && !shouldForceFullscreen && (currentMode === 'split' || splitManagerActive);
+    const splitManagerActive =
+      typeof this.splitManager?.getIsSplitMode === 'function' && this.splitManager.getIsSplitMode();
+    const shouldMaintainSplitLayout =
+      !shouldForceNormal &&
+      !shouldForceFullscreen &&
+      (currentMode === 'split' || splitManagerActive);
 
     if (shouldMaintainSplitLayout) {
       try {
@@ -1005,12 +1020,20 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   ): Promise<Terminal | null> {
     try {
       log(`🔍 [DEBUG] RefactoredTerminalWebviewManager.createTerminal called:`, {
-        terminalId, terminalName, terminalNumber, hasConfig: !!config, timestamp: Date.now(),
+        terminalId,
+        terminalName,
+        terminalNumber,
+        hasConfig: !!config,
+        timestamp: Date.now(),
       });
 
       // Phase 1: Pre-creation checks
       const checkResult = await this.preTerminalCreationChecks(
-        terminalId, terminalName, config, terminalNumber, requestSource
+        terminalId,
+        terminalName,
+        config,
+        terminalNumber,
+        requestSource
       );
       if (checkResult.action === 'skip') {
         return checkResult.terminal;
@@ -1022,7 +1045,10 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
       // Phase 2: Create terminal instance
       const terminal = await this.terminalLifecycleManager.createTerminal(
-        terminalId, terminalName, config, terminalNumber
+        terminalId,
+        terminalName,
+        config,
+        terminalNumber
       );
 
       if (!terminal) {
@@ -1032,8 +1058,12 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
       // Phase 3: Post-creation setup
       this.postTerminalCreation(
-        terminalId, terminalName, terminal, requestSource,
-        shouldForceNormal, shouldForceFullscreen
+        terminalId,
+        terminalName,
+        terminal,
+        requestSource,
+        shouldForceNormal,
+        shouldForceFullscreen
       );
 
       return terminal;

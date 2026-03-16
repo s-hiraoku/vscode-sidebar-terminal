@@ -30,24 +30,26 @@ describe('ManagerLogger', () => {
 
     it('should include [LEVEL] for non-info logs', () => {
       logger.error('Failed');
-      expect(baseLog).toHaveBeenCalledWith(expect.stringContaining('[ERROR] 🧪 [TestManager] Failed'));
+      expect(baseLog).toHaveBeenCalledWith(
+        expect.stringContaining('[ERROR] 🧪 [TestManager] Failed')
+      );
     });
 
     it('should truncate long messages', () => {
       // Configure BEFORE creating the instance, or use a fresh one
       ManagerLogger.configure({ maxMessageLength: 10 });
       const truncateLogger = ManagerLogger.createLogger('Short', 'S');
-      
+
       const longMsg = 'This is a very long message';
       truncateLogger.info(longMsg);
-      
+
       expect(baseLog).toHaveBeenCalledWith(expect.stringContaining('This is a ...'));
     });
 
     it('should log additional data', () => {
       const data = { id: 1 };
       logger.info('Msg', data);
-      
+
       expect(baseLog).toHaveBeenCalledWith(expect.stringContaining('🧪 [TestManager] Msg'));
       expect(baseLog).toHaveBeenCalledWith('🔍 [TestManager] Data:', data);
     });
@@ -56,12 +58,16 @@ describe('ManagerLogger', () => {
   describe('Specialized Formats', () => {
     it('should format lifecycle events', () => {
       logger.lifecycle('Init', 'completed');
-      expect(baseLog).toHaveBeenCalledWith(expect.stringContaining('🧪 [TestManager] ✅ Init completed'));
+      expect(baseLog).toHaveBeenCalledWith(
+        expect.stringContaining('🧪 [TestManager] ✅ Init completed')
+      );
     });
 
     it('should format performance logs', () => {
       logger.performance('Startup', 150);
-      expect(baseLog).toHaveBeenCalledWith(expect.stringContaining('🧪 [TestManager] ⏱️ Startup: 150ms'));
+      expect(baseLog).toHaveBeenCalledWith(
+        expect.stringContaining('🧪 [TestManager] ⏱️ Startup: 150ms')
+      );
     });
   });
 
@@ -69,7 +75,7 @@ describe('ManagerLogger', () => {
     it('should keep track of log history', () => {
       logger.info('msg1');
       logger.warn('msg2');
-      
+
       const all = ManagerLogger.getAllLogs();
       expect(all.length).toBe(2);
       expect(all[0].message).toBe('msg1');
@@ -79,7 +85,7 @@ describe('ManagerLogger', () => {
       const other = ManagerLogger.createLogger('Other');
       logger.info('msg1');
       other.info('msg2');
-      
+
       const filtered = logger.getRecentLogs(10);
       expect(filtered.length).toBe(1);
       expect(filtered[0].message).toBe('msg1');
@@ -88,7 +94,7 @@ describe('ManagerLogger', () => {
     it('should provide statistics', () => {
       logger.info('msg');
       logger.error('err');
-      
+
       const stats = ManagerLogger.getStats();
       expect(stats.totalEntries).toBe(2);
       expect(stats.levelCounts.info).toBe(1);

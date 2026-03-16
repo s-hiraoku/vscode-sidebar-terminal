@@ -216,7 +216,11 @@ export class ConfigManager {
     try {
       const extensionConfig = vscode.workspace.getConfiguration('secondaryTerminal');
       const extensionFontFamily = extensionConfig.get<string>('fontFamily');
-      if (extensionFontFamily && extensionFontFamily.trim() && extensionFontFamily.trim() !== 'monospace') {
+      if (
+        extensionFontFamily &&
+        extensionFontFamily.trim() &&
+        extensionFontFamily.trim() !== 'monospace'
+      ) {
         return extensionFontFamily.trim();
       }
 

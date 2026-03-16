@@ -394,7 +394,8 @@ export class SettingsPanel {
     ) as HTMLInputElement;
 
     return {
-      activeBorderMode: (activeBorderModeSelect?.value as 'none' | 'always' | 'multipleOnly') ?? 'multipleOnly',
+      activeBorderMode:
+        (activeBorderModeSelect?.value as 'none' | 'always' | 'multipleOnly') ?? 'multipleOnly',
       enableCliAgentIntegration: claudeCodeIntegrationCheckbox?.checked ?? true,
     };
   }

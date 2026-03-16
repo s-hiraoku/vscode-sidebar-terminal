@@ -6,7 +6,10 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { MouseTrackingService, SendInputCallback } from '../../../../../../webview/services/terminal/MouseTrackingService';
+import {
+  MouseTrackingService,
+  SendInputCallback,
+} from '../../../../../../webview/services/terminal/MouseTrackingService';
 
 // Mock logger
 vi.mock('../../../../../../webview/utils/ManagerLogger', () => ({
@@ -55,7 +58,7 @@ function createMockTerminal() {
   const mockElement = {
     clientWidth: 720,
     clientHeight: 408,
-    querySelector: (selector: string) => selector === '.xterm-screen' ? screenElement : null,
+    querySelector: (selector: string) => (selector === '.xterm-screen' ? screenElement : null),
     appendChild: terminalElement.appendChild.bind(terminalElement),
   };
 
@@ -64,14 +67,19 @@ function createMockTerminal() {
     cols: 80,
     rows: 24,
     parser: {
-      registerCsiHandler: vi.fn((identifier: { prefix?: string; final: string }, handler: (params: number[]) => boolean) => {
-        // Store with prefix for proper identification
-        const key = `${identifier.prefix || ''}${identifier.final}`;
-        handlers.set(key, handler);
-        return {
-          dispose: vi.fn(),
-        };
-      }),
+      registerCsiHandler: vi.fn(
+        (
+          identifier: { prefix?: string; final: string },
+          handler: (params: number[]) => boolean
+        ) => {
+          // Store with prefix for proper identification
+          const key = `${identifier.prefix || ''}${identifier.final}`;
+          handlers.set(key, handler);
+          return {
+            dispose: vi.fn(),
+          };
+        }
+      ),
     },
     // Helper to simulate CSI sequences (private mode with ? prefix)
     _simulateCsi: (final: string, params: number[]) => {
@@ -120,7 +128,9 @@ describe('MouseTrackingService', () => {
     });
 
     it('should warn if setup called twice for same terminal', async () => {
-      const { terminalLogger } = vi.mocked(await import('../../../../../../webview/utils/ManagerLogger'));
+      const { terminalLogger } = vi.mocked(
+        await import('../../../../../../webview/utils/ManagerLogger')
+      );
 
       service.setup(mockTerminal as any, 't1', viewport, mockSendInput);
       service.setup(mockTerminal as any, 't1', viewport, mockSendInput);

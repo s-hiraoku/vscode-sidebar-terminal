@@ -7,21 +7,14 @@
 
 import * as vscode from 'vscode';
 import { provider as log } from '../../utils/logger';
-import {
-  TerminalInitializationWatchdog,
-  WatchdogOptions,
-} from './TerminalInitializationWatchdog';
+import { TerminalInitializationWatchdog, WatchdogOptions } from './TerminalInitializationWatchdog';
 
 /**
  * Dependencies required by WatchdogCoordinator
  */
 export interface IWatchdogCoordinatorDependencies {
   getTerminal(terminalId: string): { ptyProcess?: unknown; name?: string } | undefined;
-  initializeShellForTerminal(
-    terminalId: string,
-    ptyProcess: unknown,
-    safeMode: boolean
-  ): void;
+  initializeShellForTerminal(terminalId: string, ptyProcess: unknown, safeMode: boolean): void;
   telemetryService?: {
     trackPerformance(data: {
       operation: string;
@@ -46,8 +39,8 @@ export class WatchdogCoordinator {
     private readonly ackOptions: WatchdogOptions,
     private readonly promptOptions: WatchdogOptions
   ) {
-    this._watchdog = new TerminalInitializationWatchdog(
-      (terminalId, info) => this.handleTimeout(terminalId, info.attempt, info.isFinalAttempt)
+    this._watchdog = new TerminalInitializationWatchdog((terminalId, info) =>
+      this.handleTimeout(terminalId, info.attempt, info.isFinalAttempt)
     );
   }
 

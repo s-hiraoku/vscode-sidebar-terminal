@@ -32,7 +32,7 @@ describe('TerminalLifecycleService', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
-    
+
     mockPtyProcess = {
       pid: 1234,
       onData: vi.fn(),
@@ -43,7 +43,7 @@ describe('TerminalLifecycleService', () => {
     };
 
     vi.mocked(pty.spawn).mockReturnValue(mockPtyProcess);
-    
+
     service = new TerminalLifecycleService();
   });
 
@@ -54,7 +54,7 @@ describe('TerminalLifecycleService', () => {
   describe('createTerminal', () => {
     it('should create a terminal instance successfully', async () => {
       const result = await service.createTerminal();
-      
+
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.value.id).toBe('term-123');
@@ -68,11 +68,11 @@ describe('TerminalLifecycleService', () => {
         shell: '/bin/zsh',
         shellArgs: ['-i'],
         cwd: '/custom/dir',
-        terminalName: 'My Term'
+        terminalName: 'My Term',
       };
-      
+
       const result = await service.createTerminal(options);
-      
+
       expect(result.success).toBe(true);
       expect(pty.spawn).toHaveBeenCalledWith(
         '/bin/zsh',
@@ -114,7 +114,7 @@ describe('TerminalLifecycleService', () => {
       } as any;
 
       await service.disposeTerminal(term);
-      
+
       expect(mockPtyProcess.kill).toHaveBeenCalled();
     });
   });

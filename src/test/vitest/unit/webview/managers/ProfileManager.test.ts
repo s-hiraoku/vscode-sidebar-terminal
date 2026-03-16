@@ -166,7 +166,9 @@ describe('ProfileManager', () => {
 
       const notificationManager = (mockCoordinator.getManagers as any)().notification;
       expect(notificationManager.showWarning).toHaveBeenCalledTimes(1);
-      expect(notificationManager.showWarning).toHaveBeenCalledWith('No terminal profiles available');
+      expect(notificationManager.showWarning).toHaveBeenCalledWith(
+        'No terminal profiles available'
+      );
     });
 
     it('should call onProfileSelected callback when profile selected', () => {
@@ -226,7 +228,9 @@ describe('ProfileManager', () => {
     });
 
     it('should throw error when setting non-existent profile as default', async () => {
-      await expect(profileManager.setDefaultProfile('nonexistent')).rejects.toThrow('Profile not found');
+      await expect(profileManager.setDefaultProfile('nonexistent')).rejects.toThrow(
+        'Profile not found'
+      );
     });
 
     it('should update isDefault flag on all profiles', async () => {
@@ -280,7 +284,9 @@ describe('ProfileManager', () => {
     });
 
     it('should throw error when creating terminal with non-existent profile', async () => {
-      await expect(profileManager.createTerminalWithProfile('nonexistent')).rejects.toThrow('Profile not found');
+      await expect(profileManager.createTerminalWithProfile('nonexistent')).rejects.toThrow(
+        'Profile not found'
+      );
     });
 
     it('should show warning on terminal creation failure', async () => {
@@ -438,7 +444,9 @@ describe('ProfileManager', () => {
     it('should handle no default profile when creating terminal', async () => {
       profileManager.updateProfiles([]);
 
-      await expect(profileManager.createTerminalWithDefaultProfile()).rejects.toThrow('No default profile available');
+      await expect(profileManager.createTerminalWithDefaultProfile()).rejects.toThrow(
+        'No default profile available'
+      );
     });
   });
 });
