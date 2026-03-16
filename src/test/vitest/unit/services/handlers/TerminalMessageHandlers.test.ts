@@ -79,8 +79,11 @@ describe('TerminalMessageHandlers', () => {
 
   it('requires a terminal id before deleting', async () => {
     const handler = new DeleteTerminalHandler(dependencies);
+    const invokeWithPartialPayload = (
+      data: Partial<Parameters<DeleteTerminalHandler['handle']>[0]>
+    ) => handler.handle(data as Parameters<DeleteTerminalHandler['handle']>[0]);
 
-    await expect(handler.handle({} as any)).rejects.toThrow(
+    await expect(invokeWithPartialPayload({})).rejects.toThrow(
       "Required field 'terminalId' is missing or null"
     );
   });
@@ -92,7 +95,7 @@ describe('TerminalMessageHandlers', () => {
     expect(dependencies.terminalManager.sendInput).toHaveBeenCalledWith('pwd', 'terminal-1');
   });
 
-  it('validates resize dimensions before delegating', () => {
+  it('rejects resize requests with non-positive dimensions', () => {
     const handler = new TerminalResizeHandler(dependencies);
 
     expect(() =>
@@ -102,6 +105,10 @@ describe('TerminalMessageHandlers', () => {
         rows: 24,
       })
     ).toThrow('Invalid resize dimensions: cols and rows must be positive');
+  });
+
+  it('delegates valid resize requests to terminalManager', () => {
+    const handler = new TerminalResizeHandler(dependencies);
 
     expect(
       handler.handle({
