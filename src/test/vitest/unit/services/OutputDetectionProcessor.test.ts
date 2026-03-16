@@ -7,7 +7,20 @@ vi.mock('../../../../utils/logger', () => ({
 }));
 
 describe('OutputDetectionProcessor', () => {
+  type StrategyRegistryStub = {
+    getAllStrategies: ReturnType<typeof vi.fn>;
+    dispose: ReturnType<typeof vi.fn>;
+  };
+  type PatternDetectorStub = {
+    cleanAnsiEscapeSequences: ReturnType<typeof vi.fn>;
+  };
+  type OutputDetectionProcessorTestAccess = OutputDetectionProcessor & {
+    strategyRegistry: StrategyRegistryStub;
+    patternDetector: PatternDetectorStub;
+  };
+
   let processor: OutputDetectionProcessor;
+  let processorTestAccess: OutputDetectionProcessorTestAccess;
   let stateManager: {
     isAgentConnected: ReturnType<typeof vi.fn>;
     getDisconnectedAgents: ReturnType<typeof vi.fn>;
@@ -22,13 +35,8 @@ describe('OutputDetectionProcessor', () => {
     get: ReturnType<typeof vi.fn>;
     clear: ReturnType<typeof vi.fn>;
   };
-  let strategyRegistry: {
-    getAllStrategies: ReturnType<typeof vi.fn>;
-    dispose: ReturnType<typeof vi.fn>;
-  };
-  let patternDetector: {
-    cleanAnsiEscapeSequences: ReturnType<typeof vi.fn>;
-  };
+  let strategyRegistry: StrategyRegistryStub;
+  let patternDetector: PatternDetectorStub;
 
   beforeEach(() => {
     stateManager = {
@@ -57,6 +65,7 @@ describe('OutputDetectionProcessor', () => {
       terminationDetector as never,
       detectionCache as never
     );
+    processorTestAccess = processor as OutputDetectionProcessorTestAccess;
 
     strategyRegistry = {
       getAllStrategies: vi.fn().mockReturnValue([]),
@@ -67,8 +76,8 @@ describe('OutputDetectionProcessor', () => {
       cleanAnsiEscapeSequences: vi.fn((line: string) => line),
     };
 
-    (processor as any).strategyRegistry = strategyRegistry;
-    (processor as any).patternDetector = patternDetector;
+    processorTestAccess.strategyRegistry = strategyRegistry;
+    processorTestAccess.patternDetector = patternDetector;
   });
 
   afterEach(() => {
@@ -186,7 +195,12 @@ describe('OutputDetectionProcessor', () => {
   });
 
   it('returns null when output processing throws', () => {
-    expect(processor.processOutput('terminal-5', null as any)).toBeNull();
+    const invokeWithUnexpectedData = processor.processOutput as (
+      terminalId: string,
+      data: string | null
+    ) => ReturnType<OutputDetectionProcessor['processOutput']>;
+
+    expect(invokeWithUnexpectedData('terminal-5', null)).toBeNull();
   });
 
   it('disposes the strategy registry only once', () => {
