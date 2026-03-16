@@ -135,7 +135,7 @@ describe('TerminalMessageHandlers', () => {
     ).toEqual({ success: true });
 
     // Then
-    expect(dependencies.terminalManager.resize).toHaveBeenCalledWith('terminal-1', 120, 30);
+    expect(dependencies.terminalManager.resize).toHaveBeenCalledWith(120, 30, 'terminal-1');
   });
 
   it('returns current settings through the settings handler', () => {
