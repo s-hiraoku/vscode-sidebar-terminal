@@ -15,11 +15,9 @@ import { IIMEHandler } from './input/interfaces/IInputHandlers';
 import { InputStateManager } from './input/services/InputStateManager';
 import { InputEventService } from './input/services/InputEventService';
 import { KeybindingService } from './input/services/KeybindingService';
-import {
-  TerminalOperationsService,
-  ScrollDirection,
-} from './input/services/TerminalOperationsService';
+import { TerminalOperationsService } from './input/services/TerminalOperationsService';
 import { isMacPlatform } from '../utils/PlatformUtils';
+import { VSCodeCommandDispatcher } from './input/handlers/VSCodeCommandDispatcher';
 
 // ============================================================================
 // Constants
@@ -71,6 +69,7 @@ export class InputManager extends BaseManager implements IInputManager {
   private eventService: InputEventService;
   private keybindingService: KeybindingService;
   private terminalOperationsService: TerminalOperationsService;
+  private vsCodeCommandDispatcher: VSCodeCommandDispatcher;
 
   constructor(coordinator: IManagerCoordinator) {
     super('InputManager', {
@@ -95,6 +94,22 @@ export class InputManager extends BaseManager implements IInputManager {
           manager
         )
     );
+
+    // Initialize VSCodeCommandDispatcher
+    this.vsCodeCommandDispatcher = new VSCodeCommandDispatcher({
+      logger: (message: string) => this.logger(message),
+      emitTerminalInteractionEvent: (type, terminalId, data, manager) =>
+        this.emitTerminalInteractionEvent(type, terminalId, data, manager),
+      terminalOperationsService: this.terminalOperationsService,
+      handleTerminalCopy: (manager) => this.handleTerminalCopy(manager),
+      handleTerminalPaste: (manager) => this.handleTerminalPaste(manager),
+      handleTerminalSelectAll: (manager) => this.handleTerminalSelectAll(manager),
+      handleTerminalFind: (manager) => this.handleTerminalFind(manager),
+      handleTerminalFindNext: (manager) => this.handleTerminalFindNext(manager),
+      handleTerminalFindPrevious: (manager) => this.handleTerminalFindPrevious(manager),
+      handleTerminalHideFind: (manager) => this.handleTerminalHideFind(manager),
+      handleTerminalClear: (manager) => this.handleTerminalClear(manager),
+    });
 
     // Initialize IME handler with new architecture
     this.imeHandler = new IMEHandler(
@@ -282,172 +297,10 @@ export class InputManager extends BaseManager implements IInputManager {
 
   /**
    * Handle VS Code commands resolved from keybindings
+   * Delegates to VSCodeCommandDispatcher
    */
   private handleVSCodeCommand(command: string, manager: IManagerCoordinator): void {
-    this.logger(`Handling VS Code command: ${command}`);
-
-    switch (command) {
-      // Terminal management
-      case 'workbench.action.terminal.new':
-        this.emitTerminalInteractionEvent('create-terminal', '', undefined, manager);
-        break;
-      case 'workbench.action.terminal.split':
-        this.emitTerminalInteractionEvent(
-          'split-terminal',
-          manager.getActiveTerminalId() || '',
-          undefined,
-          manager
-        );
-        break;
-      case 'workbench.action.terminal.kill':
-        this.emitTerminalInteractionEvent(
-          'kill-terminal',
-          manager.getActiveTerminalId() || '',
-          undefined,
-          manager
-        );
-        break;
-      case 'workbench.action.terminal.clear':
-        this.handleTerminalClear(manager);
-        break;
-
-      // Navigation
-      case 'workbench.action.terminal.focusNext':
-        this.emitTerminalInteractionEvent(
-          'switch-next',
-          manager.getActiveTerminalId() || '',
-          undefined,
-          manager
-        );
-        break;
-      case 'workbench.action.terminal.focusPrevious':
-        this.emitTerminalInteractionEvent(
-          'switch-previous',
-          manager.getActiveTerminalId() || '',
-          undefined,
-          manager
-        );
-        break;
-      case 'workbench.action.terminal.toggleTerminal':
-        this.emitTerminalInteractionEvent('toggle-terminal', '', undefined, manager);
-        break;
-
-      // Scrolling
-      case 'workbench.action.terminal.scrollUp':
-        this.scrollTerminal('up', manager);
-        break;
-      case 'workbench.action.terminal.scrollDown':
-        this.scrollTerminal('down', manager);
-        break;
-      case 'workbench.action.terminal.scrollToTop':
-        this.scrollTerminal('top', manager);
-        break;
-      case 'workbench.action.terminal.scrollToBottom':
-        this.scrollTerminal('bottom', manager);
-        break;
-      case 'workbench.action.terminal.scrollToPreviousCommand':
-        this.scrollTerminal('previousCommand', manager);
-        break;
-      case 'workbench.action.terminal.scrollToNextCommand':
-        this.scrollTerminal('nextCommand', manager);
-        break;
-
-      // Copy/Paste/Selection
-      case 'workbench.action.terminal.copySelection':
-        this.handleTerminalCopy(manager);
-        break;
-      case 'workbench.action.terminal.paste':
-        this.handleTerminalPaste(manager);
-        break;
-      case 'workbench.action.terminal.selectAll':
-        this.handleTerminalSelectAll(manager);
-        break;
-
-      // Find functionality
-      case 'workbench.action.terminal.focusFind':
-        this.handleTerminalFind(manager);
-        break;
-      case 'workbench.action.terminal.findNext':
-        this.handleTerminalFindNext(manager);
-        break;
-      case 'workbench.action.terminal.findPrevious':
-        this.handleTerminalFindPrevious(manager);
-        break;
-      case 'workbench.action.terminal.hideFind':
-        this.handleTerminalHideFind(manager);
-        break;
-
-      // Word/Line operations
-      case 'workbench.action.terminal.deleteWordLeft':
-        this.handleTerminalDeleteWordLeft(manager);
-        break;
-      case 'workbench.action.terminal.deleteWordRight':
-        this.handleTerminalDeleteWordRight(manager);
-        break;
-      case 'workbench.action.terminal.moveToLineStart':
-        this.handleTerminalMoveToLineStart(manager);
-        break;
-      case 'workbench.action.terminal.moveToLineEnd':
-        this.handleTerminalMoveToLineEnd(manager);
-        break;
-
-      // Terminal size
-      case 'workbench.action.terminal.sizeToContentWidth':
-        this.handleTerminalSizeToContent(manager);
-        break;
-
-      // Panel/UI management
-      case 'workbench.action.togglePanel':
-        this.logger('Panel toggle not available in webview context');
-        break;
-      case 'workbench.action.closePanel':
-        this.logger('Panel close not available in webview context');
-        break;
-      case 'workbench.action.toggleSidebarVisibility':
-        this.logger('Sidebar toggle not available in webview context');
-        break;
-
-      // Development tools
-      case 'workbench.action.toggleDevTools':
-        this.logger('Dev Tools toggle not available in webview context');
-        break;
-      case 'workbench.action.reloadWindow':
-        this.logger('Window reload not available in webview context');
-        break;
-      case 'workbench.action.reloadWindowWithExtensionsDisabled':
-        this.logger('Window reload with disabled extensions not available in webview context');
-        break;
-
-      // Zoom
-      case 'workbench.action.zoomIn':
-      case 'workbench.action.zoomOut':
-      case 'workbench.action.zoomReset':
-        this.logger(`Zoom commands (${command}) not available in webview context`);
-        break;
-
-      // Quick actions
-      case 'workbench.action.quickOpen':
-        this.logger('Quick Open not implemented in terminal webview');
-        break;
-      case 'workbench.action.showCommands':
-        this.logger('Command Palette not implemented in terminal webview');
-        break;
-
-      // Native console
-      case 'workbench.action.terminal.openNativeConsole':
-        this.logger('Native console not available in webview context');
-        break;
-
-      default:
-        this.logger(`Unhandled VS Code command: ${command}`);
-    }
-  }
-
-  /**
-   * Handle terminal scrolling - delegates to TerminalOperationsService
-   */
-  private scrollTerminal(direction: ScrollDirection, manager: IManagerCoordinator): void {
-    this.terminalOperationsService.scrollTerminal(direction, manager);
+    this.vsCodeCommandDispatcher.handleVSCodeCommand(command, manager);
   }
 
   /**
@@ -1392,122 +1245,14 @@ export class InputManager extends BaseManager implements IInputManager {
 
   /**
    * VS Code Standard: Determine if a key should be intercepted for VS Code handling
-   * Returns true if VS Code should handle this key (not sent to shell)
-   * Returns false if key should pass through to shell
-   *
-   * This implements the VS Code terminal keybinding behavior where:
-   * - Most keys go to shell (arrow keys, Ctrl+C for interrupt, etc.)
-   * - Only specific shortcuts are intercepted (Ctrl+Shift+C for copy, Cmd+K for clear, etc.)
+   * Delegates to VSCodeCommandDispatcher
    */
   private shouldInterceptKeyForVSCode(
     event: KeyboardEvent,
     terminal: Terminal,
     manager: IManagerCoordinator
   ): boolean {
-    // Use userAgentData if available (modern), fallback to userAgent (deprecated navigator.platform)
-    const isMac = isMacPlatform();
-    const ctrlOrCmd = isMac ? event.metaKey : event.ctrlKey;
-
-    // NEVER intercept these - they must go to shell:
-    // - Arrow keys (bash history, cursor movement)
-    // - Tab (completion)
-    // - Regular characters
-    // - Ctrl+C without selection (interrupt)
-    // - Ctrl+D (EOF)
-    // - Ctrl+Z (suspend)
-    // - Ctrl+A, Ctrl+E (line start/end in bash)
-    // - Ctrl+U, Ctrl+K (line editing in bash)
-    // - Ctrl+W (delete word in bash)
-    // - Ctrl+R (reverse search in bash)
-    // - Ctrl+L (clear screen in bash - should go to shell, not VS Code clear)
-
-    // Arrow keys - ALWAYS pass to shell
-    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
-      // Exception: Ctrl+Shift+Arrow for scrolling
-      if (event.ctrlKey && event.shiftKey) {
-        this.handleVSCodeCommand(
-          event.key === 'ArrowUp'
-            ? 'workbench.action.terminal.scrollUp'
-            : 'workbench.action.terminal.scrollDown',
-          manager
-        );
-        return true;
-      }
-      // Pass to shell (bash history, cursor movement)
-      return false;
-    }
-
-    // Tab - ALWAYS pass to shell (completion)
-    if (event.key === 'Tab') {
-      return false;
-    }
-
-    // Ctrl+C: Copy if selection exists, otherwise pass to shell for interrupt
-    if (ctrlOrCmd && event.key === 'c' && !event.shiftKey) {
-      if (terminal.hasSelection()) {
-        this.handleTerminalCopy(manager);
-        return true;
-      }
-      // No selection - pass to shell for SIGINT
-      return false;
-    }
-
-    // Ctrl+V: Paste
-    if (ctrlOrCmd && event.key === 'v' && !event.shiftKey) {
-      this.handleTerminalPaste(manager);
-      return true;
-    }
-
-    // Ctrl+Shift+C: Copy (VS Code style)
-    if (ctrlOrCmd && event.shiftKey && event.key === 'c') {
-      if (terminal.hasSelection()) {
-        this.handleTerminalCopy(manager);
-        return true;
-      }
-      return false;
-    }
-
-    // Ctrl+Shift+V: Paste (VS Code style)
-    if (ctrlOrCmd && event.shiftKey && event.key === 'v') {
-      this.handleTerminalPaste(manager);
-      return true;
-    }
-
-    // Pass these shell-essential keys to shell:
-    // Ctrl+D (EOF), Ctrl+Z (suspend), Ctrl+A, Ctrl+E, Ctrl+U, Ctrl+K, Ctrl+W, Ctrl+R, Ctrl+L
-    const shellEssentialKeys = ['d', 'z', 'a', 'e', 'u', 'k', 'w', 'r', 'l'];
-    if (event.ctrlKey && !event.shiftKey && !event.altKey && !event.metaKey) {
-      if (shellEssentialKeys.includes(event.key.toLowerCase())) {
-        return false; // Pass to shell
-      }
-    }
-
-    // macOS: Cmd+K for clear - intercept this one
-    if (isMac && event.metaKey && event.key === 'k' && !event.shiftKey) {
-      this.handleTerminalClear(manager);
-      return true;
-    }
-
-    // Ctrl+Insert / Shift+Insert for copy/paste (Windows/Linux)
-    if (event.ctrlKey && event.key === 'Insert') {
-      if (terminal.hasSelection()) {
-        this.handleTerminalCopy(manager);
-        return true;
-      }
-      return false;
-    }
-    if (event.shiftKey && event.key === 'Insert') {
-      this.handleTerminalPaste(manager);
-      return true;
-    }
-
-    // F12: Toggle dev tools (should be handled by VS Code, not shell)
-    if (event.key === 'F12') {
-      return true; // Intercept but don't handle - let VS Code handle
-    }
-
-    // All other keys - pass to shell
-    return false;
+    return this.vsCodeCommandDispatcher.shouldInterceptKeyForVSCode(event, terminal, manager);
   }
 
   private queueInputData(terminalId: string, data: string, flushImmediately: boolean): void {
