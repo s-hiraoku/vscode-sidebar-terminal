@@ -19,6 +19,7 @@ import { TerminalOperationsService } from './input/services/TerminalOperationsSe
 import { isMacPlatform } from '../utils/PlatformUtils';
 import { VSCodeCommandDispatcher } from './input/handlers/VSCodeCommandDispatcher';
 import { AltClickCoordinator } from './input/handlers/AltClickCoordinator';
+import { InputFlushingService } from './input/services/InputFlushingService';
 
 // ============================================================================
 // Constants
@@ -72,6 +73,7 @@ export class InputManager extends BaseManager implements IInputManager {
   private terminalOperationsService: TerminalOperationsService;
   private vsCodeCommandDispatcher: VSCodeCommandDispatcher;
   private altClickCoordinator: AltClickCoordinator;
+  private inputFlushingService: InputFlushingService;
 
   constructor(coordinator: IManagerCoordinator) {
     super('InputManager', {
@@ -113,6 +115,24 @@ export class InputManager extends BaseManager implements IInputManager {
       handleTerminalClear: (manager) => this.handleTerminalClear(manager),
     });
 
+    // Initialize InputFlushingService
+    this.inputFlushingService = new InputFlushingService({
+      logger: (message: string) => this.logger(message),
+      sendInput: (data: string, terminalId: string) => {
+        const messageManager = this.coordinator.getMessageManager?.();
+        if (messageManager && typeof messageManager.sendInput === 'function') {
+          messageManager.sendInput(data, terminalId);
+          return;
+        }
+        this.coordinator.postMessageToExtension({
+          command: 'input',
+          terminalId,
+          data,
+          timestamp: Date.now(),
+        });
+      },
+    });
+
     // Initialize AltClickCoordinator
     this.altClickCoordinator = new AltClickCoordinator({
       logger: (message: string) => this.logger(message),
@@ -135,10 +155,6 @@ export class InputManager extends BaseManager implements IInputManager {
 
   // Debounce timers for events
   private eventDebounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
-  private pendingInputBuffers = new Map<
-    string,
-    { data: string[]; timer: ReturnType<typeof setTimeout> | null }
-  >();
 
   // Terminal-specific disposables for xterm.js events (memory leak prevention)
   private terminalDisposables = new Map<string, Array<{ dispose(): void }>>();
@@ -706,14 +722,7 @@ export class InputManager extends BaseManager implements IInputManager {
     this.logger(`Removing terminal handlers for ${terminalId}`);
 
     // Clear pending input buffers and timers for this terminal
-    const pendingBuffer = this.pendingInputBuffers.get(terminalId);
-    if (pendingBuffer) {
-      if (pendingBuffer.timer !== null) {
-        clearTimeout(pendingBuffer.timer);
-      }
-      pendingBuffer.data = [];
-      this.pendingInputBuffers.delete(terminalId);
-    }
+    this.inputFlushingService.clearTerminalBuffer(terminalId);
 
     // Dispose xterm.js event subscriptions (onKey, onData, compositionend)
     const disposables = this.terminalDisposables.get(terminalId);
@@ -1166,16 +1175,7 @@ export class InputManager extends BaseManager implements IInputManager {
   }
 
   private shouldFlushImmediately(data: string, domEvent: KeyboardEvent): boolean {
-    if (!data) {
-      return true;
-    }
-
-    const immediateKeys = new Set(['Enter', 'Backspace', 'Delete']);
-    if (immediateKeys.has(domEvent.key)) {
-      return true;
-    }
-
-    return /[\r\n]/.test(data);
+    return this.inputFlushingService.shouldFlushImmediately(data, domEvent);
   }
 
   /**
@@ -1191,59 +1191,7 @@ export class InputManager extends BaseManager implements IInputManager {
   }
 
   private queueInputData(terminalId: string, data: string, flushImmediately: boolean): void {
-    if (!terminalId || data.length === 0) {
-      return;
-    }
-
-    let entry = this.pendingInputBuffers.get(terminalId);
-    if (!entry) {
-      entry = { data: [], timer: null };
-      this.pendingInputBuffers.set(terminalId, entry);
-    }
-
-    entry.data.push(data);
-
-    if (flushImmediately) {
-      this.flushPendingInput(terminalId);
-      return;
-    }
-
-    if (entry.timer !== null) {
-      return;
-    }
-
-    entry.timer = setTimeout(() => {
-      entry!.timer = null;
-      this.flushPendingInput(terminalId);
-    }, 0);
-  }
-
-  private flushPendingInput(terminalId: string): void {
-    const entry = this.pendingInputBuffers.get(terminalId);
-    if (!entry || entry.data.length === 0) {
-      return;
-    }
-
-    if (entry.timer !== null) {
-      clearTimeout(entry.timer);
-      entry.timer = null;
-    }
-
-    const payload = entry.data.join('');
-    entry.data.length = 0;
-
-    const messageManager = this.coordinator.getMessageManager?.();
-    if (messageManager && typeof messageManager.sendInput === 'function') {
-      messageManager.sendInput(payload, terminalId);
-      return;
-    }
-
-    this.coordinator.postMessageToExtension({
-      command: 'input',
-      terminalId,
-      data: payload,
-      timestamp: Date.now(),
-    });
+    this.inputFlushingService.queueInputData(terminalId, data, flushImmediately);
   }
 
   /**
@@ -1279,14 +1227,8 @@ export class InputManager extends BaseManager implements IInputManager {
     }
     this.eventDebounceTimers.clear();
 
-    // Flush and clear pending input buffers
-    for (const entry of this.pendingInputBuffers.values()) {
-      if (entry.timer !== null) {
-        clearTimeout(entry.timer);
-      }
-      entry.data.length = 0;
-    }
-    this.pendingInputBuffers.clear();
+    // Dispose input flushing service (clears all pending buffers and timers)
+    this.inputFlushingService.dispose();
 
     // Dispose all terminal-specific xterm.js subscriptions
     for (const [terminalId, disposables] of this.terminalDisposables) {
