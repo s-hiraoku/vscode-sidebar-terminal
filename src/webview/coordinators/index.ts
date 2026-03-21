@@ -14,3 +14,7 @@ export {
   type ITerminalStateCoordinatorDependencies,
   type SystemStatusSnapshot,
 } from './TerminalStateCoordinator';
+export {
+  PanelLocationController,
+  type IPanelLocationControllerDependencies,
+} from './PanelLocationController';
