@@ -43,6 +43,7 @@ import { ResizeCoordinator } from '../coordinators/ResizeCoordinator';
 import { CliAgentCoordinator } from '../coordinators/CliAgentCoordinator';
 import { DebugCoordinator } from '../coordinators/DebugCoordinator';
 import { SettingsCoordinator } from '../coordinators/SettingsCoordinator';
+import { TerminalStateCoordinator } from '../coordinators/TerminalStateCoordinator';
 
 // Managers (リファクタリングで抽出)
 import { SessionRestoreManager, SessionData } from './SessionRestoreManager';
@@ -116,6 +117,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   private cliAgentCoordinator!: CliAgentCoordinator;
   private debugCoordinator!: DebugCoordinator;
   private settingsCoordinator!: SettingsCoordinator;
+  private terminalStateCoordinator!: TerminalStateCoordinator;
 
   // ========================================
   // 専門マネージャー
@@ -412,6 +414,34 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       settingsPanelSetVersionInfo: (version) => this.settingsPanel.setVersionInfo(version),
       settingsPanelShow: (settings) => this.settingsPanel.show(settings),
       getVersionInfo: () => this.versionInfo,
+    });
+
+    // TerminalStateCoordinator
+    this.terminalStateCoordinator = new TerminalStateCoordinator({
+      getCurrentTerminalState: () => this.currentTerminalState,
+      setCurrentTerminalState: (state) => {
+        this.currentTerminalState = state;
+      },
+      getHasProcessedInitialState: () => this.hasProcessedInitialState,
+      setHasProcessedInitialState: (value) => {
+        this.hasProcessedInitialState = value;
+      },
+      terminalOperationsUpdateState: (state) => this.terminalOperations.updateState(state),
+      hasPendingCreations: () => this.terminalOperations.hasPendingCreations(),
+      getPendingCreationsCount: () => this.terminalOperations.getPendingCreationsCount(),
+      processPendingCreationRequests: () => this.terminalOperations.processPendingCreationRequests(),
+      hasPendingDeletions: () => this.terminalOperations.hasPendingDeletions(),
+      getPendingDeletions: () => this.terminalOperations.getPendingDeletions(),
+      updateFromState: (state) => this.terminalStateDisplayManager.updateFromState(state),
+      updateCreationState: (state) =>
+        this.terminalStateDisplayManager.updateCreationState(state),
+      debugUpdateDisplay: (state, source) =>
+        this.debugCoordinator.updateDebugDisplay(state, source),
+      debugShowTerminalLimitMessage: (current, max) =>
+        this.debugCoordinator.showTerminalLimitMessage(current, max),
+      ensureSplitResizersOnInitialDisplay: (state, isInitial) =>
+        this.ensureSplitResizersOnInitialDisplay(state, isInitial),
+      postMessageToExtension: (msg) => this.postMessageToExtension(msg),
     });
 
     log('✅ Coordinators initialized');
@@ -1450,78 +1480,15 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   }
 
   public updateState(state: unknown): void {
-    try {
-      // Type-safe state validation
-      if (!state || typeof state !== 'object') {
-        log('⚠️ [STATE] Invalid state received:', state);
-        return;
-      }
-
-      // Type-safe state validation and casting
-      const stateObj = state as Record<string, unknown>;
-      if (
-        !Array.isArray(stateObj.terminals) ||
-        !Array.isArray(stateObj.availableSlots) ||
-        typeof stateObj.maxTerminals !== 'number'
-      ) {
-        log('⚠️ [STATE] Invalid state structure:', stateObj);
-        return;
-      }
-
-      const terminalState = state as TerminalState;
-      const isInitialStateSync = !this.hasProcessedInitialState;
-
-      log('🔄 [STATE] Processing state update:', {
-        terminals: terminalState.terminals.length,
-        availableSlots: terminalState.availableSlots,
-        maxTerminals: terminalState.maxTerminals,
-        activeTerminalId: terminalState.activeTerminalId,
-      });
-
-      // 🎯 [SYNC] Handle deletion synchronization FIRST (delegated to coordinator)
-      this.terminalOperations.updateState(terminalState);
-
-      // 1. Update internal state cache
-      this.currentTerminalState = {
-        terminals: terminalState.terminals,
-        activeTerminalId: terminalState.activeTerminalId,
-        maxTerminals: terminalState.maxTerminals,
-        availableSlots: terminalState.availableSlots,
-      };
-
-      // 2. Update UI state immediately
-      this.updateUIFromState(this.currentTerminalState);
-
-      // 2.5. 🔧 FIX: Ensure split resizers appear on initial split display
-      this.ensureSplitResizersOnInitialDisplay(terminalState, isInitialStateSync);
-
-      // 3. Update terminal creation availability
-      this.updateTerminalCreationState();
-
-      // 4. Debug visualization (if enabled)
-      this.updateDebugDisplay(this.currentTerminalState);
-
-      // 5. 🔄 [QUEUE] Process any pending creation requests (delegated to coordinator)
-      if (this.terminalOperations.hasPendingCreations()) {
-        log(
-          `🔄 [QUEUE] State updated, processing ${this.terminalOperations.getPendingCreationsCount()} pending requests`
-        );
-        setTimeout(() => this.terminalOperations.processPendingCreationRequests(), 50);
-      }
-
-      this.hasProcessedInitialState = true;
-      log('✅ [STATE] State update completed successfully');
-    } catch (error) {
-      log('❌ [STATE] Error processing state update:', error);
-    }
+    this.terminalStateCoordinator.updateState(state);
   }
 
   /**
    * Update UI elements based on current terminal state
-   * Delegates to TerminalStateDisplayManager
+   * Delegates to TerminalStateCoordinator
    */
   private updateUIFromState(state: TerminalState): void {
-    this.terminalStateDisplayManager.updateFromState(state);
+    this.terminalStateCoordinator.updateUIFromState(state);
   }
 
   /**
@@ -1583,33 +1550,26 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
   /**
    * Update terminal creation button state and messaging
-   * Delegates to TerminalStateDisplayManager
+   * Delegates to TerminalStateCoordinator
    */
   private updateTerminalCreationState(): void {
-    if (!this.currentTerminalState) {
-      return;
-    }
-    this.terminalStateDisplayManager.updateCreationState(this.currentTerminalState);
+    this.terminalStateCoordinator.updateTerminalCreationState();
   }
 
   /**
    * Update debug display with current state information
-   * Delegates to DebugCoordinator
+   * Delegates to TerminalStateCoordinator
    */
   private updateDebugDisplay(state: TerminalState): void {
-    this.debugCoordinator.updateDebugDisplay(state, 'state-update');
+    this.terminalStateCoordinator.updateDebugDisplay(state);
   }
 
   /**
    * Show terminal limit reached message
-   * Delegates to DebugCoordinator
+   * Delegates to TerminalStateCoordinator
    */
   private showTerminalLimitMessage(current: number, max: number): void {
-    if (this.currentTerminalState) {
-      this.terminalStateDisplayManager.updateCreationState(this.currentTerminalState);
-    } else {
-      this.debugCoordinator.showTerminalLimitMessage(current, max);
-    }
+    this.terminalStateCoordinator.showTerminalLimitMessage(current, max);
   }
 
   // Note: displayDebugInfo has been moved to DebugPanelManager
@@ -1659,21 +1619,18 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
   /**
    * Request latest state from Extension
+   * Delegates to TerminalStateCoordinator
    */
   public requestLatestState(): void {
-    log('📡 [STATE] Requesting latest state from Extension...');
-
-    this.postMessageToExtension({
-      command: 'requestState',
-      timestamp: Date.now(),
-    });
+    this.terminalStateCoordinator.requestLatestState();
   }
 
   /**
    * Get current cached state
+   * Delegates to TerminalStateCoordinator
    */
   public getCurrentCachedState(): TerminalState | null {
-    return this.currentTerminalState;
+    return this.terminalStateCoordinator.getCurrentCachedState();
   }
 
   /**
@@ -1741,12 +1698,10 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
   /**
    * Check if the system is in a safe state for operations
+   * Delegates to TerminalStateCoordinator
    */
   public isSystemReady(): boolean {
-    const hasCachedState = !!this.currentTerminalState;
-    const noPendingDeletions = !this.terminalOperations.hasPendingDeletions();
-    const noPendingCreations = !this.terminalOperations.hasPendingCreations();
-    return hasCachedState && noPendingDeletions && noPendingCreations;
+    return this.terminalStateCoordinator.isSystemReady();
   }
 
   /**
@@ -1774,16 +1729,10 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
   /**
    * Public API: Get system status for external monitoring
+   * Delegates to TerminalStateCoordinator
    */
   public getSystemStatus(): SystemStatusSnapshot {
-    return {
-      ready: this.isSystemReady(),
-      state: this.currentTerminalState,
-      pendingOperations: {
-        deletions: this.terminalOperations.getPendingDeletions(),
-        creations: this.terminalOperations.getPendingCreationsCount(),
-      },
-    };
+    return this.terminalStateCoordinator.getSystemStatus();
   }
 
   public ensureTerminalFocus(terminalId?: string): void {
