@@ -18,6 +18,7 @@ import { KeybindingService } from './input/services/KeybindingService';
 import { TerminalOperationsService } from './input/services/TerminalOperationsService';
 import { isMacPlatform } from '../utils/PlatformUtils';
 import { VSCodeCommandDispatcher } from './input/handlers/VSCodeCommandDispatcher';
+import { AltClickCoordinator } from './input/handlers/AltClickCoordinator';
 
 // ============================================================================
 // Constants
@@ -70,6 +71,7 @@ export class InputManager extends BaseManager implements IInputManager {
   private keybindingService: KeybindingService;
   private terminalOperationsService: TerminalOperationsService;
   private vsCodeCommandDispatcher: VSCodeCommandDispatcher;
+  private altClickCoordinator: AltClickCoordinator;
 
   constructor(coordinator: IManagerCoordinator) {
     super('InputManager', {
@@ -111,6 +113,13 @@ export class InputManager extends BaseManager implements IInputManager {
       handleTerminalClear: (manager) => this.handleTerminalClear(manager),
     });
 
+    // Initialize AltClickCoordinator
+    this.altClickCoordinator = new AltClickCoordinator({
+      logger: (message: string) => this.logger(message),
+      eventRegistry: this.eventRegistry,
+      stateManager: this.stateManager,
+    });
+
     // Initialize IME handler with new architecture
     this.imeHandler = new IMEHandler(
       this.eventDebounceTimers,
@@ -120,15 +129,6 @@ export class InputManager extends BaseManager implements IInputManager {
 
     this.logger('initialization', 'starting');
   }
-
-  // Alt+Click state management
-  private altClickState: AltClickState = {
-    isVSCodeAltClickEnabled: false,
-    isAltKeyPressed: false,
-  };
-
-  // Notification manager for Alt+Click feedback
-  private notificationManager: INotificationManager | null = null;
 
   // IME Handler for composition events
   private imeHandler: IIMEHandler;
@@ -154,8 +154,7 @@ export class InputManager extends BaseManager implements IInputManager {
    * Set the notification manager for Alt+Click feedback
    */
   public setNotificationManager(notificationManager: INotificationManager): void {
-    this.notificationManager = notificationManager;
-    this.logger('Notification manager set for Alt+Click feedback');
+    this.altClickCoordinator.setNotificationManager(notificationManager);
   }
 
   /**
@@ -205,36 +204,10 @@ export class InputManager extends BaseManager implements IInputManager {
 
   /**
    * Setup Alt key visual feedback for terminals
+   * Delegates to AltClickCoordinator
    */
   public setupAltKeyVisualFeedback(): void {
-    this.logger('Setting up Alt key visual feedback');
-
-    const keydownHandler = (event: KeyboardEvent): void => {
-      if (event.altKey && !this.altClickState.isAltKeyPressed) {
-        this.altClickState.isAltKeyPressed = true;
-        this.updateTerminalCursors();
-        this.logger('Alt key pressed - updating cursor styles');
-      }
-    };
-
-    const keyupHandler = (event: KeyboardEvent): void => {
-      if (!event.altKey && this.altClickState.isAltKeyPressed) {
-        this.altClickState.isAltKeyPressed = false;
-        this.updateTerminalCursors();
-        this.logger('Alt key released - resetting cursor styles');
-      }
-    };
-
-    // Register Alt key handlers using EventHandlerRegistry
-    this.eventRegistry.register(
-      'alt-key-down',
-      document,
-      'keydown',
-      keydownHandler as EventListener
-    );
-    this.eventRegistry.register('alt-key-up', document, 'keyup', keyupHandler as EventListener);
-
-    this.logger('Alt key visual feedback', 'completed');
+    this.altClickCoordinator.setupAltKeyVisualFeedback();
   }
 
   /**
@@ -672,16 +645,8 @@ export class InputManager extends BaseManager implements IInputManager {
         return;
       }
 
-      // Alt+Click handling
-      if (event.altKey && this.altClickState.isVSCodeAltClickEnabled) {
-        // VS Code standard Alt+Click behavior
-        this.logger(`Alt+Click on terminal ${terminalId} at (${event.clientX}, ${event.clientY})`);
-
-        // Show visual feedback
-        if (this.notificationManager) {
-          this.notificationManager.showAltClickFeedback(event.clientX, event.clientY);
-        }
-
+      // Alt+Click handling - delegate to AltClickCoordinator
+      if (event.altKey && this.altClickCoordinator.handleAltClick(event.clientX, event.clientY, terminalId)) {
         // Let xterm.js handle the actual cursor positioning
         // No need to prevent default - xterm.js will handle it
 
@@ -719,32 +684,18 @@ export class InputManager extends BaseManager implements IInputManager {
 
   /**
    * Update terminal cursor styles based on Alt key state
+   * Delegates to AltClickCoordinator
    */
   private updateTerminalCursors(): void {
-    const terminals = document.querySelectorAll('.terminal-container .xterm');
-    terminals.forEach((terminal) => {
-      const element = terminal as HTMLElement;
-      if (this.altClickState.isAltKeyPressed && this.altClickState.isVSCodeAltClickEnabled) {
-        element.style.cursor = 'default';
-      } else {
-        element.style.cursor = '';
-      }
-    });
+    this.altClickCoordinator.updateTerminalCursors();
   }
 
   /**
    * Check if VS Code Alt+Click is enabled based on settings
+   * Delegates to AltClickCoordinator
    */
   public isVSCodeAltClickEnabled(settings: PartialTerminalSettings): boolean {
-    const altClickMovesCursor = settings.altClickMovesCursor ?? false;
-    const multiCursorModifier = settings.multiCursorModifier ?? 'alt';
-
-    const isEnabled = altClickMovesCursor && multiCursorModifier === 'alt';
-    this.logger(
-      `VS Code Alt+Click enabled: ${isEnabled} (altClick: ${altClickMovesCursor}, modifier: ${multiCursorModifier})`
-    );
-
-    return isEnabled;
+    return this.altClickCoordinator.isVSCodeAltClickEnabled(settings);
   }
 
   /**
@@ -786,34 +737,18 @@ export class InputManager extends BaseManager implements IInputManager {
 
   /**
    * Update Alt+Click settings and state
-   */
-  /**
-   * Update Alt+Click settings and state using unified state management
+   * Delegates to AltClickCoordinator
    */
   public updateAltClickSettings(settings: PartialTerminalSettings): void {
-    const wasEnabled = this.altClickState.isVSCodeAltClickEnabled;
-    const isEnabled = this.isVSCodeAltClickEnabled(settings);
-
-    if (wasEnabled !== isEnabled) {
-      this.altClickState.isVSCodeAltClickEnabled = isEnabled;
-
-      // Update unified state manager
-      this.stateManager.updateAltClickState({
-        isVSCodeAltClickEnabled: isEnabled,
-      });
-
-      this.logger(`Alt+Click setting changed: ${wasEnabled} → ${isEnabled}`);
-
-      // Update cursor styles immediately
-      this.updateTerminalCursors();
-    }
+    this.altClickCoordinator.updateAltClickSettings(settings);
   }
 
   /**
    * Get current Alt+Click state
+   * Delegates to AltClickCoordinator
    */
   public getAltClickState(): AltClickState {
-    return { ...this.altClickState };
+    return this.altClickCoordinator.getAltClickState();
   }
 
   /**
@@ -1365,11 +1300,9 @@ export class InputManager extends BaseManager implements IInputManager {
     }
     this.terminalDisposables.clear();
 
-    // Reset Alt+Click state
-    this.altClickState = {
-      isVSCodeAltClickEnabled: false,
-      isAltKeyPressed: false,
-    };
+    // Dispose AltClickCoordinator
+    this.altClickCoordinator.dispose();
+
     this.agentInteractionMode = false;
     this.setPanelNavigationMode(false);
     if (this.panelNavigationIndicator) {
@@ -1391,9 +1324,6 @@ export class InputManager extends BaseManager implements IInputManager {
 
     // Note: KeybindingService and TerminalOperationsService don't need explicit dispose
     // as they don't hold any event listeners or timers
-
-    // Clear references
-    this.notificationManager = null;
 
     this.logger('disposal', 'completed');
   }
