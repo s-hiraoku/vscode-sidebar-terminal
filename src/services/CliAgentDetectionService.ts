@@ -326,6 +326,3 @@ export type { AgentType } from '../types/shared';
 export type { DetectionResult, TerminationResult } from './CliAgentDetectionEngine';
 export type { AgentState, AgentStatus, StateChangeEvent } from './CliAgentStateStore';
 
-// Legacy aliases for backward compatibility
-export { CliAgentPatternRegistry as CliAgentPatternDetector } from './CliAgentPatternRegistry';
-export { CliAgentStateStore as CliAgentStateManager } from './CliAgentStateStore';

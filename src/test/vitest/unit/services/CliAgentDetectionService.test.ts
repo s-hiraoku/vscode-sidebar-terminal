@@ -17,16 +17,13 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { CliAgentDetectionService } from '../../../../services/CliAgentDetectionService';
-import { CliAgentPatternDetector } from '../../../../services/CliAgentPatternDetector';
-import { CliAgentStateManager } from '../../../../services/CliAgentStateManager';
+import { CliAgentStateStore } from '../../../../services/CliAgentStateStore';
 import {
-  ICliAgentPatternDetector,
   ICliAgentStateManager,
 } from '../../../../interfaces/CliAgentService';
 
 describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
   let detectionService: CliAgentDetectionService;
-  let _patternDetector: ICliAgentPatternDetector;
   let stateManager: ICliAgentStateManager;
 
   // Test event tracking
@@ -41,8 +38,7 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
     statusChangeEvents = [];
 
     // Create fresh instances for each test
-    _patternDetector = new CliAgentPatternDetector();
-    stateManager = new CliAgentStateManager();
+    stateManager = new CliAgentStateStore();
 
     detectionService = new CliAgentDetectionService();
 
@@ -926,10 +922,7 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
       // ACT: Start heartbeat (this would normally run in background)
       detectionService.startHeartbeat();
 
-      // Simulate heartbeat validation
-      stateManager.validateConnectedAgentState();
-
-      // ASSERT: State should remain unchanged
+      // ASSERT: State should remain unchanged after heartbeat
       const finalState = detectionService.getAgentState('term1');
       expect(finalState).toEqual(initialState);
     });
