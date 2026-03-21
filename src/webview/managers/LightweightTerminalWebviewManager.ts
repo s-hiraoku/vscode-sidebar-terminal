@@ -42,6 +42,7 @@ import { TerminalOperationsCoordinator } from '../coordinators/TerminalOperation
 import { ResizeCoordinator } from '../coordinators/ResizeCoordinator';
 import { CliAgentCoordinator } from '../coordinators/CliAgentCoordinator';
 import { DebugCoordinator } from '../coordinators/DebugCoordinator';
+import { SettingsCoordinator } from '../coordinators/SettingsCoordinator';
 
 // Managers (リファクタリングで抽出)
 import { SessionRestoreManager, SessionData } from './SessionRestoreManager';
@@ -114,6 +115,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   private resizeCoordinator!: ResizeCoordinator;
   private cliAgentCoordinator!: CliAgentCoordinator;
   private debugCoordinator!: DebugCoordinator;
+  private settingsCoordinator!: SettingsCoordinator;
 
   // ========================================
   // 専門マネージャー
@@ -371,6 +373,45 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       getApiDiagnostics: () => this.webViewApiManager.getDiagnostics(),
       showWarning: (msg) => this.notificationManager?.showWarning(msg),
       notificationManager: this.notificationManager,
+    });
+
+    // SettingsCoordinator
+    this.settingsCoordinator = new SettingsCoordinator({
+      getCurrentSettings: () => this.currentSettings,
+      setCurrentSettings: (settings) => {
+        this.currentSettings = settings;
+      },
+      configManagerApplySettings: (settings, instances) =>
+        this.configManager.applySettings(settings, instances),
+      configManagerGetCurrentSettings: () =>
+        this.configManager?.getCurrentSettings?.() ?? this.currentSettings,
+      hasConfigManager: () => !!this.configManager,
+      getAllTerminalInstances: () => this.terminalLifecycleManager.getAllTerminalInstances(),
+      getAllTerminalContainers: () => this.terminalLifecycleManager.getAllTerminalContainers(),
+      getSplitTerminals: () => this.splitManager.getTerminals(),
+      setActiveBorderMode: (mode) => this.uiManager.setActiveBorderMode(mode),
+      setTerminalHeaderEnhancementsEnabled: (enabled) =>
+        this.uiManager.setTerminalHeaderEnhancementsEnabled(enabled),
+      updateTerminalBorders: (activeId, containers) =>
+        this.uiManager.updateTerminalBorders(activeId, containers),
+      updateSplitTerminalBorders: (activeId) =>
+        this.uiManager.updateSplitTerminalBorders(activeId),
+      applyAllVisualSettings: (terminal, settings) =>
+        this.uiManager.applyAllVisualSettings(terminal as any, settings),
+      fontSettingsUpdateSettings: (fontSettings, terminals) =>
+        this.fontSettingsService.updateSettings(fontSettings, terminals),
+      fontSettingsGetCurrentSettings: () => this.fontSettingsService.getCurrentSettings(),
+      loadState: () =>
+        this.webViewApiManager.loadState() as {
+          settings?: PartialTerminalSettings;
+          fontSettings?: WebViewFontSettings;
+        } | null,
+      saveState: (state) => this.webViewApiManager.saveState(state),
+      getActiveTerminalId: () => this.getActiveTerminalId(),
+      hasSettingsPanel: () => !!this.settingsPanel,
+      settingsPanelSetVersionInfo: (version) => this.settingsPanel.setVersionInfo(version),
+      settingsPanelShow: (settings) => this.settingsPanel.show(settings),
+      getVersionInfo: () => this.versionInfo,
     });
 
     log('✅ Coordinators initialized');
@@ -1284,178 +1325,42 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   }
 
   // Settings management
+  // Delegates to SettingsCoordinator
 
   public applySettings(settings: PartialTerminalSettings): void {
-    try {
-      const activeBorderMode =
-        settings.activeBorderMode !== undefined
-          ? settings.activeBorderMode
-          : (this.currentSettings.activeBorderMode ?? 'multipleOnly');
-
-      this.currentSettings = {
-        ...this.currentSettings,
-        ...settings,
-        activeBorderMode,
-      };
-
-      // 🔧 CRITICAL FIX: Update ConfigManager with new settings
-      // This ensures new terminals created later will get the correct theme
-      if (this.configManager) {
-        const instances = this.terminalLifecycleManager.getAllTerminalInstances();
-        this.configManager.applySettings(this.currentSettings, instances);
-        log(`⚙️ [SETTINGS] ConfigManager updated with theme: ${this.currentSettings.theme}`);
-      }
-
-      this.uiManager.setActiveBorderMode(activeBorderMode);
-      this.uiManager.setTerminalHeaderEnhancementsEnabled(
-        this.currentSettings.enableTerminalHeaderEnhancements !== false
-      );
-
-      const activeId = this.getActiveTerminalId();
-      if (activeId) {
-        const containers = this.terminalLifecycleManager.getAllTerminalContainers();
-        if (containers.size > 0) {
-          this.uiManager.updateTerminalBorders(activeId, containers);
-        } else {
-          this.uiManager.updateSplitTerminalBorders(activeId);
-        }
-      }
-
-      // Apply theme and visual settings to all terminals
-      const instances = this.terminalLifecycleManager.getAllTerminalInstances();
-      instances.forEach((terminalData, terminalId) => {
-        try {
-          this.uiManager.applyAllVisualSettings(terminalData.terminal, this.currentSettings);
-          log(`⚙️ [SETTINGS] Applied visual settings to terminal ${terminalId}`);
-        } catch (error) {
-          log(`❌ [SETTINGS] Error applying visual settings to terminal ${terminalId}:`, error);
-        }
-      });
-
-      log('⚙️ Settings applied:', settings);
-    } catch (error) {
-      log('❌ Error applying settings:', error);
-    }
+    this.settingsCoordinator.applySettings(settings);
   }
 
   /**
    * Update theme for all terminal instances
    * Called when VS Code theme changes and settings.theme is 'auto'
+   * Delegates to SettingsCoordinator
    */
   public updateAllTerminalThemes(theme: TerminalTheme): void {
-    try {
-      log(`🎨 [THEME] Updating all terminal themes`);
-
-      const terminals = this.splitManager.getTerminals();
-      let updatedCount = 0;
-
-      for (const [id, instance] of terminals) {
-        if (instance.terminal) {
-          // Update xterm.js theme options
-          instance.terminal.options.theme = theme;
-
-          // Update container background color
-          if (instance.container) {
-            instance.container.style.backgroundColor = theme.background;
-          }
-
-          // Update xterm.js internal elements for immediate visual update
-          const terminalElement = instance.container?.querySelector('.xterm') as HTMLElement;
-          if (terminalElement) {
-            terminalElement.style.backgroundColor = theme.background;
-
-            // Update viewport background
-            const viewport = terminalElement.querySelector('.xterm-viewport') as HTMLElement;
-            if (viewport) {
-              viewport.style.backgroundColor = theme.background;
-            }
-
-            // Update screen background
-            const screen = terminalElement.querySelector('.xterm-screen') as HTMLElement;
-            if (screen) {
-              screen.style.backgroundColor = theme.background;
-            }
-          }
-
-          updatedCount++;
-          log(`🎨 [THEME] Updated theme for terminal: ${id}`);
-        }
-      }
-
-      // Also update terminal-body and terminals-wrapper backgrounds
-      const terminalBody = document.getElementById('terminal-body');
-      if (terminalBody) {
-        terminalBody.style.backgroundColor = theme.background;
-      }
-
-      const terminalsWrapper = document.getElementById('terminals-wrapper');
-      if (terminalsWrapper) {
-        terminalsWrapper.style.backgroundColor = theme.background;
-      }
-
-      log(`🎨 [THEME] Theme updated for ${updatedCount} terminals`);
-    } catch (error) {
-      log('❌ Error updating terminal themes:', error);
-    }
+    this.settingsCoordinator.updateAllTerminalThemes(theme);
   }
 
   /**
    * Apply font settings to all terminals
-   *
-   * Delegates to FontSettingsService for single source of truth management.
-   * This method is the entry point for font settings updates from Extension.
+   * Delegates to SettingsCoordinator
    */
   public applyFontSettings(fontSettings: WebViewFontSettings): void {
-    try {
-      // Delegate to FontSettingsService (single source of truth)
-      const terminals = this.splitManager.getTerminals();
-      this.fontSettingsService.updateSettings(fontSettings, terminals);
-    } catch (error) {
-      log('❌ Error applying font settings:', error);
-    }
+    this.settingsCoordinator.applyFontSettings(fontSettings);
   }
 
   /**
-   * Get current font settings from FontSettingsService
+   * Get current font settings from SettingsCoordinator
    */
   public getCurrentFontSettings(): WebViewFontSettings {
-    return this.fontSettingsService.getCurrentSettings();
+    return this.settingsCoordinator.getCurrentFontSettings();
   }
 
   public loadSettings(): void {
-    try {
-      const savedState = this.webViewApiManager.loadState() as {
-        settings?: PartialTerminalSettings;
-        fontSettings?: WebViewFontSettings;
-      } | null;
-
-      if (savedState?.settings) {
-        this.applySettings(savedState.settings);
-      }
-
-      if (savedState?.fontSettings) {
-        this.applyFontSettings(savedState.fontSettings);
-      }
-
-      log('📂 Settings loaded from WebView state');
-    } catch (error) {
-      log('❌ Error loading settings:', error);
-    }
+    this.settingsCoordinator.loadSettings();
   }
 
   public saveSettings(): void {
-    try {
-      const state = {
-        settings: this.currentSettings,
-        fontSettings: this.fontSettingsService.getCurrentSettings(),
-        timestamp: Date.now(),
-      };
-
-      this.webViewApiManager.saveState(state);
-      log('💾 Settings saved to WebView state');
-    } catch (error) {
-      log('❌ Error saving settings:', error);
-    }
+    this.settingsCoordinator.saveSettings();
   }
 
   // Initialization
@@ -1926,23 +1831,12 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     }
   }
 
+  /**
+   * Open settings panel
+   * Delegates to SettingsCoordinator
+   */
   public openSettings(): void {
-    try {
-      if (!this.settingsPanel) {
-        log('⚙️ Settings panel not initialized');
-        return;
-      }
-
-      const baseSettings = this.configManager?.getCurrentSettings?.() ?? this.currentSettings;
-      const panelSettings = { ...baseSettings, ...this.currentSettings };
-
-      // バージョン情報を設定
-      this.settingsPanel.setVersionInfo(this.versionInfo);
-      this.settingsPanel.show(panelSettings);
-      log('⚙️ Opening settings panel');
-    } catch (error) {
-      log('❌ Error opening settings panel:', error);
-    }
+    this.settingsCoordinator.openSettings();
   }
 
   // Statistics and diagnostics
