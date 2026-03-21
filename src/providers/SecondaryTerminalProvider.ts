@@ -7,7 +7,7 @@ import { TerminalErrorHandler } from '../utils/feedback';
 import { provider as log } from '../utils/logger';
 import { PersistenceMessageHandler } from '../handlers/PersistenceMessageHandler';
 import { TerminalInitializationCoordinator } from './TerminalInitializationCoordinator';
-import { hasSettings } from '../types/type-guards';
+// hasSettings moved to SettingsMessageHandler
 import { WebViewHtmlGenerationService } from '../services/webview/WebViewHtmlGenerationService';
 import { TelemetryService } from '../services/TelemetryService';
 
@@ -39,6 +39,8 @@ import { ProviderSessionService } from './services/ProviderSessionService';
 import { WatchdogCoordinator } from './services/WatchdogCoordinator';
 import { ScrollbackMessageHandler } from './handlers/ScrollbackMessageHandler';
 import { DebugMessageHandler } from './handlers/DebugMessageHandler';
+import { SettingsMessageHandler } from './handlers/SettingsMessageHandler';
+import { PanelLocationHandler } from './handlers/PanelLocationHandler';
 
 export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vscode.Disposable {
   public static readonly viewType = 'secondaryTerminal';
@@ -65,9 +67,6 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private _webviewMessageListenerDisposable: vscode.Disposable | null = null;
   private _webviewMessageListenerView: vscode.WebviewView | null = null;
   private _pendingPanelMoveReinit = false;
-  private _hasDetectedPanelLocation = false;
-  private _panelLocationDetectionPending = false;
-  private _panelLocationDetectionTimeout: NodeJS.Timeout | null = null;
 
   // Phase 8 services (typed properly)
   private _decorationsService?: import('../services/TerminalDecorationsService').TerminalDecorationsService;
@@ -99,6 +98,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private readonly _watchdogCoordinator: WatchdogCoordinator;
   private readonly _scrollbackMessageHandler: ScrollbackMessageHandler;
   private readonly _debugMessageHandler: DebugMessageHandler;
+  private readonly _settingsMessageHandler: SettingsMessageHandler;
+  private readonly _panelLocationHandler: PanelLocationHandler;
   private readonly _pendingInitRetries = new Map<string, number>();
   private _pendingMessages: WebviewMessage[] = [];
 
@@ -113,8 +114,6 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     maxAttempts: 1,
     backoffFactor: 1,
   };
-
-  private static readonly PANEL_LOCATION_RESPONSE_TIMEOUT_MS = 2000;
 
   constructor(
     private readonly _extensionContext: vscode.ExtensionContext,
@@ -228,6 +227,16 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
           return false;
         }
       },
+    });
+
+    this._settingsMessageHandler = new SettingsMessageHandler({
+      getSettingsService: () => this._settingsService,
+      sendMessage: (msg) => this._sendMessage(msg),
+    });
+
+    this._panelLocationHandler = new PanelLocationHandler({
+      panelLocationService: this._panelLocationService,
+      sendMessage: (msg) => this._sendMessage(msg),
     });
 
     log('🎨 [PROVIDER] NEW Facade pattern services initialized (Issue #214)');
@@ -454,24 +463,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     // Note: secondaryTerminalFocus context is NOT set here. Visibility does not imply DOM focus.
     // The WebView's terminalFocused/terminalBlurred messages are the sole source of truth.
 
-    // Guard: Skip panel location detection on simple visibility restore.
-    // Only detect on first visibility to prevent unnecessary setContext calls
-    // that can cancel VS Code's secondary sidebar maximize state.
-    if (this._hasDetectedPanelLocation) {
-      log('⏭️ [VISIBILITY] Panel location already detected, skipping redundant detection');
-      return;
-    }
-
-    // Set flag BEFORE setTimeout to prevent race condition:
-    // Multiple visibility events within 200ms would otherwise bypass the guard
-    // and queue multiple detection timers, each triggering setContext.
-    this._hasDetectedPanelLocation = true;
-
-    // First visibility: trigger detection after layout stabilizes
-    setTimeout(() => {
-      log('📍 [VISIBILITY] Requesting initial panel location detection');
-      this._requestPanelLocationDetection();
-    }, 200);
+    this._panelLocationHandler.handleWebviewVisible();
   }
 
   private _handleWebviewHidden(): void {
@@ -565,15 +557,16 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         category: 'ui' as const,
       },
 
-      // Settings handlers
+      // Settings handlers (delegated to SettingsMessageHandler)
       {
         command: 'getSettings',
-        handler: async () => await this._handleGetSettings(),
+        handler: async () => await this._settingsMessageHandler.handleGetSettings(),
         category: 'settings' as const,
       },
       {
         command: 'updateSettings',
-        handler: async (msg: WebviewMessage) => await this._handleUpdateSettings(msg),
+        handler: async (msg: WebviewMessage) =>
+          await this._settingsMessageHandler.handleUpdateSettings(msg),
         category: 'settings' as const,
       },
 
@@ -992,22 +985,10 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   private async _handleGetSettings(): Promise<void> {
-    // Use SettingsSyncService for settings
-    const settings = this._settingsService.getCurrentSettings();
-    const fontSettings = this._settingsService.getCurrentFontSettings();
-    log(`📤 [SETTINGS] _handleGetSettings sending (theme: ${settings.theme})`);
+    // Delegate settings + font settings to SettingsMessageHandler
+    await this._settingsMessageHandler.handleGetSettings();
 
-    await this._sendMessage({
-      command: 'settingsResponse',
-      settings,
-    });
-
-    await this._sendMessage({
-      command: 'fontSettingsUpdate',
-      fontSettings,
-    });
-
-    // Send initial panel location
+    // Send initial panel location (provider-specific, not part of settings handler)
     const view = this._lifecycleManager.getView();
     if (view) {
       const panelLocation = this._getCurrentPanelLocation();
@@ -1129,71 +1110,19 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   private async _handleUpdateSettings(message: WebviewMessage): Promise<void> {
-    if (!hasSettings(message)) {
-      log('⚠️ [PROVIDER] Update settings message missing settings');
-      return;
-    }
-
-    log('⚙️ [PROVIDER] Updating settings from WebView');
-    await this._settingsService.updateSettings(message.settings);
+    await this._settingsMessageHandler.handleUpdateSettings(message);
   }
 
   private async _handleReportPanelLocation(message: WebviewMessage): Promise<void> {
-    // Accept panel location reports only as responses to explicit detection requests.
-    // Autonomous reports can trigger setContext and cause VS Code to recalculate layout,
-    // which cancels the secondary sidebar's maximized state.
-    if (!this._panelLocationDetectionPending) {
-      log('⏭️ [PROVIDER] Ignoring unsolicited panel location report');
-      return;
-    }
-
-    const reportedLocation = message.location as PanelLocation;
-    if (!reportedLocation) {
-      log('⚠️ [PROVIDER] Panel location report missing location');
-      return;
-    }
-
-    this._clearPanelLocationDetectionPending('panel location report received');
-
-    log(`📍 [PROVIDER] WebView reports panel location: ${reportedLocation}`);
-    await this._panelLocationService.handlePanelLocationReport(reportedLocation);
+    await this._panelLocationHandler.handleReportPanelLocation(message);
   }
 
   private _requestPanelLocationDetection(): void {
-    const manualPanelLocation = vscode.workspace
-      .getConfiguration('secondaryTerminal')
-      .get<'sidebar' | 'panel' | 'auto'>('panelLocation', 'auto');
-
-    if (manualPanelLocation !== 'auto') {
-      log(
-        `📍 [PROVIDER] Manual panelLocation=${manualPanelLocation}; skipping panel location detection request`
-      );
-      this._clearPanelLocationDetectionPending('manual panelLocation mode');
-      return;
-    }
-
-    this._panelLocationDetectionPending = true;
-    if (this._panelLocationDetectionTimeout) {
-      clearTimeout(this._panelLocationDetectionTimeout);
-    }
-    this._panelLocationDetectionTimeout = setTimeout(() => {
-      this._clearPanelLocationDetectionPending('panel location response timeout');
-    }, SecondaryTerminalProvider.PANEL_LOCATION_RESPONSE_TIMEOUT_MS);
-
-    this._panelLocationService.requestPanelLocationDetection();
+    this._panelLocationHandler.requestPanelLocationDetection();
   }
 
   private _clearPanelLocationDetectionPending(reason: string): void {
-    if (!this._panelLocationDetectionPending && !this._panelLocationDetectionTimeout) {
-      return;
-    }
-
-    log(`📍 [PROVIDER] Clearing panel location detection pending state (${reason})`);
-    this._panelLocationDetectionPending = false;
-    if (this._panelLocationDetectionTimeout) {
-      clearTimeout(this._panelLocationDetectionTimeout);
-      this._panelLocationDetectionTimeout = null;
-    }
+    this._panelLocationHandler.clearPanelLocationDetectionPending(reason);
   }
 
   private _determineSplitDirection(): SplitDirection {
@@ -1207,103 +1136,31 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private _setupPanelLocationChangeListener(_webviewView: vscode.WebviewView): void {
     log('🔧 [PROVIDER] Setting up panel location change listener...');
 
-    // Use onDidChangeConfiguration instead of non-existent onDidChangePanelLocation
-    const disposable = vscode.workspace.onDidChangeConfiguration((event) => {
-      // Check if panelLocation setting changed
-      if (event.affectsConfiguration('secondaryTerminal.panelLocation')) {
-        log('📍 [PROVIDER] Panel location configuration changed');
+    // Panel location config changes delegated to PanelLocationHandler
+    const panelDisposable = this._panelLocationHandler.setupPanelLocationChangeListener();
+    this._cleanupService.addDisposable(panelDisposable);
 
-        // Get the new location from configuration
-        const newLocation = vscode.workspace
-          .getConfiguration('secondaryTerminal')
-          .get<PanelLocation>('panelLocation', 'sidebar');
-
-        log(`📍 [PROVIDER] New panel location: ${newLocation}`);
-        this._panelLocationService.handlePanelLocationReport(newLocation).catch((error) => {
-          log(`❌ [PROVIDER] Failed to handle panel location change: ${error}`);
-        });
-      }
-
-      // Handle settings changes that affect WebView (e.g., activeBorderMode)
-      if (this._isSettingsChangeAffectingWebView(event)) {
+    // Settings and font changes remain as a separate listener
+    const settingsDisposable = vscode.workspace.onDidChangeConfiguration((event) => {
+      // Handle settings changes that affect WebView (delegated to SettingsMessageHandler)
+      if (this._settingsMessageHandler.isSettingsChangeAffectingWebView(event)) {
         log('⚙️ [PROVIDER] Settings changed, sending updated settings to WebView...');
-        void this._sendSettingsUpdateToWebView();
+        void this._settingsMessageHandler.sendSettingsUpdateToWebView();
       }
 
-      // Handle font settings changes
-      if (this._isFontSettingsChange(event)) {
+      // Handle font settings changes (delegated to SettingsMessageHandler)
+      if (this._settingsMessageHandler.isFontSettingsChange(event)) {
         log('🎨 [PROVIDER] Font settings changed, sending update to WebView...');
-        void this._sendFontSettingsUpdateToWebView();
+        void this._settingsMessageHandler.sendFontSettingsUpdateToWebView();
       }
     });
 
-    this._cleanupService.addDisposable(disposable);
+    this._cleanupService.addDisposable(settingsDisposable);
     log('✅ [PROVIDER] Panel location change listener registered');
   }
 
-  /**
-   * Check if configuration change affects WebView settings
-   */
-  private _isSettingsChangeAffectingWebView(event: vscode.ConfigurationChangeEvent): boolean {
-    return (
-      event.affectsConfiguration('secondaryTerminal.activeBorderMode') ||
-      event.affectsConfiguration('secondaryTerminal.theme') ||
-      event.affectsConfiguration('secondaryTerminal.cursorBlink') ||
-      event.affectsConfiguration('secondaryTerminal.enableCliAgentIntegration') ||
-      event.affectsConfiguration('secondaryTerminal.enableTerminalHeaderEnhancements') ||
-      event.affectsConfiguration('secondaryTerminal.dynamicSplitDirection') ||
-      event.affectsConfiguration('secondaryTerminal.panelLocation') ||
-      event.affectsConfiguration('editor.multiCursorModifier') ||
-      event.affectsConfiguration('terminal.integrated.altClickMovesCursor') ||
-      event.affectsConfiguration('secondaryTerminal.altClickMovesCursor')
-    );
-  }
-
-  /**
-   * Check if configuration change affects font settings
-   */
-  private _isFontSettingsChange(event: vscode.ConfigurationChangeEvent): boolean {
-    return (
-      event.affectsConfiguration('secondaryTerminal.fontFamily') ||
-      event.affectsConfiguration('secondaryTerminal.fontSize') ||
-      event.affectsConfiguration('secondaryTerminal.fontWeight') ||
-      event.affectsConfiguration('secondaryTerminal.fontWeightBold') ||
-      event.affectsConfiguration('secondaryTerminal.lineHeight') ||
-      event.affectsConfiguration('secondaryTerminal.letterSpacing') ||
-      event.affectsConfiguration('terminal.integrated.fontSize') ||
-      event.affectsConfiguration('terminal.integrated.fontFamily') ||
-      event.affectsConfiguration('terminal.integrated.fontWeight') ||
-      event.affectsConfiguration('terminal.integrated.fontWeightBold') ||
-      event.affectsConfiguration('terminal.integrated.lineHeight') ||
-      event.affectsConfiguration('terminal.integrated.letterSpacing') ||
-      event.affectsConfiguration('editor.fontSize') ||
-      event.affectsConfiguration('editor.fontFamily')
-    );
-  }
-
-  /**
-   * Send updated settings to WebView
-   */
-  private async _sendSettingsUpdateToWebView(): Promise<void> {
-    const settings = this._settingsService.getCurrentSettings();
-    log(`📤 [PROVIDER] Sending settings update to WebView: activeBorderMode=${settings.activeBorderMode}`);
-    await this._sendMessage({
-      command: 'settingsResponse',
-      settings,
-    });
-  }
-
-  /**
-   * Send updated font settings to WebView
-   */
-  private async _sendFontSettingsUpdateToWebView(): Promise<void> {
-    const fontSettings = this._settingsService.getCurrentFontSettings();
-    log('📤 [PROVIDER] Sending font settings update to WebView');
-    await this._sendMessage({
-      command: 'fontSettingsUpdate',
-      fontSettings,
-    });
-  }
+  // Settings change detection, WebView sync, and font settings sync
+  // are delegated to SettingsMessageHandler
 
   public splitTerminal(direction?: SplitDirection): void {
     try {
@@ -1671,8 +1528,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
     // Reset state
     this._isInitialized = false;
-    this._hasDetectedPanelLocation = false;
-    this._clearPanelLocationDetectionPending('provider disposed');
+    this._panelLocationHandler.resetDetectionState();
+    this._panelLocationHandler.dispose();
 
     log('✅ [DEBUG] SecondaryTerminalProvider disposed');
   }
