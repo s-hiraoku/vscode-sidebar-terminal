@@ -107,6 +107,8 @@ export class CliAgentStateStore {
       terminalName,
       preserveScrollPosition: true,
       isDisplayingChoices: false,
+      isWaitingForInput: false,
+      waitingType: undefined,
     });
 
     // Remove from disconnected list
@@ -136,6 +138,8 @@ export class CliAgentStateStore {
         agentType: previousType,
         preserveScrollPosition: false,
         isDisplayingChoices: false,
+        isWaitingForInput: false,
+        waitingType: undefined,
       });
 
       this.notifyObservers({
@@ -172,6 +176,8 @@ export class CliAgentStateStore {
         agentType: null,
         preserveScrollPosition: false,
         isDisplayingChoices: false,
+        isWaitingForInput: false,
+        waitingType: undefined,
       });
 
       this.notifyObservers({

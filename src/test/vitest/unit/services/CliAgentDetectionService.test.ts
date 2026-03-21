@@ -934,4 +934,59 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
       expect(finalState).toEqual(initialState);
     });
   });
+
+  describe('🧭 Refactored detection pipeline tests', () => {
+    it('accumulates input chunks until Enter submits the command', () => {
+      detectionService.handleInputChunk('term1', 'g');
+      detectionService.handleInputChunk('term1', 'e');
+      detectionService.handleInputChunk('term1', 'm');
+      detectionService.handleInputChunk('term1', 'i');
+      detectionService.handleInputChunk('term1', 'n');
+      detectionService.handleInputChunk('term1', 'i');
+
+      expect(detectionService.getAgentState('term1')).toEqual({
+        status: 'none',
+        agentType: null,
+      });
+
+      const result = detectionService.handleInputChunk('term1', '\r');
+
+      expect(result).toMatchObject({
+        type: 'gemini',
+        source: 'input',
+      });
+      expect(detectionService.getAgentState('term1')).toEqual({
+        status: 'connected',
+        agentType: 'gemini',
+      });
+    });
+
+    it('detects waiting in the same output flush that fallback-connects an agent', () => {
+      const waitingEvents: Array<{
+        terminalId: string;
+        isWaiting: boolean;
+        waitingType?: 'input' | 'approval';
+      }> = [];
+
+      detectionService.onAgentWaitingChange((event) => {
+        waitingEvents.push(event);
+      });
+
+      const result = detectionService.handleOutputChunk(
+        'term1',
+        'Gemini CLI v0.1.0\r\ngemini > '
+      );
+
+      expect(result?.detection).toMatchObject({
+        type: 'gemini',
+        source: 'output',
+      });
+      expect(result?.state.status).toBe('connected');
+      expect(waitingEvents).toContainEqual({
+        terminalId: 'term1',
+        isWaiting: true,
+        waitingType: 'input',
+      });
+    });
+  });
 });
