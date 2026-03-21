@@ -37,6 +37,8 @@ import { TerminalCommandHandlers } from './services/TerminalCommandHandlers';
 import { TerminalKillService } from './services/TerminalKillService';
 import { ProviderSessionService } from './services/ProviderSessionService';
 import { WatchdogCoordinator } from './services/WatchdogCoordinator';
+import { ScrollbackMessageHandler } from './handlers/ScrollbackMessageHandler';
+import { DebugMessageHandler } from './handlers/DebugMessageHandler';
 
 export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vscode.Disposable {
   public static readonly viewType = 'secondaryTerminal';
@@ -95,6 +97,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private readonly _killService: TerminalKillService;
   private readonly _sessionService: ProviderSessionService;
   private readonly _watchdogCoordinator: WatchdogCoordinator;
+  private readonly _scrollbackMessageHandler: ScrollbackMessageHandler;
+  private readonly _debugMessageHandler: DebugMessageHandler;
   private readonly _pendingInitRetries = new Map<string, number>();
   private _pendingMessages: WebviewMessage[] = [];
 
@@ -209,6 +213,22 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       SecondaryTerminalProvider.ACK_WATCHDOG_OPTIONS,
       SecondaryTerminalProvider.PROMPT_WATCHDOG_OPTIONS
     );
+
+    // Initialize extracted message handlers (Phase 3A refactoring)
+    this._scrollbackMessageHandler = new ScrollbackMessageHandler({
+      getExtensionPersistenceService: () => this._extensionPersistenceService ?? null,
+    });
+
+    this._debugMessageHandler = new DebugMessageHandler({
+      isDebugEnabled: () => {
+        try {
+          const { isDebugEnabled } = require('../utils/logger');
+          return isDebugEnabled ? isDebugEnabled() : false;
+        } catch {
+          return false;
+        }
+      },
+    });
 
     log('🎨 [PROVIDER] NEW Facade pattern services initialized (Issue #214)');
     log('✅ [PROVIDER] SecondaryTerminalProvider constructed with all services');
@@ -742,39 +762,43 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       },
       {
         command: 'pushScrollbackData',
-        handler: async (msg: WebviewMessage) => await this._handlePushScrollbackData(msg),
+        handler: async (msg: WebviewMessage) =>
+          await this._scrollbackMessageHandler.handlePushScrollbackData(msg),
         category: 'persistence' as const,
       },
       {
         command: 'scrollbackDataCollected',
-        handler: async (msg: WebviewMessage) => await this._handleScrollbackDataCollected(msg),
+        handler: async (msg: WebviewMessage) =>
+          await this._scrollbackMessageHandler.handleScrollbackDataCollected(msg),
         category: 'persistence' as const,
       },
       {
         command: 'scrollbackExtracted',
-        handler: async (msg: WebviewMessage) => await this._handleScrollbackDataCollected(msg),
+        handler: async (msg: WebviewMessage) =>
+          await this._scrollbackMessageHandler.handleScrollbackDataCollected(msg),
         category: 'persistence' as const,
       },
       {
         command: 'requestScrollbackRefresh',
-        handler: async (msg: WebviewMessage) => await this._handleScrollbackRefreshRequest(msg),
+        handler: async (msg: WebviewMessage) =>
+          await this._scrollbackMessageHandler.handleScrollbackRefreshRequest(msg),
         category: 'persistence' as const,
       },
 
       // Debug handlers
       {
         command: 'htmlScriptTest',
-        handler: (msg: WebviewMessage) => this._handleHtmlScriptTest(msg),
+        handler: (msg: WebviewMessage) => this._debugMessageHandler.handleHtmlScriptTest(msg),
         category: 'debug' as const,
       },
       {
         command: 'timeoutTest',
-        handler: (msg: WebviewMessage) => this._handleTimeoutTest(msg),
+        handler: (msg: WebviewMessage) => this._debugMessageHandler.handleTimeoutTest(msg),
         category: 'debug' as const,
       },
       {
         command: 'test',
-        handler: (msg: WebviewMessage) => this._handleDebugTest(msg),
+        handler: (msg: WebviewMessage) => this._debugMessageHandler.handleDebugTest(msg),
         category: 'debug' as const,
       },
     ];
@@ -796,74 +820,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     log('✅ [PROVIDER] Message handlers initialized via MessageRoutingFacade');
   }
 
-  private async _handlePushScrollbackData(message: WebviewMessage): Promise<void> {
-    if (!this._extensionPersistenceService) {
-      log('⚠️ [PROVIDER] Received pushScrollbackData but persistence service is unavailable');
-      return;
-    }
-
-    const handler = (this._extensionPersistenceService as any).handlePushedScrollbackData;
-    if (typeof handler !== 'function') {
-      log('⚠️ [PROVIDER] Persistence service does not support pushScrollbackData');
-      return;
-    }
-
-    try {
-      handler.call(this._extensionPersistenceService, message);
-    } catch (error) {
-      log('❌ [PROVIDER] Failed to process pushScrollbackData message:', error);
-    }
-  }
-
-  private async _handleScrollbackDataCollected(message: WebviewMessage): Promise<void> {
-    const scrollbackData = (message as any)?.scrollbackData ?? (message as any)?.scrollbackContent;
-    const requestId = (message as any)?.requestId;
-    const terminalId = (message as any)?.terminalId;
-
-    if (!Array.isArray(scrollbackData)) {
-      log('⚠️ [PROVIDER] scrollbackDataCollected missing scrollbackData array');
-      return;
-    }
-
-    // Forward to persistence service for handling (supports both cache update and pending request resolution)
-    if (this._extensionPersistenceService) {
-      const handler = (this._extensionPersistenceService as any).handleScrollbackDataCollected;
-      if (typeof handler === 'function') {
-        handler.call(this._extensionPersistenceService, { terminalId, requestId, scrollbackData });
-        log(
-          `✅ [PROVIDER] scrollbackDataCollected forwarded to persistence service (requestId=${requestId || 'none'})`
-        );
-        return;
-      }
-    }
-
-    // Fallback: treat as pushScrollbackData for cache update
-    (message as any).command = 'pushScrollbackData';
-    await this._handlePushScrollbackData(message);
-  }
-
-  /**
-   * 🔧 FIX: Handle scrollback refresh request from WebView after sleep/wake
-   */
-  private async _handleScrollbackRefreshRequest(message: WebviewMessage): Promise<void> {
-    if (!this._extensionPersistenceService) {
-      log('⚠️ [PROVIDER] Received requestScrollbackRefresh but persistence service is unavailable');
-      return;
-    }
-
-    const handler = (this._extensionPersistenceService as any).handleScrollbackRefreshRequest;
-    if (typeof handler !== 'function') {
-      log('⚠️ [PROVIDER] Persistence service does not support handleScrollbackRefreshRequest');
-      return;
-    }
-
-    try {
-      await handler.call(this._extensionPersistenceService, message);
-      log('✅ [PROVIDER] Scrollback refresh request handled');
-    } catch (error) {
-      log('❌ [PROVIDER] Failed to process scrollback refresh request:', error);
-    }
-  }
+  // Scrollback message handlers delegated to ScrollbackMessageHandler
 
   private async _handleTerminalReady(message: WebviewMessage): Promise<void> {
     const terminalId = message.terminalId as string;
@@ -1064,32 +1021,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     }
   }
 
-  private _handleHtmlScriptTest(message: WebviewMessage): void {
-    log('🔥 [DEBUG] ========== HTML INLINE SCRIPT TEST MESSAGE RECEIVED ==========');
-    log('🔥 [DEBUG] HTML script communication is working!');
-    log('🔥 [DEBUG] Message content:', message);
-  }
-
-  private _handleTimeoutTest(message: WebviewMessage): void {
-    log('🔥 [DEBUG] ========== HTML TIMEOUT TEST MESSAGE RECEIVED ==========');
-    log('🔥 [DEBUG] Timeout test communication is working!');
-    log('🔥 [DEBUG] Message content:', message);
-  }
-
-  private _handleDebugTest(message: WebviewMessage): void {
-    if ((message as WebviewMessage & { type?: string }).type === 'initComplete') {
-      log('🎆 [TRACE] ===============================');
-      log('🎆 [TRACE] WEBVIEW CONFIRMS INIT COMPLETE!');
-      try {
-        const { isDebugEnabled } = require('../utils/logger');
-        if (isDebugEnabled && isDebugEnabled()) {
-          log('🎆 [TRACE] Message data:', message);
-        }
-      } catch {
-        // Silently ignore logger loading errors - debug logging is non-critical
-      }
-    }
-  }
+  // Debug message handlers delegated to DebugMessageHandler
 
   /**
    * Fallback handler for critical messages that failed normal routing.
