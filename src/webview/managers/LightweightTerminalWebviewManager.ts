@@ -310,6 +310,24 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     this.resizeCoordinator.initialize();
     this.resizeCoordinator.setupPanelLocationListener();
 
+    // CliAgentCoordinator
+    this.cliAgentCoordinator = new CliAgentCoordinator({
+      getAgentState: (id) => this.cliAgentStateManager.getAgentState(id),
+      setAgentConnected: (id, agentType, terminalName) =>
+        this.cliAgentStateManager.setAgentConnected(id, agentType, terminalName),
+      setAgentDisconnected: (id) => this.cliAgentStateManager.setAgentDisconnected(id),
+      setAgentState: (id, state) => this.cliAgentStateManager.setAgentState(id, state),
+      removeTerminalState: (id) => this.cliAgentStateManager.removeTerminalState(id),
+      detectAgentActivity: (output, id) => this.cliAgentStateManager.detectAgentActivity(output, id),
+      getActiveTerminalId: () => this.getActiveTerminalId(),
+      getAllTerminalInstances: () => this.getAllTerminalInstances(),
+      postMessageToExtension: (msg) => this.postMessageToExtension(msg),
+      updateCliAgentStatusUI: (id, status, agentType) =>
+        this.uiManager.updateCliAgentStatusByTerminalId(id, status, agentType),
+      getAgentStats: () => this.cliAgentStateManager.getAgentStats(),
+      disposeStateManager: () => this.cliAgentStateManager.dispose(),
+    });
+
     // TerminalOperationsCoordinator
     this.terminalOperations = new TerminalOperationsCoordinator({
       getActiveTerminalId: () => this.getActiveTerminalId(),
@@ -338,22 +356,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       setActiveTab: (id) => this.terminalTabManager?.setActiveTab(id),
       removeTab: (id) => this.terminalTabManager?.removeTab(id),
       saveSession: () => this.webViewPersistenceService?.saveSession() ?? Promise.resolve(false),
-      removeCliAgentState: (id) => this.cliAgentStateManager.removeTerminalState(id),
-    });
-
-    // CliAgentCoordinator
-    this.cliAgentCoordinator = new CliAgentCoordinator({
-      getAgentState: (id) => this.cliAgentStateManager.getAgentState(id),
-      setAgentConnected: (id, agentType, terminalName) =>
-        this.cliAgentStateManager.setAgentConnected(id, agentType, terminalName),
-      setAgentDisconnected: (id) => this.cliAgentStateManager.setAgentDisconnected(id),
-      setAgentState: (id, state) => this.cliAgentStateManager.setAgentState(id, state),
-      removeTerminalState: (id) => this.cliAgentStateManager.removeTerminalState(id),
-      getActiveTerminalId: () => this.getActiveTerminalId(),
-      getAllTerminalInstances: () => this.getAllTerminalInstances(),
-      postMessageToExtension: (msg) => this.postMessageToExtension(msg),
-      updateCliAgentStatusUI: (id, status, agentType) =>
-        this.uiManager.updateCliAgentStatusByTerminalId(id, status, agentType),
+      removeCliAgentState: (id) => this.cliAgentCoordinator.removeTerminalState(id),
     });
 
     // DebugCoordinator
@@ -362,7 +365,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       getSystemStatus: () => this.getSystemStatus(),
       requestLatestState: () => this.requestLatestState(),
       getTerminalStats: () => this.terminalLifecycleManager.getTerminalStats(),
-      getAgentStats: () => this.cliAgentStateManager.getAgentStats(),
+      getAgentStats: () => this.cliAgentCoordinator.getAgentStats(),
       getEventStats: () => this.eventHandlerManager.getEventStats(),
       getApiDiagnostics: () => this.webViewApiManager.getDiagnostics(),
       showWarning: (msg) => this.notificationManager?.showWarning(msg),
@@ -775,7 +778,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     // CLI Agent activity detection
     const targetId = terminalId || this.getActiveTerminalId();
     if (targetId) {
-      const detection = this.cliAgentStateManager.detectAgentActivity(data, targetId);
+      const detection = this.cliAgentCoordinator.detectAgentActivity(data, targetId);
       if (detection.isAgentOutput) {
         log(`🤖 Agent activity detected: ${detection.agentType} in terminal ${targetId}`);
       }
@@ -1326,7 +1329,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
       // 専門マネージャーのクリーンアップ
       this.eventHandlerManager.dispose();
-      this.cliAgentStateManager.dispose();
+      this.cliAgentCoordinator.dispose();
       this.terminalLifecycleManager.dispose();
       this.webViewApiManager.dispose();
       this.findInTerminalManager.dispose();
