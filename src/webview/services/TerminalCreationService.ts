@@ -14,44 +14,33 @@
  * @see openspec/changes/refactor-terminal-foundation/specs/split-lifecycle-manager/spec.md
  */
 
-import { Terminal, ITerminalOptions } from '@xterm/xterm';
+import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { SearchAddon } from '@xterm/addon-search';
 import { SerializeAddon } from '@xterm/addon-serialize';
 
-import {
-  TerminalConfig,
-  PartialTerminalSettings,
-  WebViewFontSettings,
-} from '../../types/shared';
+import { TerminalConfig } from '../../types/shared';
 import { TerminalInstance, IManagerCoordinator, IConfigManager } from '../interfaces/ManagerInterfaces';
 import { SplitManager } from '../managers/SplitManager';
 import { TerminalAddonManager } from '../managers/TerminalAddonManager';
 import { TerminalEventManager } from '../managers/TerminalEventManager';
 import { TerminalLinkManager } from '../managers/TerminalLinkManager';
-import {
-  TerminalContainerFactory,
-  TerminalContainerConfig,
-  TerminalHeaderConfig,
-} from '../factories/TerminalContainerFactory';
 import { ResizeManager } from '../utils/ResizeManager';
-import { RenderingOptimizer } from '../optimizers/RenderingOptimizer';
 import { LifecycleController } from '../controllers/LifecycleController';
 import { PerformanceMonitor } from '../../utils/PerformanceOptimizer';
 import { EventHandlerRegistry } from '../utils/EventHandlerRegistry';
 import { terminalLogger } from '../utils/ManagerLogger';
-import { TerminalHeaderElements } from '../factories/HeaderFactory';
-import { DOMUtils } from '../utils/DOMUtils';
-import { getWebviewTheme } from '../utils/WebviewThemeUtils';
-import { isMacPlatform } from '../utils/PlatformUtils';
 
 // Extracted services
 import {
-  TerminalConfigService,
-  TerminalFocusService,
-  TerminalScrollbarService,
   TerminalAutoSaveService,
+  TerminalAppearanceService,
+  TerminalDomService,
+  TerminalFocusService,
+  TerminalInteractionService,
+  TerminalLifecycleService,
   MouseTrackingService,
+  TerminalScrollbarService,
 } from './terminal';
 import { TerminalScrollIndicatorService } from './terminal/TerminalScrollIndicatorService';
 import { WebViewTerminalConfig } from './terminal/TerminalConfigService';
@@ -67,42 +56,22 @@ type TerminalConfigManager = Pick<IConfigManager, 'getCurrentFontSettings' | 'ge
 // ============================================================================
 
 /**
- * Element IDs used throughout terminal creation
- */
-const ElementIds = {
-  TERMINAL_BODY: 'terminal-body',
-  TERMINAL_VIEW: 'terminal-view',
-  TERMINALS_WRAPPER: 'terminals-wrapper',
-} as const;
-
-/**
  * CSS class names for terminal elements
  */
 const CssClasses = {
-  TERMINAL_CONTAINER: 'terminal-container',
   ACTIVE: 'active',
-  XTERM: 'xterm',
-  XTERM_VIEWPORT: 'xterm-viewport',
 } as const;
 
 /**
  * Timing constants for terminal operations
  */
 const Timings = {
-  /** Delay after renderer setup before final theme re-application */
-  POST_RENDERER_SETUP_DELAY_MS: 200,
   /** Initial retry delay for terminal creation */
   CREATION_RETRY_DELAY_MS: 500,
-  /** Delay before resuming ResizeObservers after creation */
-  RESIZE_OBSERVER_RESUME_DELAY_MS: 100,
-  /** Delay for initial focus setup */
-  FOCUS_SETUP_DELAY_MS: 50,
-  /** Progressive delays for initial resize retries */
-  RESIZE_RETRY_DELAYS: [0, 50, 100, 200, 500] as readonly number[],
-  /** Delay for post-resize CSS transition handling */
-  POST_RESIZE_DELAY_MS: 300,
-  /** Delay between mouse tracking viewport query retries */
-  MOUSE_TRACKING_RETRY_DELAY_MS: 50,
+} as const;
+
+const RenderingConfig = {
+  RESIZE_DEBOUNCE_MS: 100,
 } as const;
 
 /**
@@ -111,45 +80,7 @@ const Timings = {
 const Limits = {
   /** Maximum retry attempts for terminal creation */
   MAX_CREATION_RETRIES: 2,
-  /** Maximum retry attempts for initial resize */
-  MAX_RESIZE_RETRIES: 5,
-  /** Minimum container dimension for valid resize */
-  MIN_CONTAINER_DIMENSION: 50,
-  /** Maximum terminal number for ID recycling */
-  MAX_TERMINAL_NUMBER: 5,
-  /** Maximum attempts to find xterm viewport for mouse tracking */
-  MAX_MOUSE_TRACKING_SETUP_ATTEMPTS: 10,
 } as const;
-
-/**
- * Default font settings fallback values
- */
-const FontDefaults = {
-  FONT_WEIGHT: 'normal',
-  FONT_WEIGHT_BOLD: 'bold',
-  LINE_HEIGHT: 1,
-  LETTER_SPACING: 0,
-} as const;
-
-/**
- * CSS color constants
- */
-const CssColors = {
-  /** Default terminal background color for fallback */
-  DEFAULT_BACKGROUND: '#000000',
-} as const;
-
-/**
- * Rendering optimizer configuration defaults
- */
-const RenderingConfig = {
-  RESIZE_DEBOUNCE_MS: 100,
-  MIN_WIDTH: Limits.MIN_CONTAINER_DIMENSION,
-  MIN_HEIGHT: Limits.MIN_CONTAINER_DIMENSION,
-} as const;
-
-// Legacy constant for backward compatibility
-const POST_RENDERER_SETUP_DELAY_MS = Timings.POST_RENDERER_SETUP_DELAY_MS;
 
 /**
  * Service responsible for terminal creation, removal, and switching operations
@@ -184,19 +115,16 @@ export class TerminalCreationService implements Disposable {
 
   private readonly splitManager: SplitManager;
   private readonly coordinator: IManagerCoordinator;
-  private readonly eventRegistry: EventHandlerRegistry;
   private readonly addonManager: TerminalAddonManager;
+  private readonly autoSaveService: TerminalAutoSaveService;
   private readonly eventManager: TerminalEventManager;
   private readonly linkManager: TerminalLinkManager;
-  private readonly lifecycleController: LifecycleController;
-
-  // Extracted services
-  private readonly focusService: TerminalFocusService;
-  private readonly scrollbarService: TerminalScrollbarService;
-  private readonly autoSaveService: TerminalAutoSaveService;
-  private readonly scrollIndicatorService: TerminalScrollIndicatorService;
   private readonly mouseTrackingService: MouseTrackingService;
   private readonly scrollIndicatorDisposables: Map<string, () => void> = new Map();
+  private readonly appearanceService: TerminalAppearanceService;
+  private readonly domService: TerminalDomService;
+  private readonly interactionService: TerminalInteractionService;
+  private readonly lifecycleService: TerminalLifecycleService;
 
   constructor(
     splitManager: SplitManager,
@@ -205,18 +133,40 @@ export class TerminalCreationService implements Disposable {
   ) {
     this.splitManager = splitManager;
     this.coordinator = coordinator;
-    this.eventRegistry = eventRegistry;
     this.addonManager = new TerminalAddonManager();
+    this.autoSaveService = new TerminalAutoSaveService(coordinator);
+
+    const lifecycleController = new LifecycleController();
     this.eventManager = new TerminalEventManager(coordinator, eventRegistry);
     this.linkManager = new TerminalLinkManager(coordinator);
-    this.lifecycleController = new LifecycleController(); // Phase 3: Lifecycle management
-
-    // Phase 4: Initialize extracted services
-    this.focusService = new TerminalFocusService();
-    this.scrollbarService = new TerminalScrollbarService();
-    this.autoSaveService = new TerminalAutoSaveService(coordinator);
-    this.scrollIndicatorService = new TerminalScrollIndicatorService();
+    const focusService = new TerminalFocusService();
+    const scrollbarService = new TerminalScrollbarService();
+    const scrollIndicatorService = new TerminalScrollIndicatorService();
     this.mouseTrackingService = new MouseTrackingService();
+
+    this.appearanceService = new TerminalAppearanceService({
+      coordinator: coordinator as IManagerCoordinator & { currentSettings?: unknown },
+    });
+    this.domService = new TerminalDomService({ splitManager, coordinator });
+    this.interactionService = new TerminalInteractionService({
+      coordinator,
+      eventRegistry,
+      lifecycleController,
+      eventManager: this.eventManager,
+      focusService,
+    });
+    this.lifecycleService = new TerminalLifecycleService({
+      splitManager,
+      coordinator,
+      linkManager: this.linkManager,
+      scrollbarService,
+      mouseTrackingService: this.mouseTrackingService,
+      scrollIndicatorService,
+      autoSaveService: this.autoSaveService,
+      lifecycleController,
+      eventManager: this.eventManager,
+      scrollIndicatorDisposables: this.scrollIndicatorDisposables,
+    });
   }
 
   /**
@@ -256,11 +206,11 @@ export class TerminalCreationService implements Disposable {
         const uiManager = managers?.ui;
 
         // Phase 1: DOM readiness
-        this.ensureDomReady();
+        this.domService.ensureDomReady();
 
         // Phase 2: Config preparation
         const { terminalConfig, currentSettings, currentFontSettings, linkModifier } =
-          this.prepareTerminalConfig(config, configManager);
+          this.appearanceService.prepareTerminalConfig(config, configManager);
 
         // Phase 3: Terminal + addons
         const { terminal, fitAddon, serializeAddon, searchAddon } =
@@ -268,22 +218,45 @@ export class TerminalCreationService implements Disposable {
 
         // Phase 4: Container creation & DOM insertion
         const { container, terminalContent, containerElements, terminalNumberToUse } =
-          this.createAndInsertContainer(
-            terminalId, terminalName, config, terminalNumber, currentSettings, uiManager
-          );
+          this.domService.createAndInsertContainer({
+            terminalId,
+            terminalName,
+            config,
+            terminalNumber,
+            currentSettings,
+            uiManager,
+          });
 
         // Phase 5: Terminal interaction setup
-        this.setupTerminalInteraction(
-          terminalId, terminal, container, terminalContent,
-          currentSettings, currentFontSettings, configManager, uiManager
-        );
+        this.interactionService.setupTerminalInteraction({
+          terminalId,
+          terminal,
+          container,
+          terminalContent,
+          currentSettings,
+          currentFontSettings,
+          configManager,
+          uiManager,
+          applyPostOpenSettings: (params) => this.appearanceService.applyPostOpenSettings(params),
+        });
 
         // Phase 6: Rendering, registration & finalization
-        const terminalInstance = await this.finalizeTerminalSetup(
-          terminalId, terminalName, terminal, fitAddon, serializeAddon, searchAddon,
-          container, terminalContent, containerElements, terminalNumberToUse,
-          terminalConfig, linkModifier, config, configManager, uiManager
-        );
+        const terminalInstance = await this.lifecycleService.finalizeTerminalSetup({
+          terminalId,
+          terminalName,
+          terminal,
+          fitAddon,
+          serializeAddon,
+          searchAddon,
+          container,
+          terminalContent,
+          containerElements,
+          terminalNumberToUse,
+          terminalConfig,
+          linkModifier,
+          config,
+          uiManager,
+        });
 
         const elapsed = performanceMonitor.endTimer(
           `terminal-creation-attempt-${terminalId}-${currentRetry}`
@@ -291,7 +264,14 @@ export class TerminalCreationService implements Disposable {
         terminalLogger.info(`✅ Terminal creation completed: ${terminalId} in ${elapsed}ms`);
 
         // Final refresh after all setup (re-apply theme after WebGL/DOM renderer setup)
-        this.schedulePostRendererRefresh(terminalId, terminal, container, terminalContent, configManager, uiManager);
+        this.appearanceService.schedulePostRendererRefresh({
+          terminalId,
+          terminal,
+          container,
+          terminalContent,
+          configManager,
+          uiManager,
+        });
 
         return terminalInstance.terminal;
       } catch (error) {
@@ -314,73 +294,6 @@ export class TerminalCreationService implements Disposable {
     };
 
     return attemptCreation();
-  }
-
-  // ============================================================================
-  // Phase 1: DOM Readiness
-  // ============================================================================
-
-  /**
-   * Ensure the DOM is ready for terminal creation.
-   * Recovers by creating terminal-body if missing.
-   */
-  private ensureDomReady(): void {
-    const terminalBody = document.getElementById(ElementIds.TERMINAL_BODY);
-    if (terminalBody) {
-      return;
-    }
-
-    terminalLogger.error('Main terminal container not found');
-    const mainDiv = document.querySelector(`#${ElementIds.TERMINAL_VIEW}`) || document.body;
-    if (!mainDiv) {
-      throw new Error('Cannot find parent container for terminal-body');
-    }
-
-    const newTerminalBody = document.createElement('div');
-    newTerminalBody.id = ElementIds.TERMINAL_BODY;
-    newTerminalBody.style.cssText = `
-      display: flex;
-      flex-direction: column;
-      width: 100%;
-      height: 100%;
-      background: ${CssColors.DEFAULT_BACKGROUND};
-    `;
-    mainDiv.appendChild(newTerminalBody);
-    terminalLogger.info('✅ Created missing terminal-body container');
-  }
-
-  // ============================================================================
-  // Phase 2: Config Preparation
-  // ============================================================================
-
-  /**
-   * Prepare terminal configuration by merging fonts, theme, and user config.
-   */
-  private prepareTerminalConfig(
-    config: TerminalConfig | undefined,
-    configManager: TerminalConfigManager | undefined
-  ): {
-    terminalConfig: WebViewTerminalConfig;
-    currentSettings: PartialTerminalSettings | undefined;
-    currentFontSettings: WebViewFontSettings | undefined;
-    linkModifier: 'alt' | 'ctrlCmd';
-  } {
-    const { fontSettings: currentFontSettings, fontOverrides } = this.prepareFontSettings(config, configManager);
-    const currentSettings = this.resolveCurrentSettings(configManager);
-    const resolvedTheme = getWebviewTheme(currentSettings);
-    terminalLogger.info(`🎨 [THEME] Creating terminal with theme: ${currentSettings?.theme} -> bg=${resolvedTheme.background}`);
-
-    const configWithFonts = {
-      ...(config as Parameters<typeof TerminalConfigService.mergeConfig>[0]),
-      ...fontOverrides,
-      theme: resolvedTheme,
-    };
-    const terminalConfig = TerminalConfigService.mergeConfig(configWithFonts);
-
-    const multiCursorModifier = currentSettings?.multiCursorModifier ?? 'alt';
-    const linkModifier: 'alt' | 'ctrlCmd' = multiCursorModifier === 'alt' ? 'alt' : 'ctrlCmd';
-
-    return { terminalConfig, currentSettings, currentFontSettings, linkModifier };
   }
 
   // ============================================================================
@@ -431,598 +344,8 @@ export class TerminalCreationService implements Disposable {
     return { terminal, fitAddon, serializeAddon, searchAddon };
   }
 
-  // ============================================================================
-  // Phase 4: Container Creation & DOM Insertion
-  // ============================================================================
-
-  /**
-   * Create terminal container with header callbacks and insert into DOM.
-   */
-  private createAndInsertContainer(
-    terminalId: string,
-    terminalName: string,
-    config: TerminalConfig | undefined,
-    terminalNumber: number | undefined,
-    currentSettings: any,
-    uiManager: any
-  ): {
-    container: HTMLElement;
-    terminalContent: HTMLElement;
-    containerElements: ReturnType<typeof TerminalContainerFactory.createContainer>;
-    terminalNumberToUse: number;
-  } {
-    const terminalNumberToUse = terminalNumber ?? this.extractTerminalNumber(terminalId);
-    const isActiveFromConfig = (config as any)?.isActive ?? false;
-
-    const containerConfig: TerminalContainerConfig = {
-      id: terminalId,
-      name: terminalName,
-      className: CssClasses.TERMINAL_CONTAINER,
-      isSplit: false,
-      isActive: isActiveFromConfig,
-    };
-
-    const headerConfig = this.buildHeaderConfig(terminalId, terminalName, config, currentSettings);
-
-    const containerElements = TerminalContainerFactory.createContainer(containerConfig, headerConfig);
-    if (!containerElements || !containerElements.container || !containerElements.body) {
-      throw new Error('Invalid container elements created');
-    }
-
-    const container = containerElements.container;
-    const terminalContent = containerElements.body;
-    terminalLogger.info(`✅ Container created: ${terminalId} with terminal number: ${terminalNumberToUse}`);
-
-    // Append to DOM (xterm.js needs element in DOM to render)
-    this.insertContainerIntoDom(terminalId, container);
-
-    // Apply VS Code styling (non-fatal)
-    try {
-      if (uiManager) {
-        uiManager.applyVSCodeStyling(container);
-      }
-    } catch (error) {
-      terminalLogger.warn('⚠️ Container styling application failed; continuing without styling', error);
-    }
-
-    container.style.display = 'flex';
-    container.style.visibility = 'visible';
-
-    // Apply active border before terminal opens to prevent flicker
-    if (isActiveFromConfig) {
-      try {
-        if (uiManager) {
-          uiManager.updateSingleTerminalBorder(container, true);
-          terminalLogger.info(`✅ Active border applied to container: ${terminalId}`);
-        }
-      } catch (error) {
-        terminalLogger.warn('⚠️ Active border application failed; continuing', error);
-      }
-    }
-
-    return { container, terminalContent, containerElements, terminalNumberToUse };
-  }
-
-  /**
-   * Build header configuration with all callback handlers.
-   */
-  private buildHeaderConfig(
-    terminalId: string,
-    terminalName: string,
-    config: TerminalConfig | undefined,
-    currentSettings: any
-  ): TerminalHeaderConfig {
-    return {
-      showHeader: true,
-      showCloseButton: true,
-      showSplitButton: false,
-      customTitle: terminalName,
-      indicatorColor: (config as { indicatorColor?: string } | undefined)?.indicatorColor,
-      headerEnhancementsEnabled: currentSettings?.enableTerminalHeaderEnhancements !== false,
-      onHeaderUpdate: (clickedTerminalId, updates) => {
-        if (updates.newName) {
-          terminalLogger.info(`✏️ Header rename submitted: ${clickedTerminalId} -> ${updates.newName}`);
-
-          const terminalContainer = document.querySelector(
-            `[data-terminal-id="${clickedTerminalId}"]`
-          ) as HTMLElement | null;
-          if (terminalContainer) {
-            terminalContainer.setAttribute('data-terminal-name', updates.newName);
-          }
-
-          const tabManager = this.coordinator.getManagers?.()?.tabs;
-          if (tabManager) {
-            const extendedTabManager = tabManager as unknown as {
-              handleTerminalRenamed?: (terminalId: string, updatedName: string) => void;
-            };
-            if (typeof extendedTabManager.handleTerminalRenamed === 'function') {
-              extendedTabManager.handleTerminalRenamed(clickedTerminalId, updates.newName);
-            } else {
-              tabManager.addTab(clickedTerminalId, updates.newName);
-            }
-          }
-        }
-
-        this.coordinator.postMessageToExtension({
-          command: 'updateTerminalHeader',
-          terminalId: clickedTerminalId,
-          ...(updates.newName ? { newName: updates.newName } : {}),
-          ...(updates.indicatorColor ? { indicatorColor: updates.indicatorColor } : {}),
-        });
-      },
-      onHeaderClick: (clickedTerminalId) => {
-        terminalLogger.info(`🎯 Header clicked for terminal: ${clickedTerminalId}`);
-        this.coordinator?.setActiveTerminalId(clickedTerminalId);
-      },
-      onCloseClick: (clickedTerminalId) => {
-        terminalLogger.info(`🗑️ Header close button clicked: ${clickedTerminalId}`);
-        if (this.coordinator.deleteTerminalSafely) {
-          void this.coordinator.deleteTerminalSafely(clickedTerminalId);
-        } else {
-          this.coordinator.closeTerminal(clickedTerminalId);
-        }
-      },
-      onSplitClick: (_clickedTerminalId) => {
-        terminalLogger.info(`⊞ Split button clicked, creating new terminal`);
-        void this.coordinator.profileManager?.createTerminalWithDefaultProfile();
-      },
-      onAiAgentToggleClick: (clickedTerminalId) => {
-        terminalLogger.info(`📎 AI Agent toggle clicked for terminal: ${clickedTerminalId}`);
-        this.coordinator.handleAiAgentToggle?.(clickedTerminalId);
-      },
-    };
-  }
-
-  /**
-   * Insert container into DOM via terminals-wrapper (creating it if needed).
-   */
-  private insertContainerIntoDom(terminalId: string, container: HTMLElement): void {
-    const bodyElement = document.getElementById(ElementIds.TERMINAL_BODY);
-    if (!bodyElement) {
-      terminalLogger.error(`❌ ${ElementIds.TERMINAL_BODY} not found, cannot append container: ${terminalId}`);
-      throw new Error(`${ElementIds.TERMINAL_BODY} element not found`);
-    }
-
-    let terminalsWrapper = document.getElementById(ElementIds.TERMINALS_WRAPPER);
-    if (!terminalsWrapper) {
-      terminalLogger.info(`🆕 Creating ${ElementIds.TERMINALS_WRAPPER} (not yet initialized)`);
-      terminalsWrapper = document.createElement('div');
-      terminalsWrapper.id = ElementIds.TERMINALS_WRAPPER;
-      terminalsWrapper.style.cssText = `
-        display: flex;
-        flex: 1 1 auto;
-        gap: 4px;
-        padding: 4px;
-      `;
-      bodyElement.appendChild(terminalsWrapper);
-    }
-
-    terminalsWrapper.appendChild(container);
-    terminalLogger.info(`✅ Container appended to terminals-wrapper: ${terminalId}`);
-  }
-
-  // ============================================================================
-  // Phase 5: Terminal Interaction Setup
-  // ============================================================================
-
-  /**
-   * Open terminal, set up paste handling, apply settings, and register events.
-   */
-  private setupTerminalInteraction(
-    terminalId: string,
-    terminal: Terminal,
-    container: HTMLElement,
-    terminalContent: HTMLElement,
-    currentSettings: any,
-    currentFontSettings: any,
-    configManager: any,
-    uiManager: any
-  ): void {
-    // Open terminal in the body div (AFTER container is in DOM)
-    terminal.open(terminalContent);
-    terminalLogger.info(`✅ Terminal opened in container: ${terminalId}`);
-
-    // Setup paste handling (text AND image)
-    this.setupPasteHandling(terminalId, terminal, terminalContent);
-
-    // Apply font and visual settings AFTER terminal.open()
-    this.applyPostOpenSettings(terminalId, terminal, container, terminalContent, currentSettings, currentFontSettings, configManager, uiManager);
-
-    // Attach to LifecycleController for resource management
-    this.lifecycleController.attachTerminal(terminalId, terminal);
-
-    // Setup event handlers for click, focus, keyboard, etc.
-    this.eventManager.setupTerminalEvents(terminal, terminalId, container);
-
-    // Ensure terminal receives focus
-    this.focusService.ensureTerminalFocus(terminal, terminalId, terminalContent);
-    this.focusService.setupContainerFocusHandler(terminal, terminalId, container, terminalContent);
-
-    // Setup shell integration
-    this.setupShellIntegration(terminal, terminalId);
-  }
-
-  /**
-   * Setup paste event handling for text and image paste.
-   */
-  private setupPasteHandling(
-    terminalId: string,
-    terminal: Terminal,
-    terminalContent: HTMLElement
-  ): void {
-    // Block xterm.js keydown handling for shortcuts that should be handled by InputManager
-    terminal.attachCustomKeyEventHandler((event: KeyboardEvent) => {
-      const mac = isMacPlatform();
-
-      // Paste shortcuts
-      if ((mac && event.metaKey && event.key === 'v') ||
-          (event.ctrlKey && event.key === 'v' && !event.shiftKey)) {
-        terminalLogger.info(`📋 Paste keydown - bypassing xterm.js key handler`);
-        return false;
-      }
-
-      // Ctrl+P: Panel navigation mode toggle (bypass xterm.js so InputManager handles it)
-      if (document.body.classList.contains('panel-navigation-enabled') &&
-          event.ctrlKey && !event.shiftKey && !event.altKey && !event.metaKey &&
-          event.key.toLowerCase() === 'p') {
-        return false;
-      }
-
-      // Panel navigation mode keys: let InputManager handle them
-      if (document.body.classList.contains('panel-navigation-mode')) {
-        const key = event.key.toLowerCase();
-        if (key === 'h' || key === 'j' || key === 'k' || key === 'l' ||
-            key === 'arrowleft' || key === 'arrowright' || key === 'arrowup' || key === 'arrowdown' ||
-            key === 'escape' || key === 'r' || key === 'd' || key === 'x') {
-          return false;
-        }
-      }
-
-      return true;
-    });
-
-    // Handle ALL paste events (text AND image)
-    const pasteHandler = (event: ClipboardEvent) => {
-      const clipboardData = event.clipboardData;
-      if (!clipboardData) {
-        terminalLogger.warn('📋 Paste event has no clipboardData');
-        return;
-      }
-
-      const hasImage = Array.from(clipboardData.items).some(item => item.type.startsWith('image/'));
-
-      if (hasImage) {
-        terminalLogger.info(`🖼️ Image in paste event - sending Ctrl+V escape for Claude Code`);
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        this.coordinator.postMessageToExtension({
-          command: 'input',
-          terminalId: terminalId,
-          data: '\x16',
-        });
-        return;
-      }
-
-      const text = clipboardData.getData('text/plain');
-      if (text) {
-        terminalLogger.info(`📋 Text paste (${text.length} chars) - sending to extension`);
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        this.coordinator.postMessageToExtension({
-          command: 'pasteText',
-          terminalId: terminalId,
-          text: text,
-        });
-        return;
-      }
-
-      terminalLogger.warn('📋 Paste event has no text or image content');
-    };
-
-    this.eventRegistry.register(
-      `terminal-${terminalId}-paste`,
-      terminalContent,
-      'paste',
-      pasteHandler as EventListener,
-      true // capture phase
-    );
-  }
-
-  /**
-   * Apply visual and font settings after terminal.open().
-   */
-  private applyPostOpenSettings(
-    terminalId: string,
-    terminal: Terminal,
-    container: HTMLElement,
-    terminalContent: HTMLElement,
-    currentSettings: any,
-    currentFontSettings: any,
-    configManager: any,
-    uiManager: any
-  ): void {
-    try {
-      if (!uiManager) {
-        return;
-      }
-
-      const settingsForVisuals = currentSettings ?? configManager?.getCurrentSettings?.();
-      const fontSettingsForApply = currentFontSettings ?? configManager?.getCurrentFontSettings?.();
-
-      terminalLogger.info(`🎨 [DEBUG] Immediate settings check - theme: ${settingsForVisuals?.theme}`);
-
-      if (settingsForVisuals) {
-        uiManager.applyAllVisualSettings(terminal, settingsForVisuals);
-        terminalLogger.info(`✅ Visual settings applied to terminal: ${terminalId}`);
-        this.updateContainerBackgrounds(terminalId, container, terminalContent, settingsForVisuals);
-      }
-
-      if (fontSettingsForApply) {
-        uiManager.applyFontSettings(terminal, fontSettingsForApply);
-        terminalLogger.info(`✅ Font settings applied to terminal: ${terminalId} (${fontSettingsForApply.fontFamily}, ${fontSettingsForApply.fontSize}px)`);
-      }
-    } catch (error) {
-      terminalLogger.warn('⚠️ Terminal settings application failed; continuing with defaults', error);
-    }
-  }
-
-  // ============================================================================
-  // Phase 6: Rendering, Registration & Finalization
-  // ============================================================================
-
-  /**
-   * Set up rendering, register terminal instance, handle split mode, and notify extension.
-   */
-  private async finalizeTerminalSetup(
-    terminalId: string,
-    terminalName: string,
-    terminal: Terminal,
-    fitAddon: FitAddon,
-    serializeAddon: any,
-    searchAddon: any,
-    container: HTMLElement,
-    terminalContent: HTMLElement,
-    containerElements: ReturnType<typeof TerminalContainerFactory.createContainer>,
-    terminalNumberToUse: number,
-    terminalConfig: any,
-    linkModifier: 'alt' | 'ctrlCmd',
-    config: TerminalConfig | undefined,
-    configManager: any,
-    uiManager: any
-  ): Promise<TerminalInstance> {
-    // Register link handlers
-    this.linkManager.setLinkModifier(linkModifier);
-    this.linkManager.registerTerminalLinkHandlers(terminal, terminalId);
-
-    // Enable scrollbar
-    const xtermElement = terminalContent.querySelector(`.${CssClasses.XTERM}`);
-    this.scrollbarService.enableScrollbarDisplay(xtermElement, terminalId);
-
-    // Setup mouse tracking (delayed for async xterm.js viewport)
-    this.setupMouseTrackingDelayed(terminal, terminalId, container);
-
-    // Scroll-to-bottom indicator
-    const scrollIndicatorDispose = this.scrollIndicatorService.attach(terminal, container, terminalId);
-    this.scrollIndicatorDisposables.set(terminalId, scrollIndicatorDispose);
-
-    // RenderingOptimizer
-    const renderingOptimizer = await this.setupRenderingOptimizer(
-      terminalId, terminal, fitAddon, container,
-      terminalConfig.enableGpuAcceleration ?? true
-    );
-
-    // Create and register terminal instance
-    const terminalInstance: TerminalInstance = {
-      id: terminalId,
-      terminal,
-      fitAddon,
-      container,
-      name: terminalName,
-      isActive: false,
-      number: terminalNumberToUse,
-      searchAddon,
-      serializeAddon,
-      renderingOptimizer,
-    };
-
-    this.splitManager.getTerminals().set(terminalId, terminalInstance);
-    this.splitManager.getTerminalContainers().set(terminalId, container);
-    terminalLogger.info(`✅ Terminal registered with SplitManager: ${terminalId}`);
-
-    // Notify extension
-    const terminalReadyMessage = { command: 'terminalReady', terminalId, timestamp: Date.now() };
-    terminalLogger.info(`📨 [WebView] Sending terminalReady for terminalId: ${terminalId}`);
-    terminalLogger.debug('📨 [WebView] Message payload:', terminalReadyMessage);
-    this.coordinator.postMessageToExtension(terminalReadyMessage);
-    terminalLogger.info('✅ [WebView] terminalReady sent successfully');
-
-    // Register with TerminalContainerManager
-    const containerManager = this.coordinator?.getTerminalContainerManager?.();
-    if (containerManager) {
-      containerManager.registerContainer(terminalId, container);
-      terminalLogger.info(`✅ Container registered with TerminalContainerManager: ${terminalId}`);
-    }
-
-    // Handle split mode transitions
-    const displayModeOverride = (config as { displayModeOverride?: string } | undefined)?.displayModeOverride;
-    if (this.splitManager.getIsSplitMode() && displayModeOverride !== 'normal' && displayModeOverride !== 'fullscreen') {
-      this.splitManager.addNewTerminalToSplit(terminalId, terminalName);
-      this.coordinator.getDisplayModeManager?.()?.showAllTerminalsSplit();
-    } else if ((displayModeOverride === 'normal' || displayModeOverride === 'fullscreen') && this.splitManager.getIsSplitMode()) {
-      this.splitManager.exitSplitMode();
-    }
-
-    // Register header elements for AI Agent support
-    if (containerElements.headerElements && uiManager) {
-      if (this.hasHeaderElementsCache(uiManager)) {
-        uiManager.headerElementsCache.set(terminalId, containerElements.headerElements);
-        terminalLogger.info(`✅ Header elements registered with UIManager for AI Agent support: ${terminalId}`);
-      }
-    }
-
-    // Initial resize
-    this.performInitialResize(terminal, fitAddon, container, terminalId);
-
-    // Input handling
-    if (this.coordinator?.inputManager) {
-      this.coordinator.inputManager.addXtermClickHandler(terminal, terminalId, container, this.coordinator);
-      terminalLogger.info(`✅ Input handling setup for terminal: ${terminalId}`);
-    } else {
-      terminalLogger.error(`❌ InputManager not available for terminal: ${terminalId}`);
-    }
-
-    // Scrollback auto-save
-    this.autoSaveService.setupScrollbackAutoSave(terminal, terminalId, serializeAddon);
-
-    return terminalInstance;
-  }
-
-  /**
-   * Schedule a post-renderer refresh to fix theme colors after WebGL setup.
-   */
-  private schedulePostRendererRefresh(
-    terminalId: string,
-    terminal: Terminal,
-    container: HTMLElement,
-    terminalContent: HTMLElement,
-    configManager: any,
-    uiManager: any
-  ): void {
-    setTimeout(() => {
-      try {
-        const finalSettings = configManager?.getCurrentSettings?.();
-        terminalLogger.info(`🎨 [DEBUG] Final theme check - currentSettings.theme: ${finalSettings?.theme}`);
-
-        if (uiManager && finalSettings) {
-          uiManager.applyTerminalTheme(terminal, finalSettings);
-          terminalLogger.info(`🎨 Final theme re-application for terminal: ${terminalId}`);
-          this.updateContainerBackgrounds(terminalId, container, terminalContent, finalSettings);
-        }
-
-        terminal.refresh(0, terminal.rows - 1);
-        terminalLogger.info(`🔄 Final terminal refresh completed: ${terminalId}`);
-      } catch (error) {
-        terminalLogger.warn(`⚠️ Final refresh failed for terminal ${terminalId}:`, error);
-      }
-    }, POST_RENDERER_SETUP_DELAY_MS);
-  }
-
-  /**
-   * Remove terminal with proper cleanup
-   */
   public async removeTerminal(terminalId: string): Promise<boolean> {
-    try {
-      terminalLogger.info(`Removing terminal: ${terminalId}`);
-
-      const terminalInstance = this.splitManager.getTerminals().get(terminalId);
-      if (!terminalInstance) {
-        terminalLogger.warn(`Terminal not found: ${terminalId}`);
-        return false;
-      }
-
-      // Cleanup RenderingOptimizer
-      if (terminalInstance.renderingOptimizer) {
-        terminalInstance.renderingOptimizer.dispose();
-        terminalLogger.info(`✅ RenderingOptimizer disposed for: ${terminalId}`);
-      }
-
-      // 🔧 FIX: Clear periodic auto-save timer to prevent memory leaks
-      TerminalAutoSaveService.clearPeriodicSaveTimer(terminalId);
-
-      // Cleanup scroll indicator
-      const disposeScrollIndicator = this.scrollIndicatorDisposables.get(terminalId);
-      if (disposeScrollIndicator) {
-        disposeScrollIndicator();
-        this.scrollIndicatorDisposables.delete(terminalId);
-      }
-
-      // Cleanup mouse tracking service
-      this.mouseTrackingService.cleanup(terminalId);
-
-      // Phase 3: Dispose terminal via LifecycleController for proper resource cleanup
-      this.lifecycleController.disposeTerminal(terminalId);
-
-      // Cleanup event handlers
-      this.eventManager.removeTerminalEvents(terminalId);
-
-      // Cleanup InputManager handlers (xterm.js onKey, onData, compositionend)
-      if (this.coordinator.inputManager) {
-        try {
-          this.coordinator.inputManager.removeTerminalHandlers(terminalId);
-          terminalLogger.info(`✅ Input handlers removed via InputManager for: ${terminalId}`);
-        } catch (error) {
-          terminalLogger.warn(`⚠️ Failed to remove InputManager handlers for ${terminalId}`, error);
-        }
-      }
-
-      // Cleanup link providers
-      this.linkManager.unregisterTerminalLinkProvider(terminalId);
-
-      // Dispose terminal
-      terminalInstance.terminal.dispose();
-
-      // Remove container
-      if (terminalInstance.container && terminalInstance.container.parentNode) {
-        terminalInstance.container.parentNode.removeChild(terminalInstance.container);
-      }
-
-      // Remove from maps
-      this.splitManager.getTerminals().delete(terminalId);
-      this.splitManager.getTerminalContainers().delete(terminalId);
-
-      // Unregister container from TerminalContainerManager
-      const containerManager = this.coordinator?.getTerminalContainerManager?.();
-      if (containerManager) {
-        containerManager.unregisterContainer(terminalId);
-        terminalLogger.info(
-          `✅ Container unregistered from TerminalContainerManager: ${terminalId}`
-        );
-
-        // 🔧 FIX: Refresh layout after terminal removal to clean up orphaned resizers
-        const remainingTerminals = this.splitManager.getTerminals().size;
-        const displayManager = this.coordinator?.getDisplayModeManager?.();
-        const currentMode = displayManager?.getCurrentMode?.() ?? 'normal';
-
-        terminalLogger.info(`🔧 [CLEANUP] Current mode: ${currentMode}, remaining: ${remainingTerminals}`);
-
-        if (remainingTerminals <= 1) {
-          // If only 1 or 0 terminals remain, clear all split artifacts including resizers
-          containerManager.clearSplitArtifacts();
-          terminalLogger.info(`✅ Split artifacts cleared (remaining terminals: ${remainingTerminals})`);
-
-          // Switch to normal mode if we're in split mode with 1 terminal
-          if (currentMode === 'split' && displayManager && remainingTerminals === 1) {
-            displayManager.setDisplayMode('normal');
-            terminalLogger.info(`✅ Switched to normal mode after deletion`);
-          }
-        } else if (currentMode === 'split') {
-          // If multiple terminals remain and we're in split mode, rebuild layout
-          const orderedIds = Array.from(this.splitManager.getTerminals().keys());
-          const activeId = this.coordinator?.getActiveTerminalId?.() ?? orderedIds[0] ?? null;
-          const currentLocation =
-            (this.splitManager as { getCurrentPanelLocation?: () => 'sidebar' | 'panel' })
-              .getCurrentPanelLocation?.() || 'sidebar';
-          const splitDirection = this.splitManager.getOptimalSplitDirection(currentLocation);
-          containerManager.applyDisplayState({
-            mode: 'split',
-            activeTerminalId: activeId,
-            orderedTerminalIds: orderedIds,
-            splitDirection,
-          });
-          terminalLogger.info(`✅ Split layout rebuilt with ${remainingTerminals} terminals`);
-        } else {
-          // Normal or fullscreen mode - just clear any stray split artifacts
-          containerManager.clearSplitArtifacts();
-          terminalLogger.info(`✅ Cleared stray split artifacts in ${currentMode} mode`);
-        }
-      }
-
-      terminalLogger.info(`Terminal removed successfully: ${terminalId}`);
-      return true;
-    } catch (error) {
-      terminalLogger.error(`Failed to remove terminal ${terminalId}:`, error);
-      return false;
-    }
+    return this.lifecycleService.removeTerminal(terminalId);
   }
 
   /**
@@ -1080,412 +403,20 @@ export class TerminalCreationService implements Disposable {
     }
   }
 
-  /**
-   * Check if manager has headerElementsCache for AI Agent support
-   */
-  private hasHeaderElementsCache(
-    manager: unknown
-  ): manager is { headerElementsCache: Map<string, TerminalHeaderElements> } {
-    if (typeof manager === 'object' && manager !== null && 'headerElementsCache' in manager) {
-      const cache = (manager as { headerElementsCache?: unknown }).headerElementsCache;
-      return cache instanceof Map;
-    }
-    return false;
-  }
-
-  /**
-   * Setup shell integration decorations and link providers
-   */
-  private setupShellIntegration(terminal: Terminal, terminalId: string): void {
-    try {
-      const shellManager = this.coordinator.shellIntegrationManager;
-      if (shellManager) {
-        shellManager.decorateTerminalOutput(terminal, terminalId);
-        terminalLogger.info(`Shell integration decorations added for terminal: ${terminalId}`);
-      }
-    } catch (error) {
-      terminalLogger.warn(`Failed to setup shell integration for terminal ${terminalId}:`, error);
-    }
-  }
-
-  /**
-   * Perform initial terminal resize with retry mechanism
-   *
-   * 🔧 FIX: Sometimes the container doesn't have valid dimensions during initial resize
-   * (e.g., when WebView is in sidebar and being rendered). This retry mechanism
-   * ensures the terminal gets properly resized once the container is ready.
-   */
-  private performInitialResize(
-    terminal: Terminal,
-    fitAddon: FitAddon,
-    container: HTMLElement,
-    terminalId: string
-  ): void {
-    const maxRetries = Limits.MAX_RESIZE_RETRIES;
-    const retryDelays = Timings.RESIZE_RETRY_DELAYS;
-    let retryCount = 0;
-
-    const attemptResize = (): void => {
-      try {
-        const rect = container.getBoundingClientRect();
-
-        if (rect.width > Limits.MIN_CONTAINER_DIMENSION && rect.height > Limits.MIN_CONTAINER_DIMENSION) {
-          // 🔧 CRITICAL FIX: Reset xterm inline styles BEFORE fit() to allow width expansion
-          DOMUtils.resetXtermInlineStyles(container);
-          fitAddon.fit();
-
-          // 🔧 CRITICAL FIX: Call fit() twice with frame wait for correct canvas sizing
-          // First fit() updates internal state, second fit() applies correct dimensions
-          requestAnimationFrame(() => {
-            DOMUtils.resetXtermInlineStyles(container);
-            fitAddon.fit();
-          });
-
-          // 🔧 FIX: Refresh terminal to ensure cursor and decorations are rendered
-          // Do NOT call terminal.clear() as it clears shell prompt output
-          terminal.refresh(0, terminal.rows - 1);
-
-          terminalLogger.debug(
-            `Terminal initial size: ${terminalId} (${terminal.cols}x${terminal.rows}) after ${retryCount} retries`
-          );
-
-          // 🔧 FIX: Schedule an additional resize after a short delay
-          // This handles cases where CSS transitions or layout shifts occur after initial render
-          setTimeout(() => {
-            try {
-              const finalRect = container.getBoundingClientRect();
-              if (finalRect.width > Limits.MIN_CONTAINER_DIMENSION && finalRect.height > Limits.MIN_CONTAINER_DIMENSION) {
-                // 🔧 FIX: Reset xterm inline styles before delayed fit as well
-                DOMUtils.resetXtermInlineStyles(container);
-                fitAddon.fit();
-                // Refresh after delayed fit to ensure cursor visibility
-                terminal.refresh(0, terminal.rows - 1);
-                terminalLogger.debug(
-                  `Terminal delayed resize: ${terminalId} (${terminal.cols}x${terminal.rows})`
-                );
-              }
-            } catch (error) {
-              terminalLogger.warn(`Delayed resize failed for ${terminalId}:`, error);
-            }
-          }, Timings.POST_RESIZE_DELAY_MS);
-        } else {
-          // Container not ready - retry with increasing delays
-          if (retryCount < maxRetries) {
-            retryCount++;
-            const delay = retryDelays[retryCount] || Timings.CREATION_RETRY_DELAY_MS;
-            terminalLogger.debug(
-              `Container too small, retry ${retryCount}/${maxRetries} in ${delay}ms: ${terminalId} (${rect.width}x${rect.height})`
-            );
-            setTimeout(attemptResize, delay);
-          } else {
-            terminalLogger.warn(
-              `Container still too small after ${maxRetries} retries: ${terminalId} (${rect.width}x${rect.height})`
-            );
-            // 🔧 FIX: Force a fit anyway as last resort - xterm.js may handle small dimensions
-            try {
-              DOMUtils.resetXtermInlineStyles(container);
-              fitAddon.fit();
-              // Refresh to ensure cursor visibility (do NOT clear)
-              terminal.refresh(0, terminal.rows - 1);
-              terminalLogger.info(`Forced fit for small container: ${terminalId}`);
-            } catch (e) {
-              terminalLogger.error(`Forced fit failed for ${terminalId}:`, e);
-            }
-          }
-        }
-      } catch (error) {
-        terminalLogger.error(`Failed initial resize for ${terminalId}:`, error);
-      }
-    };
-
-    attemptResize();
-  }
-
-  /**
-   * Setup mouse tracking with delayed viewport query
-   *
-   * xterm.js creates the viewport element asynchronously, so we need to
-   * wait for it to be available before setting up mouse tracking handlers.
-   */
-  private setupMouseTrackingDelayed(
-    terminal: Terminal,
-    terminalId: string,
-    container: HTMLElement
-  ): void {
-    const maxAttempts = Limits.MAX_MOUSE_TRACKING_SETUP_ATTEMPTS;
-    const delayMs = Timings.MOUSE_TRACKING_RETRY_DELAY_MS;
-    let attempts = 0;
-
-    // Create callback to send input data to Extension/PTY
-    const sendInput = (tid: string, data: string): void => {
-      this.coordinator.postMessageToExtension({
-        command: 'input',
-        terminalId: tid,
-        data,
-      });
-    };
-
-    const trySetup = (): void => {
-      attempts++;
-      const viewport = container.querySelector(`.${CssClasses.XTERM_VIEWPORT}`) as HTMLElement;
-
-      if (viewport) {
-        this.mouseTrackingService.setup(terminal, terminalId, viewport, sendInput);
-        terminalLogger.info(`[MouseTracking] Setup complete after ${attempts} attempt(s) for: ${terminalId}`);
-      } else if (attempts < maxAttempts) {
-        terminalLogger.debug(`[MouseTracking] Viewport not found, retry ${attempts}/${maxAttempts} for: ${terminalId}`);
-        setTimeout(trySetup, delayMs);
-      } else {
-        terminalLogger.warn(`[MouseTracking] Could not find viewport after ${maxAttempts} attempts for: ${terminalId}`);
-      }
-    };
-
-    // Start with requestAnimationFrame for first attempt (waits for DOM update)
-    requestAnimationFrame(trySetup);
-  }
-
-  /**
-   * Setup RenderingOptimizer for terminal performance optimization
-   */
-  private async setupRenderingOptimizer(
-    terminalId: string,
-    terminal: Terminal,
-    fitAddon: FitAddon,
-    container: HTMLElement,
-    enableGpuAcceleration: boolean
-  ): Promise<any> {
-    try {
-      // Create RenderingOptimizer instance
-      const renderingOptimizer = new RenderingOptimizer({
-        enableWebGL: enableGpuAcceleration,
-        resizeDebounceMs: RenderingConfig.RESIZE_DEBOUNCE_MS,
-        minWidth: RenderingConfig.MIN_WIDTH,
-        minHeight: RenderingConfig.MIN_HEIGHT,
-      });
-
-      // Setup optimized resize with dimension validation and debouncing
-      renderingOptimizer.setupOptimizedResize(terminal, fitAddon, container, terminalId);
-
-      // Enable WebGL rendering if GPU acceleration is enabled
-      if (enableGpuAcceleration) {
-        await renderingOptimizer.enableWebGL(terminal, terminalId);
-      }
-
-      // Setup device-specific smooth scrolling (trackpad vs mouse)
-      renderingOptimizer.setupSmoothScrolling(terminal, container, terminalId);
-
-      terminalLogger.info(`✅ RenderingOptimizer setup completed for: ${terminalId}`);
-      return renderingOptimizer;
-    } catch (error) {
-      terminalLogger.error(`Failed to setup RenderingOptimizer for ${terminalId}:`, error);
-      return null;
-    }
-  }
-
-  /**
-   * Notify extension about terminal resize
-   */
   private notifyExtensionResize(terminalId: string, terminal: Terminal): void {
     try {
       this.coordinator.postMessageToExtension({
         command: 'resize',
-        terminalId: terminalId,
+        terminalId,
         cols: terminal.cols,
         rows: terminal.rows,
       });
-
       terminalLogger.debug(
         `Sent resize notification: ${terminalId} (${terminal.cols}x${terminal.rows})`
       );
     } catch (error) {
       terminalLogger.error(`Failed to notify extension of resize for ${terminalId}:`, error);
     }
-  }
-
-  /**
-   * Extract terminal number from terminal ID (e.g., "terminal-3" -> 3)
-   */
-  private extractTerminalNumber(terminalId: string | undefined): number {
-    if (!terminalId) {
-      return 1;
-    }
-    const match = terminalId.match(/terminal-(\d+)/);
-    if (match && match[1]) {
-      return parseInt(match[1], 10);
-    }
-
-    // Fallback: find available number
-    const existingNumbers = new Set<number>();
-    const terminals = this.splitManager.getTerminals();
-    terminals.forEach((terminal) => {
-      if (terminal.number) {
-        existingNumbers.add(terminal.number);
-      }
-    });
-
-    // Find first available number (1-MAX_TERMINAL_NUMBER)
-    for (let i = 1; i <= Limits.MAX_TERMINAL_NUMBER; i++) {
-      if (!existingNumbers.has(i)) {
-        return i;
-      }
-    }
-
-    terminalLogger.warn(
-      `Could not extract terminal number from ID: ${terminalId}, defaulting to 1`
-    );
-    return 1;
-  }
-
-  /**
-   * Resolve current settings with theme, handling ConfigManager vs coordinator race conditions.
-   *
-   * If ConfigManager returns 'auto' theme, also check coordinator's currentSettings.
-   * This handles the case where applySettings was called on coordinator but ConfigManager
-   * hasn't been updated yet.
-   *
-   * @param configManager - Optional ConfigManager for settings retrieval
-   * @returns Resolved settings object with theme
-   */
-  private resolveCurrentSettings(
-    configManager: Pick<IConfigManager, 'getCurrentSettings'> | undefined
-  ): PartialTerminalSettings | undefined {
-    let currentSettings = configManager?.getCurrentSettings?.();
-
-    // If ConfigManager returns 'auto' theme, also check coordinator's currentSettings
-    if (!currentSettings?.theme || currentSettings.theme === 'auto') {
-      const coordinatorSettings = (this.coordinator as any)?.currentSettings;
-      if (coordinatorSettings?.theme && coordinatorSettings.theme !== 'auto') {
-        currentSettings = { ...currentSettings, ...coordinatorSettings };
-        terminalLogger.info(`🎨 [THEME] Using coordinator settings (theme: ${coordinatorSettings.theme})`);
-      }
-    }
-
-    return currentSettings;
-  }
-
-  /**
-   * Prepare font settings from config, applying priority resolution and validation.
-   *
-   * Priority: config direct properties > config.fontSettings > ConfigManager
-   * This ensures powerlevel10k icons and other Nerd Font characters display correctly.
-   *
-   * @param config - Terminal configuration from Extension
-   * @param configManager - Optional ConfigManager for fallback settings
-   * @returns Validated font overrides for ITerminalOptions
-   */
-  private prepareFontSettings(
-    config: TerminalConfig | undefined,
-    configManager: Pick<IConfigManager, 'getCurrentFontSettings'> | undefined
-  ): { fontSettings: WebViewFontSettings | undefined; fontOverrides: Partial<ITerminalOptions> } {
-    // Check BOTH config.fontSettings AND direct config properties
-    // Extension sends fontFamily/fontSize directly in config, not nested in fontSettings
-    const configFontSettings = (config as any)?.fontSettings;
-    const directFontFamily = (config as any)?.fontFamily;
-    const directFontSize = (config as any)?.fontSize;
-
-    // Use direct config values if available, otherwise fall back to fontSettings or ConfigManager
-    let currentFontSettings: WebViewFontSettings | undefined;
-    if (directFontFamily || directFontSize) {
-      // Extension sent font settings directly in config
-      currentFontSettings = {
-        fontFamily: directFontFamily || configFontSettings?.fontFamily || configManager?.getCurrentFontSettings?.()?.fontFamily,
-        fontSize: directFontSize || configFontSettings?.fontSize || configManager?.getCurrentFontSettings?.()?.fontSize,
-        fontWeight: (config as any)?.fontWeight || configFontSettings?.fontWeight || FontDefaults.FONT_WEIGHT,
-        fontWeightBold: (config as any)?.fontWeightBold || configFontSettings?.fontWeightBold || FontDefaults.FONT_WEIGHT_BOLD,
-        lineHeight: (config as any)?.lineHeight || configFontSettings?.lineHeight || FontDefaults.LINE_HEIGHT,
-        letterSpacing: (config as any)?.letterSpacing ?? configFontSettings?.letterSpacing ?? FontDefaults.LETTER_SPACING,
-      };
-    } else if (configFontSettings) {
-      currentFontSettings = configFontSettings;
-    } else {
-      currentFontSettings = configManager?.getCurrentFontSettings?.();
-    }
-
-    // Only apply non-empty font settings to prevent overwriting defaults with empty values
-    const fontOverrides: Partial<ITerminalOptions> = {};
-    if (currentFontSettings) {
-      // Only include fontFamily if it's a non-empty string
-      if (typeof currentFontSettings.fontFamily === 'string' && currentFontSettings.fontFamily.trim()) {
-        fontOverrides.fontFamily = currentFontSettings.fontFamily.trim();
-      }
-      // Only include fontSize if it's a positive number
-      if (typeof currentFontSettings.fontSize === 'number' && currentFontSettings.fontSize > 0) {
-        fontOverrides.fontSize = currentFontSettings.fontSize;
-      }
-      // Only include fontWeight if it's a non-empty string
-      if (typeof currentFontSettings.fontWeight === 'string' && currentFontSettings.fontWeight.trim()) {
-        fontOverrides.fontWeight = currentFontSettings.fontWeight.trim() as ITerminalOptions['fontWeight'];
-      }
-      // Only include fontWeightBold if it's a non-empty string
-      if (typeof currentFontSettings.fontWeightBold === 'string' && currentFontSettings.fontWeightBold.trim()) {
-        fontOverrides.fontWeightBold = currentFontSettings.fontWeightBold.trim() as ITerminalOptions['fontWeightBold'];
-      }
-      // Only include lineHeight if it's a positive number
-      if (typeof currentFontSettings.lineHeight === 'number' && currentFontSettings.lineHeight > 0) {
-        fontOverrides.lineHeight = currentFontSettings.lineHeight;
-      }
-      // Only include letterSpacing if it's a number (can be 0 or negative)
-      if (typeof currentFontSettings.letterSpacing === 'number') {
-        fontOverrides.letterSpacing = currentFontSettings.letterSpacing;
-      }
-      // Cursor settings
-      if (currentFontSettings.cursorStyle) {
-        fontOverrides.cursorStyle = currentFontSettings.cursorStyle;
-      }
-      if (typeof currentFontSettings.cursorWidth === 'number' && currentFontSettings.cursorWidth > 0) {
-        fontOverrides.cursorWidth = currentFontSettings.cursorWidth;
-      }
-      // Display settings
-      if (typeof currentFontSettings.drawBoldTextInBrightColors === 'boolean') {
-        fontOverrides.drawBoldTextInBrightColors = currentFontSettings.drawBoldTextInBrightColors;
-      }
-      if (typeof currentFontSettings.minimumContrastRatio === 'number') {
-        fontOverrides.minimumContrastRatio = currentFontSettings.minimumContrastRatio;
-      }
-    }
-
-    return { fontSettings: currentFontSettings, fontOverrides };
-  }
-
-  /**
-   * Update container backgrounds with theme color
-   *
-   * 🔧 FIX: Extracted from duplicate code in createTerminal() and delayed renderer setup.
-   * Explicitly updates container backgrounds since terminal.element may not be available
-   * when applyTerminalTheme tries to scope the update.
-   *
-   * @param terminalId - Terminal identifier for logging
-   * @param container - Terminal container element
-   * @param terminalContent - Terminal content element
-   * @param settings - Settings object containing theme property
-   */
-  private updateContainerBackgrounds(
-    terminalId: string,
-    container: HTMLElement | null,
-    terminalContent: HTMLElement | null,
-    settings: { theme?: string } | null | undefined
-  ): void {
-    if (!settings) {
-      return;
-    }
-
-    const resolvedTheme = getWebviewTheme(settings);
-    const backgroundColor = resolvedTheme.background;
-
-    if (terminalContent) {
-      terminalContent.style.backgroundColor = backgroundColor;
-    }
-    if (container) {
-      const xtermElement = container.querySelector<HTMLElement>(`.${CssClasses.XTERM}`);
-      if (xtermElement) {
-        xtermElement.style.backgroundColor = backgroundColor;
-      }
-      const viewport = container.querySelector<HTMLElement>(`.${CssClasses.XTERM_VIEWPORT}`);
-      if (viewport) {
-        viewport.style.backgroundColor = backgroundColor;
-      }
-    }
-    terminalLogger.info(`🎨 Container backgrounds updated: ${terminalId} (${backgroundColor})`);
   }
 
   /**
