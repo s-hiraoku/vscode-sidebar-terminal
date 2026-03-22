@@ -10,6 +10,7 @@ import { CliAgentDetectionEngine } from './CliAgentDetectionEngine';
 import { CliAgentStateStore, AgentStatus } from './CliAgentStateStore';
 import { CliAgentWaitingDetector } from './CliAgentWaitingDetector';
 import { AudioNotificationService } from './AudioNotificationService';
+import { ToastNotificationService } from './ToastNotificationService';
 import type { AgentType } from '../types/shared';
 import { CliAgentInputAccumulator } from './CliAgentInputAccumulator';
 
@@ -18,9 +19,13 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
   private readonly stateStore: CliAgentStateStore;
   private readonly waitingDetector: CliAgentWaitingDetector;
   private readonly audioService: AudioNotificationService;
+  private readonly toastService: ToastNotificationService;
   private readonly inputAccumulator: CliAgentInputAccumulator;
   private waitingChangeSubscription: { dispose(): void } | undefined;
+  private statusChangeSubscription: { dispose(): void } | undefined;
   private heartbeatInterval: ReturnType<typeof setInterval> | undefined;
+  private readonly previousAgentInfo = new Map<string, { status: AgentStatus; agentType: AgentType | null }>();
+  private readonly removingTerminals = new Set<string>();
 
   constructor() {
     this.detectionEngine = new CliAgentDetectionEngine();
@@ -30,11 +35,26 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
       this.stateStore
     );
     this.audioService = new AudioNotificationService();
+    this.toastService = new ToastNotificationService();
     this.inputAccumulator = new CliAgentInputAccumulator();
 
     this.waitingChangeSubscription = this.stateStore.onAgentWaitingChange((event) => {
       if (event.isWaiting) {
         this.audioService.playNotification(event.terminalId);
+        this.toastService.showWaitingNotification(event.terminalId, event.waitingType);
+      }
+    });
+
+    this.statusChangeSubscription = this.stateStore.onStatusChange((event) => {
+      const previous = this.previousAgentInfo.get(event.terminalId);
+      this.previousAgentInfo.set(event.terminalId, { status: event.status, agentType: event.type });
+
+      if (event.status === 'none' && (previous?.status === 'connected' || previous?.status === 'disconnected')) {
+        if (this.removingTerminals.has(event.terminalId)) {
+          this.removingTerminals.delete(event.terminalId);
+          return;
+        }
+        this.toastService.showCompletedNotification(event.terminalId, previous.agentType);
       }
     });
   }
@@ -232,10 +252,13 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
   }
 
   handleTerminalRemoved(terminalId: string): void {
+    this.removingTerminals.add(terminalId);
     this.detectionEngine.clearTerminalCache(terminalId);
     this.waitingDetector.clearTerminalData(terminalId);
     this.inputAccumulator.clear(terminalId);
     this.stateStore.removeTerminalCompletely(terminalId);
+    this.previousAgentInfo.delete(terminalId);
+    this.toastService.clearTerminal(terminalId);
   }
 
   forceReconnectAgent(
@@ -270,8 +293,10 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
       this.heartbeatInterval = undefined;
     }
     this.waitingChangeSubscription?.dispose();
+    this.statusChangeSubscription?.dispose();
     this.waitingDetector.dispose();
     this.audioService.dispose();
+    this.toastService.dispose();
     this.stateStore.dispose();
   }
 
