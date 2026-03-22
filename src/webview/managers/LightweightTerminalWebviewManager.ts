@@ -46,6 +46,7 @@ import { SettingsCoordinator } from '../coordinators/SettingsCoordinator';
 import { TerminalStateCoordinator } from '../coordinators/TerminalStateCoordinator';
 import { PanelLocationController } from '../coordinators/PanelLocationController';
 import { LightweightTerminalLifecycleCoordinator } from '../coordinators/LightweightTerminalLifecycleCoordinator';
+import { LightweightTerminalInitializationCoordinator } from '../coordinators/LightweightTerminalInitializationCoordinator';
 
 // Managers (リファクタリングで抽出)
 import { SessionRestoreManager, SessionData } from './SessionRestoreManager';
@@ -122,6 +123,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   private terminalStateCoordinator!: TerminalStateCoordinator;
   private panelLocationController!: PanelLocationController;
   private lightweightTerminalLifecycleCoordinator!: LightweightTerminalLifecycleCoordinator;
+  private lightweightTerminalInitializationCoordinator!: LightweightTerminalInitializationCoordinator;
 
   // ========================================
   // 専門マネージャー
@@ -232,6 +234,39 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     log('✅ All managers initialized');
 
     // 既存マネージャーの初期化
+    this.lightweightTerminalInitializationCoordinator =
+      new LightweightTerminalInitializationCoordinator({
+        managerCoordinator: this,
+        getCurrentSettings: () => this.currentSettings,
+        setCurrentSettings: (settings) => {
+          this.currentSettings = settings;
+        },
+        applySettings: (settings) => this.applySettings(settings),
+        saveSettings: () => this.saveSettings(),
+        ensureTerminalFocus: () => this.ensureTerminalFocus(),
+        getAllTerminalInstances: () => this.getAllTerminalInstances(),
+        getAllTerminalContainers: () => this.getAllTerminalContainers(),
+        getActiveTerminalId: () => this.getActiveTerminalId(),
+        getTerminalInstance: (id) => this.getTerminalInstance(id),
+        createTerminal: (id, name) => this.createTerminal(id, name),
+        getSystemStatus: () => this.getSystemStatus(),
+        forceSynchronization: () => this.forceSynchronization(),
+        requestLatestState: () => this.requestLatestState(),
+        postMessageToExtension: (message) => this.postMessageToExtension(message),
+        terminalLifecycleManager: this.terminalLifecycleManager,
+        splitManager: this.splitManager,
+        findInTerminalManager: this.findInTerminalManager,
+        profileManager: this.profileManager,
+        shellIntegrationManager: this.shellIntegrationManager,
+        displayModeManager: this.displayModeManager,
+        terminalContainerManager: this.terminalContainerManager,
+        debugPanelManager: this.debugPanelManager,
+        fontSettingsService: this.fontSettingsService,
+        eventHandlerManager: this.eventHandlerManager,
+        scheduleTimeout: (handler, timeout) => window.setTimeout(handler, timeout),
+        settingsVersionInfo: () => this.versionInfo,
+        disposeManager: () => this.dispose(),
+      });
     this.initializeExistingManagers();
 
     // コーディネーターの初期化
@@ -468,131 +503,23 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
    * 既存マネージャーの初期化（段階的移行のため）
    */
   private initializeExistingManagers(): void {
-    log('🔧 Initializing existing managers...');
+    const initializedManagers =
+      this.lightweightTerminalInitializationCoordinator.initializeExistingManagers();
 
-    // Settings Panel Manager
-    this.settingsPanel = new SettingsPanel({
-      onSettingsChange: (settings) => {
-        try {
-          const mergedSettings = { ...this.currentSettings, ...settings };
-          this.applySettings(settings);
-
-          if (this.configManager) {
-            this.configManager.applySettings(
-              mergedSettings,
-              this.terminalLifecycleManager.getAllTerminalInstances()
-            );
-            this.currentSettings = this.configManager.getCurrentSettings();
-          }
-
-          // Settings are already applied to terminals via configManager
-          // messageManager does not need to update settings
-
-          this.saveSettings();
-        } catch (error) {
-          log('❌ [SETTINGS] Error applying settings from panel:', error);
-        }
-      },
-      onClose: () => {
-        try {
-          this.ensureTerminalFocus();
-        } catch (error) {
-          log('❌ [SETTINGS] Error restoring focus after closing settings:', error);
-        }
-      },
-    });
-
-    // Notification Manager
-    this.notificationManager = new NotificationManager();
-
-    // Performance Manager
-    this.performanceManager = new PerformanceManager();
-    this.performanceManager.initializePerformance(this); // 🔧 FIX: Enable DSR response handling (Issue #341)
-
-    // UI Manager
-    this.uiManager = new UIManager();
-    this.uiManager.setActiveBorderMode(this.currentSettings.activeBorderMode ?? 'multipleOnly');
-
-    // Connect FontSettingsService with UIManager (Dependency Injection)
-    this.fontSettingsService.setApplicator(this.uiManager);
-
-    // Terminal Tab Manager
-    this.terminalTabManager = new TerminalTabManager();
-    this.terminalTabManager.setCoordinator(this);
-
-    // Connect UIManager with TerminalTabManager for theme synchronization
-    this.uiManager.setTabThemeUpdater((theme) => {
-      this.terminalTabManager?.updateTheme(theme);
-    });
-
-    // Input Manager - 重要：入力機能のために必須 (Issue #216: constructor injection)
-    this.inputManager = new InputManager(this);
-    this.inputManager.initialize(); // 🔧 Initialize InputManager to register keyboard listeners
-
-    // Config Manager
-    this.configManager = new ConfigManager();
-    // Connect ConfigManager to FontSettingsService for single source of truth
-    this.configManager.setFontSettingsService(this.fontSettingsService);
-
-    // 🚀 PHASE 3: Initialize persistence managers with proper API access
-    this.webViewPersistenceService = new WebViewPersistenceService();
-    this.persistenceManager = this.webViewPersistenceService;
-
-    // Message Manager は後で初期化
-    this.messageManager = new ConsolidatedMessageManager();
-    this.messageManager.setCoordinator(this); // 🆕 Coordinator を設定（×ボタン機能に必要）
-    this.persistenceManager = this.webViewPersistenceService;
-
-    // Set up coordinator relationships for specialized managers
-    this.findInTerminalManager.setCoordinator(this);
-    this.profileManager.setCoordinator(this);
-    this.shellIntegrationManager.setCoordinator(this);
-
-    // Initialize ProfileManager asynchronously
-    this.profileManagerInitTimer = window.setTimeout(async () => {
-      try {
-        await this.profileManager.initialize();
-        log('🎯 ProfileManager async initialization completed');
-      } catch (error) {
-        console.error('❌ ProfileManager initialization failed:', error);
-      }
-    }, 100);
-
-    // Input Manager setup will be handled in setupInputManager()
-    this.terminalTabManager.initialize();
-
-    // 🆕 Initialize DisplayModeManager and TerminalContainerManager (Issue #198)
-    this.displayModeManager.initialize();
-    this.terminalContainerManager.initialize();
-
-    // Setup DebugPanelManager callbacks
-    this.debugPanelManager.setCallbacks({
-      getSystemStatus: () => this.getSystemStatus(),
-      forceSynchronization: () => this.forceSynchronization(),
-      requestLatestState: () => this.requestLatestState(),
-    });
-
-    // Initialize TerminalStateDisplayManager
-    this.terminalStateDisplayManager = new TerminalStateDisplayManager(
-      this.uiManager,
-      this.notificationManager,
-      this.terminalTabManager,
-      this.terminalContainerManager
-    );
-
-    // Initialize SessionRestoreManager (extracted for better separation)
-    this.sessionRestoreManager = new SessionRestoreManager({
-      getTerminalInstance: (id) => this.getTerminalInstance(id),
-      createTerminal: (id, name) => this.createTerminal(id, name),
-      getActiveTerminalId: () => this.getActiveTerminalId(),
-    });
-
-    // Initialize TerminalSettingsManager (extracted for better separation)
-    this.settingsManager = new TerminalSettingsManager(this.uiManager, this.configManager, {
-      getAllTerminalInstances: () => this.getAllTerminalInstances(),
-      getAllTerminalContainers: () => this.getAllTerminalContainers(),
-      getActiveTerminalId: () => this.getActiveTerminalId(),
-    });
+    this.settingsPanel = initializedManagers.settingsPanel;
+    this.notificationManager = initializedManagers.notificationManager;
+    this.performanceManager = initializedManagers.performanceManager;
+    this.uiManager = initializedManagers.uiManager;
+    this.terminalTabManager = initializedManagers.terminalTabManager;
+    this.inputManager = initializedManagers.inputManager;
+    this.configManager = initializedManagers.configManager;
+    this.webViewPersistenceService = initializedManagers.webViewPersistenceService;
+    this.persistenceManager = initializedManagers.persistenceManager;
+    this.messageManager = initializedManagers.messageManager;
+    this.terminalStateDisplayManager = initializedManagers.terminalStateDisplayManager;
+    this.sessionRestoreManager = initializedManagers.sessionRestoreManager;
+    this.settingsManager = initializedManagers.settingsManager;
+    this.profileManagerInitTimer = initializedManagers.profileManagerInitTimer;
 
     log('✅ All managers initialized');
   }
@@ -601,23 +528,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
    * 入力マネージャーの完全な設定
    */
   private setupInputManager(): void {
-    try {
-      // Alt+Click機能の設定
-      this.inputManager.setupAltKeyVisualFeedback();
-
-      // IME処理の設定
-      this.inputManager.setupIMEHandling();
-
-      // キーボードショートカットの設定
-      this.inputManager.setupKeyboardShortcuts(this);
-
-      // Agent interaction mode を無効化（VS Code標準動作）
-      this.inputManager.setAgentInteractionMode(false);
-
-      log('✅ Input manager fully configured');
-    } catch (error) {
-      log('❌ Error setting up input manager:', error);
-    }
+    this.lightweightTerminalInitializationCoordinator.setupInputManager(this.inputManager);
   }
 
   /**
@@ -625,45 +536,12 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
    * リサイズ処理はResizeCoordinatorに委譲
    */
   private setupEventHandlers(): void {
-    // メッセージイベント
-    this.eventHandlerManager.setMessageEventHandler(async (event) => {
-      log(`🔍 [DEBUG] WebView received message event:`, {
-        type: event.type,
-        dataCommand: event.data?.command,
-        timestamp: Date.now(),
-      });
-      await this.messageManager.receiveMessage(event.data, this);
-    });
-
-    // Local UI events
-    document.addEventListener('settings-open-requested' as keyof DocumentEventMap, () => {
-      this.openSettings();
-    });
-
-    // WebView window focus/blur: Notify extension for secondaryTerminalFocus context key
-    this._onWindowFocus = () => {
-      this.postMessageToExtension({
-        command: 'terminalFocused',
-        terminalId: this.getActiveTerminalId() || '',
-        timestamp: Date.now(),
-      });
-    };
-    this._onWindowBlur = () => {
-      this.postMessageToExtension({
-        command: 'terminalBlurred',
-        terminalId: this.getActiveTerminalId() || '',
-        timestamp: Date.now(),
-      });
-    };
-    window.addEventListener('focus', this._onWindowFocus);
-    window.addEventListener('blur', this._onWindowBlur);
-
-    // ページライフサイクル
-    this.eventHandlerManager.onPageUnload(() => {
-      this.dispose();
-    });
-
-    log('🎭 Event handlers configured');
+    const handlers =
+      this.lightweightTerminalInitializationCoordinator.setupEventHandlers(
+        this.messageManager
+      );
+    this._onWindowFocus = handlers.onWindowFocus;
+    this._onWindowBlur = handlers.onWindowBlur;
   }
 
   /**

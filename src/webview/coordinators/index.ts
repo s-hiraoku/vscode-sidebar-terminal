@@ -18,3 +18,8 @@ export {
   PanelLocationController,
   type IPanelLocationControllerDependencies,
 } from './PanelLocationController';
+export {
+  LightweightTerminalInitializationCoordinator,
+  type ILightweightTerminalInitializationDependencies,
+  type IInitializedManagerBundle,
+} from './LightweightTerminalInitializationCoordinator';
