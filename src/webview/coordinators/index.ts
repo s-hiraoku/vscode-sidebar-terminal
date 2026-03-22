@@ -23,3 +23,7 @@ export {
   type ILightweightTerminalInitializationDependencies,
   type IInitializedManagerBundle,
 } from './LightweightTerminalInitializationCoordinator';
+export {
+  TerminalAccessorCoordinator,
+  type ITerminalAccessorCoordinatorDependencies,
+} from './TerminalAccessorCoordinator';

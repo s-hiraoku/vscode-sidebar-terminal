@@ -47,6 +47,7 @@ import { TerminalStateCoordinator } from '../coordinators/TerminalStateCoordinat
 import { PanelLocationController } from '../coordinators/PanelLocationController';
 import { LightweightTerminalLifecycleCoordinator } from '../coordinators/LightweightTerminalLifecycleCoordinator';
 import { LightweightTerminalInitializationCoordinator } from '../coordinators/LightweightTerminalInitializationCoordinator';
+import { TerminalAccessorCoordinator } from '../coordinators/TerminalAccessorCoordinator';
 
 // Managers (リファクタリングで抽出)
 import { SessionRestoreManager, SessionData } from './SessionRestoreManager';
@@ -124,6 +125,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   private panelLocationController!: PanelLocationController;
   private lightweightTerminalLifecycleCoordinator!: LightweightTerminalLifecycleCoordinator;
   private lightweightTerminalInitializationCoordinator!: LightweightTerminalInitializationCoordinator;
+  private terminalAccessorCoordinator!: TerminalAccessorCoordinator;
 
   // ========================================
   // 専門マネージャー
@@ -268,6 +270,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
         disposeManager: () => this.dispose(),
       });
     this.initializeExistingManagers();
+    this.initializeAccessorCoordinator();
 
     // コーディネーターの初期化
     this.initializeCoordinators();
@@ -527,6 +530,32 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     log('✅ All managers initialized');
   }
 
+  private initializeAccessorCoordinator(): void {
+    this.terminalAccessorCoordinator = new TerminalAccessorCoordinator({
+      getActiveTerminalId: () => this.terminalLifecycleManager.getActiveTerminalId(),
+      getTerminalInstance: (id) => this.terminalLifecycleManager.getTerminalInstance(id),
+      getAllTerminalInstances: () => this.terminalLifecycleManager.getAllTerminalInstances(),
+      getAllTerminalContainers: () => this.terminalLifecycleManager.getAllTerminalContainers(),
+      getTerminalElement: (id) => this.terminalLifecycleManager.getTerminalElement(id),
+      managers: {
+        performance: this.performanceManager,
+        input: this.inputManager,
+        ui: this.uiManager,
+        config: this.configManager,
+        message: this.messageManager,
+        notification: this.notificationManager,
+        findInTerminal: this.findInTerminalManager,
+        profile: this.profileManager,
+        tabs: this.terminalTabManager,
+        persistence: (this.persistenceManager as IPersistenceManager | null) ?? undefined,
+        terminalContainer: this.terminalContainerManager,
+        displayMode: this.displayModeManager,
+        header: this.headerManager,
+      },
+      splitManager: this.splitManager,
+    });
+  }
+
   /**
    * 入力マネージャーの完全な設定
    */
@@ -634,26 +663,25 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   }
 
   public getTerminalInstance(terminalId: string): TerminalInstance | undefined {
-    return this.terminalLifecycleManager.getTerminalInstance(terminalId);
+    return this.terminalAccessorCoordinator.getTerminalInstance(terminalId);
   }
 
   public getSerializeAddon(
     terminalId: string
   ): import('@xterm/addon-serialize').SerializeAddon | undefined {
-    const instance = this.terminalLifecycleManager.getTerminalInstance(terminalId);
-    return instance?.serializeAddon;
+    return this.terminalAccessorCoordinator.getSerializeAddon(terminalId);
   }
 
   public getAllTerminalInstances(): Map<string, TerminalInstance> {
-    return this.terminalLifecycleManager.getAllTerminalInstances();
+    return this.terminalAccessorCoordinator.getAllTerminalInstances();
   }
 
   public getAllTerminalContainers(): Map<string, HTMLElement> {
-    return this.terminalLifecycleManager.getAllTerminalContainers();
+    return this.terminalAccessorCoordinator.getAllTerminalContainers();
   }
 
   public getTerminalElement(terminalId: string): HTMLElement | undefined {
-    return this.terminalLifecycleManager.getTerminalElement(terminalId);
+    return this.terminalAccessorCoordinator.getTerminalElement(terminalId);
   }
 
   public postMessageToExtension(message: unknown): void {
@@ -679,38 +707,24 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     displayMode?: IDisplayModeManager;
     header?: IHeaderManager;
   } {
-    return {
-      performance: this.performanceManager,
-      input: this.inputManager,
-      ui: this.uiManager,
-      config: this.configManager,
-      message: this.messageManager,
-      notification: this.notificationManager,
-      findInTerminal: this.findInTerminalManager,
-      profile: this.profileManager,
-      tabs: this.terminalTabManager,
-      persistence: (this.persistenceManager as IPersistenceManager | null) ?? undefined,
-      terminalContainer: this.terminalContainerManager,
-      displayMode: this.displayModeManager,
-      header: this.headerManager,
-    };
+    return this.terminalAccessorCoordinator.getManagers();
   }
 
   public getMessageManager(): IMessageManager {
-    return this.messageManager;
+    return this.terminalAccessorCoordinator.getMessageManager();
   }
 
   // 🆕 Getters for new managers
   public getTerminalContainerManager(): ITerminalContainerManager {
-    return this.terminalContainerManager;
+    return this.terminalAccessorCoordinator.getTerminalContainerManager();
   }
 
   public getDisplayModeManager(): IDisplayModeManager {
-    return this.displayModeManager;
+    return this.terminalAccessorCoordinator.getDisplayModeManager();
   }
 
   public getSplitManager(): SplitManager {
-    return this.splitManager;
+    return this.terminalAccessorCoordinator.getSplitManager();
   }
 
   /**
@@ -1365,33 +1379,18 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
   // Legacy compatibility getters
   public get terminal(): Terminal | null {
-    const activeId = this.getActiveTerminalId();
-    if (activeId) {
-      const instance = this.getTerminalInstance(activeId);
-      return instance?.terminal || null;
-    }
-    return null;
+    return this.terminalAccessorCoordinator.getTerminal();
   }
 
   public get fitAddon() {
-    const activeId = this.getActiveTerminalId();
-    if (activeId) {
-      const instance = this.getTerminalInstance(activeId);
-      return instance?.fitAddon || null;
-    }
-    return null;
+    return this.terminalAccessorCoordinator.getFitAddon();
   }
 
   public get terminalContainer(): HTMLElement | null {
-    const activeId = this.getActiveTerminalId();
-    if (activeId) {
-      const instance = this.getTerminalInstance(activeId);
-      return instance?.container || null;
-    }
-    return null;
+    return this.terminalAccessorCoordinator.getTerminalContainer();
   }
 
   public get activeTerminalId(): string | null {
-    return this.getActiveTerminalId();
+    return this.terminalAccessorCoordinator.getActiveTerminalIdValue();
   }
 }
