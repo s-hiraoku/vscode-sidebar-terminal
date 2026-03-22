@@ -20,6 +20,8 @@ import { isMacPlatform } from '../utils/PlatformUtils';
 import { VSCodeCommandDispatcher } from './input/handlers/VSCodeCommandDispatcher';
 import { AltClickCoordinator } from './input/handlers/AltClickCoordinator';
 import { InputFlushingService } from './input/services/InputFlushingService';
+import { PanelNavigationHandler } from './input/handlers/PanelNavigationHandler';
+import { TerminalClipboardHandler } from './input/handlers/TerminalClipboardHandler';
 
 // ============================================================================
 // Constants
@@ -43,22 +45,6 @@ const InputTimings = {
   INPUT_DEBOUNCE_DELAY_MS: 50,
 } as const;
 
-/**
- * Key sets for panel navigation mode directional movement.
- * Hoisted to module scope to avoid recreating on every keypress.
- */
-const PREVIOUS_NAVIGATION_KEYS = new Set(['h', 'k', 'ArrowLeft', 'ArrowUp']);
-const NEXT_NAVIGATION_KEYS = new Set(['j', 'l', 'ArrowRight', 'ArrowDown']);
-/**
- * Action keys for panel navigation mode (create/kill terminal).
- * Maps key to its action label for logging.
- */
-const PANEL_ACTION_KEYS = new Map<string, string>([
-  ['r', 'create terminal'],
-  ['d', 'create terminal'],
-  ['x', 'kill terminal'],
-]);
-
 export class InputManager extends BaseManager implements IInputManager {
   // Event handler registry for centralized event management
   protected readonly eventRegistry = new EventHandlerRegistry();
@@ -74,6 +60,8 @@ export class InputManager extends BaseManager implements IInputManager {
   private vsCodeCommandDispatcher: VSCodeCommandDispatcher;
   private altClickCoordinator: AltClickCoordinator;
   private inputFlushingService: InputFlushingService;
+  private panelNavigationHandler: PanelNavigationHandler;
+  private terminalClipboardHandler: TerminalClipboardHandler;
 
   constructor(coordinator: IManagerCoordinator) {
     super('InputManager', {
@@ -99,20 +87,31 @@ export class InputManager extends BaseManager implements IInputManager {
         )
     );
 
+    // Initialize TerminalClipboardHandler
+    this.terminalClipboardHandler = new TerminalClipboardHandler({
+      logger: (message: string) => this.logger(message),
+      terminalOperationsService: this.terminalOperationsService,
+    });
+
     // Initialize VSCodeCommandDispatcher
     this.vsCodeCommandDispatcher = new VSCodeCommandDispatcher({
       logger: (message: string) => this.logger(message),
       emitTerminalInteractionEvent: (type, terminalId, data, manager) =>
         this.emitTerminalInteractionEvent(type, terminalId, data, manager),
       terminalOperationsService: this.terminalOperationsService,
-      handleTerminalCopy: (manager) => this.handleTerminalCopy(manager),
-      handleTerminalPaste: (manager) => this.handleTerminalPaste(manager),
-      handleTerminalSelectAll: (manager) => this.handleTerminalSelectAll(manager),
-      handleTerminalFind: (manager) => this.handleTerminalFind(manager),
-      handleTerminalFindNext: (manager) => this.handleTerminalFindNext(manager),
-      handleTerminalFindPrevious: (manager) => this.handleTerminalFindPrevious(manager),
-      handleTerminalHideFind: (manager) => this.handleTerminalHideFind(manager),
-      handleTerminalClear: (manager) => this.handleTerminalClear(manager),
+      handleTerminalCopy: (manager) => this.terminalClipboardHandler.handleTerminalCopy(manager),
+      handleTerminalPaste: (manager) => this.terminalClipboardHandler.handleTerminalPaste(manager),
+      handleTerminalSelectAll: (manager) =>
+        this.terminalClipboardHandler.handleTerminalSelectAll(manager),
+      handleTerminalFind: (manager) => this.terminalClipboardHandler.handleTerminalFind(manager),
+      handleTerminalFindNext: (manager) =>
+        this.terminalClipboardHandler.handleTerminalFindNext(manager),
+      handleTerminalFindPrevious: (manager) =>
+        this.terminalClipboardHandler.handleTerminalFindPrevious(manager),
+      handleTerminalHideFind: (manager) =>
+        this.terminalClipboardHandler.handleTerminalHideFind(manager),
+      handleTerminalClear: (manager) =>
+        this.terminalClipboardHandler.handleTerminalClear(manager),
     });
 
     // Initialize InputFlushingService
@@ -140,6 +139,19 @@ export class InputManager extends BaseManager implements IInputManager {
       stateManager: this.stateManager,
     });
 
+    // Initialize PanelNavigationHandler
+    this.panelNavigationHandler = new PanelNavigationHandler({
+      logger: (message: string) => this.logger(message),
+      getActiveTerminalId: () => this.coordinator.getActiveTerminalId?.() || null,
+      emitTerminalInteractionEvent: (type, terminalId, data) =>
+        this.emitTerminalInteractionEvent(
+          type as TerminalInteractionEvent['type'],
+          terminalId,
+          data,
+          this.coordinator
+        ),
+    });
+
     // Initialize IME handler with new architecture
     this.imeHandler = new IMEHandler(
       this.eventDebounceTimers,
@@ -161,10 +173,6 @@ export class InputManager extends BaseManager implements IInputManager {
 
   // Simple arrow key handling for agent interactions
   private agentInteractionMode = false;
-  // Zellij-style panel navigation mode (Ctrl+P to toggle)
-  private panelNavigationMode = false;
-  private panelNavigationEnabled = false;
-  private panelNavigationIndicator: HTMLElement | null = null;
 
   /**
    * Set the notification manager for Alt+Click feedback
@@ -233,7 +241,7 @@ export class InputManager extends BaseManager implements IInputManager {
     this.logger('Setting up VS Code compatible keyboard shortcuts');
 
     const shortcutHandler = (event: KeyboardEvent): void => {
-      if (this.handlePanelNavigationKey(event, manager)) {
+      if (this.panelNavigationHandler.handlePanelNavigationKey(event)) {
         return;
       }
 
@@ -290,182 +298,6 @@ export class InputManager extends BaseManager implements IInputManager {
    */
   private handleVSCodeCommand(command: string, manager: IManagerCoordinator): void {
     this.vsCodeCommandDispatcher.handleVSCodeCommand(command, manager);
-  }
-
-  /**
-   * Handle terminal clear operation - delegates to TerminalOperationsService
-   */
-  private handleTerminalClear(manager: IManagerCoordinator): void {
-    this.terminalOperationsService.clearTerminal(manager);
-  }
-
-  /**
-   * Handle terminal copy selection
-   * Note: In VS Code WebView, navigator.clipboard may not work.
-   * We send selection to Extension to copy via VS Code API.
-   */
-  private handleTerminalCopy(manager: IManagerCoordinator): void {
-    const activeTerminalId = manager.getActiveTerminalId();
-    if (!activeTerminalId) {
-      return;
-    }
-
-    const terminalInstance = manager.getTerminalInstance(activeTerminalId);
-    if (!terminalInstance) {
-      return;
-    }
-
-    const terminal = terminalInstance.terminal;
-    const hasSelection = terminal.hasSelection();
-
-    if (hasSelection) {
-      const selection = terminal.getSelection();
-
-      if (selection) {
-        // Send selection to Extension to copy to clipboard
-        this.logger(
-          `📋 Copying selection from terminal ${activeTerminalId} (${selection.length} chars)`
-        );
-
-        manager.postMessageToExtension({
-          command: 'copyToClipboard',
-          terminalId: activeTerminalId,
-          text: selection,
-        });
-
-        // Clear selection after copy (like VS Code terminal)
-        terminal.clearSelection();
-      }
-    }
-  }
-
-  /**
-   * Handle terminal paste operation
-   * Note: In VS Code WebView, navigator.clipboard may not work.
-   * We request clipboard content from Extension via messaging.
-   */
-  private handleTerminalPaste(manager: IManagerCoordinator): void {
-    const activeTerminalId = manager.getActiveTerminalId();
-    if (!activeTerminalId) {
-      return;
-    }
-
-    // Request clipboard content from Extension
-    this.logger(`📋 Requesting clipboard content from Extension for terminal ${activeTerminalId}`);
-
-    // Send message to Extension to get clipboard content
-    manager.postMessageToExtension({
-      command: 'requestClipboardContent',
-      terminalId: activeTerminalId,
-    });
-
-    // Extension will respond with 'clipboardContent' message
-    // which is handled in message handler
-  }
-
-  /**
-   * Handle terminal select all operation
-   */
-  private handleTerminalSelectAll(manager: IManagerCoordinator): void {
-    const activeTerminalId = manager.getActiveTerminalId();
-    if (!activeTerminalId) return;
-
-    const terminalInstance = manager.getTerminalInstance(activeTerminalId);
-    if (!terminalInstance) return;
-
-    terminalInstance.terminal.selectAll();
-    this.logger(`Selected all in terminal ${activeTerminalId}`);
-  }
-
-  /**
-   * Handle terminal find operation
-   */
-  private handleTerminalFind(manager: IManagerCoordinator): void {
-    const activeTerminalId = manager.getActiveTerminalId();
-    if (!activeTerminalId) return;
-
-    const terminalInstance = manager.getTerminalInstance(activeTerminalId);
-    if (!terminalInstance || !terminalInstance.searchAddon) {
-      this.logger(`Search addon not available for terminal ${activeTerminalId}`);
-      return;
-    }
-
-    // Use search addon if available
-    try {
-      // Simple find interface - could be enhanced with search UI
-      const searchTerm = prompt('Find in terminal:');
-      if (searchTerm) {
-        terminalInstance.searchAddon.findNext(searchTerm);
-        this.logger(`Searching for "${searchTerm}" in terminal ${activeTerminalId}`);
-      }
-    } catch (error) {
-      this.logger(`Find operation failed: ${error}`);
-    }
-  }
-
-  /**
-   * Handle terminal find next
-   */
-  private handleTerminalFindNext(manager: IManagerCoordinator): void {
-    const activeTerminalId = manager.getActiveTerminalId();
-    if (!activeTerminalId) return;
-
-    const terminalInstance = manager.getTerminalInstance(activeTerminalId);
-    if (terminalInstance?.searchAddon) {
-      terminalInstance.searchAddon.findNext('', { incremental: false });
-      this.logger(`Find next in terminal ${activeTerminalId}`);
-    }
-  }
-
-  /**
-   * Handle terminal find previous
-   */
-  private handleTerminalFindPrevious(manager: IManagerCoordinator): void {
-    const activeTerminalId = manager.getActiveTerminalId();
-    if (!activeTerminalId) return;
-
-    const terminalInstance = manager.getTerminalInstance(activeTerminalId);
-    if (terminalInstance?.searchAddon) {
-      terminalInstance.searchAddon.findPrevious('', { incremental: false });
-      this.logger(`Find previous in terminal ${activeTerminalId}`);
-    }
-  }
-
-  /**
-   * Handle hide terminal find
-   */
-  private handleTerminalHideFind(_manager: IManagerCoordinator): void {
-    // Hide find UI - this would be enhanced with actual find UI
-    this.logger('Hide terminal find requested');
-  }
-
-  /**
-   * Handle terminal word deletion operations - delegates to TerminalOperationsService
-   */
-  private handleTerminalDeleteWordLeft(manager: IManagerCoordinator): void {
-    this.terminalOperationsService.deleteWordLeft(manager);
-  }
-
-  private handleTerminalDeleteWordRight(manager: IManagerCoordinator): void {
-    this.terminalOperationsService.deleteWordRight(manager);
-  }
-
-  /**
-   * Handle terminal line movement operations - delegates to TerminalOperationsService
-   */
-  private handleTerminalMoveToLineStart(manager: IManagerCoordinator): void {
-    this.terminalOperationsService.moveToLineStart(manager);
-  }
-
-  private handleTerminalMoveToLineEnd(manager: IManagerCoordinator): void {
-    this.terminalOperationsService.moveToLineEnd(manager);
-  }
-
-  /**
-   * Handle terminal size to content - delegates to TerminalOperationsService
-   */
-  private handleTerminalSizeToContent(manager: IManagerCoordinator): void {
-    this.terminalOperationsService.sizeToContent(manager);
   }
 
   /**
@@ -835,139 +667,12 @@ export class InputManager extends BaseManager implements IInputManager {
     );
   }
 
-  private resolveNavigationTerminalId(manager: IManagerCoordinator): string | null {
-    const activeTerminalId = manager.getActiveTerminalId?.();
-    if (activeTerminalId) {
-      return activeTerminalId;
-    }
-
-    const activeContainer = document.querySelector('.terminal-container.active');
-    const fallbackTerminalId = activeContainer?.getAttribute('data-terminal-id');
-    return fallbackTerminalId || null;
-  }
-
   public setPanelNavigationEnabled(enabled: boolean): void {
-    this.panelNavigationEnabled = enabled;
-    document.body.classList.toggle('panel-navigation-enabled', enabled);
-    if (!enabled && this.panelNavigationMode) {
-      this.setPanelNavigationMode(false);
-    }
-    this.logger(`Panel navigation enabled: ${enabled}`);
-  }
-
-  private handlePanelNavigationKey(event: KeyboardEvent, manager: IManagerCoordinator): boolean {
-    if (!this.panelNavigationEnabled) {
-      return false;
-    }
-
-    const normalizedKey = event.key.length === 1 ? event.key.toLowerCase() : event.key;
-    const isToggleShortcut =
-      !event.shiftKey &&
-      !event.altKey &&
-      normalizedKey === 'p' &&
-      event.ctrlKey &&
-      !event.metaKey;
-
-    if (isToggleShortcut) {
-      this.setPanelNavigationMode(!this.panelNavigationMode);
-      event.preventDefault();
-      event.stopPropagation();
-      this.logger(`Panel navigation mode: ${this.panelNavigationMode ? 'enabled' : 'disabled'}`);
-      return true;
-    }
-
-    if (!this.panelNavigationMode) {
-      return false;
-    }
-
-    if (event.key === 'Escape') {
-      this.setPanelNavigationMode(false);
-      event.preventDefault();
-      event.stopPropagation();
-      this.logger('Panel navigation mode: disabled (Escape)');
-      return true;
-    }
-
-    let interactionType: 'switch-next' | 'switch-previous' | null = null;
-    if (PREVIOUS_NAVIGATION_KEYS.has(normalizedKey)) {
-      interactionType = 'switch-previous';
-    } else if (NEXT_NAVIGATION_KEYS.has(normalizedKey)) {
-      interactionType = 'switch-next';
-    } else if (PANEL_ACTION_KEYS.has(normalizedKey)) {
-      event.preventDefault();
-      event.stopPropagation();
-      this.logger(`Panel navigation ${PANEL_ACTION_KEYS.get(normalizedKey)}: ${event.key}`);
-
-      if (normalizedKey === 'r' || normalizedKey === 'd') {
-        this.emitTerminalInteractionEvent('create-terminal', '', undefined, manager);
-      } else if (normalizedKey === 'x') {
-        const activeTerminalId = this.resolveNavigationTerminalId(manager);
-        this.emitTerminalInteractionEvent(
-          'kill-terminal',
-          activeTerminalId || '',
-          undefined,
-          manager
-        );
-      }
-
-      return true;
-    } else {
-      // Block non-navigation keys from reaching the terminal while in panel navigation mode
-      event.preventDefault();
-      event.stopPropagation();
-      this.logger(`Ignored non-navigation key in panel navigation mode: ${event.key}`);
-      return true;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    const activeTerminalId = this.resolveNavigationTerminalId(manager);
-    if (activeTerminalId) {
-      this.emitTerminalInteractionEvent(interactionType, activeTerminalId, undefined, manager);
-    } else {
-      this.logger('Panel navigation requested but no active terminal could be resolved');
-    }
-
-    return true;
+    this.panelNavigationHandler.setPanelNavigationEnabled(enabled);
   }
 
   public setPanelNavigationMode(enabled: boolean): void {
-    this.panelNavigationMode = enabled;
-    document.body.classList.toggle('panel-navigation-mode', enabled);
-
-    const indicator = this.getOrCreatePanelNavigationIndicator();
-    indicator.style.display = enabled ? 'block' : 'none';
-  }
-
-  private getOrCreatePanelNavigationIndicator(): HTMLElement {
-    if (this.panelNavigationIndicator && document.body.contains(this.panelNavigationIndicator)) {
-      return this.panelNavigationIndicator;
-    }
-
-    const indicator = document.createElement('div');
-    indicator.className = 'panel-navigation-indicator';
-    indicator.textContent = 'PANEL MODE (h/j/k/l, r/d:new, x:close, Esc)';
-    Object.assign(indicator.style, {
-      position: 'fixed',
-      top: '8px',
-      right: '8px',
-      zIndex: '10000',
-      padding: '4px 8px',
-      borderRadius: '4px',
-      fontSize: '11px',
-      fontWeight: '600',
-      letterSpacing: '0.04em',
-      textTransform: 'uppercase',
-      background: 'var(--vscode-badge-background, #0e639c)',
-      color: 'var(--vscode-badge-foreground, #ffffff)',
-      pointerEvents: 'none',
-      display: 'none',
-    });
-
-    document.body.appendChild(indicator);
-    this.panelNavigationIndicator = indicator;
-    return indicator;
+    this.panelNavigationHandler.setPanelNavigationMode(enabled);
   }
 
   /**
@@ -1104,7 +809,7 @@ export class InputManager extends BaseManager implements IInputManager {
         this.logger(`${event.metaKey ? 'Cmd' : 'Ctrl'}+C copy for terminal ${terminalId}`);
         event.preventDefault();
         event.stopPropagation(); // Prevent xterm.js from also handling this event
-        this.handleTerminalCopy(manager);
+        this.terminalClipboardHandler.handleTerminalCopy(manager);
         return true;
       }
       // Send interrupt signal (only on Ctrl+C, not Cmd+C on macOS)
@@ -1143,7 +848,7 @@ export class InputManager extends BaseManager implements IInputManager {
         this.logger(`Ctrl+Insert copy for terminal ${terminalId}`);
         event.preventDefault();
         event.stopPropagation(); // Prevent xterm.js from also handling this event
-        this.handleTerminalCopy(manager);
+        this.terminalClipboardHandler.handleTerminalCopy(manager);
         return true;
       }
     }
@@ -1153,7 +858,7 @@ export class InputManager extends BaseManager implements IInputManager {
       this.logger(`Shift+Insert paste for terminal ${terminalId}`);
       event.preventDefault();
       event.stopPropagation(); // Prevent xterm.js from also handling this event
-      this.handleTerminalPaste(manager);
+      this.terminalClipboardHandler.handleTerminalPaste(manager);
       return true;
     }
 
@@ -1245,12 +950,10 @@ export class InputManager extends BaseManager implements IInputManager {
     // Dispose AltClickCoordinator
     this.altClickCoordinator.dispose();
 
+    // Dispose PanelNavigationHandler
+    this.panelNavigationHandler.dispose();
+
     this.agentInteractionMode = false;
-    this.setPanelNavigationMode(false);
-    if (this.panelNavigationIndicator) {
-      this.panelNavigationIndicator.remove();
-      this.panelNavigationIndicator = null;
-    }
 
     // Dispose IME handler
     this.imeHandler.dispose();
