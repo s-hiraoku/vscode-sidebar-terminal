@@ -4,18 +4,21 @@ import {
   CliAgentDetectionResult,
   TerminationDetectionResult,
   CliAgentState,
+  OutputChunkProcessingResult,
 } from '../interfaces/CliAgentService';
 import { CliAgentDetectionEngine } from './CliAgentDetectionEngine';
 import { CliAgentStateStore, AgentStatus } from './CliAgentStateStore';
 import { CliAgentWaitingDetector } from './CliAgentWaitingDetector';
 import { AudioNotificationService } from './AudioNotificationService';
 import type { AgentType } from '../types/shared';
+import { CliAgentInputAccumulator } from './CliAgentInputAccumulator';
 
 export class CliAgentDetectionService implements ICliAgentDetectionService {
   private readonly detectionEngine: CliAgentDetectionEngine;
   private readonly stateStore: CliAgentStateStore;
   private readonly waitingDetector: CliAgentWaitingDetector;
   private readonly audioService: AudioNotificationService;
+  private readonly inputAccumulator: CliAgentInputAccumulator;
   private waitingChangeSubscription: { dispose(): void } | undefined;
   private heartbeatInterval: ReturnType<typeof setInterval> | undefined;
 
@@ -27,6 +30,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
       this.stateStore
     );
     this.audioService = new AudioNotificationService();
+    this.inputAccumulator = new CliAgentInputAccumulator();
 
     this.waitingChangeSubscription = this.stateStore.onAgentWaitingChange((event) => {
       if (event.isWaiting) {
@@ -71,6 +75,28 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     }
   }
 
+  handleInputChunk(terminalId: string, input: string): CliAgentDetectionResult | null {
+    if (!input) {
+      return null;
+    }
+
+    const { submittedCommands, sawInterrupt } = this.inputAccumulator.consume(terminalId, input);
+
+    if (sawInterrupt) {
+      this.detectFromInput(terminalId, '\x03');
+    }
+
+    let lastDetection: CliAgentDetectionResult | null = null;
+    for (const command of submittedCommands) {
+      const detection = this.detectFromInput(terminalId, command);
+      if (detection) {
+        lastDetection = detection;
+      }
+    }
+
+    return lastDetection;
+  }
+
   detectFromOutput(terminalId: string, data: string): CliAgentDetectionResult | null {
     try {
       const result = this.detectionEngine.detectFromOutput(terminalId, data);
@@ -91,6 +117,37 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
       log('ERROR: Output detection failed:', error);
       return null;
     }
+  }
+
+  handleOutputChunk(terminalId: string, data: string): OutputChunkProcessingResult {
+    let detection: CliAgentDetectionResult | null = null;
+    let termination: TerminationDetectionResult | null = null;
+
+    let state = this.getAgentState(terminalId);
+
+    if (state.status === 'none') {
+      detection = this.detectFromOutput(terminalId, data);
+      state = this.getAgentState(terminalId);
+    }
+
+    if (state.status !== 'none') {
+      const terminationResult = this.detectTermination(terminalId, data);
+      if (terminationResult.isTerminated) {
+        termination = terminationResult;
+      }
+      state = this.getAgentState(terminalId);
+    }
+
+    if (state.status === 'connected') {
+      this.waitingDetector.analyzeImmediately(terminalId, data);
+      state = this.getAgentState(terminalId);
+    }
+
+    return {
+      detection,
+      termination,
+      state,
+    };
   }
 
   detectTermination(terminalId: string, data: string): TerminationDetectionResult {
@@ -177,6 +234,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
   handleTerminalRemoved(terminalId: string): void {
     this.detectionEngine.clearTerminalCache(terminalId);
     this.waitingDetector.clearTerminalData(terminalId);
+    this.inputAccumulator.clear(terminalId);
     this.stateStore.removeTerminalCompletely(terminalId);
   }
 
@@ -268,6 +326,3 @@ export type { AgentType } from '../types/shared';
 export type { DetectionResult, TerminationResult } from './CliAgentDetectionEngine';
 export type { AgentState, AgentStatus, StateChangeEvent } from './CliAgentStateStore';
 
-// Legacy aliases for backward compatibility
-export { CliAgentPatternRegistry as CliAgentPatternDetector } from './CliAgentPatternRegistry';
-export { CliAgentStateStore as CliAgentStateManager } from './CliAgentStateStore';

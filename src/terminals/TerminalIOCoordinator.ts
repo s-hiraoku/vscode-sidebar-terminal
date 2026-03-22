@@ -38,7 +38,7 @@ export class TerminalIOCoordinator {
     }
 
     try {
-      this._cliAgentService.detectFromInput(resolvedTerminalId, data);
+      this._cliAgentService.handleInputChunk(resolvedTerminalId, data);
       const result = this.writeToPtyWithValidation(terminal, data);
       if (!result.success && !this.attemptPtyRecovery(terminal, data)) {
         throw new Error(result.error || 'PTY write failed');
