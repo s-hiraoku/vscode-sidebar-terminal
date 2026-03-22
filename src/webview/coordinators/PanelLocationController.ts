@@ -5,7 +5,7 @@
  * Handles panel location detection, sync, flex-direction queries, and event-driven updates.
  */
 
-import { webview as log } from '../../utils/logger';
+// Logger available if needed: import { webview as log } from '../../utils/logger';
 
 /**
  * Dependencies required by PanelLocationController

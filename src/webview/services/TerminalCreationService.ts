@@ -20,7 +20,7 @@ import { SearchAddon } from '@xterm/addon-search';
 import { SerializeAddon } from '@xterm/addon-serialize';
 
 import { TerminalConfig } from '../../types/shared';
-import { TerminalInstance, IManagerCoordinator, IConfigManager } from '../interfaces/ManagerInterfaces';
+import { IManagerCoordinator } from '../interfaces/ManagerInterfaces';
 import { SplitManager } from '../managers/SplitManager';
 import { TerminalAddonManager } from '../managers/TerminalAddonManager';
 import { TerminalEventManager } from '../managers/TerminalEventManager';
@@ -48,8 +48,6 @@ import { WebViewTerminalConfig } from './terminal/TerminalConfigService';
 interface Disposable {
   dispose(): void;
 }
-
-type TerminalConfigManager = Pick<IConfigManager, 'getCurrentFontSettings' | 'getCurrentSettings'>;
 
 // ============================================================================
 // Constants
