@@ -16,26 +16,13 @@ import { InputStateManager } from './input/services/InputStateManager';
 import { InputEventService } from './input/services/InputEventService';
 import { KeybindingService } from './input/services/KeybindingService';
 import { TerminalOperationsService } from './input/services/TerminalOperationsService';
-import { isMacPlatform } from '../utils/PlatformUtils';
 import { VSCodeCommandDispatcher } from './input/handlers/VSCodeCommandDispatcher';
 import { AltClickCoordinator } from './input/handlers/AltClickCoordinator';
 import { InputFlushingService } from './input/services/InputFlushingService';
 import { PanelNavigationHandler } from './input/handlers/PanelNavigationHandler';
 import { TerminalClipboardHandler } from './input/handlers/TerminalClipboardHandler';
-
-// ============================================================================
-// Constants
-// ============================================================================
-
-/**
- * Keyboard event constants
- */
-const KeyboardConstants = {
-  /** IME composition keycode (when IME is processing input) */
-  IME_COMPOSITION_KEYCODE: 229,
-  /** Maximum ASCII code for control characters (0-31) */
-  CONTROL_CHAR_THRESHOLD: 32,
-} as const;
+import { KeyboardShortcutSetupHandler } from './input/handlers/KeyboardShortcutSetupHandler';
+import { SpecialKeysHandler } from './input/handlers/SpecialKeysHandler';
 
 /**
  * Timing constants for input handling
@@ -62,6 +49,8 @@ export class InputManager extends BaseManager implements IInputManager {
   private inputFlushingService: InputFlushingService;
   private panelNavigationHandler: PanelNavigationHandler;
   private terminalClipboardHandler: TerminalClipboardHandler;
+  private keyboardShortcutSetupHandler: KeyboardShortcutSetupHandler;
+  private specialKeysHandler: SpecialKeysHandler;
 
   constructor(coordinator: IManagerCoordinator) {
     super('InputManager', {
@@ -152,6 +141,47 @@ export class InputManager extends BaseManager implements IInputManager {
         ),
     });
 
+    // Initialize SpecialKeysHandler
+    this.specialKeysHandler = new SpecialKeysHandler({
+      logger: (message: string) => this.logger(message),
+      isIMEComposing: () => this.imeHandler.isIMEComposing(),
+      handleTerminalCopy: (manager: IManagerCoordinator) =>
+        this.terminalClipboardHandler.handleTerminalCopy(manager),
+      handleTerminalPaste: (manager: IManagerCoordinator) =>
+        this.terminalClipboardHandler.handleTerminalPaste(manager),
+      emitTerminalInteractionEvent: (type, terminalId, data, manager) =>
+        this.emitTerminalInteractionEvent(type, terminalId, data, manager),
+      queueInputData: (terminalId: string, data: string, flushImmediately: boolean) =>
+        this.queueInputData(terminalId, data, flushImmediately),
+      getTerminalInstance: (terminalId: string) => {
+        // This will be called with manager context; use coordinator
+        return this.coordinator.getTerminalInstance?.(terminalId) as
+          | { terminal: { hasSelection(): boolean } }
+          | null
+          | undefined;
+      },
+    });
+
+    // Initialize KeyboardShortcutSetupHandler
+    this.keyboardShortcutSetupHandler = new KeyboardShortcutSetupHandler({
+      logger: (message: string) => this.logger(message),
+      eventRegistry: this.eventRegistry,
+      isIMEComposing: () => this.imeHandler.isIMEComposing(),
+      resolveKeybinding: (event: KeyboardEvent) => this.resolveKeybinding(event),
+      shouldSkipShell: (event: KeyboardEvent, resolvedCommand?: string) =>
+        this.shouldSkipShell(event, resolvedCommand),
+      handleVSCodeCommand: (command: string, manager: IManagerCoordinator) =>
+        this.handleVSCodeCommand(command, manager),
+      handlePanelNavigationKey: (event: KeyboardEvent) =>
+        this.panelNavigationHandler.handlePanelNavigationKey(event),
+      handleSpecialKeys: (
+        event: KeyboardEvent,
+        terminalId: string,
+        manager: IManagerCoordinator
+      ) => this.handleSpecialKeys(event, terminalId, manager),
+      getActiveTerminalId: () => this.coordinator.getActiveTerminalId?.() || null,
+    });
+
     // Initialize IME handler with new architecture
     this.imeHandler = new IMEHandler(
       this.eventDebounceTimers,
@@ -171,8 +201,6 @@ export class InputManager extends BaseManager implements IInputManager {
   // Terminal-specific disposables for xterm.js events (memory leak prevention)
   private terminalDisposables = new Map<string, Array<{ dispose(): void }>>();
 
-  // Simple arrow key handling for agent interactions
-  private agentInteractionMode = false;
 
   /**
    * Set the notification manager for Alt+Click feedback
@@ -236,60 +264,10 @@ export class InputManager extends BaseManager implements IInputManager {
 
   /**
    * Setup keyboard shortcuts for terminal navigation with VS Code keybinding system
+   * Delegates to KeyboardShortcutSetupHandler
    */
   public setupKeyboardShortcuts(manager: IManagerCoordinator): void {
-    this.logger('Setting up VS Code compatible keyboard shortcuts');
-
-    const shortcutHandler = (event: KeyboardEvent): void => {
-      if (this.panelNavigationHandler.handlePanelNavigationKey(event)) {
-        return;
-      }
-
-      // VS Code standard: Check IME composition before processing shortcuts
-      if (this.imeHandler.isIMEComposing()) {
-        this.logger(`Keyboard shortcut blocked during IME composition: ${event.key}`);
-        // During IME composition, don't process keyboard shortcuts
-        // Let the IME system handle all key events
-        return;
-      }
-
-      // Check for KEY_IN_COMPOSITION (VS Code standard)
-      if (event.keyCode === KeyboardConstants.IME_COMPOSITION_KEYCODE) {
-        // KeyCode.KEY_IN_COMPOSITION
-        this.logger('KEY_IN_COMPOSITION detected - stopping propagation');
-        event.stopPropagation();
-        return;
-      }
-
-      // VS Code keybinding resolution
-      const resolvedCommand = this.resolveKeybinding(event);
-      const shouldSkip = this.shouldSkipShell(event, resolvedCommand || undefined);
-
-      this.logger(
-        `Keybinding: ${event.key}, Command: ${resolvedCommand}, Skip Shell: ${shouldSkip}, IME: ${this.imeHandler.isIMEComposing()}`
-      );
-
-      // If should skip shell, handle as VS Code command
-      if (shouldSkip && resolvedCommand) {
-        event.preventDefault();
-        event.stopPropagation();
-        this.handleVSCodeCommand(resolvedCommand, manager);
-        return;
-      }
-
-      // Legacy shortcuts for compatibility
-      this.handleLegacyShortcuts(event, manager);
-    };
-
-    // Register shortcut handler using EventHandlerRegistry
-    this.eventRegistry.register(
-      'keyboard-shortcuts',
-      document,
-      'keydown',
-      shortcutHandler as EventListener
-    );
-
-    this.logger('VS Code compatible keyboard shortcuts', 'completed');
+    this.keyboardShortcutSetupHandler.setupKeyboardShortcuts(manager);
   }
 
   /**
@@ -302,56 +280,10 @@ export class InputManager extends BaseManager implements IInputManager {
 
   /**
    * Handle legacy shortcuts for backward compatibility
+   * Delegates to KeyboardShortcutSetupHandler
    */
   private handleLegacyShortcuts(event: KeyboardEvent, manager: IManagerCoordinator): void {
-    // Escape: Clear notifications (always handle, don't send to shell)
-    if (event.key === 'Escape') {
-      this.logger('Escape key detected, clearing notifications');
-      this.clearNotifications();
-    }
-
-    // Ctrl+Shift+D: Toggle debug panel (always handle, don't send to shell)
-    if (event.ctrlKey && event.shiftKey && event.key === 'D') {
-      event.preventDefault();
-      this.logger('Ctrl+Shift+D shortcut detected, toggling debug panel');
-      if ('toggleDebugPanel' in manager && typeof manager.toggleDebugPanel === 'function') {
-        (manager as { toggleDebugPanel: () => void }).toggleDebugPanel();
-      }
-    }
-
-    // Ctrl+Shift+P: Show profile selector (VS Code style)
-    if (event.ctrlKey && event.shiftKey && event.key === 'P') {
-      event.preventDefault();
-      this.logger('Ctrl+Shift+P shortcut detected, showing profile selector');
-      if (manager.profileManager) {
-        manager.profileManager.showProfileSelector();
-      }
-    }
-
-    // Ctrl+Alt+T: Create terminal with default profile (VS Code compatible)
-    if (event.ctrlKey && event.altKey && event.key === 't') {
-      event.preventDefault();
-      this.logger('Ctrl+Alt+T shortcut detected, creating terminal with default profile');
-      if (manager.profileManager) {
-        manager.profileManager.createTerminalWithDefaultProfile().catch((error: any) => {
-          this.logger('Failed to create terminal with default profile:', error);
-        });
-      }
-    }
-
-    // Ctrl+Shift+1-5: Quick profile switching by index
-    if (event.ctrlKey && event.shiftKey && /^[1-5]$/.test(event.key)) {
-      event.preventDefault();
-      const profileIndex = parseInt(event.key) - 1;
-      this.logger(
-        `Ctrl+Shift+${event.key} shortcut detected, switching to profile index ${profileIndex}`
-      );
-      if (manager.profileManager) {
-        manager.profileManager.switchToProfileByIndex(profileIndex).catch((error: any) => {
-          this.logger(`Failed to switch to profile index ${profileIndex}:`, error);
-        });
-      }
-    }
+    this.keyboardShortcutSetupHandler.handleLegacyShortcuts(event, manager);
   }
 
   /**
@@ -604,67 +536,18 @@ export class InputManager extends BaseManager implements IInputManager {
 
   /**
    * Enable/disable agent interaction mode
-   * VS Code Standard: Always disabled for standard terminal functionality
+   * Delegates to KeyboardShortcutSetupHandler
    */
-  public setAgentInteractionMode(_enabled: boolean): void {
-    // VS Code Standard: Force disable to preserve terminal functionality
-    // This ensures arrow keys work properly for bash history, completion, etc.
-    const actualEnabled = false; // Always disabled for VS Code standard behavior
-
-    if (this.agentInteractionMode !== actualEnabled) {
-      this.agentInteractionMode = actualEnabled;
-      this.logger(`Agent interaction mode: ${actualEnabled} (VS Code standard - always disabled)`);
-
-      // Clean up any existing arrow key listener
-      this.eventRegistry.unregister('agent-arrow-keys');
-    }
+  public setAgentInteractionMode(enabled: boolean): void {
+    this.keyboardShortcutSetupHandler.setAgentInteractionMode(enabled);
   }
 
   /**
    * Check if agent interaction mode is enabled
+   * Delegates to KeyboardShortcutSetupHandler
    */
   public isAgentInteractionMode(): boolean {
-    return this.agentInteractionMode;
-  }
-
-  /**
-   * Setup global keyboard listener for shortcuts and commands
-   */
-  private setupGlobalKeyboardListener(): void {
-    this.logger('Setting up global keyboard listener');
-
-    const globalKeyHandler = (event: KeyboardEvent): void => {
-      const manager = this.coordinator;
-
-      // Handle keyboard shortcuts and commands here
-      // This will be populated with global shortcut handling logic
-      if (event.ctrlKey && event.shiftKey && event.key === 'D') {
-        // Debug panel toggle handled elsewhere
-        return;
-      }
-
-      // Handle special keys (Ctrl+C/V, etc.) for the active terminal
-      if (manager) {
-        const activeTerminalId = manager.getActiveTerminalId();
-        if (activeTerminalId) {
-          const handled = this.handleSpecialKeys(event, activeTerminalId, manager);
-          if (handled) {
-            // Event was handled, no need for further processing
-            return;
-          }
-        }
-      }
-
-      // Additional global shortcuts can be added here
-    };
-
-    this.eventRegistry.register(
-      'global-keyboard',
-      document,
-      'keydown',
-      globalKeyHandler as EventListener,
-      true
-    );
+    return this.keyboardShortcutSetupHandler.isAgentInteractionMode();
   }
 
   public setPanelNavigationEnabled(enabled: boolean): void {
@@ -675,52 +558,6 @@ export class InputManager extends BaseManager implements IInputManager {
     this.panelNavigationHandler.setPanelNavigationMode(enabled);
   }
 
-  /**
-   * Setup simplified arrow key handler for agent interactions
-   * VS Code Standard: Arrow keys should be handled by xterm.js and shell
-   */
-  private setupAgentArrowKeyHandler(): void {
-    this.logger('Setting up agent arrow key handler (VS Code standard)');
-
-    const arrowKeyHandler = (event: KeyboardEvent): void => {
-      // VS Code standard: Always respect IME composition state
-      if (this.imeHandler.isIMEComposing()) {
-        this.logger(`Arrow key ${event.key} during IME composition - letting IME handle`);
-        return; // Let IME system handle all keys during composition
-      }
-
-      // Only log when in agent interaction mode for debugging
-      if (!this.agentInteractionMode) {
-        return;
-      }
-
-      // Check if this is an arrow key for logging only
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
-        // Find active terminal for logging
-        const activeTerminal = document.querySelector('.terminal-container.active');
-        if (activeTerminal) {
-          const terminalId = activeTerminal.getAttribute('data-terminal-id');
-          if (terminalId) {
-            this.logger(
-              `Arrow key ${event.key} in agent mode for terminal ${terminalId} - letting xterm.js handle`
-            );
-          }
-        }
-      }
-
-      // VS Code Standard: Let xterm.js and shell handle all arrow keys naturally
-      // Do NOT preventDefault() or stopPropagation() to preserve terminal functionality
-      // This allows bash history, completion, and cursor movement to work properly
-    };
-
-    this.eventRegistry.register(
-      'agent-arrow-keys',
-      document,
-      'keydown',
-      arrowKeyHandler as EventListener,
-      true
-    );
-  }
 
   /**
    * Emit terminal interaction event with debouncing for frequent events
@@ -769,114 +606,15 @@ export class InputManager extends BaseManager implements IInputManager {
   }
 
   /**
-   * Clear all notifications (placeholder for integration with NotificationManager)
-   */
-  private clearNotifications(): void {
-    // This will be integrated with NotificationManager
-    const notifications = document.querySelectorAll('.notification, .claude-code-notification');
-    notifications.forEach((notification) => {
-      notification.remove();
-    });
-  }
-
-  /**
    * Handle special key combinations for terminal operations with IME awareness
+   * Delegates to SpecialKeysHandler
    */
   public handleSpecialKeys(
     event: KeyboardEvent,
     terminalId: string,
     manager: IManagerCoordinator
   ): boolean {
-    // VS Code standard: Check IME composition state first
-    if (this.imeHandler.isIMEComposing()) {
-      this.logger(`Special key ${event.key} blocked during IME composition`);
-      return false; // Let IME handle all keys during composition
-    }
-
-    // Check for KEY_IN_COMPOSITION (VS Code standard)
-    if (event.keyCode === KeyboardConstants.IME_COMPOSITION_KEYCODE) {
-      // KeyCode.KEY_IN_COMPOSITION
-      this.logger('KEY_IN_COMPOSITION in special keys - blocking');
-      event.stopPropagation();
-      return true;
-    }
-
-    // Ctrl+C (Windows/Linux) or Cmd+C (macOS): Copy (if selection exists) or interrupt
-    if ((event.ctrlKey || event.metaKey) && event.key === 'c') {
-      const terminal = manager.getTerminalInstance(terminalId);
-      if (terminal && terminal.terminal.hasSelection()) {
-        // Use Extension messaging for clipboard (navigator.clipboard doesn't work in VS Code WebView)
-        this.logger(`${event.metaKey ? 'Cmd' : 'Ctrl'}+C copy for terminal ${terminalId}`);
-        event.preventDefault();
-        event.stopPropagation(); // Prevent xterm.js from also handling this event
-        this.terminalClipboardHandler.handleTerminalCopy(manager);
-        return true;
-      }
-      // Send interrupt signal (only on Ctrl+C, not Cmd+C on macOS)
-      // Note: Don't stopPropagation for interrupt - let it flow to shell
-      if (!event.metaKey) {
-        this.logger(`Ctrl+C interrupt for terminal ${terminalId}`);
-        this.emitTerminalInteractionEvent('interrupt', terminalId, undefined, manager);
-        return true;
-      }
-    }
-
-    // Paste handling: Let paste event handler in TerminalCreationService handle clipboard
-    // This ensures both text AND image paste work correctly:
-    // - Text paste: Read from clipboardData and send to extension
-    // - Image paste: Send \x16 to trigger Claude Code's native clipboard read
-    // We don't intercept keydown here because the paste event needs to fire for clipboard access
-    // Use userAgentData if available (modern), fallback to userAgent (deprecated navigator.platform)
-    const isMac = isMacPlatform();
-    if (event.key === 'v') {
-      if (isMac && event.metaKey) {
-        // macOS Cmd+V: Let paste event handler deal with it
-        // Don't preventDefault - we need the paste event to fire
-        this.logger(`Cmd+V on macOS - letting paste event handler process`);
-        return false; // Don't intercept
-      } else if (!isMac && event.ctrlKey) {
-        // Windows/Linux Ctrl+V: Let paste event handler deal with it
-        this.logger(`Ctrl+V on non-Mac - letting paste event handler process`);
-        return false; // Don't intercept
-      }
-    }
-
-    // Ctrl+Insert (Windows/Linux): Copy - VS Code standard shortcut
-    if (event.ctrlKey && event.key === 'Insert') {
-      const terminal = manager.getTerminalInstance(terminalId);
-      if (terminal && terminal.terminal.hasSelection()) {
-        this.logger(`Ctrl+Insert copy for terminal ${terminalId}`);
-        event.preventDefault();
-        event.stopPropagation(); // Prevent xterm.js from also handling this event
-        this.terminalClipboardHandler.handleTerminalCopy(manager);
-        return true;
-      }
-    }
-
-    // Shift+Insert (Windows/Linux): Paste - VS Code standard shortcut
-    if (event.shiftKey && event.key === 'Insert') {
-      this.logger(`Shift+Insert paste for terminal ${terminalId}`);
-      event.preventDefault();
-      event.stopPropagation(); // Prevent xterm.js from also handling this event
-      this.terminalClipboardHandler.handleTerminalPaste(manager);
-      return true;
-    }
-
-    // Shift+Enter or Option/Alt+Enter: Send newline for Claude Code multiline input
-    // Claude Code uses these for inserting newlines without submitting
-    if (event.key === 'Enter' && (event.shiftKey || event.altKey || event.metaKey)) {
-      this.logger(
-        `${event.shiftKey ? 'Shift' : event.altKey ? 'Alt' : 'Cmd'}+Enter - sending newline for multiline input`
-      );
-      event.preventDefault();
-      event.stopPropagation();
-      // Send literal newline character (not carriage return)
-      // This allows Claude Code to recognize it as "insert newline" vs "submit"
-      this.queueInputData(terminalId, '\n', true);
-      return true;
-    }
-
-    return false;
+    return this.specialKeysHandler.handleSpecialKeys(event, terminalId, manager);
   }
 
   private shouldFlushImmediately(data: string, domEvent: KeyboardEvent): boolean {
@@ -906,10 +644,10 @@ export class InputManager extends BaseManager implements IInputManager {
     this.logger('initialization', 'starting');
 
     // Set up keyboard event listener for global shortcuts
-    this.setupGlobalKeyboardListener();
+    this.keyboardShortcutSetupHandler.setupGlobalKeyboardListener();
 
     // Set up agent arrow key handler (VS Code standard)
-    this.setupAgentArrowKeyHandler();
+    this.keyboardShortcutSetupHandler.setupAgentArrowKeyHandler();
 
     this.logger('initialization', 'completed');
   }
@@ -953,7 +691,8 @@ export class InputManager extends BaseManager implements IInputManager {
     // Dispose PanelNavigationHandler
     this.panelNavigationHandler.dispose();
 
-    this.agentInteractionMode = false;
+    // Dispose KeyboardShortcutSetupHandler
+    this.keyboardShortcutSetupHandler.dispose();
 
     // Dispose IME handler
     this.imeHandler.dispose();
