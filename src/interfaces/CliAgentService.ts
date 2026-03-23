@@ -25,6 +25,12 @@ export interface TerminationDetectionResult {
   detectedLine?: string;
 }
 
+export interface OutputChunkProcessingResult {
+  detection: CliAgentDetectionResult | null;
+  termination: TerminationDetectionResult | null;
+  state: CliAgentState;
+}
+
 // =================== Agent State Types ===================
 
 export interface CliAgentState {
@@ -72,12 +78,28 @@ export interface ICliAgentDetectionService {
   detectFromInput(terminalId: string, data: string): CliAgentDetectionResult | null;
 
   /**
+   * Handle raw terminal input chunks and detect agents only after command submission.
+   * @param terminalId Terminal ID where the input occurred
+   * @param data Raw input chunk to process
+   * @returns Detection result when a submitted command matches, otherwise null
+   */
+  handleInputChunk(terminalId: string, data: string): CliAgentDetectionResult | null;
+
+  /**
    * Detect CLI Agent from terminal output data
    * @param terminalId Terminal ID where the output occurred
    * @param data Output data to analyze
    * @returns Detection result or null if no agent detected
    */
   detectFromOutput(terminalId: string, data: string): CliAgentDetectionResult | null;
+
+  /**
+   * Handle a terminal output flush and run detection/termination/waiting in a fixed order.
+   * @param terminalId Terminal ID where the output occurred
+   * @param data Output chunk to analyze
+   * @returns Processing summary for the chunk
+   */
+  handleOutputChunk(terminalId: string, data: string): OutputChunkProcessingResult;
 
   /**
    * Detect CLI Agent termination from terminal data
@@ -148,7 +170,7 @@ export interface ICliAgentDetectionService {
   readonly onAgentWaitingChange: vscode.Event<{
     terminalId: string;
     isWaiting: boolean;
-    waitingType?: 'input' | 'approval';
+    waitingType?: 'input' | 'approval' | 'idle';
   }>;
 
   // =================== Lifecycle Management ===================

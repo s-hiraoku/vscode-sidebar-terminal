@@ -21,6 +21,22 @@ export interface ICliAgentCoordinatorDependencies {
     state: { status: string; terminalName?: string; agentType: string | null }
   ): void;
   removeTerminalState(terminalId: string): void;
+  detectAgentActivity(
+    output: string,
+    terminalId: string
+  ): {
+    isAgentOutput: boolean;
+    agentType: string | null;
+    isDisplayingChoices: boolean;
+  };
+  getAgentStats(): {
+    totalAgents: number;
+    connectedAgents: number;
+    disconnectedAgents: number;
+    currentConnectedId: string | null;
+    agentTypes: string[];
+  };
+  disposeStateManager(): void;
 
   // Manager coordination
   getActiveTerminalId(): string | null;
@@ -52,6 +68,14 @@ export class CliAgentCoordinator {
 
   public setCliAgentDisconnected(terminalId: string): void {
     this.deps.setAgentDisconnected(terminalId);
+  }
+
+  public detectAgentActivity(output: string, terminalId: string) {
+    return this.deps.detectAgentActivity(output, terminalId);
+  }
+
+  public removeTerminalState(terminalId: string): void {
+    this.deps.removeTerminalState(terminalId);
   }
 
   /**
@@ -175,5 +199,13 @@ export class CliAgentCoordinator {
     this.deps.updateCliAgentStatusUI(terminalId, status, agentType);
 
     log(`✅ [REFACTORED] CLI Agent status updated for terminal: ${terminalId}`);
+  }
+
+  public getAgentStats() {
+    return this.deps.getAgentStats();
+  }
+
+  public dispose(): void {
+    this.deps.disposeStateManager();
   }
 }

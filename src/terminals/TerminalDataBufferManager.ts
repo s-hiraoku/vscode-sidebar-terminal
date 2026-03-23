@@ -94,13 +94,7 @@ export class TerminalDataBufferManager {
       }
 
       try {
-        this._cliAgentService.detectFromOutput(terminalId, combinedData);
-        const agentState = this._cliAgentService.getAgentState(terminalId);
-        if (agentState.status !== 'none') {
-          this._cliAgentService.detectTermination(terminalId, combinedData);
-        }
-
-        this._cliAgentService.detectWaitingState(terminalId, combinedData);
+        this._cliAgentService.handleOutputChunk(terminalId, combinedData);
       } catch {
         // Ignore CLI Agent detection errors
       }

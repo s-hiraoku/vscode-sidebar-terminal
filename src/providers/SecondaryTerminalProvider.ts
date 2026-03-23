@@ -1,13 +1,12 @@
 import * as vscode from 'vscode';
 import { TerminalManager } from '../terminals/TerminalManager';
 import { WebviewMessage } from '../types/common';
-import { TERMINAL_CONSTANTS } from '../constants';
 import { safeProcessCwd } from '../utils/common';
 import { TerminalErrorHandler } from '../utils/feedback';
 import { provider as log } from '../utils/logger';
 import { PersistenceMessageHandler } from '../handlers/PersistenceMessageHandler';
 import { TerminalInitializationCoordinator } from './TerminalInitializationCoordinator';
-import { hasSettings } from '../types/type-guards';
+// hasSettings moved to SettingsMessageHandler
 import { WebViewHtmlGenerationService } from '../services/webview/WebViewHtmlGenerationService';
 import { TelemetryService } from '../services/TelemetryService';
 
@@ -28,15 +27,19 @@ import { ResourceCleanupService } from './services/ResourceCleanupService';
 import { WebViewLifecycleManager } from './services/WebViewLifecycleManager';
 import { MessageRoutingFacade } from './services/MessageRoutingFacade';
 import { InitializationOrchestrator } from './services/InitializationOrchestrator';
-import {
-  TerminalInitializationStateMachine,
-  TerminalInitializationState,
-} from './services/TerminalInitializationStateMachine';
+import { TerminalInitializationStateMachine } from './services/TerminalInitializationStateMachine';
 import { WatchdogOptions } from './services/TerminalInitializationWatchdog';
 import { TerminalCommandHandlers } from './services/TerminalCommandHandlers';
 import { TerminalKillService } from './services/TerminalKillService';
 import { ProviderSessionService } from './services/ProviderSessionService';
 import { WatchdogCoordinator } from './services/WatchdogCoordinator';
+import { ScrollbackMessageHandler } from './handlers/ScrollbackMessageHandler';
+import { DebugMessageHandler } from './handlers/DebugMessageHandler';
+import { SettingsMessageHandler } from './handlers/SettingsMessageHandler';
+import { PanelLocationHandler } from './handlers/PanelLocationHandler';
+import { WebViewInitHandler } from './handlers/WebViewInitHandler';
+import { MessageHandlerRegistrar } from './handlers/MessageHandlerRegistrar';
+import { TerminalInitLifecycleHandler } from './handlers/TerminalInitLifecycleHandler';
 
 export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vscode.Disposable {
   public static readonly viewType = 'secondaryTerminal';
@@ -59,13 +62,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   } as const;
 
   private _terminalIdMapping?: Map<string, string>;
-  private _isInitialized = false;
   private _webviewMessageListenerDisposable: vscode.Disposable | null = null;
   private _webviewMessageListenerView: vscode.WebviewView | null = null;
-  private _pendingPanelMoveReinit = false;
-  private _hasDetectedPanelLocation = false;
-  private _panelLocationDetectionPending = false;
-  private _panelLocationDetectionTimeout: NodeJS.Timeout | null = null;
 
   // Phase 8 services (typed properly)
   private _decorationsService?: import('../services/TerminalDecorationsService').TerminalDecorationsService;
@@ -95,8 +93,13 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private readonly _killService: TerminalKillService;
   private readonly _sessionService: ProviderSessionService;
   private readonly _watchdogCoordinator: WatchdogCoordinator;
-  private readonly _pendingInitRetries = new Map<string, number>();
-  private _pendingMessages: WebviewMessage[] = [];
+  private readonly _scrollbackMessageHandler: ScrollbackMessageHandler;
+  private readonly _debugMessageHandler: DebugMessageHandler;
+  private readonly _settingsMessageHandler: SettingsMessageHandler;
+  private readonly _panelLocationHandler: PanelLocationHandler;
+  private readonly _webViewInitHandler: WebViewInitHandler;
+  private readonly _messageHandlerRegistrar: MessageHandlerRegistrar;
+  private readonly _terminalInitLifecycleHandler: TerminalInitLifecycleHandler;
 
   private static readonly ACK_WATCHDOG_OPTIONS: WatchdogOptions = {
     initialDelayMs: 700,
@@ -109,8 +112,6 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     maxAttempts: 1,
     backoffFactor: 1,
   };
-
-  private static readonly PANEL_LOCATION_RESPONSE_TIMEOUT_MS = 2000;
 
   constructor(
     private readonly _extensionContext: vscode.ExtensionContext,
@@ -210,10 +211,88 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       SecondaryTerminalProvider.PROMPT_WATCHDOG_OPTIONS
     );
 
+    // Initialize extracted message handlers (Phase 3A refactoring)
+    this._scrollbackMessageHandler = new ScrollbackMessageHandler({
+      getExtensionPersistenceService: () => this._extensionPersistenceService ?? null,
+    });
+
+    this._debugMessageHandler = new DebugMessageHandler({
+      isDebugEnabled: () => {
+        try {
+          const { isDebugEnabled } = require('../utils/logger');
+          return isDebugEnabled ? isDebugEnabled() : false;
+        } catch {
+          return false;
+        }
+      },
+    });
+
+    this._settingsMessageHandler = new SettingsMessageHandler({
+      getSettingsService: () => this._settingsService,
+      sendMessage: (msg) => this._sendMessage(msg),
+    });
+
+    this._panelLocationHandler = new PanelLocationHandler({
+      panelLocationService: this._panelLocationService,
+      sendMessage: (msg) => this._sendMessage(msg),
+    });
+
+    this._webViewInitHandler = new WebViewInitHandler({
+      sendMessage: (msg) => this._communicationService.sendMessage(msg),
+      sendVersionInfo: () => void this._communicationService.sendVersionInfo(),
+      getCurrentSettings: () => this._settingsService.getCurrentSettings(),
+      getCurrentFontSettings: () => this._settingsService.getCurrentFontSettings(),
+      orchestratorInitialize: () => this._orchestrator.initialize(),
+      sendFullCliAgentStateSync: () => this.sendFullCliAgentStateSync(),
+      initializeTerminal: () => this._initializeTerminal(),
+      startPendingWatchdogs: (isInit) => this._watchdogCoordinator.startPendingWatchdogs(isInit),
+      panelLocationHandlerHandleWebviewVisible: () => this._panelLocationHandler.handleWebviewVisible(),
+    });
+
+    this._messageHandlerRegistrar = new MessageHandlerRegistrar({
+      handleWebviewReady: (msg) => this._handleWebviewReady(msg),
+      handleWebviewInitialized: (msg) => this._handleWebviewInitialized(msg),
+      handleReportPanelLocation: (msg) => this._handleReportPanelLocation(msg),
+      handleTerminalInitializationComplete: (msg) => this._handleTerminalInitializationComplete(msg),
+      handleTerminalReady: (msg) => this._handleTerminalReady(msg),
+      handlePersistenceMessage: (msg) => this._handlePersistenceMessage(msg),
+      handleLegacyPersistenceMessage: (msg) => this._handleLegacyPersistenceMessage(msg),
+      terminalCommandHandlers: this._terminalCommandHandlers,
+      settingsMessageHandler: this._settingsMessageHandler,
+      scrollbackMessageHandler: this._scrollbackMessageHandler,
+      debugMessageHandler: this._debugMessageHandler,
+    });
+
+    // Initialize terminal init lifecycle handler
+    this._terminalInitLifecycleHandler = new TerminalInitLifecycleHandler({
+      getTerminal: (id) => this._terminalManager.getTerminal(id),
+      getTerminals: () => this._terminalManager.getTerminals(),
+      getActiveTerminalId: () => this._terminalManager.getActiveTerminalId(),
+      createTerminal: () => this._terminalManager.createTerminal(),
+      setActiveTerminal: (id) => this._terminalManager.setActiveTerminal(id),
+      initializeShellForTerminal: (id, pty, safe) =>
+        this._terminalManager.initializeShellForTerminal(id, pty as import('node-pty').IPty, safe),
+      startPtyOutput: (id) => this._terminalManager.startPtyOutput(id),
+      consumeCreationDisplayModeOverride: (id) =>
+        this._terminalManager.consumeCreationDisplayModeOverride(id),
+      getCurrentState: () => this._terminalManager.getCurrentState(),
+      onTerminalCreated: (cb) => this._terminalManager.onTerminalCreated(cb),
+      onTerminalRemoved: (cb) => this._terminalManager.onTerminalRemoved(cb),
+      sendMessage: (msg) => this._sendMessage(msg),
+      getCurrentFontSettings: () => this._settingsService.getCurrentFontSettings(),
+      sendFullCliAgentStateSync: () => this.sendFullCliAgentStateSync(),
+      addDisposable: (d) => this._cleanupService.addDisposable(d),
+      isWebViewInitialized: () => this._webViewInitHandler.isInitialized,
+      watchdogCoordinator: this._watchdogCoordinator,
+      terminalInitStateMachine: this._terminalInitStateMachine,
+      eventCoordinator: null, // Set later when event coordinator is initialized
+      safeProcessCwd,
+    });
+
     log('🎨 [PROVIDER] NEW Facade pattern services initialized (Issue #214)');
     log('✅ [PROVIDER] SecondaryTerminalProvider constructed with all services');
 
-    this._registerInitializationWatchdogs();
+    this._terminalInitLifecycleHandler.registerInitializationWatchdogs();
 
     // 🎨 Auto theme synchronization: Listen for VS Code theme changes
     this._registerThemeChangeListener();
@@ -280,8 +359,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       this._communicationService.setView(webviewView);
 
       // 🔧 FIX: Panel movement recreates the WebView content; restart handshake for the new instance
-      this._isInitialized = false;
-      this._pendingPanelMoveReinit = true;
+      this._webViewInitHandler.reset();
+      this._webViewInitHandler.setPendingPanelMoveReinit(true);
 
       // 🔧 FIX: Panel movement creates new WebView instance - must reinitialize HTML
       // VS Code destroys WebView content when moving between panel locations
@@ -345,6 +424,10 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       this._terminalInitStateMachine
     );
     this._eventCoordinator.initialize();
+
+    // Update the terminal init lifecycle handler's event coordinator reference
+    this._terminalInitLifecycleHandler.setEventCoordinator(this._eventCoordinator);
+
     log('✅ [PROVIDER] Event coordinator initialized');
   }
 
@@ -429,35 +512,11 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   private _handleWebviewVisible(): void {
-    log('🔄 [VISIBILITY] Handling WebView visible event');
-
-    // Note: secondaryTerminalFocus context is NOT set here. Visibility does not imply DOM focus.
-    // The WebView's terminalFocused/terminalBlurred messages are the sole source of truth.
-
-    // Guard: Skip panel location detection on simple visibility restore.
-    // Only detect on first visibility to prevent unnecessary setContext calls
-    // that can cancel VS Code's secondary sidebar maximize state.
-    if (this._hasDetectedPanelLocation) {
-      log('⏭️ [VISIBILITY] Panel location already detected, skipping redundant detection');
-      return;
-    }
-
-    // Set flag BEFORE setTimeout to prevent race condition:
-    // Multiple visibility events within 200ms would otherwise bypass the guard
-    // and queue multiple detection timers, each triggering setContext.
-    this._hasDetectedPanelLocation = true;
-
-    // First visibility: trigger detection after layout stabilizes
-    setTimeout(() => {
-      log('📍 [VISIBILITY] Requesting initial panel location detection');
-      this._requestPanelLocationDetection();
-    }, 200);
+    this._webViewInitHandler.handleWebviewVisible();
   }
 
   private _handleWebviewHidden(): void {
-    log('🔄 [VISIBILITY] Handling WebView hidden event');
-    // Clear focus context when WebView is hidden
-    void vscode.commands.executeCommand('setContext', 'secondaryTerminalFocus', false);
+    this._webViewInitHandler.handleWebviewHidden();
   }
 
   private _initializeWebviewContent(webviewView: vscode.WebviewView): void {
@@ -466,7 +525,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     // Get initial theme from settings to prevent flash of wrong theme
     const settings = this._settingsService.getCurrentSettings();
     const settingsTheme = settings.theme as 'light' | 'dark' | 'auto' | undefined;
-    const initialTheme = this._resolveInitialTheme(settingsTheme);
+    const initialTheme = this._webViewInitHandler.resolveInitialTheme(settingsTheme);
     log(`🎨 [PROVIDER] Initial theme for HTML: ${initialTheme} (settings: ${settingsTheme})`);
 
     // Generate HTML content with initial theme
@@ -484,406 +543,18 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     log('🤝 [HANDSHAKE] HTML set, waiting for webviewReady from WebView');
   }
 
-  private _resolveInitialTheme(
-    settingsTheme: 'light' | 'dark' | 'auto' | undefined
-  ): 'light' | 'dark' | 'auto' | undefined {
-    const normalizedTheme = settingsTheme ?? 'auto';
-    if (normalizedTheme !== 'auto') {
-      return normalizedTheme;
-    }
-
-    const activeThemeKind = vscode.window?.activeColorTheme?.kind;
-    const hasThemeKind =
-      typeof vscode.ColorThemeKind !== 'undefined' && typeof activeThemeKind === 'number';
-
-    if (!hasThemeKind) {
-      return normalizedTheme;
-    }
-
-    if (
-      activeThemeKind === vscode.ColorThemeKind.Light ||
-      activeThemeKind === vscode.ColorThemeKind.HighContrastLight
-    ) {
-      return 'light';
-    }
-
-    if (
-      activeThemeKind === vscode.ColorThemeKind.Dark ||
-      activeThemeKind === vscode.ColorThemeKind.HighContrast
-    ) {
-      return 'dark';
-    }
-
-    return normalizedTheme;
-  }
-
   private _initializeMessageHandlers(): void {
-    // Reset router to avoid duplicate registrations across reinitializations
-    this._messageRouter.reset();
-
-    const handlers = [
-      // UI handlers
-      {
-        command: 'webviewReady',
-        handler: (msg: WebviewMessage) => this._handleWebviewReady(msg),
-        category: 'ui' as const,
-      },
-      {
-        command: TERMINAL_CONSTANTS?.COMMANDS?.READY,
-        handler: (msg: WebviewMessage) => this._handleWebviewReady(msg),
-        category: 'ui' as const,
-      },
-      {
-        // 🎯 HANDSHAKE: webviewInitialized is sent AFTER WebView's message handlers are set up
-        command: 'webviewInitialized',
-        handler: (msg: WebviewMessage) => this._handleWebviewInitialized(msg),
-        category: 'ui' as const,
-      },
-      {
-        command: 'reportPanelLocation',
-        handler: async (msg: WebviewMessage) => await this._handleReportPanelLocation(msg),
-        category: 'ui' as const,
-      },
-
-      // Settings handlers
-      {
-        command: 'getSettings',
-        handler: async () => await this._handleGetSettings(),
-        category: 'settings' as const,
-      },
-      {
-        command: 'updateSettings',
-        handler: async (msg: WebviewMessage) => await this._handleUpdateSettings(msg),
-        category: 'settings' as const,
-      },
-
-      // Terminal handlers (delegated to TerminalCommandHandlers)
-      {
-        command: 'focusTerminal',
-        handler: async (msg: WebviewMessage) =>
-          await this._terminalCommandHandlers.handleFocusTerminal(msg),
-        category: 'terminal' as const,
-      },
-      {
-        command: TERMINAL_CONSTANTS?.COMMANDS?.FOCUS_TERMINAL,
-        handler: async (msg: WebviewMessage) =>
-          await this._terminalCommandHandlers.handleFocusTerminal(msg),
-        category: 'terminal' as const,
-      },
-      {
-        command: 'splitTerminal',
-        handler: (msg: WebviewMessage) => this._terminalCommandHandlers.handleSplitTerminal(msg),
-        category: 'terminal' as const,
-      },
-      {
-        command: 'createTerminal',
-        handler: async (msg: WebviewMessage) =>
-          await this._terminalCommandHandlers.handleCreateTerminal(msg),
-        category: 'terminal' as const,
-      },
-      {
-        command: TERMINAL_CONSTANTS?.COMMANDS?.CREATE_TERMINAL,
-        handler: async (msg: WebviewMessage) =>
-          await this._terminalCommandHandlers.handleCreateTerminal(msg),
-        category: 'terminal' as const,
-      },
-      {
-        command: TERMINAL_CONSTANTS?.COMMANDS?.INPUT,
-        handler: (msg: WebviewMessage) => this._terminalCommandHandlers.handleTerminalInput(msg),
-        category: 'terminal' as const,
-      },
-      {
-        command: TERMINAL_CONSTANTS?.COMMANDS?.RESIZE,
-        handler: (msg: WebviewMessage) => this._terminalCommandHandlers.handleTerminalResize(msg),
-        category: 'terminal' as const,
-      },
-      {
-        command: 'getTerminalProfiles',
-        handler: async () => await this._terminalCommandHandlers.handleGetTerminalProfiles(),
-        category: 'terminal' as const,
-      },
-      {
-        command: 'killTerminal',
-        handler: async (msg: WebviewMessage) =>
-          await this._terminalCommandHandlers.handleKillTerminal(msg),
-        category: 'terminal' as const,
-      },
-      {
-        command: 'deleteTerminal',
-        handler: async (msg: WebviewMessage) =>
-          await this._terminalCommandHandlers.handleDeleteTerminal(msg),
-        category: 'terminal' as const,
-      },
-      {
-        command: 'terminalClosed',
-        handler: async (msg: WebviewMessage) =>
-          await this._terminalCommandHandlers.handleTerminalClosed(msg),
-        category: 'terminal' as const,
-      },
-      {
-        command: 'openTerminalLink',
-        handler: async (msg: WebviewMessage) =>
-          await this._terminalCommandHandlers.handleOpenTerminalLink(msg),
-        category: 'terminal' as const,
-      },
-      {
-        command: 'reorderTerminals',
-        handler: async (msg: WebviewMessage) =>
-          await this._terminalCommandHandlers.handleReorderTerminals(msg),
-        category: 'terminal' as const,
-      },
-      {
-        command: 'renameTerminal',
-        handler: async (msg: WebviewMessage) =>
-          await this._terminalCommandHandlers.handleRenameTerminal(msg),
-        category: 'terminal' as const,
-      },
-      {
-        command: 'updateTerminalHeader',
-        handler: async (msg: WebviewMessage) =>
-          await this._terminalCommandHandlers.handleUpdateTerminalHeader(msg),
-        category: 'terminal' as const,
-      },
-      {
-        command: 'requestInitialTerminal',
-        handler: async (msg: WebviewMessage) =>
-          await this._terminalCommandHandlers.handleRequestInitialTerminal(msg),
-        category: 'terminal' as const,
-      },
-      {
-        command: 'terminalInteraction',
-        handler: async (msg: WebviewMessage) =>
-          await this._terminalCommandHandlers.handleTerminalInteraction(msg),
-        category: 'terminal' as const,
-      },
-      {
-        command: 'terminalFocused',
-        handler: async (msg: WebviewMessage) => {
-          log(`🎯 [PROVIDER] Terminal focused: ${msg.terminalId}`);
-          await vscode.commands.executeCommand('setContext', 'secondaryTerminalFocus', true);
-        },
-        category: 'terminal' as const,
-      },
-      {
-        command: 'terminalBlurred',
-        handler: async (msg: WebviewMessage) => {
-          log(`🎯 [PROVIDER] Terminal blurred: ${msg.terminalId}`);
-          await vscode.commands.executeCommand('setContext', 'secondaryTerminalFocus', false);
-        },
-        category: 'terminal' as const,
-      },
-      {
-        command: 'terminalInitializationComplete',
-        handler: async (msg: WebviewMessage) =>
-          await this._handleTerminalInitializationComplete(msg),
-        category: 'terminal' as const,
-      },
-      {
-        command: 'terminalReady',
-        handler: async (msg: WebviewMessage) => await this._handleTerminalReady(msg),
-        category: 'terminal' as const,
-      },
-      {
-        command: 'requestClipboardContent',
-        handler: async (msg: WebviewMessage) =>
-          await this._terminalCommandHandlers.handleClipboardRequest(msg),
-        category: 'terminal' as const,
-      },
-      {
-        command: 'copyToClipboard',
-        handler: async (msg: WebviewMessage) =>
-          await this._terminalCommandHandlers.handleCopyToClipboard(msg),
-        category: 'terminal' as const,
-      },
-      {
-        command: 'pasteImage',
-        handler: async (msg: WebviewMessage) =>
-          await this._terminalCommandHandlers.handlePasteImage(msg),
-        category: 'terminal' as const,
-      },
-      {
-        command: 'pasteText',
-        handler: async (msg: WebviewMessage) =>
-          await this._terminalCommandHandlers.handlePasteText(msg),
-        category: 'terminal' as const,
-      },
-      {
-        command: 'switchAiAgent',
-        handler: async (msg: WebviewMessage) =>
-          await this._terminalCommandHandlers.handleSwitchAiAgent(msg),
-        category: 'terminal' as const,
-      },
-
-      // Persistence handlers
-      {
-        command: 'persistenceSaveSession',
-        handler: async (msg: WebviewMessage) => await this._handlePersistenceMessage(msg),
-        category: 'persistence' as const,
-      },
-      {
-        command: 'persistenceRestoreSession',
-        handler: async (msg: WebviewMessage) => await this._handlePersistenceMessage(msg),
-        category: 'persistence' as const,
-      },
-      {
-        command: 'persistenceClearSession',
-        handler: async (msg: WebviewMessage) => await this._handlePersistenceMessage(msg),
-        category: 'persistence' as const,
-      },
-      {
-        command: 'terminalSerializationRequest',
-        handler: async (msg: WebviewMessage) => await this._handleLegacyPersistenceMessage(msg),
-        category: 'persistence' as const,
-      },
-      {
-        command: 'terminalSerializationRestoreRequest',
-        handler: async (msg: WebviewMessage) => await this._handleLegacyPersistenceMessage(msg),
-        category: 'persistence' as const,
-      },
-      {
-        command: 'pushScrollbackData',
-        handler: async (msg: WebviewMessage) => await this._handlePushScrollbackData(msg),
-        category: 'persistence' as const,
-      },
-      {
-        command: 'scrollbackDataCollected',
-        handler: async (msg: WebviewMessage) => await this._handleScrollbackDataCollected(msg),
-        category: 'persistence' as const,
-      },
-      {
-        command: 'scrollbackExtracted',
-        handler: async (msg: WebviewMessage) => await this._handleScrollbackDataCollected(msg),
-        category: 'persistence' as const,
-      },
-      {
-        command: 'requestScrollbackRefresh',
-        handler: async (msg: WebviewMessage) => await this._handleScrollbackRefreshRequest(msg),
-        category: 'persistence' as const,
-      },
-
-      // Debug handlers
-      {
-        command: 'htmlScriptTest',
-        handler: (msg: WebviewMessage) => this._handleHtmlScriptTest(msg),
-        category: 'debug' as const,
-      },
-      {
-        command: 'timeoutTest',
-        handler: (msg: WebviewMessage) => this._handleTimeoutTest(msg),
-        category: 'debug' as const,
-      },
-      {
-        command: 'test',
-        handler: (msg: WebviewMessage) => this._handleDebugTest(msg),
-        category: 'debug' as const,
-      },
-    ];
-
-    this._messageRouter.registerHandlers(handlers);
-
-    // Ensure critical handlers exist to avoid losing init/resize messages
-    this._messageRouter.validateHandlers([
-      'terminalInitializationComplete',
-      'terminalReady',
-      TERMINAL_CONSTANTS?.COMMANDS?.READY,
-      TERMINAL_CONSTANTS?.COMMANDS?.RESIZE,
-      TERMINAL_CONSTANTS?.COMMANDS?.FOCUS_TERMINAL,
-    ]);
-
-    // Emit registry snapshot for diagnostics (matches VS Code terminal tracing style)
-    this._messageRouter.logRegisteredHandlers();
-
-    log('✅ [PROVIDER] Message handlers initialized via MessageRoutingFacade');
+    this._messageHandlerRegistrar.registerAll(this._messageRouter);
   }
 
-  private async _handlePushScrollbackData(message: WebviewMessage): Promise<void> {
-    if (!this._extensionPersistenceService) {
-      log('⚠️ [PROVIDER] Received pushScrollbackData but persistence service is unavailable');
-      return;
-    }
-
-    const handler = (this._extensionPersistenceService as any).handlePushedScrollbackData;
-    if (typeof handler !== 'function') {
-      log('⚠️ [PROVIDER] Persistence service does not support pushScrollbackData');
-      return;
-    }
-
-    try {
-      handler.call(this._extensionPersistenceService, message);
-    } catch (error) {
-      log('❌ [PROVIDER] Failed to process pushScrollbackData message:', error);
-    }
-  }
-
-  private async _handleScrollbackDataCollected(message: WebviewMessage): Promise<void> {
-    const scrollbackData = (message as any)?.scrollbackData ?? (message as any)?.scrollbackContent;
-    const requestId = (message as any)?.requestId;
-    const terminalId = (message as any)?.terminalId;
-
-    if (!Array.isArray(scrollbackData)) {
-      log('⚠️ [PROVIDER] scrollbackDataCollected missing scrollbackData array');
-      return;
-    }
-
-    // Forward to persistence service for handling (supports both cache update and pending request resolution)
-    if (this._extensionPersistenceService) {
-      const handler = (this._extensionPersistenceService as any).handleScrollbackDataCollected;
-      if (typeof handler === 'function') {
-        handler.call(this._extensionPersistenceService, { terminalId, requestId, scrollbackData });
-        log(
-          `✅ [PROVIDER] scrollbackDataCollected forwarded to persistence service (requestId=${requestId || 'none'})`
-        );
-        return;
-      }
-    }
-
-    // Fallback: treat as pushScrollbackData for cache update
-    (message as any).command = 'pushScrollbackData';
-    await this._handlePushScrollbackData(message);
-  }
-
-  /**
-   * 🔧 FIX: Handle scrollback refresh request from WebView after sleep/wake
-   */
-  private async _handleScrollbackRefreshRequest(message: WebviewMessage): Promise<void> {
-    if (!this._extensionPersistenceService) {
-      log('⚠️ [PROVIDER] Received requestScrollbackRefresh but persistence service is unavailable');
-      return;
-    }
-
-    const handler = (this._extensionPersistenceService as any).handleScrollbackRefreshRequest;
-    if (typeof handler !== 'function') {
-      log('⚠️ [PROVIDER] Persistence service does not support handleScrollbackRefreshRequest');
-      return;
-    }
-
-    try {
-      await handler.call(this._extensionPersistenceService, message);
-      log('✅ [PROVIDER] Scrollback refresh request handled');
-    } catch (error) {
-      log('❌ [PROVIDER] Failed to process scrollback refresh request:', error);
-    }
-  }
+  // Scrollback message handlers delegated to ScrollbackMessageHandler
 
   private async _handleTerminalReady(message: WebviewMessage): Promise<void> {
-    const terminalId = message.terminalId as string;
-    if (!terminalId) {
-      log('⚠️ [PROVIDER] terminalReady missing terminalId');
-      return;
-    }
-
-    log(`✅ [PROVIDER] Terminal ready: ${terminalId}`);
-
-    // If the state machine hasn't seen the init-complete yet, advance to ViewReady to unblock shell init
-    const currentState = this._terminalInitStateMachine.getState(terminalId);
-    if (currentState < TerminalInitializationState.ViewReady) {
-      this._terminalInitStateMachine.markViewReady(terminalId, 'terminalReady');
-      this._watchdogCoordinator.startForTerminal(terminalId, 'prompt', 'terminalReady');
-      log(`🔄 [PROVIDER] terminalReady promoted state to ViewReady for ${terminalId}`);
-    }
+    await this._terminalInitLifecycleHandler.handleTerminalReady(message);
 
     // Forward to persistence service for terminal ready event handling
-    if (this._extensionPersistenceService) {
+    const terminalId = message.terminalId as string;
+    if (terminalId && this._extensionPersistenceService) {
       const handler = (this._extensionPersistenceService as any).handleTerminalReady;
       if (typeof handler === 'function') {
         handler.call(this._extensionPersistenceService, terminalId);
@@ -891,166 +562,23 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     }
   }
 
-  private _handleWebviewReady(_message: WebviewMessage): void {
-    log('🔥 [TERMINAL-INIT] === _handleWebviewReady CALLED ===');
-
-    if (this._isInitialized) {
-      log('🔄 [TERMINAL-INIT] WebView already initialized, skipping duplicate initialization');
-      return;
-    }
-
-    log('🎯 [TERMINAL-INIT] WebView ready - sending extensionReady confirmation');
-
-    // Send extensionReady
-    log('🤝 [HANDSHAKE] Sending extensionReady in response to webviewReady');
-    void this._communicationService.sendMessage({
-      command: 'extensionReady' as any,
-      timestamp: Date.now(),
-    });
-    log('✅ [HANDSHAKE] extensionReady sent to WebView');
-
-    // Mark as initialized (allows messages to be sent)
-    this._isInitialized = true;
-    // Flush any messages queued before the webview was ready
-    if (this._pendingMessages.length > 0) {
-      const queued = [...this._pendingMessages];
-      this._pendingMessages = [];
-      queued.forEach((message) => {
-        void this._communicationService.sendMessage(message);
-      });
-    }
-    this._watchdogCoordinator.startPendingWatchdogs(this._isInitialized);
-
-    // Send version information
-    void this._communicationService.sendVersionInfo();
-
-    // 🎯 HANDSHAKE: Do NOT start terminal initialization here!
-    // We must wait for webviewInitialized message to ensure WebView's
-    // message handlers are fully set up before sending terminalCreated messages.
-    // The orchestrator.initialize() will be called in _handleWebviewInitialized().
-    log('⏳ [HANDSHAKE] Waiting for webviewInitialized before starting terminal initialization');
+  private _handleWebviewReady(message: WebviewMessage): void {
+    this._webViewInitHandler.handleWebviewReady(message);
   }
 
   /**
    * Handle webviewInitialized message from WebView
    * This is sent AFTER WebView's message handlers are fully set up
    */
-  private async _handleWebviewInitialized(_message: WebviewMessage): Promise<void> {
-    log('🎯 [TERMINAL-INIT] === _handleWebviewInitialized CALLED ===');
-    log('🎯 [TERMINAL-INIT] WebView fully initialized - starting terminal initialization');
-    log(`🔍 [TERMINAL-INIT] _pendingPanelMoveReinit: ${this._pendingPanelMoveReinit}`);
-
-    // Handle panel move reinit first
-    if (this._pendingPanelMoveReinit) {
-      this._pendingPanelMoveReinit = false;
-      void this._reinitializeWebviewAfterPanelMove();
-      return;
-    }
-
-    // 🔧 CRITICAL FIX: Send settings BEFORE creating terminals
-    // This ensures WebView has correct theme before first terminal is created
-    // Previously, terminals were created with default dark theme before settings arrived
-    const settings = this._settingsService.getCurrentSettings();
-    const fontSettings = this._settingsService.getCurrentFontSettings();
-
-    log(`📤 [TERMINAL-INIT] Sending settings to WebView FIRST (theme: ${settings.theme})`);
-    await this._sendMessage({
-      command: 'settingsResponse',
-      settings,
-    });
-
-    await this._sendMessage({
-      command: 'fontSettingsUpdate',
-      fontSettings,
-    });
-    log('✅ [TERMINAL-INIT] Settings sent to WebView before terminal creation');
-
-    // 🔤 FIX: Send init message and font settings BEFORE creating terminals
-    // This ensures fonts are applied during terminal creation, not after
-    // ⚠️ IMPORTANT: Must await to ensure settings are processed before terminal creation
-    await this._initializeWithFontSettings();
-  }
-
-  private async _reinitializeWebviewAfterPanelMove(): Promise<void> {
-    try {
-      log('🔄 [PANEL-MOVE] Reinitializing WebView after panel move');
-
-      await this._sendMessage({
-        command: 'init',
-        timestamp: Date.now(),
-      });
-
-      const fontSettings = this._settingsService.getCurrentFontSettings();
-      await this._sendMessage({
-        command: 'fontSettingsUpdate',
-        fontSettings,
-      });
-
-      await this._initializeTerminal();
-      this.sendFullCliAgentStateSync();
-
-      log('✅ [PANEL-MOVE] WebView reinitialization complete');
-    } catch (error) {
-      log('❌ [PANEL-MOVE] Failed to reinitialize WebView after panel move:', error);
-      try {
-        await this._initializeTerminal();
-      } catch {
-        // ignore
-      }
-    }
-  }
-
-  /**
-   * Initialize WebView with font settings before creating terminals
-   * This ensures font settings are available when terminals are created
-   */
-  private async _initializeWithFontSettings(): Promise<void> {
-    try {
-      // Step 1: Send init message
-      log('📤 [TERMINAL-INIT] Step 1: Sending init message to WebView...');
-      await this._sendMessage({
-        command: 'init',
-        timestamp: Date.now(),
-      });
-      log('✅ [TERMINAL-INIT] init message sent');
-
-      // Step 2: Send font settings BEFORE terminal creation
-      const fontSettings = this._settingsService.getCurrentFontSettings();
-      log('📤 [TERMINAL-INIT] Step 2: Sending font settings BEFORE terminal creation');
-      await this._sendMessage({
-        command: 'fontSettingsUpdate',
-        fontSettings,
-      });
-      log('✅ [TERMINAL-INIT] Font settings sent');
-
-      // Step 3: Now create terminals - they will use the font settings we just sent
-      log('📤 [TERMINAL-INIT] Step 3: Starting terminal initialization with font settings ready');
-      await this._orchestrator.initialize();
-      log('✅ [TERMINAL-INIT] Terminal initialization complete');
-    } catch (error) {
-      log('❌ [TERMINAL-INIT] Error during initialization:', error);
-      // Still try to initialize terminals even if font settings failed
-      void this._orchestrator.initialize();
-    }
+  private async _handleWebviewInitialized(message: WebviewMessage): Promise<void> {
+    await this._webViewInitHandler.handleWebviewInitialized(message);
   }
 
   private async _handleGetSettings(): Promise<void> {
-    // Use SettingsSyncService for settings
-    const settings = this._settingsService.getCurrentSettings();
-    const fontSettings = this._settingsService.getCurrentFontSettings();
-    log(`📤 [SETTINGS] _handleGetSettings sending (theme: ${settings.theme})`);
+    // Delegate settings + font settings to SettingsMessageHandler
+    await this._settingsMessageHandler.handleGetSettings();
 
-    await this._sendMessage({
-      command: 'settingsResponse',
-      settings,
-    });
-
-    await this._sendMessage({
-      command: 'fontSettingsUpdate',
-      fontSettings,
-    });
-
-    // Send initial panel location
+    // Send initial panel location (provider-specific, not part of settings handler)
     const view = this._lifecycleManager.getView();
     if (view) {
       const panelLocation = this._getCurrentPanelLocation();
@@ -1064,32 +592,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     }
   }
 
-  private _handleHtmlScriptTest(message: WebviewMessage): void {
-    log('🔥 [DEBUG] ========== HTML INLINE SCRIPT TEST MESSAGE RECEIVED ==========');
-    log('🔥 [DEBUG] HTML script communication is working!');
-    log('🔥 [DEBUG] Message content:', message);
-  }
-
-  private _handleTimeoutTest(message: WebviewMessage): void {
-    log('🔥 [DEBUG] ========== HTML TIMEOUT TEST MESSAGE RECEIVED ==========');
-    log('🔥 [DEBUG] Timeout test communication is working!');
-    log('🔥 [DEBUG] Message content:', message);
-  }
-
-  private _handleDebugTest(message: WebviewMessage): void {
-    if ((message as WebviewMessage & { type?: string }).type === 'initComplete') {
-      log('🎆 [TRACE] ===============================');
-      log('🎆 [TRACE] WEBVIEW CONFIRMS INIT COMPLETE!');
-      try {
-        const { isDebugEnabled } = require('../utils/logger');
-        if (isDebugEnabled && isDebugEnabled()) {
-          log('🎆 [TRACE] Message data:', message);
-        }
-      } catch {
-        // Silently ignore logger loading errors - debug logging is non-critical
-      }
-    }
-  }
+  // Debug message handlers delegated to DebugMessageHandler
 
   /**
    * Fallback handler for critical messages that failed normal routing.
@@ -1112,156 +615,27 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   private async _sendInitializationComplete(terminalCount: number): Promise<void> {
-    log(`📤 [PROVIDER] Sending initialization complete: ${terminalCount} terminals`);
-    await this._sendMessage({
-      command: 'initializationComplete',
-      terminalCount: terminalCount,
-      timestamp: Date.now(),
-    });
+    await this._terminalInitLifecycleHandler.sendInitializationComplete(terminalCount);
   }
 
   private async _handleTerminalInitializationComplete(message: WebviewMessage): Promise<void> {
-    const terminalId = message.terminalId as string;
-    if (!terminalId) {
-      log('⚠️ [PROVIDER] Terminal initialization complete missing terminalId');
-      return;
-    }
-
-    const currentState = this._terminalInitStateMachine.getState(terminalId);
-    const phase = this._watchdogCoordinator.getPhase(terminalId);
-    if (
-      phase === 'prompt' &&
-      currentState >= TerminalInitializationState.ViewReady &&
-      !this._watchdogCoordinator.isInSafeMode(terminalId)
-    ) {
-      log(`⏭️ [PROVIDER] Ignoring duplicate terminalInitializationComplete for ${terminalId}`);
-      return;
-    }
-
-    log(`✅ [PROVIDER] Terminal ${terminalId} initialization confirmed by WebView`);
-    this._watchdogCoordinator.stopForTerminal(terminalId, 'webviewAck');
-    this._terminalInitStateMachine.markViewReady(terminalId, 'webviewAck');
-    this._watchdogCoordinator.startForTerminal(terminalId, 'prompt', 'awaitPrompt');
-
-    const terminal = this._terminalManager.getTerminal(terminalId);
-    if (!terminal || !terminal.ptyProcess) {
-      const attempts = (this._pendingInitRetries.get(terminalId) ?? 0) + 1;
-      this._pendingInitRetries.set(terminalId, attempts);
-
-      if (attempts > 5) {
-        log(`❌ [PROVIDER] Terminal ${terminalId} still unavailable after ${attempts} retries`);
-        this._pendingInitRetries.delete(terminalId);
-        return;
-      }
-
-      log(
-        `⏳ [PROVIDER] Terminal ${terminalId} not ready (attempt=${attempts}). Retrying terminalInitializationComplete handler...`
-      );
-      setTimeout(() => this._handleTerminalInitializationComplete(message), 50 * attempts);
-      return;
-    }
-
-    this._pendingInitRetries.delete(terminalId);
-
-    try {
-      this._terminalInitStateMachine.markShellInitializing(terminalId, 'initializeShell');
-      this._terminalManager.initializeShellForTerminal(terminalId, terminal.ptyProcess, false);
-      this._terminalInitStateMachine.markShellInitialized(terminalId, 'initializeShell');
-    } catch (error) {
-      log(`❌ [PROVIDER] Shell initialization failed for ${terminalId}:`, error);
-      this._terminalInitStateMachine.markFailed(terminalId, 'initializeShell');
-      this._watchdogCoordinator.startForTerminal(terminalId, 'prompt', 'shellInitRetry');
-      return;
-    }
-
-    try {
-      this._terminalManager.startPtyOutput(terminalId);
-      this._terminalInitStateMachine.markOutputStreaming(terminalId, 'startPtyOutput');
-    } catch (error) {
-      log(`❌ [PROVIDER] PTY output start failed for ${terminalId}:`, error);
-      this._terminalInitStateMachine.markFailed(terminalId, 'startPtyOutput');
-      this._watchdogCoordinator.startForTerminal(terminalId, 'prompt', 'ptyRetry');
-      return;
-    }
-
-    await this._sendMessage({
-      command: TERMINAL_CONSTANTS.COMMANDS.START_OUTPUT,
-      terminalId,
-      timestamp: Date.now(),
-    });
-    this._eventCoordinator?.flushBufferedOutput(terminalId);
-    this._terminalInitStateMachine.markPromptReady(terminalId, 'startOutput');
-    this._watchdogCoordinator.stopForTerminal(terminalId, 'promptReady');
-    this._watchdogCoordinator.clearSafeMode(terminalId);
-    this._watchdogCoordinator.markInitSuccess(terminalId);
+    await this._terminalInitLifecycleHandler.handleTerminalInitializationComplete(message);
   }
 
   private async _handleUpdateSettings(message: WebviewMessage): Promise<void> {
-    if (!hasSettings(message)) {
-      log('⚠️ [PROVIDER] Update settings message missing settings');
-      return;
-    }
-
-    log('⚙️ [PROVIDER] Updating settings from WebView');
-    await this._settingsService.updateSettings(message.settings);
+    await this._settingsMessageHandler.handleUpdateSettings(message);
   }
 
   private async _handleReportPanelLocation(message: WebviewMessage): Promise<void> {
-    // Accept panel location reports only as responses to explicit detection requests.
-    // Autonomous reports can trigger setContext and cause VS Code to recalculate layout,
-    // which cancels the secondary sidebar's maximized state.
-    if (!this._panelLocationDetectionPending) {
-      log('⏭️ [PROVIDER] Ignoring unsolicited panel location report');
-      return;
-    }
-
-    const reportedLocation = message.location as PanelLocation;
-    if (!reportedLocation) {
-      log('⚠️ [PROVIDER] Panel location report missing location');
-      return;
-    }
-
-    this._clearPanelLocationDetectionPending('panel location report received');
-
-    log(`📍 [PROVIDER] WebView reports panel location: ${reportedLocation}`);
-    await this._panelLocationService.handlePanelLocationReport(reportedLocation);
+    await this._panelLocationHandler.handleReportPanelLocation(message);
   }
 
   private _requestPanelLocationDetection(): void {
-    const manualPanelLocation = vscode.workspace
-      .getConfiguration('secondaryTerminal')
-      .get<'sidebar' | 'panel' | 'auto'>('panelLocation', 'auto');
-
-    if (manualPanelLocation !== 'auto') {
-      log(
-        `📍 [PROVIDER] Manual panelLocation=${manualPanelLocation}; skipping panel location detection request`
-      );
-      this._clearPanelLocationDetectionPending('manual panelLocation mode');
-      return;
-    }
-
-    this._panelLocationDetectionPending = true;
-    if (this._panelLocationDetectionTimeout) {
-      clearTimeout(this._panelLocationDetectionTimeout);
-    }
-    this._panelLocationDetectionTimeout = setTimeout(() => {
-      this._clearPanelLocationDetectionPending('panel location response timeout');
-    }, SecondaryTerminalProvider.PANEL_LOCATION_RESPONSE_TIMEOUT_MS);
-
-    this._panelLocationService.requestPanelLocationDetection();
+    this._panelLocationHandler.requestPanelLocationDetection();
   }
 
   private _clearPanelLocationDetectionPending(reason: string): void {
-    if (!this._panelLocationDetectionPending && !this._panelLocationDetectionTimeout) {
-      return;
-    }
-
-    log(`📍 [PROVIDER] Clearing panel location detection pending state (${reason})`);
-    this._panelLocationDetectionPending = false;
-    if (this._panelLocationDetectionTimeout) {
-      clearTimeout(this._panelLocationDetectionTimeout);
-      this._panelLocationDetectionTimeout = null;
-    }
+    this._panelLocationHandler.clearPanelLocationDetectionPending(reason);
   }
 
   private _determineSplitDirection(): SplitDirection {
@@ -1275,103 +649,31 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private _setupPanelLocationChangeListener(_webviewView: vscode.WebviewView): void {
     log('🔧 [PROVIDER] Setting up panel location change listener...');
 
-    // Use onDidChangeConfiguration instead of non-existent onDidChangePanelLocation
-    const disposable = vscode.workspace.onDidChangeConfiguration((event) => {
-      // Check if panelLocation setting changed
-      if (event.affectsConfiguration('secondaryTerminal.panelLocation')) {
-        log('📍 [PROVIDER] Panel location configuration changed');
+    // Panel location config changes delegated to PanelLocationHandler
+    const panelDisposable = this._panelLocationHandler.setupPanelLocationChangeListener();
+    this._cleanupService.addDisposable(panelDisposable);
 
-        // Get the new location from configuration
-        const newLocation = vscode.workspace
-          .getConfiguration('secondaryTerminal')
-          .get<PanelLocation>('panelLocation', 'sidebar');
-
-        log(`📍 [PROVIDER] New panel location: ${newLocation}`);
-        this._panelLocationService.handlePanelLocationReport(newLocation).catch((error) => {
-          log(`❌ [PROVIDER] Failed to handle panel location change: ${error}`);
-        });
-      }
-
-      // Handle settings changes that affect WebView (e.g., activeBorderMode)
-      if (this._isSettingsChangeAffectingWebView(event)) {
+    // Settings and font changes remain as a separate listener
+    const settingsDisposable = vscode.workspace.onDidChangeConfiguration((event) => {
+      // Handle settings changes that affect WebView (delegated to SettingsMessageHandler)
+      if (this._settingsMessageHandler.isSettingsChangeAffectingWebView(event)) {
         log('⚙️ [PROVIDER] Settings changed, sending updated settings to WebView...');
-        void this._sendSettingsUpdateToWebView();
+        void this._settingsMessageHandler.sendSettingsUpdateToWebView();
       }
 
-      // Handle font settings changes
-      if (this._isFontSettingsChange(event)) {
+      // Handle font settings changes (delegated to SettingsMessageHandler)
+      if (this._settingsMessageHandler.isFontSettingsChange(event)) {
         log('🎨 [PROVIDER] Font settings changed, sending update to WebView...');
-        void this._sendFontSettingsUpdateToWebView();
+        void this._settingsMessageHandler.sendFontSettingsUpdateToWebView();
       }
     });
 
-    this._cleanupService.addDisposable(disposable);
+    this._cleanupService.addDisposable(settingsDisposable);
     log('✅ [PROVIDER] Panel location change listener registered');
   }
 
-  /**
-   * Check if configuration change affects WebView settings
-   */
-  private _isSettingsChangeAffectingWebView(event: vscode.ConfigurationChangeEvent): boolean {
-    return (
-      event.affectsConfiguration('secondaryTerminal.activeBorderMode') ||
-      event.affectsConfiguration('secondaryTerminal.theme') ||
-      event.affectsConfiguration('secondaryTerminal.cursorBlink') ||
-      event.affectsConfiguration('secondaryTerminal.enableCliAgentIntegration') ||
-      event.affectsConfiguration('secondaryTerminal.enableTerminalHeaderEnhancements') ||
-      event.affectsConfiguration('secondaryTerminal.dynamicSplitDirection') ||
-      event.affectsConfiguration('secondaryTerminal.panelLocation') ||
-      event.affectsConfiguration('editor.multiCursorModifier') ||
-      event.affectsConfiguration('terminal.integrated.altClickMovesCursor') ||
-      event.affectsConfiguration('secondaryTerminal.altClickMovesCursor')
-    );
-  }
-
-  /**
-   * Check if configuration change affects font settings
-   */
-  private _isFontSettingsChange(event: vscode.ConfigurationChangeEvent): boolean {
-    return (
-      event.affectsConfiguration('secondaryTerminal.fontFamily') ||
-      event.affectsConfiguration('secondaryTerminal.fontSize') ||
-      event.affectsConfiguration('secondaryTerminal.fontWeight') ||
-      event.affectsConfiguration('secondaryTerminal.fontWeightBold') ||
-      event.affectsConfiguration('secondaryTerminal.lineHeight') ||
-      event.affectsConfiguration('secondaryTerminal.letterSpacing') ||
-      event.affectsConfiguration('terminal.integrated.fontSize') ||
-      event.affectsConfiguration('terminal.integrated.fontFamily') ||
-      event.affectsConfiguration('terminal.integrated.fontWeight') ||
-      event.affectsConfiguration('terminal.integrated.fontWeightBold') ||
-      event.affectsConfiguration('terminal.integrated.lineHeight') ||
-      event.affectsConfiguration('terminal.integrated.letterSpacing') ||
-      event.affectsConfiguration('editor.fontSize') ||
-      event.affectsConfiguration('editor.fontFamily')
-    );
-  }
-
-  /**
-   * Send updated settings to WebView
-   */
-  private async _sendSettingsUpdateToWebView(): Promise<void> {
-    const settings = this._settingsService.getCurrentSettings();
-    log(`📤 [PROVIDER] Sending settings update to WebView: activeBorderMode=${settings.activeBorderMode}`);
-    await this._sendMessage({
-      command: 'settingsResponse',
-      settings,
-    });
-  }
-
-  /**
-   * Send updated font settings to WebView
-   */
-  private async _sendFontSettingsUpdateToWebView(): Promise<void> {
-    const fontSettings = this._settingsService.getCurrentFontSettings();
-    log('📤 [PROVIDER] Sending font settings update to WebView');
-    await this._sendMessage({
-      command: 'fontSettingsUpdate',
-      fontSettings,
-    });
-  }
+  // Settings change detection, WebView sync, and font settings sync
+  // are delegated to SettingsMessageHandler
 
   public splitTerminal(direction?: SplitDirection): void {
     try {
@@ -1426,40 +728,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   public async _initializeTerminal(): Promise<void> {
-    log('🔧 [PROVIDER] Initializing terminal...');
-
-    // 🔧 CRITICAL FIX: Include font settings in terminalCreated message
-    // This ensures font settings are available when WebView creates terminals
-    const fontSettings = this._settingsService.getCurrentFontSettings();
-    log('🔤 [PROVIDER] Font settings for terminal creation:', fontSettings);
-
-    const terminals = this._terminalManager.getTerminals();
-    for (const terminal of terminals) {
-      const displayModeOverride = this._terminalManager.consumeCreationDisplayModeOverride(
-        terminal.id
-      );
-      await this._sendMessage({
-        command: 'terminalCreated',
-        terminal: {
-          id: terminal.id,
-          name: terminal.name,
-          cwd: terminal.cwd || safeProcessCwd(),
-          isActive: terminal.id === this._terminalManager.getActiveTerminalId(),
-        },
-        // 🔧 Include font settings directly in the message
-        config: {
-          fontSettings,
-          ...(displayModeOverride ? { displayModeOverride } : {}),
-        },
-      });
-    }
-
-    await this._sendMessage({
-      command: 'stateUpdate',
-      state: this._terminalManager.getCurrentState(),
-    });
-
-    log('✅ [PROVIDER] Terminal initialization complete');
+    await this._terminalInitLifecycleHandler.initializeTerminal();
   }
 
   /**
@@ -1467,15 +736,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
    * This is needed because VS Code destroys WebView content when moving panels
    */
   private _syncTerminalStateToWebView(): void {
-    log('🔄 [PROVIDER] Syncing terminal state to WebView after panel move');
-
-    // Re-initialize terminals in WebView
-    void this._initializeTerminal();
-
-    // Sync CLI agent state
-    this.sendFullCliAgentStateSync();
-
-    log('✅ [PROVIDER] Terminal state sync complete');
+    this._terminalInitLifecycleHandler.syncTerminalStateToWebView();
   }
 
   public async sendMessageToWebview(message: WebviewMessage): Promise<void> {
@@ -1483,14 +744,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   private async _sendMessage(message: WebviewMessage): Promise<void> {
-    if (!this._isInitialized && (message.command as string) !== 'extensionReady') {
-      // Queue until WebView signals readiness to avoid losing messages during reload
-      this._pendingMessages.push(message);
-      log(`⏳ [PROVIDER] Queuing message until webviewReady: ${message.command}`);
-      return;
-    }
-
-    await this._communicationService.sendMessage(message);
+    await this._webViewInitHandler.sendMessage(message);
   }
 
   public sendCliAgentStatusUpdate(
@@ -1576,38 +830,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   }
 
   private _ensureMultipleTerminals(): void {
-    log('🔥 [ENSURE] _ensureMultipleTerminals called');
-    try {
-      const currentTerminals = this._terminalManager.getTerminals().length;
-      log(`🔍 [ENSURE] Current terminal count: ${currentTerminals}`);
-
-      if (currentTerminals < 1) {
-        log('🎯 [ENSURE] Creating minimum terminal (1)');
-        const terminalId = this._terminalManager.createTerminal();
-        log(`✅ [ENSURE] Created terminal: ${terminalId}`);
-
-        if (!terminalId) {
-          log('❌ [ENSURE] createTerminal() returned null/undefined!');
-          return;
-        }
-
-        this._terminalManager.setActiveTerminal(terminalId);
-        log(`🎯 [ENSURE] Set terminal as active: ${terminalId}`);
-
-        // 🎯 FIX: Notify WebView about the newly created terminal
-        log('🎯 [ENSURE] About to call _initializeTerminal...');
-        void this._initializeTerminal().then(() => {
-          log('🎯 [ENSURE] _initializeTerminal completed');
-        }).catch((err) => {
-          log(`❌ [ENSURE] _initializeTerminal failed: ${err}`);
-        });
-        log('🎯 [ENSURE] Called _initializeTerminal (async)');
-      } else {
-        log(`✅ [ENSURE] Sufficient terminals already exist: ${currentTerminals}`);
-      }
-    } catch (error) {
-      log(`❌ [ENSURE] Failed to ensure terminals: ${String(error)}`);
-    }
+    this._terminalInitLifecycleHandler.ensureMultipleTerminals();
   }
 
   private async _handlePersistenceMessage(message: WebviewMessage): Promise<void> {
@@ -1643,51 +866,6 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   public async restoreLastSession(): Promise<boolean> {
     return this._sessionService.restoreLastSession();
   }
-
-  private _registerInitializationWatchdogs(): void {
-    try {
-      const createdDisposable = this._terminalManager.onTerminalCreated((terminal) => {
-        if (!terminal?.id) {
-          return;
-        }
-
-        this._watchdogCoordinator.recordInitStart(terminal.id);
-        this._terminalInitStateMachine.markViewPending(terminal.id, 'terminalCreated');
-        this._terminalInitStateMachine.markPtySpawned(terminal.id, 'terminalCreated');
-
-        if (this._isInitialized) {
-          this._watchdogCoordinator.startForTerminal(terminal.id, 'ack', 'terminalCreated');
-        } else {
-          this._watchdogCoordinator.addPendingTerminal(terminal.id);
-        }
-      });
-
-      const removedDisposable = this._terminalManager.onTerminalRemoved((terminalId) => {
-        this._watchdogCoordinator.stopForTerminal(terminalId, 'terminalRemoved');
-        this._terminalInitStateMachine.reset(terminalId);
-      });
-
-      this._cleanupService.addDisposable(createdDisposable);
-      this._cleanupService.addDisposable(removedDisposable);
-
-      const existingTerminals = this._terminalManager.getTerminals();
-      for (const terminal of existingTerminals) {
-        if (!terminal.id) {
-          continue;
-        }
-
-        this._watchdogCoordinator.recordInitStart(terminal.id);
-        if (this._isInitialized) {
-          this._watchdogCoordinator.startForTerminal(terminal.id, 'ack', 'existingTerminal');
-        } else {
-          this._watchdogCoordinator.addPendingTerminal(terminal.id);
-        }
-      }
-    } catch (error) {
-      log('⚠️ [PROVIDER] Failed to register initialization watchdogs:', error);
-    }
-  }
-
 
   public getPerformanceMetrics() {
     return this._lifecycleManager.getPerformanceMetrics();
@@ -1738,9 +916,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     this._cleanupService.dispose();
 
     // Reset state
-    this._isInitialized = false;
-    this._hasDetectedPanelLocation = false;
-    this._clearPanelLocationDetectionPending('provider disposed');
+    this._webViewInitHandler.reset();
+    this._panelLocationHandler.resetDetectionState();
+    this._panelLocationHandler.dispose();
 
     log('✅ [DEBUG] SecondaryTerminalProvider disposed');
   }
