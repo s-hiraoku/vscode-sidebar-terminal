@@ -245,4 +245,34 @@ describe('CliAgentCoordinator', () => {
       expect(deps.disposeStateManager).toHaveBeenCalled();
     });
   });
+
+  describe('agent state helpers', () => {
+    it('should delegate removeTerminalState', () => {
+      coordinator.removeTerminalState('terminal-9');
+
+      expect(deps.removeTerminalState).toHaveBeenCalledWith('terminal-9');
+    });
+
+    it('should delegate getAgentStats', () => {
+      const stats = {
+        totalAgents: 1,
+        connectedAgents: 1,
+        disconnectedAgents: 0,
+        currentConnectedId: 'terminal-1',
+        agentTypes: ['claude'],
+      };
+      vi.mocked(deps.getAgentStats).mockReturnValue(stats);
+
+      const result = coordinator.getAgentStats();
+
+      expect(deps.getAgentStats).toHaveBeenCalled();
+      expect(result).toBe(stats);
+    });
+
+    it('should dispose the underlying state manager', () => {
+      coordinator.dispose();
+
+      expect(deps.disposeStateManager).toHaveBeenCalled();
+    });
+  });
 });
