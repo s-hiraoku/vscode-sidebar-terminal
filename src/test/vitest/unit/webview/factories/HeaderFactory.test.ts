@@ -24,7 +24,7 @@ describe('HeaderFactory', () => {
         terminalId: 't1',
         terminalName: 'My Terminal',
       });
-      
+
       expect(elements.container.getAttribute('data-terminal-id')).toBe('t1');
       expect(elements.nameSpan.textContent).toBe('My Terminal');
       expect(elements.container.className).toContain('terminal-header');
@@ -34,9 +34,9 @@ describe('HeaderFactory', () => {
       const elements = HeaderFactory.createTerminalHeader({
         terminalId: 't1',
         terminalName: 'Split Test',
-        showSplitButton: true
+        showSplitButton: true,
       });
-      
+
       expect(elements.splitButton).toBeTruthy();
       expect(elements.splitButton?.className).toContain('split-btn');
     });
@@ -44,18 +44,18 @@ describe('HeaderFactory', () => {
     it('should handle click events', () => {
       const onHeaderClick = vi.fn();
       const onCloseClick = vi.fn();
-      
+
       const elements = HeaderFactory.createTerminalHeader({
         terminalId: 't1',
         terminalName: 'Event Test',
         onHeaderClick,
-        onCloseClick
+        onCloseClick,
       });
-      
+
       // Click header
       elements.container.click();
       expect(onHeaderClick).toHaveBeenCalledWith('t1');
-      
+
       // Click close button
       elements.closeButton.click();
       expect(onCloseClick).toHaveBeenCalledWith('t1');
@@ -66,11 +66,11 @@ describe('HeaderFactory', () => {
         terminalId: 't1',
         terminalName: 'Hover Test',
       });
-      
+
       const btn = elements.closeButton;
       btn.dispatchEvent(new MouseEvent('mouseenter'));
       expect(btn.style.opacity).toBe('1');
-      
+
       btn.dispatchEvent(new MouseEvent('mouseleave'));
       expect(btn.style.opacity).toBe('0.7');
     });
@@ -88,7 +88,7 @@ describe('HeaderFactory', () => {
 
     it('should insert CLI Agent status', () => {
       HeaderFactory.insertCliAgentStatus(elements, 'connected', 'claude');
-      
+
       expect(elements.statusSpan.textContent).toContain('AI Agent Connected');
       expect(elements.indicator.style.color.toLowerCase()).toBe('#4caf50');
     });
@@ -96,7 +96,7 @@ describe('HeaderFactory', () => {
     it('should update status when called multiple times', () => {
       HeaderFactory.insertCliAgentStatus(elements, 'connected');
       HeaderFactory.insertCliAgentStatus(elements, 'disconnected');
-      
+
       expect(elements.statusSpan.textContent).toContain('AI Agent Disconnected');
       expect(elements.statusSection.querySelectorAll('.ai-agent-status').length).toBe(1);
     });
@@ -104,7 +104,7 @@ describe('HeaderFactory', () => {
     it('should remove status', () => {
       HeaderFactory.insertCliAgentStatus(elements, 'connected');
       HeaderFactory.removeCliAgentStatus(elements);
-      
+
       expect(elements.statusSpan).toBeNull();
       expect(elements.statusSection.children.length).toBe(0);
     });
@@ -116,7 +116,7 @@ describe('HeaderFactory', () => {
         terminalId: 't1',
         terminalName: 'Old',
       });
-      
+
       HeaderFactory.updateTerminalName(elements, 'New');
       expect(elements.nameSpan.textContent).toBe('New');
     });
@@ -126,10 +126,10 @@ describe('HeaderFactory', () => {
         terminalId: 't1',
         terminalName: 'Active Test',
       });
-      
+
       HeaderFactory.setActiveState(elements, true);
       expect(elements.container.style.backgroundColor).toContain('activeBackground');
-      
+
       HeaderFactory.setActiveState(elements, false);
       expect(elements.container.style.backgroundColor).toContain('inactiveBackground');
     });
@@ -139,10 +139,10 @@ describe('HeaderFactory', () => {
         terminalId: 't1',
         terminalName: 'Button Test',
       });
-      
+
       HeaderFactory.setAiAgentToggleButtonVisibility(elements, false);
       expect(elements.aiAgentToggleButton?.style.display).toBe('none');
-      
+
       HeaderFactory.setAiAgentToggleButtonVisibility(elements, true, 'connected');
       expect(elements.aiAgentToggleButton?.style.display).toBe('flex');
       expect(elements.aiAgentToggleButton?.title).toContain('Connected');
@@ -277,7 +277,9 @@ describe('HeaderFactory', () => {
       const pinkOption = elements.titleSection.querySelector(
         '[data-indicator-color="#FF69B4"]'
       ) as HTMLButtonElement;
-      const input = elements.titleSection.querySelector('.terminal-name-edit-input') as HTMLInputElement;
+      const input = elements.titleSection.querySelector(
+        '.terminal-name-edit-input'
+      ) as HTMLInputElement;
 
       // Simulate: mousedown sets flag, focusout fires, click fires and re-focuses input
       pinkOption.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
@@ -303,7 +305,9 @@ describe('HeaderFactory', () => {
       const editor = elements.titleSection.querySelector('.terminal-header-editor') as HTMLElement;
       expect(editor).toBeTruthy();
 
-      const input = elements.titleSection.querySelector('.terminal-name-edit-input') as HTMLInputElement;
+      const input = elements.titleSection.querySelector(
+        '.terminal-name-edit-input'
+      ) as HTMLInputElement;
       const pinkOption = elements.titleSection.querySelector(
         '[data-indicator-color="#FF69B4"]'
       ) as HTMLButtonElement;
@@ -332,7 +336,9 @@ describe('HeaderFactory', () => {
       const palette = elements.titleSection.querySelector(
         '.terminal-header-color-palette'
       ) as HTMLElement;
-      const input = elements.titleSection.querySelector('.terminal-name-edit-input') as HTMLInputElement;
+      const input = elements.titleSection.querySelector(
+        '.terminal-name-edit-input'
+      ) as HTMLInputElement;
 
       // Simulate: clicking within palette background triggers input blur.
       palette.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
@@ -426,7 +432,9 @@ describe('HeaderFactory', () => {
 
       elements.container.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
 
-      const indicator = elements.container.querySelector('.terminal-processing-indicator') as HTMLElement;
+      const indicator = elements.container.querySelector(
+        '.terminal-processing-indicator'
+      ) as HTMLElement;
       const flow = elements.container.querySelector(
         '.terminal-processing-indicator-flow'
       ) as HTMLElement;
@@ -485,7 +493,9 @@ describe('HeaderFactory', () => {
       pinkOption.click();
 
       expect(onHeaderUpdate).not.toHaveBeenCalledWith('t1', { indicatorColor: '#FF69B4' });
-      expect(elements.container.style.getPropertyValue('--terminal-indicator-color')).toBe('#FF69B4');
+      expect(elements.container.style.getPropertyValue('--terminal-indicator-color')).toBe(
+        '#FF69B4'
+      );
     });
 
     it('should provide OFF option and emit transparent indicator color', () => {
@@ -520,7 +530,9 @@ describe('HeaderFactory', () => {
         terminalName: 'Indicator Test',
       });
 
-      const flow = elements.container.querySelector('.terminal-processing-indicator') as HTMLElement;
+      const flow = elements.container.querySelector(
+        '.terminal-processing-indicator'
+      ) as HTMLElement;
       expect(flow).toBeTruthy();
       expect(flow.style.opacity).toBe('0');
 
@@ -544,7 +556,9 @@ describe('HeaderFactory', () => {
         headerEnhancementsEnabled: false,
       } as any);
 
-      const flow = elements.container.querySelector('.terminal-processing-indicator') as HTMLElement;
+      const flow = elements.container.querySelector(
+        '.terminal-processing-indicator'
+      ) as HTMLElement;
       expect(flow).toBeTruthy();
 
       HeaderFactory.setProcessingIndicatorActive(elements, true);
@@ -569,7 +583,10 @@ describe('HeaderFactory', () => {
 
       expect(input).toBeTruthy();
       expect(colorOptions).toHaveLength(0);
-      expect(onHeaderUpdate).not.toHaveBeenCalledWith('t1', expect.objectContaining({ indicatorColor: expect.any(String) }));
+      expect(onHeaderUpdate).not.toHaveBeenCalledWith(
+        't1',
+        expect.objectContaining({ indicatorColor: expect.any(String) })
+      );
     });
   });
 });

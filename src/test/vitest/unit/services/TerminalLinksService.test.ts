@@ -12,7 +12,8 @@ const mocks = vi.hoisted(() => {
 
   const mockConfiguration = {
     get: vi.fn((key: string, defaultValue: any) => {
-      if (key === 'terminal.integrated.allowedLinkSchemes') return ['http', 'https', 'file', 'mailto'];
+      if (key === 'terminal.integrated.allowedLinkSchemes')
+        return ['http', 'https', 'file', 'mailto'];
       return defaultValue;
     }),
   };
@@ -48,12 +49,14 @@ const mocks = vi.hoisted(() => {
     mockEnv,
     mockWindow,
     mockCommands,
-    mockUri
+    mockUri,
   };
 });
 
 vi.mock('vscode', () => ({
-  EventEmitter: vi.fn(function() { return mocks.mockEventEmitter; }),
+  EventEmitter: vi.fn(function () {
+    return mocks.mockEventEmitter;
+  }),
   workspace: mocks.mockWorkspace,
   env: mocks.mockEnv,
   window: mocks.mockWindow,
@@ -104,7 +107,7 @@ describe('TerminalLinksService', () => {
   describe('detectLinks', () => {
     it('should detect web links', async () => {
       const links = await service.detectLinks('t1', 1, 'Check this https://example.com link');
-      
+
       expect(links).toHaveLength(1);
       expect(links[0].type).toBe('url');
       expect(links[0].text).toBe('https://example.com');
@@ -112,7 +115,7 @@ describe('TerminalLinksService', () => {
 
     it('should detect file links', async () => {
       const links = await service.detectLinks('t1', 1, 'File at /absolute/path/file');
-      
+
       expect(links).toHaveLength(1);
       expect(links[0].type).toBe('file');
       expect(links[0].text).toBe('/absolute/path/file');
@@ -120,7 +123,7 @@ describe('TerminalLinksService', () => {
 
     it('should detect email links', async () => {
       const links = await service.detectLinks('t1', 1, 'Mail to user@example.com');
-      
+
       expect(links).toHaveLength(1);
       expect(links[0].type).toBe('email');
       expect(links[0].text).toBe('user@example.com');
@@ -128,11 +131,13 @@ describe('TerminalLinksService', () => {
 
     it('should fire event when links detected', async () => {
       await service.detectLinks('t1', 1, 'https://example.com');
-      
-      expect(mocks.mockEventEmitter.fire).toHaveBeenCalledWith(expect.objectContaining({
-        terminalId: 't1',
-        links: expect.arrayContaining([expect.objectContaining({ type: 'url' })])
-      }));
+
+      expect(mocks.mockEventEmitter.fire).toHaveBeenCalledWith(
+        expect.objectContaining({
+          terminalId: 't1',
+          links: expect.arrayContaining([expect.objectContaining({ type: 'url' })]),
+        })
+      );
     });
   });
 
@@ -140,14 +145,14 @@ describe('TerminalLinksService', () => {
     it('should activate web link', async () => {
       const link = { type: 'url', text: 'https://example.com' } as any;
       await service.activateLink(link);
-      
+
       expect(mocks.mockEnv.openExternal).toHaveBeenCalled();
     });
 
     it('should activate file link', async () => {
       const link = { type: 'file', activationData: { path: '/file.txt' } } as any;
       await service.activateLink(link);
-      
+
       expect(mocks.mockWorkspace.openTextDocument).toHaveBeenCalledWith('/file.txt');
       expect(mocks.mockWindow.showTextDocument).toHaveBeenCalled();
     });
@@ -155,14 +160,17 @@ describe('TerminalLinksService', () => {
     it('should activate folder link', async () => {
       const link = { type: 'folder', activationData: { path: '/folder' } } as any;
       await service.activateLink(link);
-      
-      expect(mocks.mockCommands.executeCommand).toHaveBeenCalledWith('revealFileInOS', expect.anything());
+
+      expect(mocks.mockCommands.executeCommand).toHaveBeenCalledWith(
+        'revealFileInOS',
+        expect.anything()
+      );
     });
 
     it('should activate email link', async () => {
       const link = { type: 'email', text: 'test@example.com' } as any;
       await service.activateLink(link);
-      
+
       expect(mocks.mockEnv.openExternal).toHaveBeenCalled();
     });
   });
@@ -170,14 +178,16 @@ describe('TerminalLinksService', () => {
   describe('custom providers', () => {
     it('should support custom link providers', async () => {
       const provider = {
-        provideTerminalLinks: vi.fn().mockResolvedValue([{ startIndex: 0, length: 5, tooltip: 'Custom' }]),
+        provideTerminalLinks: vi
+          .fn()
+          .mockResolvedValue([{ startIndex: 0, length: 5, tooltip: 'Custom' }]),
         handleTerminalLink: vi.fn(),
       };
-      
+
       service.registerLinkProvider(provider as any);
-      
+
       const links = await service.detectLinks('t1', 1, '12345');
-      
+
       expect(links).toHaveLength(1);
       expect(links[0].type).toBe('custom');
       expect(provider.provideTerminalLinks).toHaveBeenCalled();

@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DisposableStore, toDisposable, combineDisposables } from '../../../../utils/DisposableStore';
+import {
+  DisposableStore,
+  toDisposable,
+  combineDisposables,
+} from '../../../../utils/DisposableStore';
 
 describe('DisposableStore', () => {
   let store: DisposableStore;

@@ -21,7 +21,7 @@ describe('ResourceCleanupService', () => {
     it('should track disposables', () => {
       const mockDisposable = { dispose: vi.fn() };
       service.addDisposable(mockDisposable);
-      
+
       expect(service.getDisposableCount()).toBe(1);
     });
 
@@ -29,16 +29,16 @@ describe('ResourceCleanupService', () => {
       const d1 = { dispose: vi.fn() };
       const d2 = { dispose: vi.fn() };
       service.addDisposables(d1, d2);
-      
+
       expect(service.getDisposableCount()).toBe(2);
     });
 
     it('should dispose added resource immediately if service is already disposed', () => {
       service.dispose();
       const mockDisposable = { dispose: vi.fn() };
-      
+
       service.addDisposable(mockDisposable);
-      
+
       expect(mockDisposable.dispose).toHaveBeenCalled();
       expect(service.getDisposableCount()).toBe(0);
     });
@@ -47,11 +47,15 @@ describe('ResourceCleanupService', () => {
   describe('Cleanup Callbacks', () => {
     it('should execute callbacks in LIFO order', async () => {
       const executionOrder: number[] = [];
-      service.registerCleanupCallback(() => { executionOrder.push(1); });
-      service.registerCleanupCallback(() => { executionOrder.push(2); });
-      
+      service.registerCleanupCallback(() => {
+        executionOrder.push(1);
+      });
+      service.registerCleanupCallback(() => {
+        executionOrder.push(2);
+      });
+
       service.dispose();
-      
+
       expect(executionOrder).toEqual([2, 1]);
     });
 
@@ -68,10 +72,12 @@ describe('ResourceCleanupService', () => {
     });
 
     it('should handle errors in callbacks gracefully', () => {
-      service.registerCleanupCallback(() => { throw new Error('Fail'); });
+      service.registerCleanupCallback(() => {
+        throw new Error('Fail');
+      });
       const secondCallback = vi.fn();
       service.registerCleanupCallback(secondCallback);
-      
+
       expect(() => service.dispose()).not.toThrow();
       expect(secondCallback).toHaveBeenCalled();
     });
@@ -82,9 +88,9 @@ describe('ResourceCleanupService', () => {
       const d1 = { dispose: vi.fn() };
       const d2 = { dispose: vi.fn() };
       service.addDisposables(d1, d2);
-      
+
       service.dispose();
-      
+
       expect(d1.dispose).toHaveBeenCalled();
       expect(d2.dispose).toHaveBeenCalled();
       expect(service.isDisposed()).toBe(true);
@@ -93,9 +99,9 @@ describe('ResourceCleanupService', () => {
 
     it('should skip if already disposed', () => {
       service.dispose();
-      
+
       // Should not log disposal messages again (implicitly tested by logic)
-      service.dispose(); 
+      service.dispose();
       expect(service.isDisposed()).toBe(true);
     });
   });

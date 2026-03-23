@@ -51,61 +51,63 @@ describe('WebViewInitializationTemplate', () => {
 
   it('should prevent duplicate initialization by default', async () => {
     await template.initialize();
-    
+
     // Reset flags
     template.setupViewReferenceCalled = false;
-    
+
     await template.initialize();
-    
+
     expect(template.setupViewReferenceCalled).toBe(false);
   });
 
   it('should allow duplicate initialization if context permits', async () => {
     await template.initialize();
-    
+
     template.setupViewReferenceCalled = false;
-    
+
     await template.initialize({ skipDuplicates: false });
-    
+
     expect(template.setupViewReferenceCalled).toBe(true);
   });
 
   it('should track metrics for each phase', async () => {
     await template.initialize();
-    
+
     const metrics = template.getInitializationMetrics();
     expect(metrics.length).toBeGreaterThan(0);
-    expect(metrics.find(m => m.phase === 'Core Setup')).toBeDefined();
-    expect(metrics.every(m => m.success === true)).toBe(true);
+    expect(metrics.find((m) => m.phase === 'Core Setup')).toBeDefined();
+    expect(metrics.every((m) => m.success === true)).toBe(true);
   });
 
   it('should handle errors and track failure metrics', async () => {
-    const errorTemplate = new class extends TestInitializationTemplate {
+    const errorTemplate = new (class extends TestInitializationTemplate {
       protected override async initializeContent(): Promise<void> {
         throw new Error('Content failure');
       }
       protected override handleInitializationError(_error: unknown): void {
         // Recovery: don't re-throw
       }
-    };
+    })();
 
     // Should not throw because we overridden handleInitializationError to recover
     await errorTemplate.initialize();
-    
+
     expect(errorTemplate.isInitialized()).toBe(false);
     const metrics = errorTemplate.getInitializationMetrics();
-    const contentMetric = metrics.find(m => m.phase === 'Content Initialization');
+    const contentMetric = metrics.find((m) => m.phase === 'Content Initialization');
     expect(contentMetric?.success).toBe(false);
     expect(String(contentMetric?.error)).toContain('Content failure');
   });
 
   it('should throw error if errorRecovery is false', async () => {
-    const errorTemplate = new class extends TestInitializationTemplate {
+    const errorTemplate = new (class extends TestInitializationTemplate {
       protected override async initializeContent(): Promise<void> {
         throw new Error('Content failure');
       }
-    };
+    })();
 
-    await expect(errorTemplate.initialize({ errorRecovery: false })).rejects.toThrow('Content failure');
+    await expect(errorTemplate.initialize({ errorRecovery: false })).rejects.toThrow(
+      'Content failure'
+    );
   });
 });

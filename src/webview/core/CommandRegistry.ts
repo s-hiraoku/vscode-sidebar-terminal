@@ -119,7 +119,8 @@ export class CommandRegistry {
     handler: CommandHandler<T>,
     options: HandlerOptions = {}
   ): void {
-    const priorityValue: number = PRIORITY_VALUES[options.priority ?? 'normal'] ?? PRIORITY_VALUES.normal;
+    const priorityValue: number =
+      PRIORITY_VALUES[options.priority ?? 'normal'] ?? PRIORITY_VALUES.normal;
 
     const registered: RegisteredHandler = {
       handler: handler as CommandHandler,
@@ -152,7 +153,9 @@ export class CommandRegistry {
       categoryCommands.add(command);
     }
 
-    log(`[CommandRegistry] ✅ Registered: ${command}${options.category ? ` [${options.category}]` : ''}`);
+    log(
+      `[CommandRegistry] ✅ Registered: ${command}${options.category ? ` [${options.category}]` : ''}`
+    );
   }
 
   /**

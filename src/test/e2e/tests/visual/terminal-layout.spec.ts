@@ -37,7 +37,9 @@ test.describe('Terminal Layout @visual-regression', () => {
     await vrtHelper.setTerminalBorderState(true, 1);
 
     // Inject some sample content
-    await vrtHelper.injectTerminalContent('user@host:~$ ls -la\ntotal 32\ndrwxr-xr-x  5 user user 4096 Dec 26 10:00 .');
+    await vrtHelper.injectTerminalContent(
+      'user@host:~$ ls -la\ntotal 32\ndrwxr-xr-x  5 user user 4096 Dec 26 10:00 .'
+    );
 
     // Assert: Visual comparison of the terminal container
     const terminalBody = page.locator('#terminal-body');
@@ -96,7 +98,9 @@ test.describe('Terminal Layout @visual-regression', () => {
    */
   test('should render full page layout correctly @P0', async ({ page }) => {
     // Inject sample content
-    await vrtHelper.injectTerminalContent('user@host:~$ npm run build\n> Building...\n> Build successful!');
+    await vrtHelper.injectTerminalContent(
+      'user@host:~$ npm run build\n> Building...\n> Build successful!'
+    );
 
     // Assert: Visual comparison of full page
     await expect(page).toHaveScreenshot('terminal-full-layout.png', {

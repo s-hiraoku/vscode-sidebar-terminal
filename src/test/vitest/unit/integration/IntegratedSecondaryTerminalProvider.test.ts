@@ -22,7 +22,10 @@ vi.mock('vscode', () => {
     },
     Uri: {
       file: (p: string) => ({ fsPath: p, scheme: 'file', toString: () => `file://${p}` }),
-      joinPath: (uri: any, ...parts: string[]) => ({ fsPath: `${uri.fsPath}/${parts.join('/')}`, scheme: 'file' }),
+      joinPath: (uri: any, ...parts: string[]) => ({
+        fsPath: `${uri.fsPath}/${parts.join('/')}`,
+        scheme: 'file',
+      }),
     },
     EventEmitter: class {
       event = vi.fn();
@@ -30,15 +33,17 @@ vi.mock('vscode', () => {
     },
     Disposable: class {
       dispose = vi.fn();
-      static from(..._args: any[]) { return { dispose: vi.fn() }; }
+      static from(..._args: any[]) {
+        return { dispose: vi.fn() };
+      }
     },
   };
 });
 // Mock other dependencies
 vi.mock('../../../../terminals/TerminalManager');
 vi.mock('../../../../services/TerminalPersistenceService');
-vi.mock('../../../../handlers/PersistenceMessageHandler', () => ({ 
-  createPersistenceMessageHandler: vi.fn(() => ({ 
+vi.mock('../../../../handlers/PersistenceMessageHandler', () => ({
+  createPersistenceMessageHandler: vi.fn(() => ({
     registerMessageHandlers: vi.fn(),
     handlePersistenceMessage: vi.fn(),
   })),
@@ -53,7 +58,7 @@ describe('IntegratedSecondaryTerminalProvider', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
-    
+
     mockContext = {
       extensionUri: { fsPath: '/test/uri' },
       subscriptions: [],
@@ -70,7 +75,10 @@ describe('IntegratedSecondaryTerminalProvider', () => {
       resizeTerminal: vi.fn(),
     };
 
-    provider = new IntegratedSecondaryTerminalProvider(mockContext, mockTerminalManager as unknown as TerminalManager);
+    provider = new IntegratedSecondaryTerminalProvider(
+      mockContext,
+      mockTerminalManager as unknown as TerminalManager
+    );
 
     mockWebviewView = {
       webview: {
@@ -86,7 +94,7 @@ describe('IntegratedSecondaryTerminalProvider', () => {
   describe('resolveWebviewView', () => {
     it('should configure webview and setup listeners', () => {
       provider.resolveWebviewView(mockWebviewView, {} as any, {} as any);
-      
+
       expect(mockWebviewView.webview.options.enableScripts).toBe(true);
       expect(mockWebviewView.webview.html).toContain('Terminal Webview');
       expect(mockWebviewView.webview.onDidReceiveMessage).toHaveBeenCalled();
@@ -104,7 +112,7 @@ describe('IntegratedSecondaryTerminalProvider', () => {
 
     it('should handle webviewReady and send settings', async () => {
       await messageCallback({ command: 'webviewReady' });
-      
+
       expect(mockWebviewView.webview.postMessage).toHaveBeenCalledWith(
         expect.objectContaining({ command: 'settingsResponse' })
       );
@@ -113,7 +121,7 @@ describe('IntegratedSecondaryTerminalProvider', () => {
     it('should handle createTerminal', async () => {
       mockTerminalManager.createTerminal.mockReturnValue('new-id');
       await messageCallback({ command: 'createTerminal' });
-      
+
       expect(mockTerminalManager.createTerminal).toHaveBeenCalled();
       expect(mockWebviewView.webview.postMessage).toHaveBeenCalledWith(
         expect.objectContaining({ command: 'terminalCreated', terminalId: 'new-id' })
@@ -134,9 +142,9 @@ describe('IntegratedSecondaryTerminalProvider', () => {
     it('should forward state updates to webview', () => {
       const stateUpdateCallback = mockTerminalManager.onStateUpdate.mock.calls[0][0];
       const mockState = { terminals: [] };
-      
+
       stateUpdateCallback(mockState);
-      
+
       expect(mockWebviewView.webview.postMessage).toHaveBeenCalledWith(
         expect.objectContaining({ command: 'stateUpdate', state: mockState })
       );

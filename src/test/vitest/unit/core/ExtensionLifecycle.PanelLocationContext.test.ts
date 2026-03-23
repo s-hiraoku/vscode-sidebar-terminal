@@ -68,11 +68,17 @@ vi.mock('../../../../terminals/TerminalManager', () => ({
 
     setShellIntegrationService(..._args: unknown[]): void {}
 
-    onTerminalCreated(): { dispose: () => void } { return { dispose: vi.fn() }; }
+    onTerminalCreated(): { dispose: () => void } {
+      return { dispose: vi.fn() };
+    }
 
-    onTerminalRemoved(): { dispose: () => void } { return { dispose: vi.fn() }; }
+    onTerminalRemoved(): { dispose: () => void } {
+      return { dispose: vi.fn() };
+    }
 
-    onTerminalFocus(): { dispose: () => void } { return { dispose: vi.fn() }; }
+    onTerminalFocus(): { dispose: () => void } {
+      return { dispose: vi.fn() };
+    }
 
     dispose(): void {}
   },
@@ -195,8 +201,7 @@ describe('ExtensionLifecycle - panel location context on activate', () => {
     await lifecycle.activate(context);
 
     const setContextCalls = mocks.executeCommand.mock.calls.filter(
-      (call: unknown[]) =>
-        call[0] === 'setContext' && call[1] === 'secondaryTerminal.panelLocation'
+      (call: unknown[]) => call[0] === 'setContext' && call[1] === 'secondaryTerminal.panelLocation'
     );
 
     expect(setContextCalls).toHaveLength(0);

@@ -411,10 +411,12 @@ body.resizing-vertical * {
 
 /* Blinking cursor animation */
 @keyframes terminal-cursor-blink {
-  0%, 50% {
+  0%,
+  50% {
     opacity: 1;
   }
-  51%, 100% {
+  51%,
+  100% {
     opacity: 0;
   }
 }
@@ -430,5 +432,8 @@ body.resizing-vertical * {
 
 /* Inactive selection (when terminal not focused) */
 .xterm:not(:focus-within) .xterm-selection div {
-  background-color: var(--vscode-terminal-inactiveSelectionBackground, rgba(38, 79, 120, 0.3)) !important;
+  background-color: var(
+    --vscode-terminal-inactiveSelectionBackground,
+    rgba(38, 79, 120, 0.3)
+  ) !important;
 }

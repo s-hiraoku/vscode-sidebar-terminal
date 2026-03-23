@@ -40,7 +40,9 @@ describe('FileReferenceCommand', () => {
     const mockConfig = {
       get: vi.fn().mockReturnValue(true), // CLI Agent integration enabled
     };
-    (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockConfig);
+    (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockReturnValue(
+      mockConfig
+    );
 
     // Mock workspace folders
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -72,11 +74,17 @@ describe('FileReferenceCommand', () => {
     (vscode.window as any).activeTextEditor = mockActiveEditor;
 
     // Mock commands
-    (vscode.commands.executeCommand as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    (vscode.commands.executeCommand as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
+      undefined
+    );
 
     // Mock notifications
-    (vscode.window.showInformationMessage as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
-    (vscode.window.showWarningMessage as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    (vscode.window.showInformationMessage as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
+      undefined
+    );
+    (vscode.window.showWarningMessage as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
+      undefined
+    );
   });
 
   afterEach(() => {
@@ -200,10 +208,7 @@ describe('FileReferenceCommand', () => {
 
       // Verify that the correct text was sent
       await new Promise((resolve) => setTimeout(resolve, 200));
-      expect(mockTerminalManager.sendInput).toHaveBeenCalledWith(
-        '@src/test.ts ',
-        'terminal-1'
-      );
+      expect(mockTerminalManager.sendInput).toHaveBeenCalledWith('@src/test.ts ', 'terminal-1');
     });
 
     it('should send file reference with line numbers when text is selected', async () => {
@@ -237,7 +242,9 @@ describe('FileReferenceCommand', () => {
       const mockConfig = {
         get: vi.fn().mockReturnValue(false), // CLI Agent integration disabled
       };
-      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockConfig);
+      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockReturnValue(
+        mockConfig
+      );
 
       fileReferenceCommand.handleSendAtMention();
 

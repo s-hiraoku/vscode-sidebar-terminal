@@ -90,7 +90,9 @@ export class SessionLifecycleManager {
           `Terminal session saved successfully (${count} terminal${count !== 1 ? 's' : ''})`
         );
       } else {
-        await vscode.window.showErrorMessage(`Failed to save session: ${result.error || 'Unknown error'}`);
+        await vscode.window.showErrorMessage(
+          `Failed to save session: ${result.error || 'Unknown error'}`
+        );
       }
     } catch (error) {
       await vscode.window.showErrorMessage(
@@ -112,7 +114,10 @@ export class SessionLifecycleManager {
       if (result.success) {
         if (result.restoredCount && result.restoredCount > 0) {
           await this.restoreScrollbackForAllTerminals();
-          const skipped = result.skippedCount && result.skippedCount > 0 ? `, ${result.skippedCount} skipped` : '';
+          const skipped =
+            result.skippedCount && result.skippedCount > 0
+              ? `, ${result.skippedCount} skipped`
+              : '';
           await vscode.window.showInformationMessage(
             `Terminal session restored: ${result.restoredCount} terminal${result.restoredCount > 1 ? 's' : ''} restored${skipped}`
           );
@@ -120,7 +125,9 @@ export class SessionLifecycleManager {
           await vscode.window.showInformationMessage('No previous session data found to restore');
         }
       } else {
-        await vscode.window.showErrorMessage(`Failed to restore session: ${result.error || 'Unknown error'}`);
+        await vscode.window.showErrorMessage(
+          `Failed to restore session: ${result.error || 'Unknown error'}`
+        );
       }
     } catch (error) {
       await vscode.window.showErrorMessage(

@@ -271,7 +271,9 @@ describe('DisplayModeManager - Fullscreen Display (Issue #198)', () => {
       (DOMUtils.clearContainerHeightStyles as unknown as { mockClear: () => void }).mockClear();
 
       // Set split direction to horizontal (where clearContainerHeightStyles is called)
-      (mockSplitManager.getOptimalSplitDirection as ReturnType<typeof vi.fn>).mockReturnValue('horizontal');
+      (mockSplitManager.getOptimalSplitDirection as ReturnType<typeof vi.fn>).mockReturnValue(
+        'horizontal'
+      );
 
       const containers = Array.from(mockContainerManager.getAllContainers().values());
 
@@ -297,7 +299,9 @@ describe('DisplayModeManager - Fullscreen Display (Issue #198)', () => {
         get: () => 500,
       });
 
-      (mockSplitManager.getOptimalSplitDirection as ReturnType<typeof vi.fn>).mockReturnValue('vertical');
+      (mockSplitManager.getOptimalSplitDirection as ReturnType<typeof vi.fn>).mockReturnValue(
+        'vertical'
+      );
       (mockSplitManager.getLayoutMode as ReturnType<typeof vi.fn>).mockReturnValue('single-row');
 
       displayManager.showAllTerminalsSplit();
@@ -315,7 +319,9 @@ describe('DisplayModeManager - Fullscreen Display (Issue #198)', () => {
       const terminalsWrapper = document.getElementById('terminals-wrapper') as HTMLElement;
       terminalsWrapper.classList.add('terminal-grid-layout');
 
-      (mockSplitManager.getOptimalSplitDirection as ReturnType<typeof vi.fn>).mockReturnValue('vertical');
+      (mockSplitManager.getOptimalSplitDirection as ReturnType<typeof vi.fn>).mockReturnValue(
+        'vertical'
+      );
 
       displayManager.showAllTerminalsSplit();
       vi.runAllTimers();
@@ -429,7 +435,9 @@ describe('DisplayModeManager - Fullscreen Display (Issue #198)', () => {
       displayManager.dispose();
 
       // Assert - dispose should call applyDisplayState to reset mode
-      expect(mockContainerManager.applyDisplayState.mock.calls.length).toBeGreaterThan(callCountBefore);
+      expect(mockContainerManager.applyDisplayState.mock.calls.length).toBeGreaterThan(
+        callCountBefore
+      );
     });
 
     it('should clear all visibility tracking on dispose', () => {

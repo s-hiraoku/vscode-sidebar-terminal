@@ -87,7 +87,19 @@ const DEFAULT_FONT_SETTINGS: Readonly<WebViewFontSettings> = getDefaultFontSetti
 const FONT_CONSTRAINTS = {
   MIN_FONT_SIZE: 8,
   MAX_FONT_SIZE: 72,
-  VALID_FONT_WEIGHTS: ['normal', 'bold', '100', '200', '300', '400', '500', '600', '700', '800', '900'],
+  VALID_FONT_WEIGHTS: [
+    'normal',
+    'bold',
+    '100',
+    '200',
+    '300',
+    '400',
+    '500',
+    '600',
+    '700',
+    '800',
+    '900',
+  ],
 } as const;
 
 /**
@@ -211,7 +223,9 @@ export class FontSettingsService {
       }
     });
 
-    log(`🔤 [FontSettingsService] Applied font settings to ${successCount} terminals (${errorCount} errors)`);
+    log(
+      `🔤 [FontSettingsService] Applied font settings to ${successCount} terminals (${errorCount} errors)`
+    );
   }
 
   /**

@@ -218,8 +218,14 @@ describe('PanelLocationHandler', () => {
         // Reset to 0 to force fallback to body dimensions
         vi.stubGlobal('innerWidth', 0);
         vi.stubGlobal('innerHeight', 0);
-        Object.defineProperty(document.documentElement, 'clientWidth', { value: 0, configurable: true });
-        Object.defineProperty(document.documentElement, 'clientHeight', { value: 0, configurable: true });
+        Object.defineProperty(document.documentElement, 'clientWidth', {
+          value: 0,
+          configurable: true,
+        });
+        Object.defineProperty(document.documentElement, 'clientHeight', {
+          value: 0,
+          configurable: true,
+        });
         // Set body dimensions for panel mode (wide aspect ratio)
         Object.defineProperty(document.body, 'clientWidth', { value: 1200, configurable: true });
         Object.defineProperty(document.body, 'clientHeight', { value: 400, configurable: true });
@@ -497,8 +503,14 @@ describe('PanelLocationHandler', () => {
     it('should fallback to sidebar when dimensions are zero', () => {
       vi.stubGlobal('innerWidth', 0);
       vi.stubGlobal('innerHeight', 0);
-      Object.defineProperty(document.documentElement, 'clientWidth', { value: 0, configurable: true });
-      Object.defineProperty(document.documentElement, 'clientHeight', { value: 0, configurable: true });
+      Object.defineProperty(document.documentElement, 'clientWidth', {
+        value: 0,
+        configurable: true,
+      });
+      Object.defineProperty(document.documentElement, 'clientHeight', {
+        value: 0,
+        configurable: true,
+      });
       // Also reset body dimensions to 0 to test full fallback to sidebar
       Object.defineProperty(document.body, 'clientWidth', { value: 0, configurable: true });
       Object.defineProperty(document.body, 'clientHeight', { value: 0, configurable: true });
@@ -516,8 +528,14 @@ describe('PanelLocationHandler', () => {
     it('should use document.body dimensions as fallback', () => {
       vi.stubGlobal('innerWidth', 0);
       vi.stubGlobal('innerHeight', 0);
-      Object.defineProperty(document.documentElement, 'clientWidth', { value: 0, configurable: true });
-      Object.defineProperty(document.documentElement, 'clientHeight', { value: 0, configurable: true });
+      Object.defineProperty(document.documentElement, 'clientWidth', {
+        value: 0,
+        configurable: true,
+      });
+      Object.defineProperty(document.documentElement, 'clientHeight', {
+        value: 0,
+        configurable: true,
+      });
 
       // Setup body dimensions for panel detection
       Object.defineProperty(document.body, 'clientWidth', { value: 1200, configurable: true });

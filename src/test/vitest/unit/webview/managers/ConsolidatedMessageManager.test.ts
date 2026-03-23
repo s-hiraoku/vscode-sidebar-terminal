@@ -19,7 +19,10 @@ import { MessageCommand } from '../../../../../webview/managers/messageTypes';
  * Used to provide type-safe mocking for tests that verify split resizer behavior.
  */
 interface SplitResizerCoordinator extends IManagerCoordinator {
-  getDisplayModeManager: () => Pick<IDisplayModeManager, 'getCurrentMode' | 'showAllTerminalsSplit'>;
+  getDisplayModeManager: () => Pick<
+    IDisplayModeManager,
+    'getCurrentMode' | 'showAllTerminalsSplit'
+  >;
   updateSplitResizers: () => void;
 }
 

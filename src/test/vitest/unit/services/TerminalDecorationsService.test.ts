@@ -18,7 +18,9 @@ const mockConfiguration = {
 
 vi.mock('vscode', () => {
   return {
-    EventEmitter: vi.fn(function() { return mockEventEmitter; }),
+    EventEmitter: vi.fn(function () {
+      return mockEventEmitter;
+    }),
     workspace: {
       getConfiguration: vi.fn(() => mockConfiguration),
       onDidChangeConfiguration: vi.fn(() => ({ dispose: vi.fn() })),
@@ -58,10 +60,12 @@ describe('TerminalDecorationsService', () => {
       service.addDecoration(decoration);
 
       expect(service.getDecorations('t1')).toHaveLength(1);
-      expect(mockEventEmitter.fire).toHaveBeenCalledWith(expect.objectContaining({
-        terminalId: 't1',
-        decorations: expect.arrayContaining([expect.objectContaining({ commandId: 'cmd1' })])
-      }));
+      expect(mockEventEmitter.fire).toHaveBeenCalledWith(
+        expect.objectContaining({
+          terminalId: 't1',
+          decorations: expect.arrayContaining([expect.objectContaining({ commandId: 'cmd1' })]),
+        })
+      );
     });
 
     it('should respect max decoration limit', () => {
@@ -124,7 +128,7 @@ describe('TerminalDecorationsService', () => {
     it('should detect command end and complete latest running command', () => {
       // Start command
       service.processShellIntegrationData('t1', '\x1b]633;A;ls\x07');
-      
+
       // End command (exit code 0)
       service.processShellIntegrationData('t1', '\x1b]633;D;0\x07');
 

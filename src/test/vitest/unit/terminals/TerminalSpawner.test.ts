@@ -47,7 +47,7 @@ describe('TerminalSpawner', () => {
 
     // Default mocks
     vi.mocked(pty.spawn).mockReturnValue(mockPtyProcess);
-    
+
     // Mock fs.statSync and accessSync to simulate valid directories by default
     vi.mocked(fs.statSync).mockReturnValue({
       isDirectory: () => true,
@@ -119,7 +119,7 @@ describe('TerminalSpawner', () => {
       // It should try other candidates like home or tmp
       const home = '/users/home';
       const env = { ...defaultRequest.env, HOME: home };
-      
+
       spawner.spawnTerminal({ ...defaultRequest, env });
 
       expect(pty.spawn).toHaveBeenCalledWith(
@@ -167,7 +167,7 @@ describe('TerminalSpawner', () => {
 
       // If requested shell is same as fallback, shouldn't try twice
       const request = { ...defaultRequest, shell: '/bin/bash' }; // bash is also a fallback
-      
+
       vi.mocked(pty.spawn).mockImplementation(() => {
         throw new Error('Fail');
       });
@@ -179,8 +179,8 @@ describe('TerminalSpawner', () => {
       }
 
       const calls = vi.mocked(pty.spawn).mock.calls;
-      const shellsTried = calls.map(c => c[0]);
-      const bashCount = shellsTried.filter(s => s === '/bin/bash').length;
+      const shellsTried = calls.map((c) => c[0]);
+      const bashCount = shellsTried.filter((s) => s === '/bin/bash').length;
       expect(bashCount).toBe(1);
 
       // Restore
@@ -190,7 +190,7 @@ describe('TerminalSpawner', () => {
     it('should include process.cwd in candidates if valid', () => {
       const originalCwd = process.cwd;
       const mockCwd = '/process/cwd';
-      
+
       // @ts-ignore
       process.cwd = vi.fn().mockReturnValue(mockCwd);
 

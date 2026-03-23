@@ -494,7 +494,10 @@ export class TerminalTabList {
             tabElement.style.backgroundColor = this.currentTheme.background;
             tabElement.style.color = this.currentTheme.foreground;
           } else {
-            tabElement.style.backgroundColor = this.adjustBrightness(this.currentTheme.background, -10);
+            tabElement.style.backgroundColor = this.adjustBrightness(
+              this.currentTheme.background,
+              -10
+            );
             tabElement.style.color = this.currentTheme.foreground + 'cc';
           }
         }
@@ -523,7 +526,10 @@ export class TerminalTabList {
             tabElement.style.backgroundColor = this.currentTheme.background;
             tabElement.style.color = this.currentTheme.foreground;
           } else {
-            tabElement.style.backgroundColor = this.adjustBrightness(this.currentTheme.background, -10);
+            tabElement.style.backgroundColor = this.adjustBrightness(
+              this.currentTheme.background,
+              -10
+            );
             tabElement.style.color = this.currentTheme.foreground + 'cc';
           }
         }
@@ -960,7 +966,9 @@ export class TerminalTabList {
     }
 
     // Update all tab elements
-    const tabElements = this.tabsContainer.querySelectorAll('.terminal-tab') as NodeListOf<HTMLElement>;
+    const tabElements = this.tabsContainer.querySelectorAll(
+      '.terminal-tab'
+    ) as NodeListOf<HTMLElement>;
     tabElements.forEach((tabElement) => {
       const isActive = tabElement.classList.contains('active');
       if (isActive) {

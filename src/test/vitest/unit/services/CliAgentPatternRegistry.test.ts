@@ -130,7 +130,11 @@ describe('CliAgentPatternRegistry', () => {
     });
 
     it('should return false for long output lines', () => {
-      expect(registry.isShellPrompt('This is a very long line that clearly is not a prompt even if it has $ in it')).toBe(false);
+      expect(
+        registry.isShellPrompt(
+          'This is a very long line that clearly is not a prompt even if it has $ in it'
+        )
+      ).toBe(false);
     });
   });
 

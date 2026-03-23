@@ -4,7 +4,10 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as vscode from 'vscode';
-import { PanelLocationService, isPanelLocation } from '../../../../../providers/services/PanelLocationService';
+import {
+  PanelLocationService,
+  isPanelLocation,
+} from '../../../../../providers/services/PanelLocationService';
 
 // Mock VS Code API
 vi.mock('vscode', () => ({
@@ -69,7 +72,7 @@ describe('PanelLocationService', () => {
       (vscode.workspace.getConfiguration as any).mockReturnValue({ get: mockGet });
 
       await service.handlePanelLocationReport('panel');
-      
+
       expect(service.getCachedPanelLocation()).toBe('panel');
       expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
         'setContext',
@@ -88,7 +91,7 @@ describe('PanelLocationService', () => {
       const onChange = vi.fn();
       // Default is 'sidebar'
       await service.handlePanelLocationReport('panel', onChange);
-      
+
       expect(onChange).toHaveBeenCalledWith('sidebar', 'panel');
     });
 
@@ -157,13 +160,13 @@ describe('PanelLocationService', () => {
       (vscode.workspace.getConfiguration as any).mockReturnValue({ get: mockGet });
 
       service.requestPanelLocationDetection();
-      
+
       expect(mockSendMessage).not.toHaveBeenCalled();
-      
+
       vi.advanceTimersByTime(300);
-      
+
       expect(mockSendMessage).toHaveBeenCalledWith({
-        command: 'requestPanelLocationDetection'
+        command: 'requestPanelLocationDetection',
       });
     });
 
@@ -365,7 +368,7 @@ describe('PanelLocationService', () => {
         return def;
       });
       (vscode.workspace.getConfiguration as any).mockReturnValue({ get: mockGet });
-      
+
       expect(service.getCurrentPanelLocation()).toBe('sidebar');
     });
 
@@ -376,7 +379,7 @@ describe('PanelLocationService', () => {
         return def;
       });
       (vscode.workspace.getConfiguration as any).mockReturnValue({ get: mockGet });
-      
+
       expect(service.getCurrentPanelLocation()).toBe('panel');
     });
   });

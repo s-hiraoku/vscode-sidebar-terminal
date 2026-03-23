@@ -58,11 +58,7 @@ export class CliAgentCoordinator {
     return this.deps.getAgentState(terminalId);
   }
 
-  public setCliAgentConnected(
-    terminalId: string,
-    agentType: string,
-    terminalName?: string
-  ): void {
+  public setCliAgentConnected(terminalId: string, agentType: string, terminalName?: string): void {
     this.deps.setAgentConnected(terminalId, agentType, terminalName);
   }
 
@@ -116,9 +112,7 @@ export class CliAgentCoordinator {
         );
       } else {
         // None state: force-reconnect to create a new agent connection
-        log(
-          `⏻ No agent detected, sending force-reconnect for terminal: ${terminalId}`
-        );
+        log(`⏻ No agent detected, sending force-reconnect for terminal: ${terminalId}`);
         this.deps.postMessageToExtension({
           command: 'switchAiAgent',
           terminalId,
@@ -187,9 +181,7 @@ export class CliAgentCoordinator {
     status: 'connected' | 'disconnected' | 'none',
     agentType: string | null
   ): void {
-    log(
-      `🔄 [REFACTORED] UpdateCliAgentStatus called: ${terminalId}, ${status}, ${agentType}`
-    );
+    log(`🔄 [REFACTORED] UpdateCliAgentStatus called: ${terminalId}, ${status}, ${agentType}`);
 
     this.deps.setAgentState(terminalId, {
       status,

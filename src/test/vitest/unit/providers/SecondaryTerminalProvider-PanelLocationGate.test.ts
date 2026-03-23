@@ -61,7 +61,9 @@ const mockTerminalManager = {
   onStateUpdate: vi.fn().mockReturnValue(mocks.mockDisposable),
   onTerminalFocus: vi.fn().mockReturnValue(mocks.mockDisposable),
   onCliAgentStatusChange: vi.fn().mockReturnValue(mocks.mockDisposable),
-  getCurrentState: vi.fn().mockReturnValue({ terminals: [mockTerminalInfo], activeTerminalId: 'terminal-1' }),
+  getCurrentState: vi
+    .fn()
+    .mockReturnValue({ terminals: [mockTerminalInfo], activeTerminalId: 'terminal-1' }),
   getConnectedAgentTerminalId: vi.fn().mockReturnValue('terminal-1'),
   getConnectedAgentType: vi.fn().mockReturnValue('claude'),
   getDisconnectedAgents: vi.fn().mockReturnValue(new Map()),
@@ -146,7 +148,10 @@ describe('SecondaryTerminalProvider - Panel Location Response Gate', () => {
   });
 
   it('should ignore reportPanelLocation when no detection was requested', async () => {
-    const handleReportSpy = vi.spyOn((provider as any)._panelLocationService, 'handlePanelLocationReport');
+    const handleReportSpy = vi.spyOn(
+      (provider as any)._panelLocationService,
+      'handlePanelLocationReport'
+    );
 
     await messageHandler?.({ command: 'reportPanelLocation', location: 'panel' });
 
@@ -154,7 +159,10 @@ describe('SecondaryTerminalProvider - Panel Location Response Gate', () => {
   });
 
   it('should accept reportPanelLocation after explicit detection request', async () => {
-    const handleReportSpy = vi.spyOn((provider as any)._panelLocationService, 'handlePanelLocationReport');
+    const handleReportSpy = vi.spyOn(
+      (provider as any)._panelLocationService,
+      'handlePanelLocationReport'
+    );
 
     (provider as any)._requestPanelLocationDetection();
     await messageHandler?.({ command: 'reportPanelLocation', location: 'panel' });
@@ -164,7 +172,10 @@ describe('SecondaryTerminalProvider - Panel Location Response Gate', () => {
   });
 
   it('should ignore late reportPanelLocation after request timeout', async () => {
-    const handleReportSpy = vi.spyOn((provider as any)._panelLocationService, 'handlePanelLocationReport');
+    const handleReportSpy = vi.spyOn(
+      (provider as any)._panelLocationService,
+      'handlePanelLocationReport'
+    );
 
     (provider as any)._requestPanelLocationDetection();
     vi.advanceTimersByTime(3000);
@@ -185,7 +196,10 @@ describe('SecondaryTerminalProvider - Panel Location Response Gate', () => {
       inspect: vi.fn().mockReturnValue({ globalValue: undefined, workspaceValue: undefined }),
     });
 
-    const handleReportSpy = vi.spyOn((provider as any)._panelLocationService, 'handlePanelLocationReport');
+    const handleReportSpy = vi.spyOn(
+      (provider as any)._panelLocationService,
+      'handlePanelLocationReport'
+    );
 
     (provider as any)._requestPanelLocationDetection();
     await messageHandler?.({ command: 'reportPanelLocation', location: 'panel' });

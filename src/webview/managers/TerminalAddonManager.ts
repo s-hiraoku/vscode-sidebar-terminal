@@ -233,12 +233,14 @@ export class TerminalAddonManager {
     fitAddon.proposeDimensions = () => {
       const element = terminal.element as HTMLElement | null;
       const parent = element?.parentElement as HTMLElement | null;
-      const core = (terminal as unknown as {
-        _core?: {
-          _renderService?: { dimensions?: { css: { cell: { width: number; height: number } } } };
-          viewport?: { scrollBarWidth: number };
-        };
-      })._core;
+      const core = (
+        terminal as unknown as {
+          _core?: {
+            _renderService?: { dimensions?: { css: { cell: { width: number; height: number } } } };
+            viewport?: { scrollBarWidth: number };
+          };
+        }
+      )._core;
       const dimensions = core?._renderService?.dimensions;
 
       if (!element || !parent || !dimensions) {
@@ -277,12 +279,11 @@ export class TerminalAddonManager {
       const actualScrollbarWidth = viewport
         ? Math.max(0, viewport.offsetWidth - viewport.clientWidth)
         : 0;
-      const scrollbarWidth =
-        actualScrollbarWidth || core?.viewport?.scrollBarWidth || 0;
+      const scrollbarWidth = actualScrollbarWidth || core?.viewport?.scrollBarWidth || 0;
 
       const availableHeight = height - paddingVertical - parentPaddingVertical;
       const availableWidth = width - paddingHorizontal - parentPaddingHorizontal - scrollbarWidth;
-      const safetyPaddingPx = 0;  // Remove safety padding to maximize visible area
+      const safetyPaddingPx = 0; // Remove safety padding to maximize visible area
 
       return {
         cols: Math.max(2, Math.floor((availableWidth - safetyPaddingPx) / cellWidth)),

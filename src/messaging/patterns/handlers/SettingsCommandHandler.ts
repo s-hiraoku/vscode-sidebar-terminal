@@ -73,7 +73,8 @@ export class SettingsCommandHandler extends BaseCommandHandler {
   ): Promise<void> {
     // 🔧 FIX: Extract fontSettings object from message
     const fontSettings = (message as any).fontSettings || {};
-    const { fontSize, fontFamily, fontWeight, fontWeightBold, lineHeight, letterSpacing } = fontSettings;
+    const { fontSize, fontFamily, fontWeight, fontWeightBold, lineHeight, letterSpacing } =
+      fontSettings;
 
     this.log(context, 'info', 'Updating font settings', {
       fontSize,

@@ -173,7 +173,10 @@ describe('CliAgentStateManager', () => {
     });
 
     it('should detect choice display patterns', () => {
-      const result = manager.detectAgentActivity('Select an option:\n[1] Option A\n[2] Option B', 'terminal-1');
+      const result = manager.detectAgentActivity(
+        'Select an option:\n[1] Option A\n[2] Option B',
+        'terminal-1'
+      );
 
       expect(result.isAgentOutput).toBe(true);
       expect(result.isDisplayingChoices).toBe(true);
@@ -424,20 +427,26 @@ describe('CliAgentStateManager', () => {
     it('should apply synced state', () => {
       const syncData = {
         allAgents: new Map<string, CliAgentState>([
-          ['terminal-1', {
-            status: 'connected' as const,
-            terminalName: 'Terminal 1',
-            agentType: 'claude',
-            preserveScrollPosition: true,
-            isDisplayingChoices: false,
-          }],
-          ['terminal-2', {
-            status: 'disconnected' as const,
-            terminalName: 'Terminal 2',
-            agentType: 'gemini',
-            preserveScrollPosition: false,
-            isDisplayingChoices: false,
-          }],
+          [
+            'terminal-1',
+            {
+              status: 'connected' as const,
+              terminalName: 'Terminal 1',
+              agentType: 'claude',
+              preserveScrollPosition: true,
+              isDisplayingChoices: false,
+            },
+          ],
+          [
+            'terminal-2',
+            {
+              status: 'disconnected' as const,
+              terminalName: 'Terminal 2',
+              agentType: 'gemini',
+              preserveScrollPosition: false,
+              isDisplayingChoices: false,
+            },
+          ],
         ]),
         currentConnectedId: 'terminal-1',
       };
@@ -454,13 +463,16 @@ describe('CliAgentStateManager', () => {
 
       const syncData = {
         allAgents: new Map<string, CliAgentState>([
-          ['terminal-new', {
-            status: 'connected' as const,
-            terminalName: 'Terminal New',
-            agentType: 'new-agent',
-            preserveScrollPosition: true,
-            isDisplayingChoices: false,
-          }],
+          [
+            'terminal-new',
+            {
+              status: 'connected' as const,
+              terminalName: 'Terminal New',
+              agentType: 'new-agent',
+              preserveScrollPosition: true,
+              isDisplayingChoices: false,
+            },
+          ],
         ]),
         currentConnectedId: 'terminal-new',
       };
@@ -515,7 +527,10 @@ describe('CliAgentStateManager', () => {
     });
 
     it('should detect Choice patterns with numbers', () => {
-      const result = manager.detectAgentActivity('[1] First option\n[2] Second option', 'terminal-1');
+      const result = manager.detectAgentActivity(
+        '[1] First option\n[2] Second option',
+        'terminal-1'
+      );
       expect(result.isDisplayingChoices).toBe(true);
     });
   });

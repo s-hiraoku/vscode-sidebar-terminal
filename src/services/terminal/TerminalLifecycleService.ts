@@ -85,7 +85,10 @@ export class TerminalLifecycleService {
         return failureFromDetails({
           code: ErrorCode.RESOURCE_EXHAUSTED,
           message: 'Maximum number of terminals reached',
-          context: { maxTerminals: TERMINAL_CONSTANTS.MAX_TERMINAL_COUNT, attemptedNumber: terminalNumber },
+          context: {
+            maxTerminals: TERMINAL_CONSTANTS.MAX_TERMINAL_COUNT,
+            attemptedNumber: terminalNumber,
+          },
         });
       }
 

@@ -4,7 +4,6 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { TerminalContainerManager } from '../../../../../webview/managers/TerminalContainerManager';
 import { IManagerCoordinator } from '../../../../../webview/interfaces/ManagerInterfaces';
 
-
 describe('TerminalContainerManager resizer visibility', () => {
   let manager: TerminalContainerManager;
   let terminalBody: HTMLElement;

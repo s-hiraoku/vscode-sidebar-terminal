@@ -23,11 +23,13 @@ vi.mock('../../../../../utils/logger', () => ({
 }));
 
 // Helper to create mock services
-function createMockService(options: {
-  initializeImpl?: (deps: any) => void | Promise<void>;
-  disposeImpl?: () => void;
-  getHealthStatusImpl?: () => { healthy: boolean };
-} = {}): any {
+function createMockService(
+  options: {
+    initializeImpl?: (deps: any) => void | Promise<void>;
+    disposeImpl?: () => void;
+    getHealthStatusImpl?: () => { healthy: boolean };
+  } = {}
+): any {
   return {
     initialize: options.initializeImpl ?? vi.fn(),
     dispose: options.disposeImpl ?? vi.fn(),
@@ -71,11 +73,9 @@ describe('DependencyContainer', () => {
     });
 
     it('should register service with dependencies', () => {
-      container.register(
-        ServiceType.UI_MANAGER,
-        () => createMockService(),
-        [ServiceType.SETTINGS_COORDINATOR]
-      );
+      container.register(ServiceType.UI_MANAGER, () => createMockService(), [
+        ServiceType.SETTINGS_COORDINATOR,
+      ]);
 
       const graph = container.getDependencyGraph();
       expect(graph.get(ServiceType.UI_MANAGER)).toContain(ServiceType.SETTINGS_COORDINATOR);
@@ -287,16 +287,13 @@ describe('DependencyContainer', () => {
   describe('getDependencyGraph', () => {
     it('should return complete dependency graph', () => {
       container.register(ServiceType.SETTINGS_COORDINATOR, () => createSimpleService());
-      container.register(
+      container.register(ServiceType.UI_MANAGER, () => createSimpleService(), [
+        ServiceType.SETTINGS_COORDINATOR,
+      ]);
+      container.register(ServiceType.INPUT_MANAGER, () => createSimpleService(), [
         ServiceType.UI_MANAGER,
-        () => createSimpleService(),
-        [ServiceType.SETTINGS_COORDINATOR]
-      );
-      container.register(
-        ServiceType.INPUT_MANAGER,
-        () => createSimpleService(),
-        [ServiceType.UI_MANAGER, ServiceType.SETTINGS_COORDINATOR]
-      );
+        ServiceType.SETTINGS_COORDINATOR,
+      ]);
 
       const graph = container.getDependencyGraph();
 
@@ -310,11 +307,9 @@ describe('DependencyContainer', () => {
   describe('validateDependencyGraph', () => {
     it('should validate correct dependency graph', () => {
       container.register(ServiceType.SETTINGS_COORDINATOR, () => createSimpleService());
-      container.register(
-        ServiceType.UI_MANAGER,
-        () => createSimpleService(),
-        [ServiceType.SETTINGS_COORDINATOR]
-      );
+      container.register(ServiceType.UI_MANAGER, () => createSimpleService(), [
+        ServiceType.SETTINGS_COORDINATOR,
+      ]);
 
       const result = container.validateDependencyGraph();
 
@@ -323,16 +318,12 @@ describe('DependencyContainer', () => {
     });
 
     it('should detect circular dependencies', () => {
-      container.register(
-        ServiceType.UI_MANAGER,
-        () => createSimpleService(),
-        [ServiceType.INPUT_MANAGER]
-      );
-      container.register(
+      container.register(ServiceType.UI_MANAGER, () => createSimpleService(), [
         ServiceType.INPUT_MANAGER,
-        () => createSimpleService(),
-        [ServiceType.UI_MANAGER]
-      );
+      ]);
+      container.register(ServiceType.INPUT_MANAGER, () => createSimpleService(), [
+        ServiceType.UI_MANAGER,
+      ]);
 
       const result = container.validateDependencyGraph();
 
@@ -341,11 +332,9 @@ describe('DependencyContainer', () => {
     });
 
     it('should detect missing dependencies', () => {
-      container.register(
-        ServiceType.UI_MANAGER,
-        () => createSimpleService(),
-        [ServiceType.SETTINGS_COORDINATOR]
-      );
+      container.register(ServiceType.UI_MANAGER, () => createSimpleService(), [
+        ServiceType.SETTINGS_COORDINATOR,
+      ]);
       // Note: SETTINGS_COORDINATOR is not registered
 
       const result = container.validateDependencyGraph();
@@ -355,21 +344,15 @@ describe('DependencyContainer', () => {
     });
 
     it('should detect complex circular chains', () => {
-      container.register(
-        ServiceType.UI_MANAGER,
-        () => createSimpleService(),
-        [ServiceType.INPUT_MANAGER]
-      );
-      container.register(
+      container.register(ServiceType.UI_MANAGER, () => createSimpleService(), [
         ServiceType.INPUT_MANAGER,
-        () => createSimpleService(),
-        [ServiceType.CONFIG_MANAGER]
-      );
-      container.register(
+      ]);
+      container.register(ServiceType.INPUT_MANAGER, () => createSimpleService(), [
         ServiceType.CONFIG_MANAGER,
-        () => createSimpleService(),
-        [ServiceType.UI_MANAGER]
-      );
+      ]);
+      container.register(ServiceType.CONFIG_MANAGER, () => createSimpleService(), [
+        ServiceType.UI_MANAGER,
+      ]);
 
       const result = container.validateDependencyGraph();
 
@@ -503,11 +486,9 @@ describe('DependencyContainer', () => {
 
     it('should copy dependencies', () => {
       container.register(ServiceType.SETTINGS_COORDINATOR, () => createSimpleService());
-      container.register(
-        ServiceType.UI_MANAGER,
-        () => createSimpleService(),
-        [ServiceType.SETTINGS_COORDINATOR]
-      );
+      container.register(ServiceType.UI_MANAGER, () => createSimpleService(), [
+        ServiceType.SETTINGS_COORDINATOR,
+      ]);
 
       const scope = container.createScope();
       const graph = scope.getDependencyGraph();
@@ -573,11 +554,9 @@ describe('DependencyContainer', () => {
 
       const settingsService = createSimpleService();
       container.register(ServiceType.SETTINGS_COORDINATOR, () => settingsService);
-      container.register(
-        ServiceType.UI_MANAGER,
-        () => mockManager,
-        [ServiceType.SETTINGS_COORDINATOR]
-      );
+      container.register(ServiceType.UI_MANAGER, () => mockManager, [
+        ServiceType.SETTINGS_COORDINATOR,
+      ]);
 
       await container.resolve(ServiceType.UI_MANAGER);
 

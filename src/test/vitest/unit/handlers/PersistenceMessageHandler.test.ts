@@ -11,7 +11,7 @@ const { mockPersistenceService } = vi.hoisted(() => ({
     saveCurrentSession: vi.fn(),
     restoreSession: vi.fn(),
     cleanupExpiredSessions: vi.fn(),
-  }
+  },
 }));
 
 // Mock logger
@@ -31,11 +31,11 @@ describe('PersistenceMessageHandler', () => {
     it('should handle saveSession command', async () => {
       mockPersistenceService.saveCurrentSession.mockResolvedValue({
         success: true,
-        terminalCount: 2
+        terminalCount: 2,
       });
 
       const response = await handler.handleMessage({ command: 'saveSession' });
-      
+
       expect(response.success).toBe(true);
       expect(response.terminalCount).toBe(2);
       expect(mockPersistenceService.saveCurrentSession).toHaveBeenCalled();
@@ -45,11 +45,11 @@ describe('PersistenceMessageHandler', () => {
       mockPersistenceService.restoreSession.mockResolvedValue({
         success: true,
         terminalsRestored: 1,
-        terminals: [{ id: 't1' }]
+        terminals: [{ id: 't1' }],
       });
 
       const response = await handler.handleMessage({ command: 'restoreSession' });
-      
+
       expect(response.success).toBe(true);
       expect(response.terminalCount).toBe(1);
       expect(response.data).toHaveLength(1);
@@ -59,7 +59,7 @@ describe('PersistenceMessageHandler', () => {
       mockPersistenceService.cleanupExpiredSessions.mockResolvedValue(undefined);
 
       const response = await handler.handleMessage({ command: 'clearSession' });
-      
+
       expect(response.success).toBe(true);
       expect(mockPersistenceService.cleanupExpiredSessions).toHaveBeenCalled();
     });
@@ -80,9 +80,9 @@ describe('PersistenceMessageHandler', () => {
   describe('Error Handling', () => {
     it('should handle service failures gracefully', async () => {
       mockPersistenceService.saveCurrentSession.mockRejectedValue(new Error('Disk full'));
-      
+
       const response = await handler.handleMessage({ command: 'saveSession' });
-      
+
       expect(response.success).toBe(false);
       expect(response.error).toContain('Disk full');
     });

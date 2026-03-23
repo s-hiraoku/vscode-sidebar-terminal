@@ -314,7 +314,9 @@ export class IMEHandler extends BaseInputHandler implements IIMEHandler {
     }
   }
 
-  private forceResetCompositionState(reason: 'timeout' | 'window-blur' | 'visibility-hidden'): void {
+  private forceResetCompositionState(
+    reason: 'timeout' | 'window-blur' | 'visibility-hidden'
+  ): void {
     this.clearCompositionRecoveryTimer();
     this.compositionContext = null;
     this.lastCompositionEvent = null;

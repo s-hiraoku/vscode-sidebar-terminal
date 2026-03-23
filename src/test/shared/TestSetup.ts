@@ -845,7 +845,7 @@ export function restoreGlobalState(snapshot: GlobalStateSnapshot): void {
 function resetStubsRecursively(obj: any, depth: number = 0): void {
   if (!obj || typeof obj !== 'object' || depth > 3) return;
 
-  Object.keys(obj).forEach(key => {
+  Object.keys(obj).forEach((key) => {
     try {
       const value = obj[key];
       if (value && typeof value === 'function') {
@@ -1045,7 +1045,7 @@ export function teardownTestEnvironment(): void {
   if (originalProcessEnv) {
     try {
       // Clear current env and restore original
-      Object.keys(process.env).forEach(key => {
+      Object.keys(process.env).forEach((key) => {
         if (!(key in originalProcessEnv!)) {
           delete process.env[key];
         }
@@ -1059,7 +1059,7 @@ export function teardownTestEnvironment(): void {
   // Clear require.cache entries we added
   try {
     const modulesToClear = ['vscode', 'node-pty'];
-    modulesToClear.forEach(moduleName => {
+    modulesToClear.forEach((moduleName) => {
       try {
         const modulePath = require.resolve(moduleName, { paths: [process.cwd()] });
         delete require.cache[modulePath];

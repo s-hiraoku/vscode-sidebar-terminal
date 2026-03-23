@@ -350,7 +350,10 @@ export class ScrollbackMessageHandler implements IMessageHandler {
       await this.flushTerminalWrites(terminalInstance.terminal);
 
       // Extract scrollback data
-      const scrollbackData = this.extractScrollbackFromTerminal(terminalInstance, maxLines || ScrollbackConfig.DEFAULT_MAX_LINES);
+      const scrollbackData = this.extractScrollbackFromTerminal(
+        terminalInstance,
+        maxLines || ScrollbackConfig.DEFAULT_MAX_LINES
+      );
 
       this.logger.info(
         `📦 [SAVE-DEBUG] Extracted ${scrollbackData.length} lines for terminal ${terminalId}`

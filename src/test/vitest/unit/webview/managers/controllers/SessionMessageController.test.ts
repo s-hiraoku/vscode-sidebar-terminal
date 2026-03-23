@@ -45,7 +45,10 @@ describe('SessionMessageController', () => {
     it('should log error if terminalId or terminalName is missing', async () => {
       const msg: MessageCommand = { command: 'sessionRestore' }; // missing data
       await controller.handleSessionRestoreMessage(msg, mockCoordinator);
-      expect(mockLogger.error).toHaveBeenCalledWith('Invalid session restore data received', expect.anything());
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Invalid session restore data received',
+        expect.anything()
+      );
     });
 
     it('should use restoreSession if available on coordinator', async () => {
@@ -67,7 +70,9 @@ describe('SessionMessageController', () => {
         scrollbackData: ['line 1', 'line 2'],
         sessionRestoreMessage: undefined,
       });
-      expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining('Successfully restored terminal session'));
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        expect.stringContaining('Successfully restored terminal session')
+      );
     });
 
     it('should fallback to createTerminal if restoreSession returns false', async () => {
@@ -83,7 +88,9 @@ describe('SessionMessageController', () => {
 
       await controller.handleSessionRestoreMessage(msg, mockCoordinator);
 
-      expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Session restore failed'));
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Session restore failed')
+      );
       expect(mockCoordinator.createTerminal).toHaveBeenCalledWith(
         'term-1',
         'Term 1',
@@ -114,27 +121,27 @@ describe('SessionMessageController', () => {
     });
 
     it('should call restoreTerminalScrollback if message/scrollback exists and createTerminal was used', async () => {
-        vi.useFakeTimers();
-        const msg: MessageCommand = {
-            command: 'sessionRestore',
-            terminalId: 'term-1',
-            terminalName: 'Term 1',
-            sessionRestoreMessage: 'Restored',
-        };
+      vi.useFakeTimers();
+      const msg: MessageCommand = {
+        command: 'sessionRestore',
+        terminalId: 'term-1',
+        terminalName: 'Term 1',
+        sessionRestoreMessage: 'Restored',
+      };
 
-        const restoreTerminalScrollbackMock = vi.fn();
-        (mockCoordinator as any).restoreTerminalScrollback = restoreTerminalScrollbackMock;
+      const restoreTerminalScrollbackMock = vi.fn();
+      (mockCoordinator as any).restoreTerminalScrollback = restoreTerminalScrollbackMock;
 
-        await controller.handleSessionRestoreMessage(msg, mockCoordinator);
-        
-        vi.runAllTimers();
+      await controller.handleSessionRestoreMessage(msg, mockCoordinator);
 
-        expect(restoreTerminalScrollbackMock).toHaveBeenCalledWith('term-1', 'Restored', []);
-        vi.useRealTimers();
+      vi.runAllTimers();
+
+      expect(restoreTerminalScrollbackMock).toHaveBeenCalledWith('term-1', 'Restored', []);
+      vi.useRealTimers();
     });
 
     it('should handle errors during creation and try creation again as fallback', async () => {
-       const msg: MessageCommand = {
+      const msg: MessageCommand = {
         command: 'sessionRestore',
         terminalId: 'term-1',
         terminalName: 'Term 1',
@@ -144,7 +151,9 @@ describe('SessionMessageController', () => {
 
       await controller.handleSessionRestoreMessage(msg, mockCoordinator);
 
-      expect(mockLogger.error).toHaveBeenCalledWith(expect.stringContaining('Failed to restore terminal session'));
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to restore terminal session')
+      );
       // Expect fallback creation attempt
       expect(mockCoordinator.createTerminal).toHaveBeenCalledTimes(2);
     });
@@ -157,18 +166,35 @@ describe('SessionMessageController', () => {
     });
 
     it('handleSessionRestoreProgressMessage should call notification util', () => {
-      controller.handleSessionRestoreProgressMessage({ command: 'progress', restored: 2, total: 5 });
+      controller.handleSessionRestoreProgressMessage({
+        command: 'progress',
+        restored: 2,
+        total: 5,
+      });
       expect(NotificationUtils.showSessionRestoreProgress).toHaveBeenCalledWith(2, 5);
     });
 
     it('handleSessionRestoreCompletedMessage should call notification util', () => {
-      controller.handleSessionRestoreCompletedMessage({ command: 'completed', restoredCount: 3, skippedCount: 2 });
+      controller.handleSessionRestoreCompletedMessage({
+        command: 'completed',
+        restoredCount: 3,
+        skippedCount: 2,
+      });
       expect(NotificationUtils.showSessionRestoreCompleted).toHaveBeenCalledWith(3, 2);
     });
 
     it('handleSessionRestoreErrorMessage should call notification util', () => {
-      controller.handleSessionRestoreErrorMessage({ command: 'error', error: 'Fail', partialSuccess: true, errorType: 'Timeout' });
-      expect(NotificationUtils.showSessionRestoreError).toHaveBeenCalledWith('Fail', true, 'Timeout');
+      controller.handleSessionRestoreErrorMessage({
+        command: 'error',
+        error: 'Fail',
+        partialSuccess: true,
+        errorType: 'Timeout',
+      });
+      expect(NotificationUtils.showSessionRestoreError).toHaveBeenCalledWith(
+        'Fail',
+        true,
+        'Timeout'
+      );
     });
 
     it('handleSessionSavedMessage should call notification util', () => {
@@ -185,34 +211,53 @@ describe('SessionMessageController', () => {
       controller.handleSessionClearedMessage();
       expect(NotificationUtils.showSessionCleared).toHaveBeenCalled();
     });
-    
+
     it('handleSessionRestoreSkippedMessage should call notification util', () => {
-        controller.handleSessionRestoreSkippedMessage({ command: 'skipped', reason: 'Old' });
-        expect(NotificationUtils.showSessionRestoreSkipped).toHaveBeenCalledWith('Old');
+      controller.handleSessionRestoreSkippedMessage({ command: 'skipped', reason: 'Old' });
+      expect(NotificationUtils.showSessionRestoreSkipped).toHaveBeenCalledWith('Old');
     });
 
     it('handleTerminalRestoreErrorMessage should call notification util dynamically imported', async () => {
-        // Since we mocked the module, dynamic import might return the mocked module in test env usually.
-        // However, the implementation does `await import(...)`.
-        // Vitest module mocking should handle this if configured correctly, but let's verify.
-        
-        await controller.handleTerminalRestoreErrorMessage({ command: 'termError', terminalName: 'T1', error: 'Err' });
-        // The implementation calls showTerminalRestoreError from dynamic import.
-        // Assuming vitest mocks the module globally for this file:
-        const { showTerminalRestoreError } = await import('../../../../../../webview/utils/NotificationUtils');
-        expect(showTerminalRestoreError).toHaveBeenCalledWith('T1', 'Err');
+      // Since we mocked the module, dynamic import might return the mocked module in test env usually.
+      // However, the implementation does `await import(...)`.
+      // Vitest module mocking should handle this if configured correctly, but let's verify.
+
+      await controller.handleTerminalRestoreErrorMessage({
+        command: 'termError',
+        terminalName: 'T1',
+        error: 'Err',
+      });
+      // The implementation calls showTerminalRestoreError from dynamic import.
+      // Assuming vitest mocks the module globally for this file:
+      const { showTerminalRestoreError } =
+        await import('../../../../../../webview/utils/NotificationUtils');
+      expect(showTerminalRestoreError).toHaveBeenCalledWith('T1', 'Err');
     });
   });
 
   describe('handleSessionRestoredMessage', () => {
-      it('should log success message', () => {
-          controller.handleSessionRestoredMessage({ command: 'restored', success: true, restoredCount: 5, totalCount: 5 });
-          expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining('Session restoration successful'));
+    it('should log success message', () => {
+      controller.handleSessionRestoredMessage({
+        command: 'restored',
+        success: true,
+        restoredCount: 5,
+        totalCount: 5,
       });
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        expect.stringContaining('Session restoration successful')
+      );
+    });
 
-      it('should log warning message for partial success', () => {
-        controller.handleSessionRestoredMessage({ command: 'restored', success: false, restoredCount: 3, totalCount: 5 });
-        expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Session restoration partially failed'));
+    it('should log warning message for partial success', () => {
+      controller.handleSessionRestoredMessage({
+        command: 'restored',
+        success: false,
+        restoredCount: 3,
+        totalCount: 5,
+      });
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Session restoration partially failed')
+      );
     });
   });
 });

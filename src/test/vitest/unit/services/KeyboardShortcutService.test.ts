@@ -62,10 +62,12 @@ describe('KeyboardShortcutService', () => {
       get: vi.fn().mockReturnValue(false),
     });
     mocks.mockWorkspace.onDidChangeConfiguration.mockClear();
-    mocks.mockWorkspace.onDidChangeConfiguration.mockImplementation((listener: (e: any) => void) => {
-      configChangeListeners.push(listener);
-      return { dispose: vi.fn() };
-    });
+    mocks.mockWorkspace.onDidChangeConfiguration.mockImplementation(
+      (listener: (e: any) => void) => {
+        configChangeListeners.push(listener);
+        return { dispose: vi.fn() };
+      }
+    );
 
     terminalManager = {
       getDefaultProfile: vi.fn().mockReturnValue(null),
@@ -193,10 +195,11 @@ describe('KeyboardShortcutService', () => {
       });
 
       const event = {
-        affectsConfiguration: (key: string) =>
-          key === 'secondaryTerminal.panelNavigation.enabled',
+        affectsConfiguration: (key: string) => key === 'secondaryTerminal.panelNavigation.enabled',
       };
-      configChangeListeners.forEach((listener) => { listener(event); });
+      configChangeListeners.forEach((listener) => {
+        listener(event);
+      });
 
       expect(mocks.mockCommands.executeCommand).toHaveBeenCalledWith(
         'setContext',
@@ -211,7 +214,9 @@ describe('KeyboardShortcutService', () => {
       const event = {
         affectsConfiguration: (key: string) => key === 'editor.fontSize',
       };
-      configChangeListeners.forEach((listener) => { listener(event); });
+      configChangeListeners.forEach((listener) => {
+        listener(event);
+      });
 
       expect(mocks.mockCommands.executeCommand).not.toHaveBeenCalledWith(
         'setContext',

@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { LazyInitializable, InitializationState, InitializationError, withLazyInitialization } from '../../../../patterns/LazyInitializable';
+import {
+  LazyInitializable,
+  InitializationState,
+  InitializationError,
+  withLazyInitialization,
+} from '../../../../patterns/LazyInitializable';
 
 // Concrete implementation for testing
 class TestLazyInitializable extends LazyInitializable {
@@ -84,7 +89,7 @@ describe('LazyInitializable', () => {
       const call2 = testObj.publicEnsureInitializedAsync();
 
       expect(testObj.isInitializing).toBe(true);
-      
+
       resolveInit!();
       await Promise.all([call1, call2]);
 

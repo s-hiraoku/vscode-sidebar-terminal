@@ -292,8 +292,10 @@ export class ErrorHandlingManager {
     };
 
     this.errorLog.forEach((report) => {
-      stats.byCategory[report.context.category] = (stats.byCategory[report.context.category] || 0) + 1;
-      stats.bySeverity[report.context.severity] = (stats.bySeverity[report.context.severity] || 0) + 1;
+      stats.byCategory[report.context.category] =
+        (stats.byCategory[report.context.category] || 0) + 1;
+      stats.bySeverity[report.context.severity] =
+        (stats.bySeverity[report.context.severity] || 0) + 1;
       report.recoverable ? stats.recoverable++ : stats.unrecoverable++;
     });
 

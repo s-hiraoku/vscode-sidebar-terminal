@@ -104,10 +104,7 @@ export class ProfileMessageHandler implements IMessageHandler {
   /**
    * Handle default profile changed message
    */
-  private handleDefaultProfileChanged(
-    msg: MessageCommand,
-    coordinator: IManagerCoordinator
-  ): void {
+  private handleDefaultProfileChanged(msg: MessageCommand, coordinator: IManagerCoordinator): void {
     this.logger.info('Default profile changed');
 
     // Forward to ProfileManager if it exists
