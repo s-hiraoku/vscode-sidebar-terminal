@@ -170,7 +170,7 @@ export interface ICliAgentDetectionService {
   readonly onAgentWaitingChange: vscode.Event<{
     terminalId: string;
     isWaiting: boolean;
-    waitingType?: 'input' | 'approval';
+    waitingType?: 'input' | 'approval' | 'idle';
   }>;
 
   // =================== Lifecycle Management ===================

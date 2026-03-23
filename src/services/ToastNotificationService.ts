@@ -47,7 +47,7 @@ export class ToastNotificationService implements vscode.Disposable {
 
   public showWaitingNotification(
     terminalId: string,
-    waitingType?: 'input' | 'approval'
+    waitingType?: 'input' | 'approval' | 'idle'
   ): void {
     if (this.isDisposed) {
       return;
@@ -59,7 +59,11 @@ export class ToastNotificationService implements vscode.Disposable {
     }
 
     const typeLabel =
-      waitingType === 'approval' ? 'waiting for approval' : 'waiting for input';
+      waitingType === 'approval'
+        ? 'waiting for approval'
+        : waitingType === 'idle'
+          ? 'idle (no output)'
+          : 'waiting for input';
     const message = `CLI Agent is ${typeLabel} (${terminalId})`;
 
     log('[TOAST]', message);

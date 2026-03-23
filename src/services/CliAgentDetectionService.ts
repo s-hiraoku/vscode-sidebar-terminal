@@ -13,6 +13,7 @@ import { AudioNotificationService } from './AudioNotificationService';
 import { ToastNotificationService } from './ToastNotificationService';
 import type { AgentType } from '../types/shared';
 import { CliAgentInputAccumulator } from './CliAgentInputAccumulator';
+import { CliAgentIdleDetector } from './CliAgentIdleDetector';
 
 export class CliAgentDetectionService implements ICliAgentDetectionService {
   private readonly detectionEngine: CliAgentDetectionEngine;
@@ -21,6 +22,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
   private readonly audioService: AudioNotificationService;
   private readonly toastService: ToastNotificationService;
   private readonly inputAccumulator: CliAgentInputAccumulator;
+  private readonly idleDetector: CliAgentIdleDetector;
   private waitingChangeSubscription: { dispose(): void } | undefined;
   private statusChangeSubscription: { dispose(): void } | undefined;
   private heartbeatInterval: ReturnType<typeof setInterval> | undefined;
@@ -37,6 +39,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     this.audioService = new AudioNotificationService();
     this.toastService = new ToastNotificationService();
     this.inputAccumulator = new CliAgentInputAccumulator();
+    this.idleDetector = new CliAgentIdleDetector(this.stateStore);
 
     this.waitingChangeSubscription = this.stateStore.onAgentWaitingChange((event) => {
       if (event.isWaiting) {
@@ -159,6 +162,11 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     }
 
     if (state.status === 'connected') {
+      // Clear idle waiting when new output arrives
+      this.idleDetector.clearIdleWaiting(terminalId);
+      // Reset idle timer (output received = agent is active)
+      this.idleDetector.resetTimer(terminalId);
+
       this.waitingDetector.analyzeImmediately(terminalId, data);
       state = this.getAgentState(terminalId);
     }
@@ -253,6 +261,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
 
   handleTerminalRemoved(terminalId: string): void {
     this.removingTerminals.add(terminalId);
+    this.idleDetector.cancelTimer(terminalId);
     this.detectionEngine.clearTerminalCache(terminalId);
     this.waitingDetector.clearTerminalData(terminalId);
     this.inputAccumulator.clear(terminalId);
@@ -294,6 +303,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     }
     this.waitingChangeSubscription?.dispose();
     this.statusChangeSubscription?.dispose();
+    this.idleDetector.dispose();
     this.waitingDetector.dispose();
     this.audioService.dispose();
     this.toastService.dispose();

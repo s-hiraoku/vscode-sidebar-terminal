@@ -510,6 +510,13 @@
           "maximum": 60000,
           "description": "Minimum interval between toast notifications per terminal (ms)"
         },
+        "secondaryTerminal.agentIdleDetection.timeoutMs": {
+          "type": "number",
+          "default": 3000,
+          "minimum": 1000,
+          "maximum": 30000,
+          "description": "Time in ms without output to consider agent idle/waiting"
+        },
         "secondaryTerminal.enableTerminalHeaderEnhancements": {
           "type": "boolean",
           "default": true,
