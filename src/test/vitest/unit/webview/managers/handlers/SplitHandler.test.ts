@@ -10,7 +10,7 @@ describe('SplitHandler', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
-    
+
     mockLogger = {
       info: vi.fn(),
       warn: vi.fn(),
@@ -19,7 +19,10 @@ describe('SplitHandler', () => {
 
     mockSplitManager = {
       splitTerminal: vi.fn(),
-      terminals: new Map([['t1', {}], ['t2', {}]]),
+      terminals: new Map([
+        ['t1', {}],
+        ['t2', {}],
+      ]),
       splitDirection: 'vertical',
     };
 
@@ -56,26 +59,33 @@ describe('SplitHandler', () => {
     });
 
     it('should handle relayoutTerminals', () => {
-      handler.handleMessage({ command: 'relayoutTerminals', direction: 'horizontal' }, mockCoordinator);
-      
+      handler.handleMessage(
+        { command: 'relayoutTerminals', direction: 'horizontal' },
+        mockCoordinator
+      );
+
       expect(mockSplitManager.splitDirection).toBe('horizontal');
-      expect(mockContainerManager.applyDisplayState).toHaveBeenCalledWith(expect.objectContaining({
-        mode: 'split',
-        splitDirection: 'horizontal'
-      }));
+      expect(mockContainerManager.applyDisplayState).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mode: 'split',
+          splitDirection: 'horizontal',
+        })
+      );
     });
 
     it('should skip relayout if less than 2 terminals', () => {
       mockSplitManager.terminals = new Map([['t1', {}]]);
       handler.handleMessage({ command: 'relayoutTerminals' }, mockCoordinator);
-      
+
       expect(mockContainerManager.applyDisplayState).not.toHaveBeenCalled();
     });
 
     it('should warn if SplitManager is missing', () => {
       mockCoordinator.getSplitManager.mockReturnValue(null);
       handler.handleMessage({ command: 'split' }, mockCoordinator);
-      expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('SplitManager not available'));
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('SplitManager not available')
+      );
     });
 
     it('should set display mode when requested', () => {

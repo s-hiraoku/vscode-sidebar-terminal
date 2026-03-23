@@ -79,7 +79,9 @@ const mockExtensionContext = {
     delete: vi.fn(),
     clear: vi.fn(),
     getScoped: vi.fn(),
-    [Symbol.iterator]: function* () { yield* []; },
+    [Symbol.iterator]: function* () {
+      yield* [];
+    },
   },
   secrets: {
     get: vi.fn().mockResolvedValue(undefined),
@@ -137,7 +139,9 @@ const mockTerminalManager = {
   getTerminalInfo: vi.fn().mockReturnValue(mockTerminalInfo),
   getIdleTerminalId: vi.fn().mockReturnValue(null),
   initializeShellForTerminal: vi.fn().mockResolvedValue(undefined),
-  getCurrentState: vi.fn().mockReturnValue({ terminals: [mockTerminalInfo], activeTerminalId: 'terminal-1' }),
+  getCurrentState: vi
+    .fn()
+    .mockReturnValue({ terminals: [mockTerminalInfo], activeTerminalId: 'terminal-1' }),
   // CLI Agent Status methods
   getConnectedAgentTerminalId: vi.fn().mockReturnValue('terminal-1'),
   getConnectedAgentType: vi.fn().mockReturnValue('claude'),

@@ -107,10 +107,7 @@ if (typeof globalThis.IntersectionObserver === 'undefined') {
     readonly rootMargin: string = '0px';
     readonly thresholds: ReadonlyArray<number> = [0];
 
-    constructor(
-      _callback: IntersectionObserverCallback,
-      _options?: IntersectionObserverInit
-    ) {}
+    constructor(_callback: IntersectionObserverCallback, _options?: IntersectionObserverInit) {}
 
     observe(): void {}
     unobserve(): void {}

@@ -30,7 +30,13 @@ export class Uri {
   static parse(value: string): Uri {
     try {
       const url = new URL(value);
-      return new Uri(url.protocol.replace(':', ''), url.host, url.pathname, url.search.substring(1), url.hash.substring(1));
+      return new Uri(
+        url.protocol.replace(':', ''),
+        url.host,
+        url.pathname,
+        url.search.substring(1),
+        url.hash.substring(1)
+      );
     } catch {
       // Fallback for non-URL strings
       return new Uri('file', '', value);
@@ -46,7 +52,13 @@ export class Uri {
     return `${this.scheme}://${this.authority}${this.path}`;
   }
 
-  with(change: { scheme?: string; authority?: string; path?: string; query?: string; fragment?: string }): Uri {
+  with(change: {
+    scheme?: string;
+    authority?: string;
+    path?: string;
+    query?: string;
+    fragment?: string;
+  }): Uri {
     return new Uri(
       change.scheme ?? this.scheme,
       change.authority ?? this.authority,
@@ -78,7 +90,7 @@ export class EventEmitter<T> {
   };
 
   fire = vi.fn((data: T): void => {
-    this.listeners.forEach(listener => listener(data));
+    this.listeners.forEach((listener) => listener(data));
   });
 
   dispose(): void {
@@ -96,7 +108,7 @@ export class Disposable {
 
   static from(...disposables: { dispose(): void }[]): Disposable {
     return new Disposable(() => {
-      disposables.forEach(d => d.dispose());
+      disposables.forEach((d) => d.dispose());
     });
   }
 
@@ -151,7 +163,12 @@ export class Range {
 
   constructor(start: Position, end: Position);
   constructor(startLine: number, startCharacter: number, endLine: number, endCharacter: number);
-  constructor(startOrLine: Position | number, endOrCharacter: Position | number, endLine?: number, endCharacter?: number) {
+  constructor(
+    startOrLine: Position | number,
+    endOrCharacter: Position | number,
+    endLine?: number,
+    endCharacter?: number
+  ) {
     if (typeof startOrLine === 'number') {
       this.start = new Position(startOrLine, endOrCharacter as number);
       this.end = new Position(endLine as number, endCharacter as number);
@@ -183,8 +200,18 @@ export class Selection extends Range {
   active: Position;
 
   constructor(anchor: Position, active: Position);
-  constructor(anchorLine: number, anchorCharacter: number, activeLine: number, activeCharacter: number);
-  constructor(anchorOrLine: Position | number, activeOrCharacter: Position | number, activeLine?: number, activeCharacter?: number) {
+  constructor(
+    anchorLine: number,
+    anchorCharacter: number,
+    activeLine: number,
+    activeCharacter: number
+  );
+  constructor(
+    anchorOrLine: Position | number,
+    activeOrCharacter: Position | number,
+    activeLine?: number,
+    activeCharacter?: number
+  ) {
     if (typeof anchorOrLine === 'number') {
       const anchor = new Position(anchorOrLine, activeOrCharacter as number);
       const active = new Position(activeLine as number, activeCharacter as number);

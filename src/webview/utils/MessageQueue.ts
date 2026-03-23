@@ -121,7 +121,7 @@ export class MessageQueue implements Disposable {
       // Continue processing as long as there are messages in either queue
       while (this.highPriorityQueue.length > 0 || this.normalQueue.length > 0) {
         let message: QueuedMessage;
-        
+
         // Always check high priority first in every iteration
         if (this.highPriorityQueue.length > 0) {
           message = this.highPriorityQueue.shift()!;

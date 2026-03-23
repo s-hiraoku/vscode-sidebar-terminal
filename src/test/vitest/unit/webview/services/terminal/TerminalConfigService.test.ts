@@ -17,14 +17,16 @@ describe('TerminalConfigService', () => {
       // Test Mac
       vi.resetModules();
       vi.stubGlobal('navigator', { userAgent: 'Macintosh' });
-      const modMac = await import('../../../../../../webview/services/terminal/TerminalConfigService');
+      const modMac =
+        await import('../../../../../../webview/services/terminal/TerminalConfigService');
       const macConfig = modMac.TerminalConfigService.getDefaultConfig();
       expect(macConfig.fontSize).toBe(12);
 
       // Test Linux
       vi.resetModules();
       vi.stubGlobal('navigator', { userAgent: 'Linux' });
-      const modLinux = await import('../../../../../../webview/services/terminal/TerminalConfigService');
+      const modLinux =
+        await import('../../../../../../webview/services/terminal/TerminalConfigService');
       const linuxConfig = modLinux.TerminalConfigService.getDefaultConfig();
       expect(linuxConfig.fontSize).toBe(14);
       expect(linuxConfig.lineHeight).toBe(1.1);
@@ -35,9 +37,9 @@ describe('TerminalConfigService', () => {
     it('should override defaults with user settings', () => {
       const merged = TerminalConfigService.mergeConfig({
         fontSize: 20,
-        cursorStyle: 'bar'
+        cursorStyle: 'bar',
       });
-      
+
       expect(merged.fontSize).toBe(20);
       expect(merged.cursorStyle).toBe('bar');
       expect(merged.cursorBlink).toBe(true); // preserved default

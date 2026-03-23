@@ -139,13 +139,7 @@ describe('CLI Agent Detection - Improved Patterns', () => {
     });
 
     it('should NOT detect fictional completion patterns', () => {
-      const nonCompletionMessages = [
-        '[done]',
-        '[finished]',
-        'done',
-        'complete',
-        'completed',
-      ];
+      const nonCompletionMessages = ['[done]', '[finished]', 'done', 'complete', 'completed'];
 
       nonCompletionMessages.forEach((message) => {
         const result = detectionService.detectTermination('terminal-1', message);

@@ -59,7 +59,7 @@ describe('SettingsSyncService', () => {
   beforeEach(() => {
     mockReinitializeCallback = vi.fn().mockResolvedValue(undefined);
     mockUnifiedConfig.update.mockResolvedValue(undefined);
-    
+
     // Default mocks for migration check in constructor
     (vscode.workspace.getConfiguration as any).mockReturnValue({
       inspect: vi.fn().mockReturnValue({ globalValue: undefined }),
@@ -222,18 +222,38 @@ describe('SettingsSyncService', () => {
 
       await service.updateSettings(settingsToUpdate);
 
-      expect(mockUnifiedConfig.update).toHaveBeenCalledWith('secondaryTerminal', 'cursorBlink', false);
+      expect(mockUnifiedConfig.update).toHaveBeenCalledWith(
+        'secondaryTerminal',
+        'cursorBlink',
+        false
+      );
       expect(mockUnifiedConfig.update).toHaveBeenCalledWith('secondaryTerminal', 'theme', 'auto');
-      expect(mockUnifiedConfig.update).toHaveBeenCalledWith('secondaryTerminal', 'enableCliAgentIntegration', false);
+      expect(mockUnifiedConfig.update).toHaveBeenCalledWith(
+        'secondaryTerminal',
+        'enableCliAgentIntegration',
+        false
+      );
       expect(mockUnifiedConfig.update).toHaveBeenCalledWith(
         'secondaryTerminal',
         'enableTerminalHeaderEnhancements',
         false
       );
-      expect(mockUnifiedConfig.update).toHaveBeenCalledWith('secondaryTerminal', 'activeBorderMode', 'none');
-      expect(mockUnifiedConfig.update).toHaveBeenCalledWith('secondaryTerminal', 'dynamicSplitDirection', true);
-      expect(mockUnifiedConfig.update).toHaveBeenCalledWith('secondaryTerminal', 'panelLocation', 'sidebar');
-      
+      expect(mockUnifiedConfig.update).toHaveBeenCalledWith(
+        'secondaryTerminal',
+        'activeBorderMode',
+        'none'
+      );
+      expect(mockUnifiedConfig.update).toHaveBeenCalledWith(
+        'secondaryTerminal',
+        'dynamicSplitDirection',
+        true
+      );
+      expect(mockUnifiedConfig.update).toHaveBeenCalledWith(
+        'secondaryTerminal',
+        'panelLocation',
+        'sidebar'
+      );
+
       expect(mockReinitializeCallback).toHaveBeenCalled();
     });
 
@@ -261,9 +281,9 @@ describe('SettingsSyncService', () => {
         if (key === 'multiCursorModifier') return 'ctrlCmd';
         return def;
       });
-      
+
       (vscode.workspace.getConfiguration as any).mockReturnValue({
-        get: mockGet
+        get: mockGet,
       });
 
       const result = service.getAltClickSettings();
@@ -279,9 +299,9 @@ describe('SettingsSyncService', () => {
     it('should update the reinitialize callback', async () => {
       const newCallback = vi.fn().mockResolvedValue(undefined);
       service.setReinitializeCallback(newCallback);
-      
+
       await service.updateSettings({ theme: 'dark' });
-      
+
       expect(newCallback).toHaveBeenCalled();
       expect(mockReinitializeCallback).not.toHaveBeenCalled();
     });

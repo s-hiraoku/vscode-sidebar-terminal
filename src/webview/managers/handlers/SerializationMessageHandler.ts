@@ -70,9 +70,7 @@ export class SerializationMessageHandler implements IMessageHandler {
     registry.set('restoreTerminalSerialization', (msg, coord) =>
       this.handleRestoreTerminalSerialization(msg, coord)
     );
-    registry.set('terminalRestoreInfo', (msg, coord) =>
-      this.handleTerminalRestoreInfo(msg, coord)
-    );
+    registry.set('terminalRestoreInfo', (msg, coord) => this.handleTerminalRestoreInfo(msg, coord));
     registry.set('saveAllTerminalSessions', (msg, coord) =>
       this.handleSaveAllTerminalSessions(msg, coord)
     );

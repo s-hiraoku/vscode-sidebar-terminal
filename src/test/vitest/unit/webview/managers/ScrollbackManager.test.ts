@@ -23,10 +23,10 @@ describe('ScrollbackManager', () => {
           cursorY: 1,
           getLine: vi.fn().mockImplementation((i) => ({
             translateToString: () => `text${i}`,
-            isWrapped: false
-          }))
-        }
-      }
+            isWrapped: false,
+          })),
+        },
+      },
     };
   });
 
@@ -39,7 +39,7 @@ describe('ScrollbackManager', () => {
     it('should register and unregister terminals', () => {
       manager.registerTerminal('t1', mockTerminal, mockSerializeAddon);
       expect(manager.getStats().registeredTerminals).toBe(1);
-      
+
       manager.unregisterTerminal('t1');
       expect(manager.getStats().registeredTerminals).toBe(0);
     });
@@ -48,7 +48,7 @@ describe('ScrollbackManager', () => {
   describe('saveScrollback', () => {
     it('should save and process scrollback data', () => {
       manager.registerTerminal('t1', mockTerminal, mockSerializeAddon);
-      
+
       // Update mock to match serialize output
       mockTerminal.buffer.active.getLine.mockImplementation((i) => {
         if (i === 0) return { translateToString: () => 'line1', isWrapped: false };
@@ -57,7 +57,7 @@ describe('ScrollbackManager', () => {
       });
 
       const result = manager.saveScrollback('t1', { trimEmptyLines: true });
-      
+
       expect(result).not.toBeNull();
       if (result) {
         expect(mockSerializeAddon.serialize).toHaveBeenCalled();
@@ -75,9 +75,9 @@ describe('ScrollbackManager', () => {
   describe('restoreScrollback', () => {
     it('should restore content to terminal', () => {
       manager.registerTerminal('t1', mockTerminal, mockSerializeAddon);
-      
+
       const success = manager.restoreScrollback('t1', 'row1\nrow2');
-      
+
       expect(success).toBe(true);
       expect(mockTerminal.clear).toHaveBeenCalled();
       expect(mockTerminal.writeln).toHaveBeenCalledWith('row1');
@@ -92,23 +92,23 @@ describe('ScrollbackManager', () => {
           if (i === 0) return { translateToString: () => 'part1', isWrapped: false };
           if (i === 1) return { translateToString: () => 'part2', isWrapped: true };
           return null;
-        })
+        }),
       };
-      
+
       const line1 = mockBuffer.getLine(1);
       const full = manager.getFullBufferLine(line1 as any, 1, mockBuffer);
-      
+
       expect(full).toBe('part1part2');
     });
 
     it('should iterate buffer in reverse', () => {
       const mockBuffer = {
-        getLine: vi.fn().mockImplementation((i) => ({ id: i }))
+        getLine: vi.fn().mockImplementation((i) => ({ id: i })),
       };
-      
+
       const iterator = manager.getBufferReverseIterator(mockBuffer, 2);
       const results = Array.from(iterator);
-      
+
       expect(results).toHaveLength(3);
       expect((results[0] as any).id).toBe(2);
       expect((results[1] as any).id).toBe(1);

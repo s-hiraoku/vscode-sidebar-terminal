@@ -24,7 +24,9 @@ export interface IPty {
   process: string;
   handleFlowControl: boolean;
   onData: (callback: (data: string) => void) => { dispose: () => void };
-  onExit: (callback: (exitCode: { exitCode: number; signal?: number }) => void) => { dispose: () => void };
+  onExit: (callback: (exitCode: { exitCode: number; signal?: number }) => void) => {
+    dispose: () => void;
+  };
   write: (data: string) => void;
   resize: (cols: number, rows: number) => void;
   kill: (signal?: string) => void;
@@ -44,14 +46,11 @@ class MockPty implements IPty {
   private exitCallbacks: Array<(exitCode: { exitCode: number; signal?: number }) => void> = [];
   private _killed = false;
 
-  constructor(
-    _file: string,
-    _args: string[] | string,
-    options?: IPtyForkOptions
-  ) {
+  constructor(_file: string, _args: string[] | string, options?: IPtyForkOptions) {
     if (options?.cols) this.cols = options.cols;
     if (options?.rows) this.rows = options.rows;
-    if (options?.handleFlowControl !== undefined) this.handleFlowControl = options.handleFlowControl;
+    if (options?.handleFlowControl !== undefined)
+      this.handleFlowControl = options.handleFlowControl;
   }
 
   onData = vi.fn((callback: (data: string) => void) => {
@@ -86,7 +85,7 @@ class MockPty implements IPty {
   kill = vi.fn((_signal?: string) => {
     if (!this._killed) {
       this._killed = true;
-      this.exitCallbacks.forEach(cb => cb({ exitCode: 0 }));
+      this.exitCallbacks.forEach((cb) => cb({ exitCode: 0 }));
     }
   });
 
@@ -96,22 +95,18 @@ class MockPty implements IPty {
 
   // Test helper methods
   _simulateData(data: string): void {
-    this.dataCallbacks.forEach(cb => cb(data));
+    this.dataCallbacks.forEach((cb) => cb(data));
   }
 
   _simulateExit(exitCode: number, signal?: number): void {
     if (!this._killed) {
       this._killed = true;
-      this.exitCallbacks.forEach(cb => cb({ exitCode, signal }));
+      this.exitCallbacks.forEach((cb) => cb({ exitCode, signal }));
     }
   }
 }
 
-export function spawn(
-  file: string,
-  args: string[] | string = [],
-  options?: IPtyForkOptions
-): IPty {
+export function spawn(file: string, args: string[] | string = [], options?: IPtyForkOptions): IPty {
   return new MockPty(file, args, options);
 }
 

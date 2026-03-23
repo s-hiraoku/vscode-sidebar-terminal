@@ -627,10 +627,7 @@ export class CliAgentDetectionEngine {
       this.resetInterruptTracking(terminalSignals);
     }
 
-    if (
-      !candidateAgent ||
-      (currentAgentType && candidateAgent !== currentAgentType)
-    ) {
+    if (!candidateAgent || (currentAgentType && candidateAgent !== currentAgentType)) {
       return null;
     }
 
@@ -652,7 +649,8 @@ export class CliAgentDetectionEngine {
     const now = Date.now();
     const timeSinceLastInterrupt = now - terminalSignals.lastInterruptAt;
     const withinDoubleInterruptWindow =
-      terminalSignals.lastInterruptAt > 0 && timeSinceLastInterrupt <= this.DOUBLE_INTERRUPT_WINDOW_MS;
+      terminalSignals.lastInterruptAt > 0 &&
+      timeSinceLastInterrupt <= this.DOUBLE_INTERRUPT_WINDOW_MS;
 
     if (withinDoubleInterruptWindow) {
       const isLikelyEchoFromInput =

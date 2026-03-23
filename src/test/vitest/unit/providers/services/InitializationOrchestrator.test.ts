@@ -3,7 +3,10 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { InitializationOrchestrator, InitializationPhase } from '../../../../../providers/services/InitializationOrchestrator';
+import {
+  InitializationOrchestrator,
+  InitializationPhase,
+} from '../../../../../providers/services/InitializationOrchestrator';
 
 const { mockTerminalCoordinator, mockMessageRouter } = vi.hoisted(() => ({
   mockTerminalCoordinator: {
@@ -45,11 +48,11 @@ describe('InitializationOrchestrator', () => {
   describe('initialize', () => {
     it('should complete all phases successfully', async () => {
       const result = await orchestrator.initialize();
-      
+
       expect(result.success).toBe(true);
       expect(result.phase).toBe(InitializationPhase.COMPLETED);
       expect(orchestrator.isInitialized()).toBe(true);
-      
+
       expect(mockMessageRouter.setInitialized).toHaveBeenCalledWith(true);
       expect(mockTerminalCoordinator.initialize).toHaveBeenCalled();
     });
@@ -57,7 +60,7 @@ describe('InitializationOrchestrator', () => {
     it('should track phase timings', async () => {
       await orchestrator.initialize();
       const timings = orchestrator.getPhaseTimings();
-      
+
       expect(timings.has(InitializationPhase.WEBVIEW_SETUP)).toBe(true);
       expect(timings.has(InitializationPhase.MESSAGE_HANDLERS)).toBe(true);
       expect(timings.has(InitializationPhase.TERMINAL_SETUP)).toBe(true);
@@ -67,7 +70,7 @@ describe('InitializationOrchestrator', () => {
     it('should skip initialization if already complete', async () => {
       await orchestrator.initialize();
       mockTerminalCoordinator.initialize.mockClear();
-      
+
       const result = await orchestrator.initialize();
       expect(result.phase).toBe(InitializationPhase.COMPLETED);
       expect(mockTerminalCoordinator.initialize).not.toHaveBeenCalled();
@@ -76,9 +79,9 @@ describe('InitializationOrchestrator', () => {
     it('should handle phase failure gracefully', async () => {
       const error = new Error('Setup failed');
       mockTerminalCoordinator.initialize.mockRejectedValue(error);
-      
+
       const result = await orchestrator.initialize();
-      
+
       expect(result.success).toBe(false);
       expect(result.phase).toBe(InitializationPhase.FAILED);
       expect(result.error).toBe(error);
@@ -95,10 +98,10 @@ describe('InitializationOrchestrator', () => {
     it('should allow re-initialization after reset', async () => {
       await orchestrator.initialize();
       orchestrator.reset();
-      
+
       expect(orchestrator.isInitialized()).toBe(false);
       expect(orchestrator.getCurrentPhase()).toBe(InitializationPhase.NOT_STARTED);
-      
+
       await orchestrator.initialize();
       expect(orchestrator.isInitialized()).toBe(true);
     });

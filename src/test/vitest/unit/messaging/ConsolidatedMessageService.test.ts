@@ -171,7 +171,11 @@ describe('ConsolidatedMessageService', () => {
 
       await messageService.receiveMessage(statusMessage, mockCoordinator);
 
-      expect(mockCoordinator.updateCliAgentStatus).toHaveBeenCalledWith('terminal-1', 'connected', 'claude');
+      expect(mockCoordinator.updateCliAgentStatus).toHaveBeenCalledWith(
+        'terminal-1',
+        'connected',
+        'claude'
+      );
     });
 
     it('should handle invalid messages gracefully', async () => {

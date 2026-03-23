@@ -6,7 +6,7 @@ describe('SessionDataTransformer', () => {
     terminals: [{ id: 't1', name: 'Term 1', number: 1, cwd: '/test', isActive: true }],
     activeTerminalId: 't1',
     timestamp: Date.now(),
-    version: '1.0.0'
+    version: '1.0.0',
   };
 
   beforeEach(() => {
@@ -51,15 +51,18 @@ describe('SessionDataTransformer', () => {
       const sessionWithLargeScrollback: SessionStorageData = {
         ...validSession,
         scrollbackData: {
-          't1': Array(100).fill('some long log line content')
-        }
+          t1: Array(100).fill('some long log line content'),
+        },
       };
 
-      const result = SessionDataTransformer.optimizeSessionStorage(sessionWithLargeScrollback, 0.0001); // Trigger optimization
-      
+      const result = SessionDataTransformer.optimizeSessionStorage(
+        sessionWithLargeScrollback,
+        0.0001
+      ); // Trigger optimization
+
       expect(result.optimized).toBe(true);
       expect(result.reductionPercent).toBeGreaterThan(0);
-      
+
       const optimizedScrollback = sessionWithLargeScrollback.scrollbackData?.['t1'] as string[];
       expect(optimizedScrollback.length).toBeLessThan(100);
     });
@@ -71,11 +74,11 @@ describe('SessionDataTransformer', () => {
         terminals: [],
         timestamp: Date.now(),
         // No version, or old version
-        config: { scrollbackLines: 200 }
+        config: { scrollbackLines: 200 },
       };
 
       const result = SessionDataTransformer.migrateSessionFormat(oldFormat);
-      
+
       expect(result.migrated).toBe(true);
       expect(result.sessionData.version).toBe('0.1.137');
       expect(result.sessionData.config?.scrollbackLines).toBe(1000);
@@ -91,7 +94,7 @@ describe('SessionDataTransformer', () => {
     it('should normalize terminal data with defaults', () => {
       const partial = { id: 'test' };
       const normalized = SessionDataTransformer.normalizeTerminalData(partial);
-      
+
       expect(normalized.id).toBe('test');
       expect(normalized.name).toBe('Terminal');
       expect(normalized.scrollback).toEqual([]);

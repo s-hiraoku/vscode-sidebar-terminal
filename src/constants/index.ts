@@ -128,7 +128,10 @@ export { ERROR_CONSTANTS, type ErrorConstantsType } from './ErrorConstants';
 export { CONFIG_CACHE_CONSTANTS, type ConfigCacheConstantsType } from './ConfigCacheConstants';
 
 // システムターミナル定数（詳細版）
-export { TERMINAL_CONSTANTS as SYSTEM_TERMINAL_CONSTANTS, type TerminalConstantsType } from './TerminalConstants';
+export {
+  TERMINAL_CONSTANTS as SYSTEM_TERMINAL_CONSTANTS,
+  type TerminalConstantsType,
+} from './TerminalConstants';
 
 // 列挙型
 export {

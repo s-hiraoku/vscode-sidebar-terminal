@@ -52,12 +52,14 @@ export class SettingsSyncService {
 
       if (newUserValue === undefined) {
         log(`🔄 Migrating highlightActiveBorder=${userValue} to activeBorderMode=${newMode}`);
-        config.update('activeBorderMode', newMode, vscode.ConfigurationTarget.Global)
-          .then(() => {
+        config.update('activeBorderMode', newMode, vscode.ConfigurationTarget.Global).then(
+          () => {
             log(`✅ Settings migration complete`);
-          }, (err) => {
+          },
+          (err) => {
             log(`⚠️ Settings migration failed: ${err}`);
-          });
+          }
+        );
       }
     }
   }

@@ -175,7 +175,9 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
 
       it('should successfully register and execute handlers', async () => {
         // RED: Registered handlers should execute
-        const handler: TypedMessageHandler<TerminalMessageData> = vi.fn().mockResolvedValue(undefined);
+        const handler: TypedMessageHandler<TerminalMessageData> = vi
+          .fn()
+          .mockResolvedValue(undefined);
         const registration: TypedMessageRegistration<TerminalMessageData> = {
           command: 'terminal:create',
           handler,
@@ -210,7 +212,9 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
     describe('Validation Integration', () => {
       it('should validate data before passing to handler', async () => {
         // RED: Invalid data should not reach handler
-        const handler: TypedMessageHandler<TerminalMessageData> = vi.fn().mockResolvedValue(undefined);
+        const handler: TypedMessageHandler<TerminalMessageData> = vi
+          .fn()
+          .mockResolvedValue(undefined);
         const validator = MessageDataValidator.createTerminalValidator(mockLogger);
         const registration: TypedMessageRegistration<TerminalMessageData> = {
           command: 'terminal:create',
@@ -228,7 +232,9 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
 
       it('should pass validated data to handler', async () => {
         // RED: Valid data should reach handler after validation
-        const handler: TypedMessageHandler<TerminalMessageData> = vi.fn().mockResolvedValue(undefined);
+        const handler: TypedMessageHandler<TerminalMessageData> = vi
+          .fn()
+          .mockResolvedValue(undefined);
         const validator = MessageDataValidator.createTerminalValidator(mockLogger);
         const registration: TypedMessageRegistration<TerminalMessageData> = {
           command: 'terminal:create',
@@ -343,10 +349,7 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
         });
 
         expect(() => sender.sendMessage('test:command', {})).not.toThrow();
-        expect(mockLogger).toHaveBeenCalledWith(
-          expect.any(String),
-          expect.any(Error)
-        );
+        expect(mockLogger).toHaveBeenCalledWith(expect.any(String), expect.any(Error));
       });
     });
 
@@ -468,7 +471,9 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
 
       it('should handle message processing errors gracefully', async () => {
         // RED: Processing errors should not crash listener
-        const handler: TypedMessageHandler = vi.fn().mockRejectedValue(new Error('Processing failed'));
+        const handler: TypedMessageHandler = vi
+          .fn()
+          .mockRejectedValue(new Error('Processing failed'));
         router.registerHandler({ command: 'error:command', handler });
 
         const mockEvent = {
@@ -549,7 +554,9 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
       // RED: Complete workflow should work end-to-end
       const router = new TypedMessageRouter('TestComponent', mockLogger);
       const validator = MessageDataValidator.createTerminalValidator(mockLogger);
-      const handler: TypedMessageHandler<TerminalMessageData> = vi.fn().mockResolvedValue(undefined);
+      const handler: TypedMessageHandler<TerminalMessageData> = vi
+        .fn()
+        .mockResolvedValue(undefined);
 
       // Register handler with validation
       router.registerHandler({

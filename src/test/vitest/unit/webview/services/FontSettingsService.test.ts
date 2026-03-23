@@ -3,7 +3,10 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { FontSettingsService, IFontSettingsApplicator } from '../../../../../webview/services/FontSettingsService';
+import {
+  FontSettingsService,
+  IFontSettingsApplicator,
+} from '../../../../../webview/services/FontSettingsService';
 import { Terminal } from '@xterm/xterm';
 import { TerminalInstance } from '../../../../../webview/interfaces/ManagerInterfaces';
 
@@ -45,7 +48,10 @@ describe('FontSettingsService', () => {
       // Private property, but we can test via effects
       const mockTerminal = {} as Terminal;
       service.applyToTerminal(mockTerminal, 'test-1');
-      expect(mockApplicator.applyFontSettings).toHaveBeenCalledWith(mockTerminal, expect.anything());
+      expect(mockApplicator.applyFontSettings).toHaveBeenCalledWith(
+        mockTerminal,
+        expect.anything()
+      );
     });
 
     it('should warn when applying without applicator', () => {
@@ -65,15 +71,17 @@ describe('FontSettingsService', () => {
       service.updateSettings(newSettings, new Map());
 
       expect(service.getCurrentSettings().fontSize).toBe(16);
-      expect(listener).toHaveBeenCalledWith(expect.objectContaining({
-        newSettings: expect.objectContaining({ fontSize: 16 }),
-        previousSettings: expect.anything()
-      }));
+      expect(listener).toHaveBeenCalledWith(
+        expect.objectContaining({
+          newSettings: expect.objectContaining({ fontSize: 16 }),
+          previousSettings: expect.anything(),
+        })
+      );
     });
 
     it('should apply to all terminals when updated', () => {
       service.setApplicator(mockApplicator);
-      
+
       const mockTerminal = { refresh: vi.fn(), rows: 24 } as any;
       const mockFitAddon = { fit: vi.fn() } as any;
       const terminals = new Map<string, TerminalInstance>();
@@ -81,15 +89,20 @@ describe('FontSettingsService', () => {
 
       service.updateSettings({ fontSize: 18 }, terminals);
 
-      expect(mockApplicator.applyFontSettings).toHaveBeenCalledWith(mockTerminal, expect.objectContaining({ fontSize: 18 }));
+      expect(mockApplicator.applyFontSettings).toHaveBeenCalledWith(
+        mockTerminal,
+        expect.objectContaining({ fontSize: 18 })
+      );
       expect(mockFitAddon.fit).toHaveBeenCalled();
       expect(mockTerminal.refresh).toHaveBeenCalled();
     });
 
     it('should handle errors in listeners gracefully', () => {
-      const faultyListener = vi.fn().mockImplementation(() => { throw new Error('Faulty'); });
+      const faultyListener = vi.fn().mockImplementation(() => {
+        throw new Error('Faulty');
+      });
       service.onSettingsChange(faultyListener);
-      
+
       expect(() => service.updateSettings({ fontSize: 14 }, new Map())).not.toThrow();
     });
   });
@@ -125,9 +138,11 @@ describe('FontSettingsService', () => {
   describe('Single Terminal Application', () => {
     it('should handle errors during single terminal application', () => {
       service.setApplicator({
-        applyFontSettings: () => { throw new Error('Failed'); }
+        applyFontSettings: () => {
+          throw new Error('Failed');
+        },
       });
-      
+
       expect(() => service.applyToTerminal({} as any, 't1')).not.toThrow();
     });
   });
@@ -136,10 +151,10 @@ describe('FontSettingsService', () => {
     it('should stop notifying when unsubscribed', () => {
       const listener = vi.fn();
       const unsubscribe = service.onSettingsChange(listener);
-      
+
       unsubscribe();
       service.updateSettings({ fontSize: 15 }, new Map());
-      
+
       expect(listener).not.toHaveBeenCalled();
     });
   });

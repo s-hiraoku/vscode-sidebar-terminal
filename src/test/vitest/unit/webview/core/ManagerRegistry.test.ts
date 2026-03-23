@@ -23,10 +23,12 @@ vi.mock('../../../../../utils/logger', () => ({
 }));
 
 // Helper to create mock managers
-function createMockManager(options: {
-  initializeImpl?: () => void | Promise<void>;
-  disposeImpl?: () => void;
-} = {}): IManagerLifecycle {
+function createMockManager(
+  options: {
+    initializeImpl?: () => void | Promise<void>;
+    disposeImpl?: () => void;
+  } = {}
+): IManagerLifecycle {
   return {
     initialize: options.initializeImpl ?? vi.fn(),
     dispose: options.disposeImpl ?? vi.fn(),
@@ -136,12 +138,8 @@ describe('ManagerRegistry', () => {
       const initFn1 = vi.fn();
       const initFn2 = vi.fn();
 
-      registry.register('manager1', () =>
-        createMockManager({ initializeImpl: initFn1 })
-      );
-      registry.register('manager2', () =>
-        createMockManager({ initializeImpl: initFn2 })
-      );
+      registry.register('manager1', () => createMockManager({ initializeImpl: initFn1 }));
+      registry.register('manager2', () => createMockManager({ initializeImpl: initFn2 }));
 
       await registry.initializeAll();
 
@@ -222,9 +220,7 @@ describe('ManagerRegistry', () => {
         await new Promise((resolve) => setTimeout(resolve, 10));
       });
 
-      registry.register('async', () =>
-        createMockManager({ initializeImpl: initFn })
-      );
+      registry.register('async', () => createMockManager({ initializeImpl: initFn }));
 
       await registry.initializeAll();
 
@@ -235,17 +231,13 @@ describe('ManagerRegistry', () => {
       registry.register('a', () => createMockManager(), { dependsOn: ['b'] });
       registry.register('b', () => createMockManager(), { dependsOn: ['a'] });
 
-      await expect(registry.initializeAll()).rejects.toThrow(
-        /Circular dependency/
-      );
+      await expect(registry.initializeAll()).rejects.toThrow(/Circular dependency/);
     });
 
     it('should throw when initializing after disposal', async () => {
       registry.disposeAll();
 
-      await expect(registry.initializeAll()).rejects.toThrow(
-        /Cannot initialize after disposal/
-      );
+      await expect(registry.initializeAll()).rejects.toThrow(/Cannot initialize after disposal/);
     });
 
     it('should propagate initialization errors', async () => {
@@ -289,12 +281,8 @@ describe('ManagerRegistry', () => {
       const disposeFn1 = vi.fn();
       const disposeFn2 = vi.fn();
 
-      registry.register('manager1', () =>
-        createMockManager({ disposeImpl: disposeFn1 })
-      );
-      registry.register('manager2', () =>
-        createMockManager({ disposeImpl: disposeFn2 })
-      );
+      registry.register('manager1', () => createMockManager({ disposeImpl: disposeFn1 }));
+      registry.register('manager2', () => createMockManager({ disposeImpl: disposeFn2 }));
 
       registry.disposeAll();
 
@@ -344,9 +332,7 @@ describe('ManagerRegistry', () => {
 
     it('should handle multiple dispose calls gracefully', () => {
       const disposeFn = vi.fn();
-      registry.register('test', () =>
-        createMockManager({ disposeImpl: disposeFn })
-      );
+      registry.register('test', () => createMockManager({ disposeImpl: disposeFn }));
 
       registry.disposeAll();
       registry.disposeAll();
@@ -368,11 +354,9 @@ describe('ManagerRegistry', () => {
 
     it('should not dispose lazy managers that were never accessed', () => {
       const disposeFn = vi.fn();
-      registry.register(
-        'lazy',
-        () => createMockManager({ disposeImpl: disposeFn }),
-        { lazy: true }
-      );
+      registry.register('lazy', () => createMockManager({ disposeImpl: disposeFn }), {
+        lazy: true,
+      });
 
       registry.disposeAll();
 
@@ -543,9 +527,7 @@ describe('ManagerRegistry', () => {
     it('should handle managers registered after partial initialization', async () => {
       const initFn1 = vi.fn();
 
-      registry.register('first', () =>
-        createMockManager({ initializeImpl: initFn1 })
-      );
+      registry.register('first', () => createMockManager({ initializeImpl: initFn1 }));
 
       await registry.initializeAll();
 
@@ -553,9 +535,7 @@ describe('ManagerRegistry', () => {
 
       // Register and initialize new manager
       const initFn2 = vi.fn();
-      registry.register('second', () =>
-        createMockManager({ initializeImpl: initFn2 })
-      );
+      registry.register('second', () => createMockManager({ initializeImpl: initFn2 }));
 
       await registry.initializeAll();
 

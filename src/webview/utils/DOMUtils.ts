@@ -151,10 +151,7 @@ export namespace DOMUtils {
    * Selector cache: avoids repeated querySelector calls on the same container.
    * Uses WeakMap so entries are automatically GC'd when the container is removed from DOM.
    */
-  const selectorCache = new WeakMap<
-    HTMLElement,
-    Map<string, HTMLElement | null>
-  >();
+  const selectorCache = new WeakMap<HTMLElement, Map<string, HTMLElement | null>>();
 
   /**
    * Query a selector within a container, using a WeakMap cache to avoid repeated DOM queries.
@@ -223,7 +220,9 @@ export namespace DOMUtils {
     const xtermHelpers = cachedQuery(container, '.xterm-helpers');
 
     // Reset dimension styles on all xterm internal elements in one pass
-    if (terminalContent) { clearDimensionStyles(terminalContent); }
+    if (terminalContent) {
+      clearDimensionStyles(terminalContent);
+    }
     if (xtermEl) {
       clearDimensionStyles(xtermEl);
       // Copy background color from viewport to eliminate visible gap
@@ -231,10 +230,18 @@ export namespace DOMUtils {
         xtermEl.style.backgroundColor = viewport.style.backgroundColor;
       }
     }
-    if (viewport) { clearDimensionStyles(viewport); }
-    if (screen) { clearDimensionStyles(screen); }
-    if (xtermRows) { xtermRows.style.width = ''; }
-    if (xtermHelpers) { xtermHelpers.style.width = ''; }
+    if (viewport) {
+      clearDimensionStyles(viewport);
+    }
+    if (screen) {
+      clearDimensionStyles(screen);
+    }
+    if (xtermRows) {
+      xtermRows.style.width = '';
+    }
+    if (xtermHelpers) {
+      xtermHelpers.style.width = '';
+    }
 
     // Reset canvas elements (not cached — NodeList changes with addons)
     const canvasElements = screen?.querySelectorAll('canvas');

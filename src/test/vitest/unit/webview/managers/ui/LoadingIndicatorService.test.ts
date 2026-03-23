@@ -25,7 +25,7 @@ describe('LoadingIndicatorService', () => {
   describe('showTerminalPlaceholder', () => {
     it('should create placeholder if not exists', () => {
       service.showTerminalPlaceholder();
-      
+
       const placeholder = document.getElementById('terminal-placeholder');
       expect(placeholder).not.toBeNull();
       expect(placeholder?.style.display).toBe('flex');
@@ -40,13 +40,13 @@ describe('LoadingIndicatorService', () => {
 
       // Show again
       service.showTerminalPlaceholder();
-      
+
       expect(placeholder.style.display).toBe('flex');
     });
 
     it('should set correct content', () => {
       service.showTerminalPlaceholder();
-      
+
       const title = document.querySelector('.placeholder-title');
       expect(title?.textContent).toBe('No Terminal Active');
     });
@@ -55,9 +55,9 @@ describe('LoadingIndicatorService', () => {
   describe('hideTerminalPlaceholder', () => {
     it('should hide existing placeholder', () => {
       service.showTerminalPlaceholder();
-      
+
       service.hideTerminalPlaceholder();
-      
+
       const placeholder = document.getElementById('terminal-placeholder');
       expect(placeholder?.style.display).toBe('none');
     });
@@ -71,7 +71,7 @@ describe('LoadingIndicatorService', () => {
   describe('showLoadingIndicator', () => {
     it('should create indicator', () => {
       const indicator = service.showLoadingIndicator('Test Loading');
-      
+
       expect(indicator.classList.contains('loading-indicator')).toBe(true);
       expect(indicator.textContent).toContain('Test Loading');
       expect(container.contains(indicator)).toBe(true);
@@ -87,20 +87,20 @@ describe('LoadingIndicatorService', () => {
     it('should remove specific indicator', () => {
       const indicator = service.showLoadingIndicator();
       expect(container.contains(indicator)).toBe(true);
-      
+
       service.hideLoadingIndicator(indicator);
-      
+
       expect(container.contains(indicator)).toBe(false);
     });
 
     it('should remove all indicators if no argument', () => {
       service.showLoadingIndicator('1');
       service.showLoadingIndicator('2');
-      
+
       expect(document.querySelectorAll('.loading-indicator').length).toBe(2);
-      
+
       service.hideLoadingIndicator();
-      
+
       expect(document.querySelectorAll('.loading-indicator').length).toBe(0);
     });
   });
@@ -108,20 +108,20 @@ describe('LoadingIndicatorService', () => {
   describe('state checks', () => {
     it('isPlaceholderVisible should return true only when displayed', () => {
       expect(service.isPlaceholderVisible()).toBe(false);
-      
+
       service.showTerminalPlaceholder();
       expect(service.isPlaceholderVisible()).toBe(true);
-      
+
       service.hideTerminalPlaceholder();
       expect(service.isPlaceholderVisible()).toBe(false);
     });
 
     it('hasLoadingIndicator should return true if any exist', () => {
       expect(service.hasLoadingIndicator()).toBe(false);
-      
+
       service.showLoadingIndicator();
       expect(service.hasLoadingIndicator()).toBe(true);
-      
+
       service.hideLoadingIndicator();
       expect(service.hasLoadingIndicator()).toBe(false);
     });

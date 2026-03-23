@@ -1,4 +1,3 @@
-
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as vscode from 'vscode';
 
@@ -37,19 +36,21 @@ vi.mock('vscode', () => ({
   },
   Disposable: class {
     dispose = vi.fn();
-    static from(..._args: any[]) { return { dispose: vi.fn() }; }
+    static from(..._args: any[]) {
+      return { dispose: vi.fn() };
+    }
   },
   ColorThemeKind: { Light: 1, Dark: 2, HighContrast: 3, HighContrastLight: 4 },
-  Uri: { 
+  Uri: {
     file: (path: string) => ({ fsPath: path, scheme: 'file', toString: () => `file://${path}` }),
     joinPath: (uri: any, ...parts: string[]) => {
       const newPath = `${uri.fsPath}/${parts.join('/')}`;
       return {
         ...uri,
         fsPath: newPath,
-        toString: () => `file://${newPath}`
+        toString: () => `file://${newPath}`,
       };
-    }
+    },
   },
 }));
 
@@ -62,7 +63,7 @@ describe('SecondaryTerminalProvider', () => {
   beforeEach(() => {
     mockContext = {
       extensionUri: { fsPath: '/test/path', scheme: 'file', toString: () => 'file:///test/path' },
-      subscriptions: []
+      subscriptions: [],
     };
 
     mockTerminalManager = {
@@ -80,7 +81,9 @@ describe('SecondaryTerminalProvider', () => {
       onStateUpdate: vi.fn(() => ({ dispose: vi.fn() })),
       onTerminalFocus: vi.fn(() => ({ dispose: vi.fn() })),
       onCliAgentStatusChange: vi.fn(() => ({ dispose: vi.fn() })),
-      getCurrentState: vi.fn().mockReturnValue({ terminals: [], availableSlots: [1, 2, 3], maxTerminals: 5 }),
+      getCurrentState: vi
+        .fn()
+        .mockReturnValue({ terminals: [], availableSlots: [1, 2, 3], maxTerminals: 5 }),
       getConnectedAgentTerminalId: vi.fn(),
       getConnectedAgentType: vi.fn(),
       getDisconnectedAgents: vi.fn().mockReturnValue(new Map()),
@@ -93,11 +96,11 @@ describe('SecondaryTerminalProvider', () => {
         postMessage: vi.fn().mockResolvedValue(true),
         asWebviewUri: vi.fn((uri) => uri),
         cspSource: 'vscode-resource:',
-        html: ''
+        html: '',
       },
       onDidDispose: vi.fn(() => ({ dispose: vi.fn() })),
       onDidChangeVisibility: vi.fn(() => ({ dispose: vi.fn() })),
-      visible: true
+      visible: true,
     };
 
     provider = new SecondaryTerminalProvider(mockContext, mockTerminalManager);
@@ -116,14 +119,14 @@ describe('SecondaryTerminalProvider', () => {
 
     it('should resolve webview view and set options', () => {
       provider!.resolveWebviewView(mockWebviewView, {} as any, {} as any);
-      
+
       expect(mockWebviewView.webview.options).toBeDefined();
       expect(mockWebviewView.webview.onDidReceiveMessage).toHaveBeenCalled();
     });
 
     it('should generate and set HTML content', () => {
       provider!.resolveWebviewView(mockWebviewView, {} as any, {} as any);
-      
+
       expect(mockWebviewView.webview.html).toContain('<!DOCTYPE html>');
       expect(mockWebviewView.webview.html).toContain('terminal-body');
     });
@@ -132,37 +135,43 @@ describe('SecondaryTerminalProvider', () => {
   describe('Message Handling (Handshake)', () => {
     it('should handle webviewReady and send extensionReady', async () => {
       provider!.resolveWebviewView(mockWebviewView, {} as any, {} as any);
-      
+
       // Extract the message handler registered with webview
       const messageHandler = mockWebviewView.webview.onDidReceiveMessage.mock.calls[0][0];
-      
+
       await messageHandler({ command: 'webviewReady' });
-      
+
       await vi.waitFor(() => {
-        expect(mockWebviewView.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
-          command: 'extensionReady'
-        }));
+        expect(mockWebviewView.webview.postMessage).toHaveBeenCalledWith(
+          expect.objectContaining({
+            command: 'extensionReady',
+          })
+        );
       });
     });
 
     it('should handle webviewInitialized and start terminal init', async () => {
       provider!.resolveWebviewView(mockWebviewView, {} as any, {} as any);
       const messageHandler = mockWebviewView.webview.onDidReceiveMessage.mock.calls[0][0];
-      
+
       // Step 1: Handshake part 1
       await messageHandler({ command: 'webviewReady' });
-      
+
       // Step 2: Handshake part 2
       await messageHandler({ command: 'webviewInitialized' });
-      
+
       // Should send settings and init command
       await vi.waitFor(() => {
-        expect(mockWebviewView.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
-          command: 'settingsResponse'
-        }));
-        expect(mockWebviewView.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
-          command: 'init'
-        }));
+        expect(mockWebviewView.webview.postMessage).toHaveBeenCalledWith(
+          expect.objectContaining({
+            command: 'settingsResponse',
+          })
+        );
+        expect(mockWebviewView.webview.postMessage).toHaveBeenCalledWith(
+          expect.objectContaining({
+            command: 'init',
+          })
+        );
       });
     });
 
@@ -207,15 +216,18 @@ describe('SecondaryTerminalProvider', () => {
   describe('Theme Sync', () => {
     it('should notify WebView when VS Code theme changes and mode is auto', () => {
       provider!.resolveWebviewView(mockWebviewView, {} as any, {} as any);
-      
+
       // Simulate theme change trigger
-      const themeChangeCallback = (vscode.window.onDidChangeActiveColorTheme as any).mock.calls[0][0];
+      const themeChangeCallback = (vscode.window.onDidChangeActiveColorTheme as any).mock
+        .calls[0][0];
       themeChangeCallback({ kind: 2 }); // Dark theme
-      
-      expect(mockWebviewView.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
-        command: 'themeChanged',
-        theme: 'dark'
-      }));
+
+      expect(mockWebviewView.webview.postMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          command: 'themeChanged',
+          theme: 'dark',
+        })
+      );
     });
   });
 });

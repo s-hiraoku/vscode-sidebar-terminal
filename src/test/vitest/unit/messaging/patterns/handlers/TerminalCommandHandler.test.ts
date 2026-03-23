@@ -1,4 +1,3 @@
-
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TerminalCommandHandler } from '../../../../../../messaging/patterns/handlers/TerminalCommandHandler';
 import { IMessageHandlerContext } from '../../../../../../messaging/patterns/core/IMessageHandler';
@@ -48,10 +47,10 @@ describe('TerminalCommandHandler', () => {
   it('should handle output command', async () => {
     const mockTerminal = { write: vi.fn() };
     mockCoordinator.getTerminalInstance.mockReturnValue({ terminal: mockTerminal });
-    
+
     const msg = { command: 'output', terminalId: 't1', data: 'hello' };
     await handler.handle(msg as any, mockContext);
-    
+
     expect(mockCoordinator.getTerminalInstance).toHaveBeenCalledWith('t1');
     expect(mockTerminal.write).toHaveBeenCalledWith('hello');
   });
@@ -77,20 +76,20 @@ describe('TerminalCommandHandler', () => {
   it('should handle clear command', async () => {
     const mockTerminal = { clear: vi.fn() };
     mockCoordinator.getTerminalInstance.mockReturnValue({ terminal: mockTerminal });
-    
+
     const msg = { command: 'clear', terminalId: 't1' };
     await handler.handle(msg as any, mockContext);
-    
+
     expect(mockTerminal.clear).toHaveBeenCalled();
   });
 
   it('should handle clear command without ID (use active)', async () => {
     const mockTerminal = { clear: vi.fn() };
     mockCoordinator.getTerminalInstance.mockReturnValue({ terminal: mockTerminal });
-    
+
     const msg = { command: 'clear' };
     await handler.handle(msg as any, mockContext);
-    
+
     expect(mockCoordinator.getActiveTerminalId).toHaveBeenCalled();
     expect(mockCoordinator.getTerminalInstance).toHaveBeenCalledWith('active-term');
     expect(mockTerminal.clear).toHaveBeenCalled();
@@ -98,6 +97,8 @@ describe('TerminalCommandHandler', () => {
 
   it('should throw error if coordinator is missing', async () => {
     mockContext.coordinator = undefined;
-    await expect(handler.handle({ command: 'init' } as any, mockContext)).rejects.toThrow('Coordinator not available');
+    await expect(handler.handle({ command: 'init' } as any, mockContext)).rejects.toThrow(
+      'Coordinator not available'
+    );
   });
 });

@@ -142,10 +142,15 @@ export class TerminalAutoSaveService {
         });
 
         // eslint-disable-next-line no-console
-        console.log(`[AUTO-SAVE] Saved scrollback before sleep for ${terminalId}: ${lines.length} lines`);
+        console.log(
+          `[AUTO-SAVE] Saved scrollback before sleep for ${terminalId}: ${lines.length} lines`
+        );
       } catch (error) {
         // eslint-disable-next-line no-console
-        console.warn(`[AUTO-SAVE] Failed to save scrollback before sleep for ${terminalId}:`, error);
+        console.warn(
+          `[AUTO-SAVE] Failed to save scrollback before sleep for ${terminalId}:`,
+          error
+        );
       }
     }
   }
@@ -341,17 +346,17 @@ export class TerminalAutoSaveService {
           terminalLogger.debug(
             `[AUTO-SAVE] Periodic save for terminal ${terminalId}: ${lines.length} lines`
           );
-        } else if (this.coordinator && typeof this.coordinator.postMessageToExtension === 'function') {
+        } else if (
+          this.coordinator &&
+          typeof this.coordinator.postMessageToExtension === 'function'
+        ) {
           this.coordinator.postMessageToExtension(message);
           terminalLogger.debug(
             `[AUTO-SAVE] Periodic save via coordinator for terminal ${terminalId}: ${lines.length} lines`
           );
         }
       } catch (error) {
-        terminalLogger.warn(
-          `[AUTO-SAVE] Periodic save failed for terminal ${terminalId}:`,
-          error
-        );
+        terminalLogger.warn(`[AUTO-SAVE] Periodic save failed for terminal ${terminalId}:`, error);
       }
     }, TerminalAutoSaveService.PERIODIC_SAVE_INTERVAL);
 
@@ -362,6 +367,8 @@ export class TerminalAutoSaveService {
     TerminalAutoSaveService.registeredTerminals.set(terminalId, { terminal, serializeAddon });
     TerminalAutoSaveService.setupVisibilityChangeHandler();
 
-    terminalLogger.info(`[AUTO-SAVE] Scrollback auto-save enabled for terminal: ${terminalId} (periodic: ${TerminalAutoSaveService.PERIODIC_SAVE_INTERVAL}ms)`);
+    terminalLogger.info(
+      `[AUTO-SAVE] Scrollback auto-save enabled for terminal: ${terminalId} (periodic: ${TerminalAutoSaveService.PERIODIC_SAVE_INTERVAL}ms)`
+    );
   }
 }

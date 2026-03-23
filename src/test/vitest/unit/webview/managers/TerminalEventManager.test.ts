@@ -98,7 +98,7 @@ describe('TerminalEventManager', () => {
     it('should skip legacy input handler when InputManager is present', () => {
       // Setup coordinator with InputManager
       (mockCoordinator as any).inputManager = {};
-      
+
       manager.setupTerminalEvents(mockTerminal as Terminal, 't1', mockContainer);
 
       expect(mockTerminal.onData).not.toHaveBeenCalled();
@@ -116,7 +116,7 @@ describe('TerminalEventManager', () => {
       expect(mockCoordinator.postMessageToExtension).toHaveBeenCalledWith({
         command: 'input',
         data: 'test input',
-        terminalId: 't1'
+        terminalId: 't1',
       });
     });
   });
@@ -124,7 +124,7 @@ describe('TerminalEventManager', () => {
   describe('Click Handling', () => {
     it('should setup click handler for activation', () => {
       manager.setupTerminalEvents(mockTerminal as Terminal, 't1', mockContainer);
-      
+
       expect(mockRegistry.register).toHaveBeenCalledWith(
         'terminal-t1-click',
         expect.anything(),
@@ -135,7 +135,7 @@ describe('TerminalEventManager', () => {
 
     it('should activate terminal on click if no selection', () => {
       manager.setupTerminalEvents(mockTerminal as Terminal, 't1', mockContainer);
-      
+
       // Get registered handler
       const calls = (mockRegistry.register as any).mock.calls;
       const clickCall = calls.find((call: any) => call[0] === 'terminal-t1-click');
@@ -150,7 +150,7 @@ describe('TerminalEventManager', () => {
 
     it('should NOT activate terminal on click if selection exists', () => {
       manager.setupTerminalEvents(mockTerminal as Terminal, 't1', mockContainer);
-      
+
       const calls = (mockRegistry.register as any).mock.calls;
       const clickCall = calls.find((call: any) => call[0] === 'terminal-t1-click');
       const clickHandler = clickCall[3];
@@ -165,14 +165,14 @@ describe('TerminalEventManager', () => {
   describe('Focus Optimization', () => {
     it('should register focus and blur handlers', () => {
       manager.setupTerminalEvents(mockTerminal as Terminal, 't1', mockContainer);
-      
+
       expect(mockRegistry.register).toHaveBeenCalledWith(
         'terminal-t1-focus',
         mockTerminal.textarea,
         'focus',
         expect.any(Function)
       );
-      
+
       expect(mockRegistry.register).toHaveBeenCalledWith(
         'terminal-t1-blur',
         mockTerminal.textarea,
@@ -213,7 +213,7 @@ describe('TerminalEventManager', () => {
       vi.useFakeTimers();
       // textarea does not have 'focused' attribute initially
       manager.focusTerminal(mockTerminal as Terminal, 't1');
-      
+
       vi.advanceTimersByTime(10);
       expect(mockTerminal.focus).toHaveBeenCalled();
       vi.useRealTimers();

@@ -169,11 +169,7 @@ describe('CliAgentCoordinator', () => {
         terminalName: 'Terminal terminal-1',
         agentType: 'claude',
       });
-      expect(deps.updateCliAgentStatusUI).toHaveBeenCalledWith(
-        'terminal-1',
-        'connected',
-        'claude'
-      );
+      expect(deps.updateCliAgentStatusUI).toHaveBeenCalledWith('terminal-1', 'connected', 'claude');
     });
 
     it('should find terminal by name and update', () => {
@@ -216,11 +212,37 @@ describe('CliAgentCoordinator', () => {
         status: 'connected',
         agentType: 'gemini',
       });
-      expect(deps.updateCliAgentStatusUI).toHaveBeenCalledWith(
-        'terminal-2',
-        'connected',
-        'gemini'
-      );
+      expect(deps.updateCliAgentStatusUI).toHaveBeenCalledWith('terminal-2', 'connected', 'gemini');
+    });
+  });
+
+  describe('agent state helpers', () => {
+    it('should delegate removeTerminalState', () => {
+      coordinator.removeTerminalState('terminal-9');
+
+      expect(deps.removeTerminalState).toHaveBeenCalledWith('terminal-9');
+    });
+
+    it('should delegate getAgentStats', () => {
+      const stats = {
+        totalAgents: 1,
+        connectedAgents: 1,
+        disconnectedAgents: 0,
+        currentConnectedId: 'terminal-1',
+        agentTypes: ['claude'],
+      };
+      vi.mocked(deps.getAgentStats).mockReturnValue(stats);
+
+      const result = coordinator.getAgentStats();
+
+      expect(deps.getAgentStats).toHaveBeenCalled();
+      expect(result).toBe(stats);
+    });
+
+    it('should dispose the underlying state manager', () => {
+      coordinator.dispose();
+
+      expect(deps.disposeStateManager).toHaveBeenCalled();
     });
   });
 

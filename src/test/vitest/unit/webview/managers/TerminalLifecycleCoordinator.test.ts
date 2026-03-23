@@ -83,10 +83,7 @@ describe('TerminalLifecycleCoordinator', () => {
       postMessageToExtension: vi.fn(),
     };
 
-    coordinator = new TerminalLifecycleCoordinator(
-      mockSplitManager as any,
-      mockCoordinator as any
-    );
+    coordinator = new TerminalLifecycleCoordinator(mockSplitManager as any, mockCoordinator as any);
   });
 
   afterEach(() => {

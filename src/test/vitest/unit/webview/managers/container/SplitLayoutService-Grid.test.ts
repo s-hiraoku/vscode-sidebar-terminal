@@ -149,7 +149,9 @@ describe('SplitLayoutService - Grid Layout', () => {
       service.activateGridLayout(terminalBody, getTerminalIds(6), (id) => containers.get(id));
 
       for (let i = 1; i <= 5; i++) {
-        const wrapper = document.querySelector(`[data-terminal-wrapper-id="term-${i}"]`) as HTMLElement;
+        const wrapper = document.querySelector(
+          `[data-terminal-wrapper-id="term-${i}"]`
+        ) as HTMLElement;
         expect(wrapper?.style.gridRow).toBe('1');
       }
     });

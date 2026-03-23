@@ -20,7 +20,7 @@ describe('TerminalCommand', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
-    
+
     mockTerminalManager = {
       hasActiveTerminal: vi.fn().mockReturnValue(true),
       getActiveTerminalId: vi.fn().mockReturnValue('term-1'),
@@ -33,7 +33,7 @@ describe('TerminalCommand', () => {
   describe('handleSendToTerminal', () => {
     it('should send provided content directly', () => {
       command.handleSendToTerminal('echo hello');
-      
+
       expect(mockTerminalManager.sendInput).toHaveBeenCalledWith('echo hello', 'term-1');
     });
 
@@ -46,24 +46,24 @@ describe('TerminalCommand', () => {
       vi.mocked(vscode.window.showInputBox).mockReturnValue(inputPromise as any);
 
       command.handleSendToTerminal();
-      
+
       expect(vscode.window.showInputBox).toHaveBeenCalled();
-      
+
       // Resolve the promise
       resolveInput!('user-input');
-      
+
       // Wait for .then() to execute
       await Promise.resolve();
       await Promise.resolve(); // extra tick just in case
-      
+
       expect(mockTerminalManager.sendInput).toHaveBeenCalledWith('user-input', 'term-1');
     });
 
     it('should show warning if no active terminal', () => {
       mockTerminalManager.hasActiveTerminal.mockReturnValue(false);
-      
+
       command.handleSendToTerminal('hello');
-      
+
       expect(vscode.window.showWarningMessage).toHaveBeenCalled();
       expect(mockTerminalManager.sendInput).not.toHaveBeenCalled();
     });
@@ -72,10 +72,12 @@ describe('TerminalCommand', () => {
       mockTerminalManager.sendInput.mockImplementation(() => {
         throw new Error('Send failed');
       });
-      
+
       command.handleSendToTerminal('hello');
-      
-      expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(expect.stringContaining('Send failed'));
+
+      expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
+        expect.stringContaining('Send failed')
+      );
     });
   });
 });

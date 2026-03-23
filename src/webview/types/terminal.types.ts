@@ -11,11 +11,7 @@ import type { AgentType as CoreAgentType } from '../../types/shared';
 export type CliAgentStatusType = 'connected' | 'disconnected' | 'none';
 
 // Agent type definitions
-export type AgentType =
-  | CoreAgentType
-  | 'codeium'
-  | 'other'
-  | null;
+export type AgentType = CoreAgentType | 'codeium' | 'other' | null;
 
 // Terminal state types
 export type TerminalState = 'active' | 'inactive' | 'starting' | 'stopping' | 'error';

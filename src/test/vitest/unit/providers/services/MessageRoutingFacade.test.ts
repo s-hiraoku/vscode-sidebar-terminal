@@ -21,7 +21,7 @@ describe('MessageRoutingFacade', () => {
     it('should register a single handler', () => {
       const handler = vi.fn();
       facade.registerHandler('test', handler, 'terminal', 'Description');
-      
+
       expect(facade.hasHandler('test')).toBe(true);
       expect(facade.getHandlerCount()).toBe(1);
       expect(facade.getRegisteredCommands()).toContain('test');
@@ -30,11 +30,11 @@ describe('MessageRoutingFacade', () => {
     it('should register multiple handlers', () => {
       const handlers = [
         { command: 'cmd1', handler: vi.fn(), category: 'ui' as const },
-        { command: 'cmd2', handler: vi.fn(), category: 'settings' as const }
+        { command: 'cmd2', handler: vi.fn(), category: 'settings' as const },
       ];
-      
+
       facade.registerHandlers(handlers);
-      
+
       expect(facade.getHandlerCount()).toBe(2);
       expect(facade.getHandlersByCategory('ui')).toHaveLength(1);
       expect(facade.getHandlersByCategory('settings')).toHaveLength(1);
@@ -50,10 +50,10 @@ describe('MessageRoutingFacade', () => {
     it('should handle and dispatch valid message', async () => {
       const handler = vi.fn().mockResolvedValue(undefined);
       facade.registerHandler('greet', handler);
-      
+
       const message = { command: 'greet', data: 'hello' };
       const result = await facade.handleMessage(message);
-      
+
       expect(result).toBe(true);
       expect(handler).toHaveBeenCalledWith(message);
     });
@@ -71,7 +71,7 @@ describe('MessageRoutingFacade', () => {
     it('should throw error if handler fails', async () => {
       const handler = vi.fn().mockRejectedValue(new Error('Handler fail'));
       facade.registerHandler('fail', handler);
-      
+
       await expect(facade.handleMessage({ command: 'fail' })).rejects.toThrow('Handler fail');
     });
   });
@@ -79,7 +79,7 @@ describe('MessageRoutingFacade', () => {
   describe('Validation and Lifecycle', () => {
     it('should validate required handlers', () => {
       facade.registerHandler('critical', vi.fn());
-      
+
       // Should not throw and log success/failure
       facade.validateHandlers(['critical']);
       facade.validateHandlers(['missing']);
@@ -94,7 +94,7 @@ describe('MessageRoutingFacade', () => {
     it('should clear all handlers', () => {
       facade.registerHandler('test', vi.fn());
       facade.clear();
-      
+
       expect(facade.getHandlerCount()).toBe(0);
       expect(facade.hasHandler('test')).toBe(false);
       expect(facade.isInitialized()).toBe(false);
@@ -105,7 +105,7 @@ describe('MessageRoutingFacade', () => {
     it('should log registered handlers without throwing', () => {
       facade.registerHandler('t1', vi.fn(), 'terminal');
       facade.registerHandler('u1', vi.fn()); // Uncategorized
-      
+
       expect(() => facade.logRegisteredHandlers()).not.toThrow();
     });
   });

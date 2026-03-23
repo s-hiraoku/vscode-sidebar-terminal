@@ -90,10 +90,7 @@ export interface InteractionConfig {
  * Replacement for the legacy TerminalConfig
  */
 export interface ExtensionTerminalConfig
-  extends BaseTerminalConfig,
-    DisplayConfig,
-    ShellConfig,
-    TerminalLimitsConfig {
+  extends BaseTerminalConfig, DisplayConfig, ShellConfig, TerminalLimitsConfig {
   readonly shell: string; // Extension では必須
   readonly shellArgs: string[]; // Extension では必須
   readonly cursor?: {
@@ -206,11 +203,7 @@ export interface WebViewSettingsPayload {
  * Unified type containing all configuration items
  */
 export interface CompleteTerminalSettings
-  extends BaseTerminalConfig,
-    DisplayConfig,
-    ShellConfig,
-    TerminalLimitsConfig,
-    InteractionConfig {}
+  extends BaseTerminalConfig, DisplayConfig, ShellConfig, TerminalLimitsConfig, InteractionConfig {}
 
 // ===== WebView-Specific Configuration =====
 
