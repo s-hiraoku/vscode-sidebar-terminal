@@ -437,8 +437,13 @@ describe('SecondaryTerminalProvider - Integration Tests', () => {
 
       await capturedMessageHandler({ command: 'webviewReady' });
 
-      // Provider should be initialized
-      expect(provider._isInitialized).toBe(true);
+      // Handshake state is now owned by WebViewInitHandler
+      expect(provider._webViewInitHandler.isInitialized).toBe(true);
+      expect(mockWebview.postMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          command: 'extensionReady',
+        })
+      );
     });
   });
 
@@ -680,8 +685,13 @@ describe('SecondaryTerminalProvider - Integration Tests', () => {
         command: 'testCommand',
       });
 
-      // Message should be queued (pending)
-      expect(newProvider._pendingMessages.length).toBeGreaterThanOrEqual(0);
+      // Message queue is now owned by WebViewInitHandler and should not hit the WebView yet
+      expect(newProvider._webViewInitHandler.isInitialized).toBe(false);
+      expect(mockWebview.postMessage).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          command: 'testCommand',
+        })
+      );
 
       newProvider.dispose();
     });

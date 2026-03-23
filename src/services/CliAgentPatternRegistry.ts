@@ -112,7 +112,13 @@ export class CliAgentPatternRegistry {
           // Claude's waiting prompt can include inline hint text or terminal-mode residue.
           /^❯(?:\s+.*)?$/,
         ],
-        toolApprovalRegexPatterns: [/Allow\s+(once|always)\?/i, /\(Y\/n\)/, /\(y\/N\)/],
+        toolApprovalRegexPatterns: [
+          /Allow\s+(once|always)\?/i,
+          /needs your permission/i,
+          /\(Y\/n\)/,
+          /\(y\/N\)/,
+          /\(y\/n\/always\)/i,
+        ],
       },
     });
 
@@ -159,7 +165,14 @@ export class CliAgentPatternRegistry {
       terminationRegexPatterns: [/Agent powering down\.\s*Goodbye!/i],
       waitingPatterns: {
         inputPromptRegexPatterns: [/^gemini\s*>\s*$/i],
-        toolApprovalRegexPatterns: [/Do you approve/i],
+        toolApprovalRegexPatterns: [
+          /Do you approve/i,
+          /Allow\s+command/i,
+          /Approve\?\s*\(/i,
+          /Proceed\s+(Once|Always)/i,
+          /\[y\/N\]/,
+          /\(y\/n\/always\)/i,
+        ],
       },
     });
 
@@ -174,7 +187,11 @@ export class CliAgentPatternRegistry {
       terminationRegexPatterns: [/\[process exited with code \d+\]/i],
       waitingPatterns: {
         inputPromptRegexPatterns: [/^codex\s*>\s*$/i],
-        toolApprovalRegexPatterns: [],
+        toolApprovalRegexPatterns: [
+          /ask me to approve/i,
+          /\[y\/N\]/,
+          /\(Y\/n\)/,
+        ],
       },
     });
 
@@ -189,7 +206,12 @@ export class CliAgentPatternRegistry {
       terminationRegexPatterns: [/\[process exited with code \d+\]/i],
       waitingPatterns: {
         inputPromptRegexPatterns: [/^copilot\s*>\s*$/i],
-        toolApprovalRegexPatterns: [],
+        toolApprovalRegexPatterns: [
+          /Yes,\s+proceed/i,
+          /Yes,\s+and\s+(remember|approve)/i,
+          /\[y\/N\]/,
+          /\(Y\/n\)/,
+        ],
       },
     });
 

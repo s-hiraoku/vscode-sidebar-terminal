@@ -4,6 +4,8 @@
  * - Tab creation, switching, and closing
  * - Drag & drop reordering
  * - Tab state persistence
+ *
+ * Event coordination is delegated to TabEventCoordinator.
  */
 
 import { Terminal } from '@xterm/xterm';
@@ -12,6 +14,7 @@ import { TerminalTabList, TerminalTab, TerminalTabEvents } from '../components/T
 import { webview as log } from '../../utils/logger';
 import { arraysEqual } from '../../utils/arrayUtils';
 import { TerminalTheme } from '../types/theme.types';
+import { TabEventCoordinator } from './TabEventCoordinator';
 
 interface TabSyncInfo {
   id: string;
@@ -45,10 +48,26 @@ export class TerminalTabManager implements TerminalTabEvents {
   private pendingDeletions: Set<string> = new Set();
   // 🔧 FIX: Track tabs being created to prevent duplicate additions
   private pendingCreations: Set<string> = new Set();
-  // 🔧 FIX: Track pending timeouts for proper cleanup on dispose
-  private pendingTimeouts: Set<ReturnType<typeof setTimeout>> = new Set();
 
-  constructor() {}
+  // Delegated event coordinator
+  private eventCoordinator: TabEventCoordinator;
+
+  constructor() {
+    this.eventCoordinator = new TabEventCoordinator({
+      getCoordinator: () => this.coordinator,
+      getTabCount: () => this.tabs.size,
+      getTabOrder: () => this.tabOrder,
+      hasTab: (tabId: string) => this.tabs.has(tabId),
+      setActiveTab: (tabId: string) => this.setActiveTab(tabId),
+      setTabOrder: (order: string[]) => {
+        this.tabOrder = order;
+      },
+      rebuildTabsInOrder: () => this.rebuildTabsInOrder(),
+      hasPendingDeletion: (tabId: string) => this.pendingDeletions.has(tabId),
+      addPendingDeletion: (tabId: string) => this.pendingDeletions.add(tabId),
+    });
+    this.eventCoordinator.setActiveTabIdGetter(() => this.getActiveTabId());
+  }
 
   public setCoordinator(coordinator: IManagerCoordinator): void {
     this.coordinator = coordinator;
@@ -118,182 +137,36 @@ export class TerminalTabManager implements TerminalTabEvents {
   }
 
   /**
-   * Helper: Schedule a timeout and track it for cleanup
-   */
-  private scheduleTimeout(callback: () => void, delay: number): ReturnType<typeof setTimeout> {
-    const timeoutId = setTimeout(() => {
-      this.pendingTimeouts.delete(timeoutId);
-      callback();
-    }, delay);
-    this.pendingTimeouts.add(timeoutId);
-    return timeoutId;
-  }
-
-  /**
-   * TerminalTabEvents implementation
+   * TerminalTabEvents implementation - delegated to TabEventCoordinator
    */
   public onTabClick = (tabId: string): void => {
-    log(`🗂️ Tab clicked: ${tabId}`);
-
-    // Switch to the clicked terminal
-    if (this.coordinator) {
-      this.coordinator.setActiveTerminalId(tabId);
-
-      // If in fullscreen mode, switch the fullscreen terminal
-      this.handleFullscreenModeSwitch(tabId);
-    }
-
-    this.setActiveTab(tabId);
+    this.eventCoordinator.onTabClick(tabId);
   };
 
   public onTabClose = (tabId: string): void => {
-    log(`🗂️ Tab close requested: ${tabId}`);
-
-    // 🔧 FIX: Check if deletion is already in progress to prevent duplicate deletions
-    if (this.pendingDeletions.has(tabId)) {
-      log(`⏭️ [TAB-CLOSE] Deletion already in progress, skipping: ${tabId}`);
-      return;
-    }
-
-    // Protect the last tab from being closed
-    if (this.tabs.size <= 1) {
-      console.warn('⚠️ Cannot close the last terminal tab');
-      this.showNotification('Cannot close the last terminal');
-      return;
-    }
-
-    // 🔧 FIX: Mark as pending deletion BEFORE any operations
-    this.pendingDeletions.add(tabId);
-    log(`🗂️ [TAB-CLOSE] Marked as pending deletion: ${tabId}`);
-
-    // Handle display mode transition before closing
-    this.handleDisplayModeAfterClose(tabId);
-
-    // Close the terminal via coordinator
-    this.closeTerminalSafely(tabId);
+    this.eventCoordinator.onTabClose(tabId);
   };
 
   public onTabRename = (tabId: string, newName: string): void => {
-    log(`🗂️ Tab rename: ${tabId} -> ${newName}`);
-
+    // Update local tab state, then delegate to coordinator for extension notification
     const tab = this.tabs.get(tabId);
     if (tab) {
       tab.name = newName;
       this.updateTab(tabId, { name: newName });
-
-      // Notify coordinator about name change
-      this.coordinator?.postMessageToExtension({
-        command: 'renameTerminal',
-        terminalId: tabId,
-        newName: newName,
-      });
     }
+    this.eventCoordinator.onTabRename(tabId, newName);
   };
 
   public onTabReorder = (fromIndex: number, toIndex: number, nextOrder: string[]): void => {
-    log(`🗂️ Tab reorder: ${fromIndex} -> ${toIndex}`, nextOrder);
-
-    if (!Array.isArray(nextOrder) || nextOrder.length === 0) {
-      return;
-    }
-
-    const normalizedOrder = nextOrder.filter((id) => this.tabs.has(id));
-    const remaining = this.tabOrder.filter((id) => !normalizedOrder.includes(id));
-    const finalOrder = [...normalizedOrder, ...remaining];
-
-    if (finalOrder.length === 0) {
-      return;
-    }
-
-    if (
-      finalOrder.length === this.tabOrder.length &&
-      finalOrder.every((id, index) => this.tabOrder[index] === id)
-    ) {
-      return;
-    }
-
-    this.tabOrder = finalOrder;
-
-    // Rebuild the tab UI in new order
-    this.rebuildTabsInOrder();
-
-    // Reorder terminal containers in the DOM
-    if (this.coordinator) {
-      const managers = this.coordinator.getManagers();
-      if (managers.terminalContainer) {
-        managers.terminalContainer.reorderContainers(this.tabOrder);
-      }
-
-      // Refresh split mode layout if active
-      this.refreshSplitModeIfActive();
-    }
-
-    // Notify extension host so state updates preserve the new order
-    if (this.coordinator && typeof this.coordinator.postMessageToExtension === 'function') {
-      this.coordinator.postMessageToExtension({
-        command: 'reorderTerminals',
-        order: [...this.tabOrder],
-      });
-    }
+    this.eventCoordinator.onTabReorder(fromIndex, toIndex, nextOrder);
   };
 
   public onNewTab = (): void => {
-    log('🗂️ New tab requested');
-
-    if (!this.coordinator) {
-      return;
-    }
-
-    const currentMode = this.getCurrentMode();
-    const currentTerminalCount = this.tabs.size;
-    const newTerminalId = this.generateTerminalId();
-    const terminalName = `Terminal ${currentTerminalCount + 1}`;
-
-    log(`📊 Current state: mode=${currentMode}, terminals=${currentTerminalCount}`);
-
-    // If in fullscreen mode with 1+ terminals, switch to split mode first
-    if (currentMode === 'fullscreen' && currentTerminalCount > 0) {
-      log(`🔀 Fullscreen → Split: Showing ${currentTerminalCount} existing terminals first`);
-
-      const displayManager = this.getDisplayManager();
-      if (displayManager) {
-        // Step 1: Show all existing terminals in split mode
-        displayManager.showAllTerminalsSplit();
-
-        // Step 2: Wait for layout to complete, then add new terminal
-        // Increased delay to ensure split layout is fully applied
-        this.scheduleTimeout(() => {
-          log(
-            `➕ Adding new terminal (${currentTerminalCount + 1}/${currentTerminalCount + 1}): ${newTerminalId}`
-          );
-          this.coordinator!.createTerminal(newTerminalId, terminalName);
-        }, 250);
-      }
-    } else {
-      // Normal or split mode: directly create terminal
-      log(`➕ Adding new terminal directly: ${newTerminalId}`);
-      this.coordinator.createTerminal(newTerminalId, terminalName);
-    }
+    this.eventCoordinator.onNewTab();
   };
 
   public onModeToggle = (): void => {
-    log('🖥️ Mode toggle requested');
-
-    if (this.coordinator) {
-      const displayManager = this.coordinator.getDisplayModeManager?.();
-      if (displayManager) {
-        const currentMode = displayManager.getCurrentMode();
-        const activeTabId = this.getActiveTabId();
-
-        if (currentMode === 'fullscreen' && this.tabs.size > 1) {
-          log('🔀 Fullscreen -> Split mode');
-          displayManager.toggleSplitMode();
-        } else if (activeTabId) {
-          log(`🔍 Switching to fullscreen mode for: ${activeTabId}`);
-          displayManager.showTerminalFullscreen(activeTabId);
-        }
-      }
-    }
+    this.eventCoordinator.onModeToggle();
   };
 
   /**
@@ -395,7 +268,7 @@ export class TerminalTabManager implements TerminalTabEvents {
 
     // 🔧 FIX: Clear pending deletion after a delay to prevent race conditions
     // Extended from 300ms to 500ms to allow for async message processing
-    this.scheduleTimeout(() => {
+    this.eventCoordinator.scheduleTimeout(() => {
       this.pendingDeletions.delete(terminalId);
       log(`🗂️ [TAB-REMOVE] Deletion tracking cleared for: ${terminalId}`);
     }, 500);
@@ -605,153 +478,6 @@ export class TerminalTabManager implements TerminalTabEvents {
     this.tabList.reorderTabs(this.tabOrder);
   }
 
-  private generateTerminalId(): string {
-    const timestamp = Date.now();
-    const random = Math.random().toString(36).substring(2, 8);
-    return `terminal-${timestamp}-${random}`;
-  }
-
-  /**
-   * Helper: Get DisplayModeManager instance
-   */
-  private getDisplayManager() {
-    return this.coordinator?.getDisplayModeManager?.();
-  }
-
-  /**
-   * Helper: Get current display mode
-   */
-  private getCurrentMode(): 'normal' | 'fullscreen' | 'split' | null {
-    return this.getDisplayManager()?.getCurrentMode() ?? null;
-  }
-
-  /**
-   * Helper: Switch fullscreen to specific terminal
-   */
-  private handleFullscreenModeSwitch(terminalId: string): void {
-    const displayManager = this.getDisplayManager();
-    if (displayManager && displayManager.getCurrentMode() === 'fullscreen') {
-      displayManager.showTerminalFullscreen(terminalId);
-    }
-  }
-
-  /**
-   * Helper: Handle display mode transition after closing a terminal
-   */
-  private handleDisplayModeAfterClose(tabId: string): void {
-    const displayManager = this.getDisplayManager();
-    const currentMode = this.getCurrentMode();
-    const remainingCount = this.tabs.size - 1;
-
-    if (!displayManager) {
-      return;
-    }
-
-    if (currentMode === 'fullscreen') {
-      this.handleFullscreenModeAfterClose(tabId, remainingCount, displayManager);
-    } else if (currentMode === 'split') {
-      this.handleSplitModeAfterClose(remainingCount, displayManager);
-    }
-  }
-
-  /**
-   * Helper: Handle fullscreen mode after closing terminal
-   */
-  private handleFullscreenModeAfterClose(
-    closedTabId: string,
-    remainingCount: number,
-    displayManager: ReturnType<NonNullable<IManagerCoordinator['getDisplayModeManager']>>
-  ): void {
-    if (!displayManager) {
-      return;
-    }
-
-    const remainingTerminalId = this.tabOrder.find((id) => id !== closedTabId);
-    if (remainingTerminalId) {
-      this.scheduleTimeout(() => displayManager.showTerminalFullscreen(remainingTerminalId), 50);
-    } else {
-      displayManager.setDisplayMode('normal');
-    }
-  }
-
-  /**
-   * Helper: Handle split mode after closing terminal
-   */
-  private handleSplitModeAfterClose(
-    remainingCount: number,
-    displayManager: ReturnType<NonNullable<IManagerCoordinator['getDisplayModeManager']>>
-  ): void {
-    if (!displayManager) {
-      return;
-    }
-
-    if (remainingCount === 1) {
-      this.scheduleTimeout(() => displayManager.setDisplayMode('normal'), 50);
-    } else {
-      this.scheduleTimeout(() => displayManager.showAllTerminalsSplit(), 50);
-    }
-  }
-
-  /**
-   * Helper: Close terminal safely
-   */
-  private closeTerminalSafely(tabId: string): void {
-    if (!this.coordinator) {
-      return;
-    }
-
-    if ('deleteTerminalSafely' in this.coordinator) {
-      (
-        this.coordinator as unknown as { deleteTerminalSafely: (id: string) => void }
-      ).deleteTerminalSafely(tabId);
-    } else {
-      this.coordinator.closeTerminal(tabId);
-    }
-  }
-
-  /**
-   * Helper: Show notification to user
-   */
-  private showNotification(message: string): void {
-    if (this.coordinator) {
-      const managers = this.coordinator.getManagers();
-      if (managers.notification) {
-        managers.notification.showWarning(message);
-      }
-    }
-  }
-
-  /**
-   * Helper: Check if should switch to split mode (when in fullscreen)
-   */
-  private shouldSwitchToSplitMode(): boolean {
-    return this.getCurrentMode() === 'fullscreen';
-  }
-
-  /**
-   * Helper: Switch to split mode and execute callback
-   */
-  private switchToSplitModeAndExecute(callback: () => void, delay: number = 250): void {
-    const displayManager = this.getDisplayManager();
-    if (displayManager) {
-      log('🔀 Switching to split mode...');
-      // Show all terminals in split mode (not just set the mode)
-      displayManager.showAllTerminalsSplit();
-      log(`⏱️ Waiting ${delay}ms for layout to complete...`);
-      this.scheduleTimeout(callback, delay);
-    }
-  }
-
-  /**
-   * Helper: Refresh split mode layout if currently active
-   */
-  private refreshSplitModeIfActive(): void {
-    const displayManager = this.getDisplayManager();
-    if (displayManager && displayManager.getCurrentMode() === 'split') {
-      this.scheduleTimeout(() => displayManager.showAllTerminalsSplit(), 50);
-    }
-  }
-
   // arraysEqual removed - using shared utility from utils/arrayUtils.ts
 
   /**
@@ -764,17 +490,8 @@ export class TerminalTabManager implements TerminalTabEvents {
 
     log(`🎯 Terminal created: ${terminalId}, terminals: ${previousCount} → ${newCount}`);
 
-    // Make the new tab active and refresh split mode if needed
-    this.scheduleTimeout(() => {
-      this.setActiveTab(terminalId);
-
-      // If in split mode, refresh layout to include new terminal
-      const currentMode = this.getCurrentMode();
-      if (currentMode === 'split') {
-        log(`🔄 Refreshing split layout with ${newCount} terminals`);
-        this.refreshSplitModeIfActive();
-      }
-    }, 100);
+    // Delegate post-creation coordination (active tab, split refresh) to event coordinator
+    this.eventCoordinator.handleTerminalCreated(terminalId);
   }
 
   public handleTerminalClosed(terminalId: string): void {
@@ -841,9 +558,8 @@ export class TerminalTabManager implements TerminalTabEvents {
    * Cleanup
    */
   public dispose(): void {
-    // 🔧 FIX: Clear all pending timeouts to prevent memory leaks
-    this.pendingTimeouts.forEach((timeoutId) => clearTimeout(timeoutId));
-    this.pendingTimeouts.clear();
+    // Dispose event coordinator (clears its pending timeouts)
+    this.eventCoordinator.dispose();
 
     if (this.tabList) {
       this.tabList.dispose();

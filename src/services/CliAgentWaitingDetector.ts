@@ -39,6 +39,16 @@ export class CliAgentWaitingDetector {
     this.debounceTimers.set(terminalId, timer);
   }
 
+  public analyzeImmediately(terminalId: string, data: string): void {
+    const existingTimer = this.debounceTimers.get(terminalId);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+      this.debounceTimers.delete(terminalId);
+    }
+    this.pendingData.delete(terminalId);
+    this.performAnalysis(terminalId, data);
+  }
+
   private performAnalysis(terminalId: string, data: string): void {
     const state = this.stateStore.getAgentState(terminalId);
     if (!state || state.status !== 'connected' || !state.agentType) {

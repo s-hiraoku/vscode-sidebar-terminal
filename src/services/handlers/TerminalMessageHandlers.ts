@@ -42,7 +42,7 @@ export interface ITerminalManagerForHandler {
   createTerminal(options: CreateTerminalData): Promise<string>;
   deleteTerminal(terminalId: string, force: boolean): Promise<boolean>;
   sendInput(terminalId: string, input: string): void;
-  resize(terminalId: string, cols: number, rows: number): void;
+  resize(cols: number, rows: number, terminalId?: string): void;
   focusTerminal(terminalId: string): void;
   getActiveTerminalId(): string | null;
   getWorkingDirectory(terminalId: string): Promise<string>;
@@ -180,7 +180,7 @@ export class TerminalResizeHandler extends BaseMessageHandler<
     }
 
     try {
-      this.dependencies.terminalManager.resize(data.terminalId, data.cols, data.rows);
+      this.dependencies.terminalManager.resize(data.cols, data.rows, data.terminalId);
       this.log(`Terminal resized: ${data.terminalId} (${data.cols}x${data.rows})`);
       return { success: true };
     } catch (error) {

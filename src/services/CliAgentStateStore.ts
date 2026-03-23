@@ -14,7 +14,7 @@ export interface AgentState {
   lastChoiceDetected?: number;
   startTime?: Date;
   isWaitingForInput: boolean;
-  waitingType?: 'input' | 'approval';
+  waitingType?: 'input' | 'approval' | 'idle';
 }
 
 export interface DisconnectedAgentInfo {
@@ -33,7 +33,7 @@ export interface StateChangeEvent {
 export interface WaitingChangeEvent {
   terminalId: string;
   isWaiting: boolean;
-  waitingType?: 'input' | 'approval';
+  waitingType?: 'input' | 'approval' | 'idle';
 }
 
 export type StateChangeObserver = (event: StateChangeEvent) => void;
@@ -107,6 +107,8 @@ export class CliAgentStateStore {
       terminalName,
       preserveScrollPosition: true,
       isDisplayingChoices: false,
+      isWaitingForInput: false,
+      waitingType: undefined,
     });
 
     // Remove from disconnected list
@@ -136,6 +138,8 @@ export class CliAgentStateStore {
         agentType: previousType,
         preserveScrollPosition: false,
         isDisplayingChoices: false,
+        isWaitingForInput: false,
+        waitingType: undefined,
       });
 
       this.notifyObservers({
@@ -172,6 +176,8 @@ export class CliAgentStateStore {
         agentType: null,
         preserveScrollPosition: false,
         isDisplayingChoices: false,
+        isWaitingForInput: false,
+        waitingType: undefined,
       });
 
       this.notifyObservers({
@@ -190,7 +196,7 @@ export class CliAgentStateStore {
   public setAgentWaiting(
     terminalId: string,
     isWaiting: boolean,
-    waitingType?: 'input' | 'approval'
+    waitingType?: 'input' | 'approval' | 'idle'
   ): void {
     const state = this.agentStates.get(terminalId);
     if (!state || state.status !== 'connected') {
