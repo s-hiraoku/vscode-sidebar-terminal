@@ -498,6 +498,25 @@
           "maximum": 60000,
           "description": "Minimum interval between notifications per terminal (ms)"
         },
+        "secondaryTerminal.agentToastNotification.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show toast notifications when a CLI agent is waiting for input or completes processing"
+        },
+        "secondaryTerminal.agentToastNotification.cooldownMs": {
+          "type": "number",
+          "default": 10000,
+          "minimum": 1000,
+          "maximum": 60000,
+          "description": "Minimum interval between toast notifications per terminal (ms)"
+        },
+        "secondaryTerminal.agentIdleDetection.timeoutMs": {
+          "type": "number",
+          "default": 3000,
+          "minimum": 1000,
+          "maximum": 30000,
+          "description": "Time in ms without output to consider agent idle/waiting"
+        },
         "secondaryTerminal.enableTerminalHeaderEnhancements": {
           "type": "boolean",
           "default": true,
