@@ -32,6 +32,10 @@ export class CliAgentIdleDetector implements vscode.Disposable {
     const timeoutMs = this.getTimeoutMs();
 
     const timer = setTimeout(() => {
+      // Guard against stale callbacks after a replacement timer was set
+      if (this.timers.get(terminalId) !== timer) {
+        return;
+      }
       this.timers.delete(terminalId);
 
       // Only fire if agent is still connected

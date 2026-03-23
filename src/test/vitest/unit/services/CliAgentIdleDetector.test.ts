@@ -106,11 +106,10 @@ describe('CliAgentIdleDetector', () => {
       vi.advanceTimersByTime(3000);
       expect(spy).toHaveBeenCalledTimes(1);
 
-      // Timer fires again — should not duplicate
+      // Timer fires again — should not duplicate due to redundancy prevention
       detector.resetTimer('terminal-1');
       vi.advanceTimersByTime(3000);
-      // setAgentWaiting has redundancy prevention, so spy may still be called once
-      // but the state store prevents redundant updates
+      expect(spy).toHaveBeenCalledTimes(1);
     });
 
     it('should use configured timeout from settings', () => {
@@ -182,6 +181,7 @@ describe('CliAgentIdleDetector', () => {
       stateStore.onAgentWaitingChange(spy);
 
       detector.resetTimer('terminal-1');
+      detector.resetTimer('terminal-2');
       detector.dispose();
       vi.advanceTimersByTime(5000);
 
