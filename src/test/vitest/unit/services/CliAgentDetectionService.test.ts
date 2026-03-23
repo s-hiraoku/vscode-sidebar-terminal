@@ -27,12 +27,12 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
   let stateManager: ICliAgentStateManager;
 
   // Test event tracking
-  let statusChangeEvents: Array < {
+  let statusChangeEvents: Array<{
     terminalId: string;
     status: 'connected' | 'disconnected' | 'none';
     type: string | null;
     terminalName?: string;
-  } > = [];
+  }> = [];
 
   beforeEach(() => {
     statusChangeEvents = [];
@@ -90,7 +90,7 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
       'Here is some code that mentions claude in comments',
       '// Using Claude AI for this function',
       'Error: Claude connection failed',
-      'Installing claude-cli package...', 
+      'Installing claude-cli package...',
       'claude-3-5-sonnet-20241022', // Model identifier alone is not startup
     ];
 
@@ -144,11 +144,11 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
     const realGeminiOutputs = [
       // Startup messages
       'Welcome to Gemini CLI!',
-      'Welcome to Gemini', 
+      'Welcome to Gemini',
       'Google AI Gemini initialized',
       'gemini-1.5-pro-latest ready',
       'gemini-2.0-flash-thinking experimental model',
-      'Connecting to Gemini API...', 
+      'Connecting to Gemini API...',
       'Gemini session started successfully',
 
       // Model indicators
@@ -173,7 +173,7 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
       'Update available: gemini-cli v2.1.0',
       'New version is available!',
       'New Gemini model is available for testing',
-      'Installing gemini dependencies...', 
+      'Installing gemini dependencies...',
       'Error: Gemini API key not found',
       '// This function uses Gemini for processing',
     ];
@@ -480,10 +480,10 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
     beforeEach(() => {
       // Start an agent first
       detectionService.detectFromOutput('term1', 'Welcome to Claude Code!');
-      
+
       // Advance time to bypass "recent AI activity" check (10s timeout)
       vi.advanceTimersByTime(15000);
-      
+
       statusChangeEvents = []; // Clear startup event
     });
 
@@ -493,7 +493,13 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
 
     realShellPrompts.forEach((prompt, index) => {
       // Skip failing patterns
-      if (['dev@ubuntu:~/workspace% ', '➜ myproject git:(main) ✗ ', 'root@docker-container:/# '].includes(prompt)) {
+      if (
+        [
+          'dev@ubuntu:~/workspace% ',
+          '➜ myproject git:(main) ✗ ',
+          'root@docker-container:/# ',
+        ].includes(prompt)
+      ) {
         return;
       }
       it(`should detect termination from shell prompt #${index + 1}: "${prompt}"`, () => {
@@ -685,9 +691,9 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
       expect(detectionService.detectFromInput('term1', 'npx @openai/codex@latest\r')?.type).toBe(
         'codex'
       );
-      expect(
-        detectionService.detectFromInput('term1', 'pnpm dlx @google/gemini-cli\r')?.type
-      ).toBe('gemini');
+      expect(detectionService.detectFromInput('term1', 'pnpm dlx @google/gemini-cli\r')?.type).toBe(
+        'gemini'
+      );
       expect(
         detectionService.detectFromInput('term1', 'yarn dlx @anthropic-ai/claude-code\r')?.type
       ).toBe('claude');

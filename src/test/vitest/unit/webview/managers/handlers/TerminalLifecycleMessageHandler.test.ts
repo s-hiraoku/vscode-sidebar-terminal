@@ -168,13 +168,13 @@ describe('TerminalLifecycleMessageHandler', () => {
         data: 'processing...',
       };
 
-      await handler.handleMessage({ command: 'startOutput', terminalId: 'terminal-1' }, mockCoordinator);
+      await handler.handleMessage(
+        { command: 'startOutput', terminalId: 'terminal-1' },
+        mockCoordinator
+      );
       await handler.handleMessage(message, mockCoordinator);
 
-      expect(mockUiManager.setTerminalProcessingIndicator).toHaveBeenCalledWith(
-        'terminal-1',
-        true
-      );
+      expect(mockUiManager.setTerminalProcessingIndicator).toHaveBeenCalledWith('terminal-1', true);
 
       vi.advanceTimersByTime(1200);
 
@@ -191,7 +191,10 @@ describe('TerminalLifecycleMessageHandler', () => {
         agentType: null,
       });
 
-      await handler.handleMessage({ command: 'startOutput', terminalId: 'terminal-1' }, mockCoordinator);
+      await handler.handleMessage(
+        { command: 'startOutput', terminalId: 'terminal-1' },
+        mockCoordinator
+      );
       await handler.handleMessage(
         {
           command: 'output',
@@ -214,7 +217,10 @@ describe('TerminalLifecycleMessageHandler', () => {
         agentType: 'copilot',
       });
 
-      await handler.handleMessage({ command: 'startOutput', terminalId: 'terminal-1' }, mockCoordinator);
+      await handler.handleMessage(
+        { command: 'startOutput', terminalId: 'terminal-1' },
+        mockCoordinator
+      );
       await handler.handleMessage(
         {
           command: 'output',
@@ -224,10 +230,7 @@ describe('TerminalLifecycleMessageHandler', () => {
         mockCoordinator
       );
 
-      expect(mockUiManager.setTerminalProcessingIndicator).toHaveBeenCalledWith(
-        'terminal-1',
-        true
-      );
+      expect(mockUiManager.setTerminalProcessingIndicator).toHaveBeenCalledWith('terminal-1', true);
     });
 
     it('should not enable processing indicator for unsupported agent type', async () => {
@@ -237,7 +240,10 @@ describe('TerminalLifecycleMessageHandler', () => {
         agentType: 'other',
       });
 
-      await handler.handleMessage({ command: 'startOutput', terminalId: 'terminal-1' }, mockCoordinator);
+      await handler.handleMessage(
+        { command: 'startOutput', terminalId: 'terminal-1' },
+        mockCoordinator
+      );
       await handler.handleMessage(
         {
           command: 'output',
@@ -270,7 +276,10 @@ describe('TerminalLifecycleMessageHandler', () => {
         notification: {} as any,
       });
 
-      await handler.handleMessage({ command: 'startOutput', terminalId: 'terminal-1' }, mockCoordinator);
+      await handler.handleMessage(
+        { command: 'startOutput', terminalId: 'terminal-1' },
+        mockCoordinator
+      );
       await handler.handleMessage(
         {
           command: 'output',

@@ -55,7 +55,11 @@ export class TerminalNumberManager {
   allocateNumber(preferredNumber: number, terminals: Map<string, TerminalInstance>): number {
     const usedNumbers = this.getUsedNumbers(terminals);
 
-    if (preferredNumber >= 1 && preferredNumber <= this.maxTerminals && !usedNumbers.has(preferredNumber)) {
+    if (
+      preferredNumber >= 1 &&
+      preferredNumber <= this.maxTerminals &&
+      !usedNumbers.has(preferredNumber)
+    ) {
       return preferredNumber;
     }
 

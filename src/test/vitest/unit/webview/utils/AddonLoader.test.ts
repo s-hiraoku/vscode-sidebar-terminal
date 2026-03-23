@@ -6,8 +6,8 @@ vi.mock('../../../../../webview/utils/ManagerLogger', () => ({
   terminalLogger: {
     info: vi.fn(),
     warn: vi.fn(),
-    error: vi.fn()
-  }
+    error: vi.fn(),
+  },
 }));
 
 describe('AddonLoader', () => {
@@ -15,7 +15,7 @@ describe('AddonLoader', () => {
 
   beforeEach(() => {
     mockTerminal = {
-      loadAddon: vi.fn()
+      loadAddon: vi.fn(),
     };
     vi.clearAllMocks();
   });
@@ -33,7 +33,7 @@ describe('AddonLoader', () => {
   describe('loadAddon', () => {
     it('should successfully load an addon', async () => {
       const addon = await AddonLoader.loadAddon(mockTerminal, 't1', MockAddon);
-      
+
       expect(addon).toBeInstanceOf(MockAddon);
       expect(mockTerminal.loadAddon).toHaveBeenCalledWith(addon);
     });
@@ -41,7 +41,7 @@ describe('AddonLoader', () => {
     it('should call onLoaded after loading', async () => {
       const onLoaded = vi.fn();
       const addon = await AddonLoader.loadAddon(mockTerminal, 't1', MockAddon, { onLoaded });
-      
+
       expect(onLoaded).toHaveBeenCalledWith(addon, mockTerminal);
     });
 
@@ -52,8 +52,10 @@ describe('AddonLoader', () => {
     });
 
     it('should return undefined for optional addon failure', async () => {
-      const addon = await AddonLoader.loadAddon(mockTerminal, 't1', FailingAddon, { required: false });
-      
+      const addon = await AddonLoader.loadAddon(mockTerminal, 't1', FailingAddon, {
+        required: false,
+      });
+
       expect(addon).toBeUndefined();
       expect(mockTerminal.loadAddon).not.toHaveBeenCalled();
     });
@@ -77,11 +79,11 @@ describe('AddonLoader', () => {
     it('should load multiple addons and return a map', async () => {
       const addons = [
         { AddonClass: MockAddon, options: { addonName: 'Addon1' } },
-        { AddonClass: MockAddon, options: { addonName: 'Addon2' } }
+        { AddonClass: MockAddon, options: { addonName: 'Addon2' } },
       ];
 
       const resultMap = await AddonLoader.loadMultipleAddons(mockTerminal, 't1', addons);
-      
+
       expect(resultMap.size).toBe(2);
       expect(resultMap.get('Addon1')).toBeInstanceOf(MockAddon);
       expect(resultMap.get('Addon2')).toBeInstanceOf(MockAddon);

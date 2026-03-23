@@ -112,7 +112,9 @@ export class TerminalBorderService {
    */
   private isLightBackground(color: string): boolean {
     // Parse hex color
-    let r = 0, g = 0, b = 0;
+    let r = 0,
+      g = 0,
+      b = 0;
 
     if (color.startsWith('#')) {
       const hex = color.slice(1);

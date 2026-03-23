@@ -13,12 +13,12 @@ import { DOMUtils } from '../utils/DOMUtils';
 
 const ENABLE_WEBVIEW_DEBUG_LOGS = Boolean(
   typeof globalThis !== 'undefined' &&
-    (((globalThis as Record<string, unknown>).SECONDARY_TERMINAL_DEBUG_LOGS as
-      | boolean
-      | undefined) === true ||
-      (typeof localStorage !== 'undefined' &&
-        typeof localStorage.getItem === 'function' &&
-        localStorage.getItem('SECONDARY_TERMINAL_DEBUG_LOGS') === 'true'))
+  (((globalThis as Record<string, unknown>).SECONDARY_TERMINAL_DEBUG_LOGS as
+    | boolean
+    | undefined) === true ||
+    (typeof localStorage !== 'undefined' &&
+      typeof localStorage.getItem === 'function' &&
+      localStorage.getItem('SECONDARY_TERMINAL_DEBUG_LOGS') === 'true'))
 );
 
 export class PerformanceManager extends BaseManager {
@@ -111,10 +111,7 @@ export class PerformanceManager extends BaseManager {
     return entry;
   }
 
-  private scheduleEntryFlush(
-    terminal: Terminal,
-    entry: BufferEntry
-  ): void {
+  private scheduleEntryFlush(terminal: Terminal, entry: BufferEntry): void {
     if (entry.timer === null) {
       // Use requestAnimationFrame for display-synchronized flushing.
       // For CLI Agent mode with very low latency needs, use setTimeout fallback.
@@ -142,7 +139,8 @@ export class PerformanceManager extends BaseManager {
         entry.timerType = 'raf';
       } else {
         // CLI Agent mode: use setTimeout with fast interval for lower latency
-        const flushInterval = SPLIT_CONSTANTS.CLI_AGENT_FLUSH_INTERVAL ?? Math.max(8, this.BUFFER_FLUSH_INTERVAL / 2);
+        const flushInterval =
+          SPLIT_CONSTANTS.CLI_AGENT_FLUSH_INTERVAL ?? Math.max(8, this.BUFFER_FLUSH_INTERVAL / 2);
 
         entry.timer = window.setTimeout(() => {
           try {

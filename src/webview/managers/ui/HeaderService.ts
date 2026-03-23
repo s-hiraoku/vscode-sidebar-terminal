@@ -107,11 +107,7 @@ export class HeaderService {
   /**
    * Update terminal header title
    */
-  public updateTerminalHeader(
-    terminalId: string,
-    newName?: string,
-    indicatorColor?: string
-  ): void {
+  public updateTerminalHeader(terminalId: string, newName?: string, indicatorColor?: string): void {
     const headerElements = this.headerElementsCache.get(terminalId);
     if (headerElements) {
       if (typeof newName === 'string' && newName.trim().length > 0) {

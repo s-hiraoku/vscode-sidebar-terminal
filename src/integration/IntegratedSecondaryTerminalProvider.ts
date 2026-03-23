@@ -15,9 +15,7 @@
 import * as vscode from 'vscode';
 import { TerminalManager } from '../terminals/TerminalManager';
 import { WebviewMessage } from '../types/shared';
-import {
-  ExtensionPersistenceService,
-} from '../services/persistence/ExtensionPersistenceService';
+import { ExtensionPersistenceService } from '../services/persistence/ExtensionPersistenceService';
 import {
   createPersistenceMessageHandler,
   IPersistenceMessageHandler,
@@ -55,15 +53,10 @@ export class IntegratedSecondaryTerminalProvider
     this.terminalManager = terminalManager;
 
     // Initialize persistence service with proper dependency injection
-    this.persistenceService = new ExtensionPersistenceService(
-      this.context,
-      this.terminalManager
-    );
+    this.persistenceService = new ExtensionPersistenceService(this.context, this.terminalManager);
 
     // Initialize persistence message handler with clean separation
-    this.persistenceMessageHandler = createPersistenceMessageHandler(
-      this.persistenceService
-    );
+    this.persistenceMessageHandler = createPersistenceMessageHandler(this.persistenceService);
 
     this.initializeServices();
   }

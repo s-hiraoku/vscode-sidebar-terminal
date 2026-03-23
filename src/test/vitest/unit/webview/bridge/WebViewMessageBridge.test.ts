@@ -15,7 +15,7 @@ describe('WebViewMessageBridge', () => {
       getState: vi.fn(),
       setState: vi.fn(),
     };
-    
+
     vi.stubGlobal('acquireVsCodeApi', () => mockVscodeApi);
     bridge = new WebViewMessageBridge();
   });
@@ -37,10 +37,10 @@ describe('WebViewMessageBridge', () => {
     it('should register and unregister handlers', () => {
       const handler = vi.fn();
       bridge.registerHandler('cmd', handler);
-      
+
       expect(bridge.getHandlerCount()).toBe(1);
       expect(bridge.getRegisteredCommands()).toContain('cmd');
-      
+
       bridge.unregisterHandler('cmd');
       expect(bridge.getHandlerCount()).toBe(0);
     });
@@ -50,10 +50,10 @@ describe('WebViewMessageBridge', () => {
     it('should process message with registered handler', async () => {
       const handler = vi.fn().mockResolvedValue({ success: true });
       bridge.registerHandler('cmd', handler);
-      
+
       const msg = { command: 'cmd' };
       const result = await bridge.processMessage(msg);
-      
+
       expect(result.success).toBe(true);
       expect(handler).toHaveBeenCalledWith(msg);
     });
@@ -67,7 +67,7 @@ describe('WebViewMessageBridge', () => {
     it('should handle errors in handlers', async () => {
       const handler = vi.fn().mockRejectedValue(new Error('Fail'));
       bridge.registerHandler('fail', handler);
-      
+
       const result = await bridge.processMessage({ command: 'fail' });
       expect(result.success).toBe(false);
       expect(result.error).toBe('Fail');

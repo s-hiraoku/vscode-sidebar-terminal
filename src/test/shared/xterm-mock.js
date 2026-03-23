@@ -107,7 +107,12 @@ const xtermMock = {
       registerCharacterJoiner: () => 0,
       deregisterCharacterJoiner: () => {},
       registerMarker: () => ({ dispose: () => {}, line: 0, isDisposed: false }),
-      registerDecoration: () => ({ dispose: () => {}, marker: { line: 0, isDisposed: false }, element: null, isDisposed: false }),
+      registerDecoration: () => ({
+        dispose: () => {},
+        marker: { line: 0, isDisposed: false },
+        element: null,
+        isDisposed: false,
+      }),
       onData: () => ({ dispose: () => {} }),
       onBinary: () => ({ dispose: () => {} }),
       onResize: () => ({ dispose: () => {} }),
@@ -205,10 +210,7 @@ const xtermModules = [
 xtermModules.forEach((moduleName) => {
   try {
     // モジュールパスを解決してキャッシュに登録
-    const possiblePaths = [
-      moduleName,
-      path.join(process.cwd(), 'node_modules', moduleName),
-    ];
+    const possiblePaths = [moduleName, path.join(process.cwd(), 'node_modules', moduleName)];
 
     possiblePaths.forEach((modulePath) => {
       try {

@@ -21,7 +21,7 @@ vi.mock('@xterm/xterm', () => {
     cols = 80;
     rows = 24;
     unicode = { activeVersion: '11' };
-    
+
     constructor(options?: any) {
       this.options = options || {};
     }
@@ -76,12 +76,12 @@ vi.mock('../../../../../webview/managers/TerminalAddonManager', () => {
           webLinksAddon: {},
           serializeAddon: { serialize: vi.fn() },
           searchAddon: { findNext: vi.fn(), findPrevious: vi.fn() },
-          unicode11Addon: {}
+          unicode11Addon: {},
         };
       });
       dispose = vi.fn();
       disposeAddons = vi.fn();
-    }
+    },
   };
 });
 
@@ -133,12 +133,12 @@ describe('TerminalCreationService', () => {
         unregisterContainer: vi.fn(),
         clearSplitArtifacts: vi.fn(),
         applyDisplayState: vi.fn(),
-        registerContainer: vi.fn()
+        registerContainer: vi.fn(),
       }),
       getDisplayModeManager: vi.fn().mockReturnValue({
         getCurrentMode: vi.fn().mockReturnValue('normal'),
         setDisplayMode: vi.fn(),
-        showAllTerminalsSplit: vi.fn()
+        showAllTerminalsSplit: vi.fn(),
       }),
       getManagers: vi.fn().mockReturnValue({
         config: {
@@ -152,7 +152,7 @@ describe('TerminalCreationService', () => {
           applyFontSettings: vi.fn(),
           applyTerminalTheme: vi.fn(),
           headerElementsCache: new Map(),
-        }
+        },
       }),
       inputManager: {
         addXtermClickHandler: vi.fn(),
@@ -161,7 +161,7 @@ describe('TerminalCreationService', () => {
       closeTerminal: vi.fn(),
       setActiveTerminalId: vi.fn(),
       profileManager: {
-        createTerminalWithDefaultProfile: vi.fn()
+        createTerminalWithDefaultProfile: vi.fn(),
       },
       handleAiAgentToggle: vi.fn(),
     };
@@ -331,11 +331,11 @@ describe('TerminalCreationService', () => {
       vi.spyOn(document, 'querySelector').mockReturnValue(null);
 
       const terminal = await service.createTerminal('fail-term', 'Fail');
-      
+
       expect(terminal).toBeNull();
       // Should have tried at least 3 attempts
       expect(getElementSpy.mock.calls.length).toBeGreaterThanOrEqual(3);
-      
+
       getElementSpy.mockRestore();
     });
 
@@ -370,11 +370,11 @@ describe('TerminalCreationService', () => {
       const terminalId = 'terminal-font-test';
       const config = {
         fontFamily: '   ', // Empty string
-        fontSize: 0,       // Invalid size
+        fontSize: 0, // Invalid size
       } as any;
 
       const terminal = await service.createTerminal(terminalId, 'Font Test', config);
-      
+
       expect(terminal).not.toBeNull();
       // Should not have applied invalid fonts, should use xterm defaults or system defaults
       // (Testing that it didn't crash)

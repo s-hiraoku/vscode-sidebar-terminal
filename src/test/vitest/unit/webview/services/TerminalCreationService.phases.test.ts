@@ -341,9 +341,7 @@ describe('TerminalCreationService - Phase Decomposition', () => {
       mockCoordinator.getManagers.mockReturnValue({
         config: {
           getCurrentFontSettings: vi.fn().mockReturnValue({}),
-          getCurrentSettings: vi
-            .fn()
-            .mockReturnValue({ multiCursorModifier: 'ctrlCmd' }),
+          getCurrentSettings: vi.fn().mockReturnValue({ multiCursorModifier: 'ctrlCmd' }),
         },
         ui: {
           applyVSCodeStyling: vi.fn(),
@@ -436,15 +434,9 @@ describe('TerminalCreationService - Phase Decomposition', () => {
       ) => boolean;
       document.body.classList.add('panel-navigation-mode');
 
-      expect(
-        keyHandler(new dom.window.KeyboardEvent('keydown', { key: 'r' }))
-      ).toBe(false);
-      expect(
-        keyHandler(new dom.window.KeyboardEvent('keydown', { key: 'd' }))
-      ).toBe(false);
-      expect(
-        keyHandler(new dom.window.KeyboardEvent('keydown', { key: 'x' }))
-      ).toBe(false);
+      expect(keyHandler(new dom.window.KeyboardEvent('keydown', { key: 'r' }))).toBe(false);
+      expect(keyHandler(new dom.window.KeyboardEvent('keydown', { key: 'd' }))).toBe(false);
+      expect(keyHandler(new dom.window.KeyboardEvent('keydown', { key: 'x' }))).toBe(false);
 
       document.body.classList.remove('panel-navigation-mode');
     });

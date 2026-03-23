@@ -64,11 +64,13 @@ function createMockCoordinator(): IManagerCoordinator {
 }
 
 // Helper to create mock mouse event
-function createMockMouseEvent(options: {
-  metaKey?: boolean;
-  ctrlKey?: boolean;
-  altKey?: boolean;
-} = {}): MouseEvent {
+function createMockMouseEvent(
+  options: {
+    metaKey?: boolean;
+    ctrlKey?: boolean;
+    altKey?: boolean;
+  } = {}
+): MouseEvent {
   return {
     metaKey: options.metaKey ?? false,
     ctrlKey: options.ctrlKey ?? false,

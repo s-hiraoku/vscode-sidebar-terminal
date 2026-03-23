@@ -5,7 +5,6 @@
 import { describe, it, expect } from 'vitest';
 import { TerminalCoordinator } from '../../../../../webview/services/TerminalCoordinator';
 
-
 // Mock Terminal and Addons
 vi.mock('@xterm/xterm', () => {
   class MockTerminal {
@@ -45,7 +44,7 @@ describe('TerminalCoordinator', () => {
       maxTerminals: 5,
       defaultShell: '/bin/bash',
       workingDirectory: '/',
-      debugMode: false
+      debugMode: false,
     });
   });
 
@@ -57,7 +56,7 @@ describe('TerminalCoordinator', () => {
   describe('createTerminal', () => {
     it('should create and store terminal instance', async () => {
       const terminalId = await coordinator.createTerminal();
-      
+
       expect(terminalId).toBeDefined();
       expect(coordinator.getTerminalCount()).toBe(1);
       expect(coordinator.getTerminal(terminalId)).toBeTruthy();
@@ -67,14 +66,14 @@ describe('TerminalCoordinator', () => {
       // Set low limit
       (coordinator as any).config.maxTerminals = 1;
       await coordinator.createTerminal();
-      
+
       await expect(coordinator.createTerminal()).rejects.toThrow('maximum of 1 terminals reached');
     });
 
     it('should emit onTerminalCreated event', async () => {
       const listener = vi.fn();
       coordinator.addEventListener('onTerminalCreated', listener);
-      
+
       await coordinator.createTerminal();
       expect(listener).toHaveBeenCalled();
     });
@@ -90,7 +89,7 @@ describe('TerminalCoordinator', () => {
     it('should activate terminal', () => {
       const _t2Id = 'terminal-2'; // mock expected next ID
       coordinator.activateTerminal(t1Id);
-      
+
       const info = coordinator.getTerminalInfo(t1Id);
       expect(info?.isActive).toBe(true);
       expect(info?.container.style.display).toBe('block');
@@ -99,14 +98,14 @@ describe('TerminalCoordinator', () => {
     it('should write to terminal', () => {
       const terminal = coordinator.getTerminal(t1Id) as any;
       coordinator.writeToTerminal(t1Id, 'hello');
-      
+
       expect(terminal.write).toHaveBeenCalledWith('hello', expect.any(Function));
     });
 
     it('should resize terminal', () => {
       const terminal = coordinator.getTerminal(t1Id) as any;
       coordinator.resizeTerminal(t1Id, 100, 40);
-      
+
       expect(terminal.resize).toHaveBeenCalledWith(100, 40);
     });
   });
@@ -115,9 +114,9 @@ describe('TerminalCoordinator', () => {
     it('should dispose terminal and remove from collection', async () => {
       const id = await coordinator.createTerminal();
       const terminal = coordinator.getTerminal(id) as any;
-      
+
       await coordinator.removeTerminal(id);
-      
+
       expect(terminal.dispose).toHaveBeenCalled();
       expect(coordinator.hasTerminals()).toBe(false);
     });

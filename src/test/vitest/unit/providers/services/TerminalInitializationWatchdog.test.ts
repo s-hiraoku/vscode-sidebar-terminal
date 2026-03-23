@@ -32,31 +32,34 @@ describe('TerminalInitializationWatchdog', () => {
 
   it('should trigger callback after initial delay', () => {
     watchdog.start(terminalId, 'test');
-    
+
     vi.advanceTimersByTime(100);
     expect(mockCallback).toHaveBeenCalledWith(terminalId, { attempt: 1, isFinalAttempt: false });
   });
 
   it('should use backoff for subsequent attempts', () => {
     watchdog.start(terminalId, 'test');
-    
+
     // 1st attempt at 100ms
     vi.advanceTimersByTime(100);
     expect(mockCallback).toHaveBeenCalledTimes(1);
-    
+
     // 2nd attempt at +200ms (100 * 2)
     vi.advanceTimersByTime(200);
     expect(mockCallback).toHaveBeenCalledTimes(2);
-    expect(mockCallback).toHaveBeenLastCalledWith(terminalId, { attempt: 2, isFinalAttempt: false });
+    expect(mockCallback).toHaveBeenLastCalledWith(terminalId, {
+      attempt: 2,
+      isFinalAttempt: false,
+    });
   });
 
   it('should stop after max attempts', () => {
     watchdog.start(terminalId, 'test');
-    
+
     vi.advanceTimersByTime(100 + 200 + 400); // 1st, 2nd, 3rd (final)
     expect(mockCallback).toHaveBeenCalledTimes(3);
     expect(mockCallback).toHaveBeenLastCalledWith(terminalId, { attempt: 3, isFinalAttempt: true });
-    
+
     // Should not trigger again
     vi.advanceTimersByTime(1000);
     expect(mockCallback).toHaveBeenCalledTimes(3);
@@ -65,10 +68,10 @@ describe('TerminalInitializationWatchdog', () => {
   it('should not trigger callback if stopped', () => {
     watchdog.start(terminalId, 'test');
     vi.advanceTimersByTime(50);
-    
+
     watchdog.stop(terminalId, 'done');
     vi.advanceTimersByTime(100);
-    
+
     expect(mockCallback).not.toHaveBeenCalled();
   });
 
@@ -77,11 +80,11 @@ describe('TerminalInitializationWatchdog', () => {
     watchdog.start(terminalId, 'test1');
     vi.advanceTimersByTime(50);
     watchdog.start(term2, 'test2');
-    
+
     vi.advanceTimersByTime(50);
     expect(mockCallback).toHaveBeenCalledWith(terminalId, expect.anything());
     expect(mockCallback).not.toHaveBeenCalledWith(term2, expect.anything());
-    
+
     vi.advanceTimersByTime(50);
     expect(mockCallback).toHaveBeenCalledWith(term2, expect.anything());
   });
@@ -89,7 +92,7 @@ describe('TerminalInitializationWatchdog', () => {
   it('should clean up on dispose', () => {
     watchdog.start(terminalId, 'test');
     watchdog.dispose();
-    
+
     vi.advanceTimersByTime(1000);
     expect(mockCallback).not.toHaveBeenCalled();
   });

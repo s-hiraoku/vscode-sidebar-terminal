@@ -176,11 +176,7 @@ export class TerminalStateDisplayManager {
 
   private syncHeaderIndicatorColors(state: TerminalState): void {
     state.terminals.forEach((terminal) => {
-      this.uiManager.updateTerminalHeader(
-        terminal.id,
-        terminal.name,
-        terminal.indicatorColor
-      );
+      this.uiManager.updateTerminalHeader(terminal.id, terminal.name, terminal.indicatorColor);
     });
   }
 }

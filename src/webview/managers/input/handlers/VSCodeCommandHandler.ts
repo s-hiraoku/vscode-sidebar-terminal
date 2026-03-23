@@ -13,10 +13,7 @@
 
 import { IManagerCoordinator } from '../../../interfaces/ManagerInterfaces';
 import { CommandRegistry } from '../../../core/CommandRegistry';
-import {
-  TerminalOperationsService,
-  ScrollDirection,
-} from '../services/TerminalOperationsService';
+import { TerminalOperationsService, ScrollDirection } from '../services/TerminalOperationsService';
 import { TerminalInteractionEvent } from '../../../../types/common';
 
 export type EmitEventFn = (
@@ -48,10 +45,7 @@ export class VSCodeCommandHandler {
    * @param manager Manager coordinator
    * @returns true if command was handled
    */
-  public async handleCommand(
-    command: string,
-    manager: IManagerCoordinator
-  ): Promise<boolean> {
+  public async handleCommand(command: string, manager: IManagerCoordinator): Promise<boolean> {
     this.logger(`Handling VS Code command: ${command}`);
 
     try {
@@ -104,22 +98,12 @@ export class VSCodeCommandHandler {
 
         'workbench.action.terminal.split': (msg) => {
           const manager = msg.manager as IManagerCoordinator;
-          this.emitEvent(
-            'split-terminal',
-            manager.getActiveTerminalId() || '',
-            undefined,
-            manager
-          );
+          this.emitEvent('split-terminal', manager.getActiveTerminalId() || '', undefined, manager);
         },
 
         'workbench.action.terminal.kill': (msg) => {
           const manager = msg.manager as IManagerCoordinator;
-          this.emitEvent(
-            'kill-terminal',
-            manager.getActiveTerminalId() || '',
-            undefined,
-            manager
-          );
+          this.emitEvent('kill-terminal', manager.getActiveTerminalId() || '', undefined, manager);
         },
 
         'workbench.action.terminal.clear': (msg) => {
@@ -144,12 +128,7 @@ export class VSCodeCommandHandler {
       {
         'workbench.action.terminal.focusNext': (msg) => {
           const manager = msg.manager as IManagerCoordinator;
-          this.emitEvent(
-            'switch-next',
-            manager.getActiveTerminalId() || '',
-            undefined,
-            manager
-          );
+          this.emitEvent('switch-next', manager.getActiveTerminalId() || '', undefined, manager);
         },
 
         'workbench.action.terminal.focusPrevious': (msg) => {

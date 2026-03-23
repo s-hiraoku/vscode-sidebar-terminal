@@ -218,16 +218,19 @@ export class Throttler {
     if (this.timer !== null) return;
 
     const delay = this.options.interval - (Date.now() - this.lastExecuteTime);
-    this.timer = setTimeout(() => {
-      this.timer = null;
-      if (this.pendingArgs !== null) {
-        this.lastExecuteTime = Date.now();
-        const args = this.pendingArgs;
-        this.pendingArgs = null;
-        this.log('Executing (trailing)');
-        this.callback(...args);
-      }
-    }, Math.max(0, delay));
+    this.timer = setTimeout(
+      () => {
+        this.timer = null;
+        if (this.pendingArgs !== null) {
+          this.lastExecuteTime = Date.now();
+          const args = this.pendingArgs;
+          this.pendingArgs = null;
+          this.log('Executing (trailing)');
+          this.callback(...args);
+        }
+      },
+      Math.max(0, delay)
+    );
   }
 
   /**
@@ -539,7 +542,10 @@ export class KeyedEventBuffer<T> {
     this.log('Disposed');
   }
 
-  private scheduleFlush(key: string, entry: { items: T[]; timer: ReturnType<typeof setTimeout> | null }): void {
+  private scheduleFlush(
+    key: string,
+    entry: { items: T[]; timer: ReturnType<typeof setTimeout> | null }
+  ): void {
     if (entry.timer !== null) return;
 
     entry.timer = setTimeout(() => {
@@ -550,7 +556,9 @@ export class KeyedEventBuffer<T> {
 
   private log(message: string): void {
     if (this.options.debug) {
-      const prefix = this.options.name ? `[KeyedEventBuffer:${this.options.name}]` : '[KeyedEventBuffer]';
+      const prefix = this.options.name
+        ? `[KeyedEventBuffer:${this.options.name}]`
+        : '[KeyedEventBuffer]';
       log(`${prefix} ${message}`);
     }
   }
@@ -563,7 +571,11 @@ export class KeyedEventBuffer<T> {
 /**
  * Create a simple debouncer
  */
-export function createDebouncer(callback: () => void, delay: number, options?: Partial<DebouncerOptions>): Debouncer {
+export function createDebouncer(
+  callback: () => void,
+  delay: number,
+  options?: Partial<DebouncerOptions>
+): Debouncer {
   return new Debouncer(callback, { delay, ...options });
 }
 

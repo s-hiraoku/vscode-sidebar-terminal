@@ -364,10 +364,7 @@ describe('AccessibilityUtils', () => {
 
       it('should not navigate for other keys', () => {
         const onNavigate = vi.fn();
-        const items = [
-          document.createElement('div'),
-          document.createElement('div'),
-        ];
+        const items = [document.createElement('div'), document.createElement('div')];
         const event = new KeyboardEvent('keydown', { key: 'Enter' });
 
         KeyboardNavigationHelper.handleArrowKeys(event, items, 0, onNavigate);
@@ -377,10 +374,7 @@ describe('AccessibilityUtils', () => {
 
       it('should handle ArrowRight same as ArrowDown', () => {
         const onNavigate = vi.fn();
-        const items = [
-          document.createElement('div'),
-          document.createElement('div'),
-        ];
+        const items = [document.createElement('div'), document.createElement('div')];
         const event = new KeyboardEvent('keydown', { key: 'ArrowRight' });
 
         KeyboardNavigationHelper.handleArrowKeys(event, items, 0, onNavigate);
@@ -390,10 +384,7 @@ describe('AccessibilityUtils', () => {
 
       it('should handle ArrowLeft same as ArrowUp', () => {
         const onNavigate = vi.fn();
-        const items = [
-          document.createElement('div'),
-          document.createElement('div'),
-        ];
+        const items = [document.createElement('div'), document.createElement('div')];
         const event = new KeyboardEvent('keydown', { key: 'ArrowLeft' });
 
         KeyboardNavigationHelper.handleArrowKeys(event, items, 1, onNavigate);
@@ -515,5 +506,4 @@ describe('AccessibilityUtils', () => {
       });
     });
   });
-
 });

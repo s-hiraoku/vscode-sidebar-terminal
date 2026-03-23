@@ -47,7 +47,7 @@ describe('WebViewPersistenceService', () => {
       getState: vi.fn(),
       setState: vi.fn(),
     };
-    
+
     service = new WebViewPersistenceService();
     mockTerminal = new Terminal();
   });
@@ -60,7 +60,7 @@ describe('WebViewPersistenceService', () => {
   describe('addTerminal', () => {
     it('should register terminal and setup auto-save', () => {
       service.addTerminal('t1', mockTerminal);
-      
+
       expect(service.hasTerminal('t1')).toBe(true);
       expect(mockTerminal.loadAddon).toHaveBeenCalled();
       expect(mockTerminal.onData).toHaveBeenCalled();
@@ -71,7 +71,7 @@ describe('WebViewPersistenceService', () => {
     it('should return serialized data with metadata', () => {
       service.addTerminal('t1', mockTerminal);
       const data = service.serializeTerminal('t1');
-      
+
       expect(data).toBeTruthy();
       expect(data?.content).toBe('mocked-serialized-content');
       expect(data?.metadata.dimensions.cols).toBe(80);
@@ -82,9 +82,12 @@ describe('WebViewPersistenceService', () => {
     it('should write content back to terminal', () => {
       service.addTerminal('t1', mockTerminal);
       const success = service.restoreTerminalContent('t1', 'line1\nline2');
-      
+
       expect(success).toBe(true);
-      expect(mockTerminal.write).toHaveBeenCalledWith(expect.stringContaining('line1'), expect.any(Function));
+      expect(mockTerminal.write).toHaveBeenCalledWith(
+        expect.stringContaining('line1'),
+        expect.any(Function)
+      );
     });
   });
 
@@ -92,11 +95,13 @@ describe('WebViewPersistenceService', () => {
     it('should push message to extension', async () => {
       service.addTerminal('t1', mockTerminal);
       await service.saveSession();
-      
-      expect((window as any).vscodeApi.postMessage).toHaveBeenCalledWith(expect.objectContaining({
-        command: 'pushScrollbackData',
-        terminalId: 't1'
-      }));
+
+      expect((window as any).vscodeApi.postMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          command: 'pushScrollbackData',
+          terminalId: 't1',
+        })
+      );
     });
   });
 
@@ -104,12 +109,12 @@ describe('WebViewPersistenceService', () => {
     it('should trigger save after data event and debounce delay', () => {
       service.addTerminal('t1', mockTerminal);
       const onDataHandler = mockTerminal.onData.mock.calls[0][0];
-      
+
       onDataHandler('input');
-      
+
       // Debounce delay is 3000ms
       vi.advanceTimersByTime(3000);
-      
+
       expect((window as any).vscodeApi.postMessage).toHaveBeenCalled();
     });
   });
@@ -118,7 +123,7 @@ describe('WebViewPersistenceService', () => {
     it('should stop timers and clear references', () => {
       service.addTerminal('t1', mockTerminal);
       service.dispose();
-      
+
       expect(service.getAvailableTerminals().length).toBe(0);
     });
   });

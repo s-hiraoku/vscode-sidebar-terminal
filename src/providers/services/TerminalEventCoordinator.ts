@@ -105,7 +105,7 @@ export class TerminalEventCoordinator implements vscode.Disposable {
         'consumeCreationDisplayModeOverride' in this._terminalManager &&
         typeof (this._terminalManager as any).consumeCreationDisplayModeOverride === 'function'
           ? (this._terminalManager as any).consumeCreationDisplayModeOverride(terminal.id)
-          : terminal.creationDisplayModeOverride ?? null;
+          : (terminal.creationDisplayModeOverride ?? null);
 
       const message: WebviewMessage = {
         command: TERMINAL_CONSTANTS.COMMANDS.TERMINAL_CREATED,

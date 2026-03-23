@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CliAgentMessageController } from '../../../../../../webview/managers/controllers/CliAgentMessageController';
-import type { IManagerCoordinator, INotificationManager } from '../../../../../../webview/interfaces/ManagerInterfaces';
+import type {
+  IManagerCoordinator,
+  INotificationManager,
+} from '../../../../../../webview/interfaces/ManagerInterfaces';
 import { ManagerLogger } from '../../../../../../webview/utils/ManagerLogger';
 import type { MessageCommand } from '../../../../../../webview/managers/messageTypes';
 
@@ -73,11 +76,7 @@ describe('CliAgentMessageController', () => {
 
       controller.handleStatusUpdateMessage(msg, mockCoordinator);
 
-      expect(mockCoordinator.updateCliAgentStatus).toHaveBeenCalledWith(
-        '2',
-        'connected',
-        null
-      );
+      expect(mockCoordinator.updateCliAgentStatus).toHaveBeenCalledWith('2', 'connected', null);
     });
 
     it('should use fallback terminalId if neither ID nor name allows extraction', () => {
@@ -97,42 +96,46 @@ describe('CliAgentMessageController', () => {
         'connected',
         null
       );
-      expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Using fallback terminalId'));
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Using fallback terminalId')
+      );
     });
 
     it('should map legacy status correctly', () => {
-        const statuses = [
-            { input: 'connected', expected: 'connected' },
-            { input: 'disconnected', expected: 'disconnected' },
-            { input: 'inactive', expected: 'none' },
-            { input: 'terminated', expected: 'none' },
-            { input: 'unknown', expected: 'none' },
-        ];
+      const statuses = [
+        { input: 'connected', expected: 'connected' },
+        { input: 'disconnected', expected: 'disconnected' },
+        { input: 'inactive', expected: 'none' },
+        { input: 'terminated', expected: 'none' },
+        { input: 'unknown', expected: 'none' },
+      ];
 
-        statuses.forEach(({ input, expected }) => {
-            const msg: MessageCommand = {
-                command: 'statusUpdate',
-                cliAgentStatus: {
-                    terminalId: 'term-1',
-                    status: input,
-                },
-            };
-            controller.handleStatusUpdateMessage(msg, mockCoordinator);
-            expect(mockCoordinator.updateCliAgentStatus).toHaveBeenCalledWith('term-1', expected, null);
-        });
+      statuses.forEach(({ input, expected }) => {
+        const msg: MessageCommand = {
+          command: 'statusUpdate',
+          cliAgentStatus: {
+            terminalId: 'term-1',
+            status: input,
+          },
+        };
+        controller.handleStatusUpdateMessage(msg, mockCoordinator);
+        expect(mockCoordinator.updateCliAgentStatus).toHaveBeenCalledWith('term-1', expected, null);
+      });
     });
 
     it('should handle errors gracefully', () => {
-        const msg: MessageCommand = {
-            command: 'statusUpdate',
-            cliAgentStatus: { terminalId: 'term-1', status: 'connected' },
-        };
-        const error = new Error('Update failed');
-        (mockCoordinator.updateCliAgentStatus as any).mockImplementation(() => { throw error; });
+      const msg: MessageCommand = {
+        command: 'statusUpdate',
+        cliAgentStatus: { terminalId: 'term-1', status: 'connected' },
+      };
+      const error = new Error('Update failed');
+      (mockCoordinator.updateCliAgentStatus as any).mockImplementation(() => {
+        throw error;
+      });
 
-        controller.handleStatusUpdateMessage(msg, mockCoordinator);
+      controller.handleStatusUpdateMessage(msg, mockCoordinator);
 
-        expect(mockLogger.error).toHaveBeenCalledWith('Error updating CLI Agent status', error);
+      expect(mockLogger.error).toHaveBeenCalledWith('Error updating CLI Agent status', error);
     });
   });
 
@@ -140,7 +143,9 @@ describe('CliAgentMessageController', () => {
     it('should log warning if no terminalStates data', () => {
       const msg: MessageCommand = { command: 'fullStateSync' };
       controller.handleFullStateSyncMessage(msg, mockCoordinator);
-      expect(mockLogger.warn).toHaveBeenCalledWith('No terminal states data in full state sync message');
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'No terminal states data in full state sync message'
+      );
     });
 
     it('should update multiple terminals', () => {
@@ -154,66 +159,97 @@ describe('CliAgentMessageController', () => {
 
       controller.handleFullStateSyncMessage(msg, mockCoordinator);
 
-      expect(mockCoordinator.updateCliAgentStatus).toHaveBeenCalledWith('term-1', 'connected', 'claude');
-      expect(mockCoordinator.updateCliAgentStatus).toHaveBeenCalledWith('term-2', 'disconnected', null);
-      expect(mockLogger.info).toHaveBeenCalledWith('Full CLI Agent state sync completed successfully');
+      expect(mockCoordinator.updateCliAgentStatus).toHaveBeenCalledWith(
+        'term-1',
+        'connected',
+        'claude'
+      );
+      expect(mockCoordinator.updateCliAgentStatus).toHaveBeenCalledWith(
+        'term-2',
+        'disconnected',
+        null
+      );
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'Full CLI Agent state sync completed successfully'
+      );
     });
 
     it('should continue processing other terminals if one fails', () => {
-        const msg: MessageCommand = {
-            command: 'fullStateSync',
-            terminalStates: {
-                'term-1': { status: 'connected', agentType: 'claude' },
-                'term-2': { status: 'disconnected', agentType: null },
-            },
-        };
-        const error = new Error('Fail');
-        (mockCoordinator.updateCliAgentStatus as any).mockImplementationOnce(() => { throw error; });
+      const msg: MessageCommand = {
+        command: 'fullStateSync',
+        terminalStates: {
+          'term-1': { status: 'connected', agentType: 'claude' },
+          'term-2': { status: 'disconnected', agentType: null },
+        },
+      };
+      const error = new Error('Fail');
+      (mockCoordinator.updateCliAgentStatus as any).mockImplementationOnce(() => {
+        throw error;
+      });
 
-        controller.handleFullStateSyncMessage(msg, mockCoordinator);
+      controller.handleFullStateSyncMessage(msg, mockCoordinator);
 
-        expect(mockLogger.error).toHaveBeenCalledWith('Error updating terminal term-1', error);
-        expect(mockCoordinator.updateCliAgentStatus).toHaveBeenCalledWith('term-2', 'disconnected', null);
+      expect(mockLogger.error).toHaveBeenCalledWith('Error updating terminal term-1', error);
+      expect(mockCoordinator.updateCliAgentStatus).toHaveBeenCalledWith(
+        'term-2',
+        'disconnected',
+        null
+      );
     });
   });
 
   describe('handleSwitchResponseMessage', () => {
-      it('should warn if notification manager is missing', () => {
-          (mockCoordinator.getManagers as any).mockReturnValue({});
-          const msg: MessageCommand = { command: 'switchResponse', terminalId: 'term-1' };
-          
-          controller.handleSwitchResponseMessage(msg, mockCoordinator);
+    it('should warn if notification manager is missing', () => {
+      (mockCoordinator.getManagers as any).mockReturnValue({});
+      const msg: MessageCommand = { command: 'switchResponse', terminalId: 'term-1' };
 
-          expect(mockLogger.warn).toHaveBeenCalledWith('NotificationManager not available for AI Agent feedback');
-      });
+      controller.handleSwitchResponseMessage(msg, mockCoordinator);
 
-      it('should show success notification on forced reconnect', () => {
-          const msg: MessageCommand & { success?: boolean; newStatus?: string; isForceReconnect?: boolean } = {
-              command: 'switchResponse',
-              terminalId: 'term-1',
-              success: true,
-              newStatus: 'connected',
-              isForceReconnect: true,
-          };
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'NotificationManager not available for AI Agent feedback'
+      );
+    });
 
-          controller.handleSwitchResponseMessage(msg, mockCoordinator);
+    it('should show success notification on forced reconnect', () => {
+      const msg: MessageCommand & {
+        success?: boolean;
+        newStatus?: string;
+        isForceReconnect?: boolean;
+      } = {
+        command: 'switchResponse',
+        terminalId: 'term-1',
+        success: true,
+        newStatus: 'connected',
+        isForceReconnect: true,
+      };
 
-          expect(mockNotificationManager.showNotificationInTerminal).toHaveBeenCalledWith('📎 AI Agent Connected', 'success');
-          expect(mockLogger.info).toHaveBeenCalledWith('AI Agent operation succeeded', expect.anything());
-      });
+      controller.handleSwitchResponseMessage(msg, mockCoordinator);
 
-      it('should show error notification on failure', () => {
-        const msg: MessageCommand & { success?: boolean; reason?: string } = {
-            command: 'switchResponse',
-            terminalId: 'term-1',
-            success: false,
-            reason: 'Connection refused',
-        };
+      expect(mockNotificationManager.showNotificationInTerminal).toHaveBeenCalledWith(
+        '📎 AI Agent Connected',
+        'success'
+      );
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'AI Agent operation succeeded',
+        expect.anything()
+      );
+    });
 
-        controller.handleSwitchResponseMessage(msg, mockCoordinator);
+    it('should show error notification on failure', () => {
+      const msg: MessageCommand & { success?: boolean; reason?: string } = {
+        command: 'switchResponse',
+        terminalId: 'term-1',
+        success: false,
+        reason: 'Connection refused',
+      };
 
-        expect(mockNotificationManager.showNotificationInTerminal).toHaveBeenCalledWith('❌ AI Agent operation failed', 'error');
-        expect(mockLogger.error).toHaveBeenCalledWith('AI Agent operation failed', expect.anything());
-      });
+      controller.handleSwitchResponseMessage(msg, mockCoordinator);
+
+      expect(mockNotificationManager.showNotificationInTerminal).toHaveBeenCalledWith(
+        '❌ AI Agent operation failed',
+        'error'
+      );
+      expect(mockLogger.error).toHaveBeenCalledWith('AI Agent operation failed', expect.anything());
+    });
   });
 });

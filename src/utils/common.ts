@@ -95,11 +95,21 @@ export function generateTerminalName(index: number): string {
 export class ActiveTerminalManager {
   private activeTerminalId?: string;
 
-  public setActive(terminalId: string): void { this.activeTerminalId = terminalId; }
-  public getActive(): string | undefined { return this.activeTerminalId; }
-  public clearActive(): void { this.activeTerminalId = undefined; }
-  public hasActive(): boolean { return this.activeTerminalId !== undefined; }
-  public isActive(terminalId: string): boolean { return this.activeTerminalId === terminalId; }
+  public setActive(terminalId: string): void {
+    this.activeTerminalId = terminalId;
+  }
+  public getActive(): string | undefined {
+    return this.activeTerminalId;
+  }
+  public clearActive(): void {
+    this.activeTerminalId = undefined;
+  }
+  public hasActive(): boolean {
+    return this.activeTerminalId !== undefined;
+  }
+  public isActive(terminalId: string): boolean {
+    return this.activeTerminalId === terminalId;
+  }
 }
 
 export function generateNonce(): string {
@@ -143,10 +153,16 @@ export function getShellForPlatform(): string {
   return process.env.SHELL || '/bin/bash';
 }
 
-export function showErrorMessage(message: string, ...items: string[]): Thenable<string | undefined> {
+export function showErrorMessage(
+  message: string,
+  ...items: string[]
+): Thenable<string | undefined> {
   return vscode.window.showErrorMessage(message, ...items);
 }
 
-export function showWarningMessage(message: string, ...items: string[]): Thenable<string | undefined> {
+export function showWarningMessage(
+  message: string,
+  ...items: string[]
+): Thenable<string | undefined> {
   return vscode.window.showWarningMessage(message, ...items);
 }

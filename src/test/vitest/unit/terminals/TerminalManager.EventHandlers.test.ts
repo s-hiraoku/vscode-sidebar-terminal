@@ -225,7 +225,7 @@ describe('TerminalManager - Event Handler Setup (TDD)', () => {
     it('should set KilledByUser state when deleteTerminal is called', async () => {
       // Create TWO terminals to satisfy the "at least 1 terminal" rule
       const terminalId = terminalManager.createTerminal();
-      terminalManager.createTerminal(); 
+      terminalManager.createTerminal();
 
       // Transition to Running state first
       mockPty.emitData('initial data');

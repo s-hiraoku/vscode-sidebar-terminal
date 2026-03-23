@@ -35,7 +35,7 @@ describe('TerminalProcessCoordinator', () => {
     vi.useFakeTimers();
 
     mockTerminals = new Map();
-    
+
     mockPtyProcess = {
       pid: 123,
       onData: vi.fn().mockReturnValue({ dispose: vi.fn() }),
@@ -79,7 +79,7 @@ describe('TerminalProcessCoordinator', () => {
   describe('initializeShellForTerminal', () => {
     it('should inject shell integration if enabled and not safe mode', () => {
       coordinator.initializeShellForTerminal('t1', mockPtyProcess, false);
-      
+
       expect(mockShellIntegrationService.injectShellIntegration).toHaveBeenCalledWith(
         't1',
         '/bin/bash',
@@ -89,17 +89,17 @@ describe('TerminalProcessCoordinator', () => {
 
     it('should skip shell integration in safe mode', () => {
       coordinator.initializeShellForTerminal('t1', mockPtyProcess, true);
-      
+
       expect(mockShellIntegrationService.injectShellIntegration).not.toHaveBeenCalled();
     });
 
     it('should avoid duplicate initialization', () => {
       coordinator.initializeShellForTerminal('t1', mockPtyProcess, false);
       coordinator.initializeShellForTerminal('t1', mockPtyProcess, false);
-      
+
       expect(mockShellIntegrationService.injectShellIntegration).toHaveBeenCalledTimes(1);
     });
-    
+
     it('should setup initial prompt guard if not safe mode', () => {
       // Access private map if needed or verify side effects
       // We can verify that ptyProcess.onData was attached for the guard
@@ -128,9 +128,9 @@ describe('TerminalProcessCoordinator', () => {
     it('should setup data and exit handlers', () => {
       const onExit = vi.fn();
       const term = mockTerminals.get('t1')!;
-      
+
       coordinator.setupTerminalEvents(term, onExit);
-      
+
       expect(mockPtyProcess.onData).toHaveBeenCalled();
       expect(mockPtyProcess.onExit).toHaveBeenCalled();
       expect(term.processState).toBe(ProcessState.Launching);
@@ -139,15 +139,15 @@ describe('TerminalProcessCoordinator', () => {
     it('should update state to Running on data', () => {
       const onExit = vi.fn();
       const term = mockTerminals.get('t1')!;
-      
+
       coordinator.setupTerminalEvents(term, onExit);
-      
+
       // Get the data callback passed to onData
       const dataCallback = mockPtyProcess.onData.mock.calls[0][0];
-      
+
       // Simulate data
       dataCallback('some data');
-      
+
       expect(term.processState).toBe(ProcessState.Running);
       expect(mockBufferDataCallback).toHaveBeenCalledWith('t1', 'some data');
     });
@@ -155,15 +155,15 @@ describe('TerminalProcessCoordinator', () => {
     it('should handle process exit', () => {
       const onExit = vi.fn();
       const term = mockTerminals.get('t1')!;
-      
+
       coordinator.setupTerminalEvents(term, onExit);
-      
+
       // Get the exit callback
       const exitCallback = mockPtyProcess.onExit.mock.calls[0][0];
-      
+
       // Simulate exit
       exitCallback({ exitCode: 1 });
-      
+
       expect(onExit).toHaveBeenCalledWith('t1', 1);
       expect(term.processState).toBe(ProcessState.KilledDuringLaunch); // because it was Launching
     });
@@ -173,7 +173,7 @@ describe('TerminalProcessCoordinator', () => {
     it('should fire event emitter', () => {
       const term = mockTerminals.get('t1')!;
       coordinator.notifyProcessStateChange(term, ProcessState.Running);
-      
+
       expect(mockStateUpdateEmitter.fire).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'processStateChange',
@@ -186,12 +186,12 @@ describe('TerminalProcessCoordinator', () => {
     it('should setup timeout for Launching state', () => {
       const term = mockTerminals.get('t1')!;
       coordinator.notifyProcessStateChange(term, ProcessState.Launching);
-      
+
       expect(vi.getTimerCount()).toBeGreaterThan(0);
-      
+
       // Fast forward
       vi.runAllTimers();
-      
+
       expect(term.processState).toBe(ProcessState.KilledDuringLaunch);
     });
 
@@ -201,11 +201,11 @@ describe('TerminalProcessCoordinator', () => {
       term.processState = ProcessState.Launching;
       coordinator.notifyProcessStateChange(term, ProcessState.Launching);
       const _timerCount = vi.getTimerCount();
-      
+
       // Then Running to clear it
       term.processState = ProcessState.Running;
       coordinator.notifyProcessStateChange(term, ProcessState.Running);
-      
+
       // Timers should be reduced (or cleared)
       // Note: ensureInitialPrompt might also set timers
       // But we can check that if we run timers, state doesn't change to KilledDuringLaunch

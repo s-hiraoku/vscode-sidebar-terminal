@@ -220,9 +220,7 @@ export class CliAgentPatternRegistry {
       type: 'opencode',
       commandPrefixes: ['opencode ', 'opencode'],
       startupPatterns: [],
-      startupRegexPatterns: [
-        /OpenCode\s+(?:Zen|Base)/i,
-      ],
+      startupRegexPatterns: [/OpenCode\s+(?:Zen|Base)/i],
       activityKeywords: ['opencode', 'open code'],
       terminationPatterns: [],
       terminationRegexPatterns: [/\[process exited with code \d+\]/i],
@@ -676,7 +674,10 @@ export class CliAgentPatternRegistry {
     }
 
     const { waitingPatterns } = patterns;
-    const lines = output.split('\n').map((l) => l.trim()).filter(Boolean);
+    const lines = output
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean);
 
     // Check each line against approval patterns first (more specific)
     for (const line of lines) {

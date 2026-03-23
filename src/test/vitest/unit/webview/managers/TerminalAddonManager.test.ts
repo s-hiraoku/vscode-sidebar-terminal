@@ -3,7 +3,10 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { TerminalAddonManager, AddonConfig } from '../../../../../webview/managers/TerminalAddonManager';
+import {
+  TerminalAddonManager,
+  AddonConfig,
+} from '../../../../../webview/managers/TerminalAddonManager';
 import { Terminal } from '@xterm/xterm';
 import { AddonLoader } from '../../../../../webview/utils/AddonLoader';
 
@@ -79,8 +82,8 @@ describe('TerminalAddonManager', () => {
       element: document.createElement('div'),
       _core: {
         _renderService: { dimensions: { css: { cell: { width: 10, height: 20 } } } },
-        viewport: { scrollBarWidth: 10 }
-      }
+        viewport: { scrollBarWidth: 10 },
+      },
     };
 
     // Setup basic AddonLoader mocks
@@ -145,8 +148,9 @@ describe('TerminalAddonManager', () => {
     it('should throw if required addon fails to load', async () => {
       (AddonLoader.loadAddon as any).mockResolvedValueOnce(null); // Fail FitAddon
 
-      await expect(manager.loadAllAddons(mockTerminal as Terminal, 't1', {}))
-        .rejects.toThrow('FitAddon failed to load');
+      await expect(manager.loadAllAddons(mockTerminal as Terminal, 't1', {})).rejects.toThrow(
+        'FitAddon failed to load'
+      );
     });
   });
 
@@ -158,7 +162,7 @@ describe('TerminalAddonManager', () => {
       const addons: any = {
         searchAddon,
         unicode11Addon,
-        fitAddon: {} // Essential ones usually auto-disposed by xterm
+        fitAddon: {}, // Essential ones usually auto-disposed by xterm
       };
 
       manager.disposeAddons(addons);
@@ -217,7 +221,10 @@ describe('TerminalAddonManager', () => {
 
       // JSDOM specific: getComputedStyle mocks
       vi.spyOn(window, 'getComputedStyle').mockImplementation((el: Element) => {
-        if (el === parent) return { getPropertyValue: (prop: string) => (prop === 'width' ? '100px' : '100px') } as any;
+        if (el === parent)
+          return {
+            getPropertyValue: (prop: string) => (prop === 'width' ? '100px' : '100px'),
+          } as any;
         return { getPropertyValue: () => '0px' } as any;
       });
 
@@ -258,28 +265,40 @@ describe('TerminalAddonManager', () => {
             return {
               getPropertyValue: (prop: string) => {
                 switch (prop) {
-                  case 'width': return `${parentWidth}px`;
-                  case 'height': return `${parentHeight}px`;
-                  case 'padding-left': return `${parentPaddingLeft}px`;
-                  case 'padding-right': return `${parentPaddingRight}px`;
-                  case 'padding-top': return `${parentPaddingTop}px`;
-                  case 'padding-bottom': return `${parentPaddingBottom}px`;
-                  default: return '0px';
+                  case 'width':
+                    return `${parentWidth}px`;
+                  case 'height':
+                    return `${parentHeight}px`;
+                  case 'padding-left':
+                    return `${parentPaddingLeft}px`;
+                  case 'padding-right':
+                    return `${parentPaddingRight}px`;
+                  case 'padding-top':
+                    return `${parentPaddingTop}px`;
+                  case 'padding-bottom':
+                    return `${parentPaddingBottom}px`;
+                  default:
+                    return '0px';
                 }
-              }
+              },
             } as any;
           }
           if (el === element) {
             return {
               getPropertyValue: (prop: string) => {
                 switch (prop) {
-                  case 'padding-left': return `${paddingLeft}px`;
-                  case 'padding-right': return `${paddingRight}px`;
-                  case 'padding-top': return `${paddingTop}px`;
-                  case 'padding-bottom': return `${paddingBottom}px`;
-                  default: return '0px';
+                  case 'padding-left':
+                    return `${paddingLeft}px`;
+                  case 'padding-right':
+                    return `${paddingRight}px`;
+                  case 'padding-top':
+                    return `${paddingTop}px`;
+                  case 'padding-bottom':
+                    return `${paddingBottom}px`;
+                  default:
+                    return '0px';
                 }
-              }
+              },
             } as any;
           }
           return { getPropertyValue: () => '0px' } as any;
@@ -301,11 +320,11 @@ describe('TerminalAddonManager', () => {
           _core: {
             _renderService: {
               dimensions: {
-                css: { cell: { width: cellWidth, height: cellHeight } }
-              }
+                css: { cell: { width: cellWidth, height: cellHeight } },
+              },
             },
-            viewport: { scrollBarWidth: scrollbarWidth }
-          }
+            viewport: { scrollBarWidth: scrollbarWidth },
+          },
         };
 
         Object.defineProperty(element, 'parentElement', { value: parent });
@@ -430,7 +449,21 @@ describe('TerminalAddonManager', () => {
       });
 
       it('should include parent padding in width calculation', async () => {
-        const { terminalMock } = setupProposeDimensionsTest(800, 600, 10, 20, 0, 0, 0, 0, 0, 4, 4, 0, 0);
+        const { terminalMock } = setupProposeDimensionsTest(
+          800,
+          600,
+          10,
+          20,
+          0,
+          0,
+          0,
+          0,
+          0,
+          4,
+          4,
+          0,
+          0
+        );
 
         const addons = await manager.loadAllAddons(terminalMock as any, 't1', {});
         const dims = addons.fitAddon.proposeDimensions();

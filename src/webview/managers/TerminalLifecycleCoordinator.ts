@@ -423,7 +423,11 @@ export class TerminalLifecycleCoordinator {
       // 🔧 CRITICAL FIX: Use requestAnimationFrame for better timing
       requestAnimationFrame(() => {
         terminals.forEach((terminalInstance, terminalId) => {
-          if (terminalInstance.terminal && terminalInstance.fitAddon && terminalInstance.container) {
+          if (
+            terminalInstance.terminal &&
+            terminalInstance.fitAddon &&
+            terminalInstance.container
+          ) {
             // Use ResizeManager for consistent resize behavior
             ResizeManager.debounceResize(
               `resize-all-${terminalId}`,
@@ -467,7 +471,11 @@ export class TerminalLifecycleCoordinator {
     });
 
     // Find first available number (1-MAX_TERMINAL_NUMBER)
-    for (let i = TerminalDefaults.DEFAULT_TERMINAL_NUMBER; i <= TerminalDefaults.MAX_TERMINAL_NUMBER; i++) {
+    for (
+      let i = TerminalDefaults.DEFAULT_TERMINAL_NUMBER;
+      i <= TerminalDefaults.MAX_TERMINAL_NUMBER;
+      i++
+    ) {
       if (!existingNumbers.has(i)) {
         return i;
       }

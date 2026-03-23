@@ -19,7 +19,7 @@ vi.mock('../../../../../webview/components/TerminalTabList', () => ({
     reorderTabs = vi.fn();
     updateTheme = vi.fn();
     dispose = vi.fn();
-  }
+  },
 }));
 
 vi.mock('../../../../../utils/logger', () => ({
@@ -99,7 +99,7 @@ describe('TerminalTabManager', () => {
     it('should update existing tab on add', () => {
       manager.addTab('t1', 'Term 1');
       manager.addTab('t1', 'Updated Name');
-      
+
       expect(manager.getTabCount()).toBe(1);
       expect(manager.getAllTabs()[0].name).toBe('Updated Name');
     });
@@ -107,15 +107,15 @@ describe('TerminalTabManager', () => {
     it('should remove a tab', () => {
       manager.addTab('t1', 'Term 1');
       manager.removeTab('t1');
-      
+
       expect(manager.getTabCount()).toBe(0);
     });
 
     it('should prevent removing last tab via close event', () => {
       manager.addTab('t1', 'Term 1');
-      
+
       manager.onTabClose('t1');
-      
+
       // Should show warning and NOT call remove/close logic
       const notifManager = mockCoordinator.getManagers().notification;
       expect(notifManager!.showWarning).toHaveBeenCalled();
@@ -125,9 +125,9 @@ describe('TerminalTabManager', () => {
     it('should activate tab', () => {
       manager.addTab('t1', 'Term 1');
       manager.addTab('t2', 'Term 2');
-      
+
       manager.setActiveTab('t2');
-      
+
       expect(manager.getActiveTabId()).toBe('t2');
     });
   });
@@ -136,32 +136,36 @@ describe('TerminalTabManager', () => {
     it('should handle tab click', () => {
       manager.addTab('t1', 'Term 1');
       manager.onTabClick('t1');
-      
+
       expect(mockCoordinator.setActiveTerminalId).toHaveBeenCalledWith('t1');
     });
 
     it('should handle tab rename', () => {
       manager.addTab('t1', 'Old Name');
       manager.onTabRename('t1', 'New Name');
-      
+
       expect(manager.getAllTabs()[0].name).toBe('New Name');
-      expect(mockCoordinator.postMessageToExtension).toHaveBeenCalledWith(expect.objectContaining({
-        command: 'renameTerminal',
-        newName: 'New Name'
-      }));
+      expect(mockCoordinator.postMessageToExtension).toHaveBeenCalledWith(
+        expect.objectContaining({
+          command: 'renameTerminal',
+          newName: 'New Name',
+        })
+      );
     });
 
     it('should handle tab reorder', () => {
       manager.addTab('t1', '1');
       manager.addTab('t2', '2');
-      
+
       manager.onTabReorder(0, 1, ['t2', 't1']);
-      
+
       expect(manager.getAllTabs()[0].id).toBe('t2');
-      expect(mockCoordinator.postMessageToExtension).toHaveBeenCalledWith(expect.objectContaining({
-        command: 'reorderTerminals',
-        order: ['t2', 't1']
-      }));
+      expect(mockCoordinator.postMessageToExtension).toHaveBeenCalledWith(
+        expect.objectContaining({
+          command: 'reorderTerminals',
+          order: ['t2', 't1'],
+        })
+      );
     });
 
     it('should handle new tab request', () => {
@@ -195,21 +199,21 @@ describe('TerminalTabManager', () => {
     it('should sync tabs from extension state', () => {
       const tabs = [
         { id: 't1', name: 'Sync 1', isActive: true },
-        { id: 't2', name: 'Sync 2', isActive: false }
+        { id: 't2', name: 'Sync 2', isActive: false },
       ];
-      
+
       manager.syncTabs(tabs);
-      
+
       expect(manager.getTabCount()).toBe(2);
       expect(manager.getActiveTabId()).toBe('t1');
     });
 
     it('should remove tabs not in sync state', () => {
       manager.addTab('old', 'Old');
-      
+
       const tabs = [{ id: 'new', name: 'New', isActive: true }];
       manager.syncTabs(tabs);
-      
+
       expect(manager.getTabCount()).toBe(1);
       expect(manager.getAllTabs()[0].id).toBe('new');
     });

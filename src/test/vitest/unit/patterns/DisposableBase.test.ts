@@ -1,19 +1,24 @@
-
 import { describe, it, expect, vi } from 'vitest';
-import { DisposableBase, DisposableCallback, toDisposable } from '../../../../patterns/DisposableBase';
+import {
+  DisposableBase,
+  DisposableCallback,
+  toDisposable,
+} from '../../../../patterns/DisposableBase';
 
 // Mock vscode
 vi.mock('vscode', () => ({
   Disposable: class {
-    static from(..._args: any[]) { return { dispose: vi.fn() }; }
+    static from(..._args: any[]) {
+      return { dispose: vi.fn() };
+    }
     dispose() {}
-  }
+  },
 }));
 
 // Concrete implementation for testing
 class TestDisposable extends DisposableBase {
   public doDisposeCalled = 0;
-  
+
   constructor() {
     super();
   }
@@ -89,12 +94,12 @@ describe('DisposableBase', () => {
       const order: string[] = [];
       const d1 = { dispose: () => order.push('d1') };
       const d2 = { dispose: () => order.push('d2') };
-      
+
       testObj.publicRegisterDisposable(d1);
       testObj.publicRegisterDisposable(d2);
-      
+
       testObj.dispose();
-      
+
       expect(order).toEqual(['d2', 'd1']);
       expect(testObj.isDisposed()).toBe(true);
     });
@@ -103,12 +108,12 @@ describe('DisposableBase', () => {
       const order: string[] = [];
       const d1 = { dispose: () => order.push('disposable') };
       const c1 = () => order.push('cleanup');
-      
+
       testObj.publicRegisterDisposable(d1);
       testObj.publicRegisterCleanup(c1);
-      
+
       testObj.dispose();
-      
+
       expect(order).toEqual(['disposable', 'cleanup']);
     });
 
@@ -119,15 +124,19 @@ describe('DisposableBase', () => {
     });
 
     it('should handle errors in disposables gracefully', () => {
-      const d1 = { dispose: () => { throw new Error('fail'); } };
+      const d1 = {
+        dispose: () => {
+          throw new Error('fail');
+        },
+      };
       const d2 = { dispose: vi.fn() };
-      
+
       testObj.publicRegisterDisposable(d1);
       testObj.publicRegisterDisposable(d2);
-      
+
       // Should not throw
       testObj.dispose();
-      
+
       expect(d2.dispose).toHaveBeenCalled();
     });
   });
@@ -135,7 +144,9 @@ describe('DisposableBase', () => {
   describe('throwIfDisposed', () => {
     it('should throw if already disposed', () => {
       testObj.dispose();
-      expect(() => testObj.publicThrowIfDisposed('testMethod')).toThrow('Cannot call testMethod on disposed TestDisposable');
+      expect(() => testObj.publicThrowIfDisposed('testMethod')).toThrow(
+        'Cannot call testMethod on disposed TestDisposable'
+      );
     });
 
     it('should not throw if not disposed', () => {

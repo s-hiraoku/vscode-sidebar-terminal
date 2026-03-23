@@ -9,7 +9,7 @@ describe('ProfileMessageHandler', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
-    
+
     mockLogger = {
       info: vi.fn(),
       warn: vi.fn(),
@@ -23,7 +23,7 @@ describe('ProfileMessageHandler', () => {
 
     mockCoordinator = {
       getManagers: vi.fn().mockReturnValue({
-        profile: mockProfileManager
+        profile: mockProfileManager,
       }),
     };
 
@@ -40,7 +40,7 @@ describe('ProfileMessageHandler', () => {
   describe('handleMessage', () => {
     it('should handle showProfileSelector', () => {
       handler.handleMessage({ command: 'showProfileSelector' }, mockCoordinator);
-      
+
       expect(mockProfileManager.showProfileSelector).toHaveBeenCalled();
       expect(mockLogger.info).toHaveBeenCalledWith('Show profile selector');
     });
@@ -48,7 +48,7 @@ describe('ProfileMessageHandler', () => {
     it('should handle profilesUpdated', () => {
       const msg = { command: 'profilesUpdated', profiles: [] };
       handler.handleMessage(msg, mockCoordinator);
-      
+
       expect(mockProfileManager.handleMessage).toHaveBeenCalledWith(msg);
       expect(mockLogger.info).toHaveBeenCalledWith('Profiles updated');
     });
@@ -56,19 +56,23 @@ describe('ProfileMessageHandler', () => {
     it('should handle defaultProfileChanged', () => {
       const msg = { command: 'defaultProfileChanged', profile: 'bash' };
       handler.handleMessage(msg, mockCoordinator);
-      
+
       expect(mockProfileManager.handleMessage).toHaveBeenCalledWith(msg);
       expect(mockLogger.info).toHaveBeenCalledWith('Default profile changed');
     });
 
     it('should warn on unknown command', () => {
       handler.handleMessage({ command: 'unknown' }, mockCoordinator);
-      expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Unknown profile command'));
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Unknown profile command')
+      );
     });
 
     it('should warn if command property is missing', () => {
       handler.handleMessage({} as any, mockCoordinator);
-      expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('without command property'));
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('without command property')
+      );
     });
   });
 });

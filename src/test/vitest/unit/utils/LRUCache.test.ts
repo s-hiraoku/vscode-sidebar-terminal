@@ -1,4 +1,3 @@
-
 import { describe, it, expect } from 'vitest';
 import { LRUCache } from '../../../../utils/LRUCache';
 
@@ -24,10 +23,10 @@ describe('LRUCache', () => {
     const cache = new LRUCache<string, number>(2);
     cache.set('a', 1);
     cache.set('b', 2);
-    
+
     // Access 'a', making it MRU
     cache.get('a');
-    
+
     cache.set('c', 3); // 'b' should be evicted instead of 'a'
 
     expect(cache.has('b')).toBe(false);
