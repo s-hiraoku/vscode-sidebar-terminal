@@ -21,6 +21,22 @@ export interface ICliAgentCoordinatorDependencies {
     state: { status: string; terminalName?: string; agentType: string | null }
   ): void;
   removeTerminalState(terminalId: string): void;
+  detectAgentActivity(
+    output: string,
+    terminalId: string
+  ): {
+    isAgentOutput: boolean;
+    agentType: string | null;
+    isDisplayingChoices: boolean;
+  };
+  getAgentStats(): {
+    totalAgents: number;
+    connectedAgents: number;
+    disconnectedAgents: number;
+    currentConnectedId: string | null;
+    agentTypes: string[];
+  };
+  disposeStateManager(): void;
 
   // Manager coordination
   getActiveTerminalId(): string | null;
@@ -42,16 +58,20 @@ export class CliAgentCoordinator {
     return this.deps.getAgentState(terminalId);
   }
 
-  public setCliAgentConnected(
-    terminalId: string,
-    agentType: string,
-    terminalName?: string
-  ): void {
+  public setCliAgentConnected(terminalId: string, agentType: string, terminalName?: string): void {
     this.deps.setAgentConnected(terminalId, agentType, terminalName);
   }
 
   public setCliAgentDisconnected(terminalId: string): void {
     this.deps.setAgentDisconnected(terminalId);
+  }
+
+  public detectAgentActivity(output: string, terminalId: string) {
+    return this.deps.detectAgentActivity(output, terminalId);
+  }
+
+  public removeTerminalState(terminalId: string): void {
+    this.deps.removeTerminalState(terminalId);
   }
 
   /**
@@ -92,9 +112,7 @@ export class CliAgentCoordinator {
         );
       } else {
         // None state: force-reconnect to create a new agent connection
-        log(
-          `⏻ No agent detected, sending force-reconnect for terminal: ${terminalId}`
-        );
+        log(`⏻ No agent detected, sending force-reconnect for terminal: ${terminalId}`);
         this.deps.postMessageToExtension({
           command: 'switchAiAgent',
           terminalId,
@@ -163,9 +181,7 @@ export class CliAgentCoordinator {
     status: 'connected' | 'disconnected' | 'none',
     agentType: string | null
   ): void {
-    log(
-      `🔄 [REFACTORED] UpdateCliAgentStatus called: ${terminalId}, ${status}, ${agentType}`
-    );
+    log(`🔄 [REFACTORED] UpdateCliAgentStatus called: ${terminalId}, ${status}, ${agentType}`);
 
     this.deps.setAgentState(terminalId, {
       status,
@@ -175,5 +191,13 @@ export class CliAgentCoordinator {
     this.deps.updateCliAgentStatusUI(terminalId, status, agentType);
 
     log(`✅ [REFACTORED] CLI Agent status updated for terminal: ${terminalId}`);
+  }
+
+  public getAgentStats() {
+    return this.deps.getAgentStats();
+  }
+
+  public dispose(): void {
+    this.deps.disposeStateManager();
   }
 }

@@ -13,7 +13,7 @@ const ENABLE_TERMINAL_DEBUG_LOGS = process.env.SECONDARY_TERMINAL_DEBUG_LOGS ===
 export class TerminalDataBufferManager {
   private readonly _dataBuffers = new Map<string, string[]>();
   private readonly _dataFlushTimers = new Map<string, NodeJS.Timeout>();
-  private readonly DATA_FLUSH_INTERVAL = PERFORMANCE_CONSTANTS.OUTPUT_BUFFER_FLUSH_INTERVAL_MS; // 16ms (60fps) - unified via PerformanceConstants
+  private readonly DATA_FLUSH_INTERVAL = PERFORMANCE_CONSTANTS.OUTPUT_BUFFER_FLUSH_INTERVAL_MS;
   private readonly MAX_BUFFER_SIZE = 50;
   private readonly _debugLoggingEnabled = ENABLE_TERMINAL_DEBUG_LOGS;
   private readonly _ansiFilterState = new Map<
@@ -42,11 +42,7 @@ export class TerminalDataBufferManager {
       this._dataBuffers.set(terminalId, []);
     }
 
-    const buffer = this._dataBuffers.get(terminalId);
-    if (!buffer) {
-      this._dataBuffers.set(terminalId, []);
-      return;
-    }
+    const buffer = this._dataBuffers.get(terminalId)!;
 
     const normalizedData = this._normalizeControlSequences(terminalId, data);
     buffer.push(normalizedData);
@@ -98,22 +94,7 @@ export class TerminalDataBufferManager {
       }
 
       try {
-        this._cliAgentService.detectFromOutput(terminalId, combinedData);
-
-        const cliAgentService = this._cliAgentService as unknown as {
-          getAgentState?: (id: string) => { status: 'connected' | 'disconnected' | 'none' } | null;
-          detectTermination?: (id: string, data: string) => { isTerminated: boolean } | null;
-        };
-
-        if (
-          typeof cliAgentService.getAgentState === 'function' &&
-          typeof cliAgentService.detectTermination === 'function'
-        ) {
-          const agentState = cliAgentService.getAgentState(terminalId);
-          if (agentState?.status && agentState.status !== 'none') {
-            cliAgentService.detectTermination(terminalId, combinedData);
-          }
-        }
+        this._cliAgentService.handleOutputChunk(terminalId, combinedData);
       } catch {
         // Ignore CLI Agent detection errors
       }
@@ -148,8 +129,10 @@ export class TerminalDataBufferManager {
   }
 
   private _filterEraseScrollbackSequence(terminalId: string, data: string): string {
-    const state =
-      this._ansiFilterState.get(terminalId) ?? { mode: 'normal' as const, csiParams: '' };
+    const state = this._ansiFilterState.get(terminalId) ?? {
+      mode: 'normal' as const,
+      csiParams: '',
+    };
 
     let out = '';
     for (let i = 0; i < data.length; i++) {

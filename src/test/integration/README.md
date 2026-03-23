@@ -101,7 +101,9 @@ Verifies that service failures don't cascade:
 
 ```typescript
 // Make one service fail
-vi.spyOn(mockLifecycleManager, 'createTerminal').mockImplementation(() => { throw new Error('Service failure'); });
+vi.spyOn(mockLifecycleManager, 'createTerminal').mockImplementation(() => {
+  throw new Error('Service failure');
+});
 
 // Other services should still function
 const stats = terminalManager.getPerformanceMetrics();

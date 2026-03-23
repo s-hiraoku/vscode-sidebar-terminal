@@ -1,4 +1,3 @@
-
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SessionCommandHandler } from '../../../../../../messaging/patterns/handlers/SessionCommandHandler';
 import { IMessageHandlerContext } from '../../../../../../messaging/patterns/core/IMessageHandler';
@@ -30,21 +29,27 @@ describe('SessionCommandHandler', () => {
     const terminals = [{ id: 't1' }];
     const msg = { command: 'sessionRestore', terminals, activeTerminalId: 't1' };
     await handler.handle(msg as any, mockContext);
-    
+
     expect(mockCoordinator.restoreSession).toHaveBeenCalledWith({
       terminals,
       activeTerminalId: 't1',
-      config: undefined
+      config: undefined,
     });
   });
 
   it('should handle sessionRestoreStarted command', async () => {
     await handler.handle({ command: 'sessionRestoreStarted' } as any, mockContext);
-    expect(mockContext.log).toHaveBeenCalledWith('info', expect.stringContaining('Session restore started'));
+    expect(mockContext.log).toHaveBeenCalledWith(
+      'info',
+      expect.stringContaining('Session restore started')
+    );
   });
 
   it('should handle sessionRestoreProgress command', async () => {
-    await handler.handle({ command: 'sessionRestoreProgress', progress: 1, total: 2 } as any, mockContext);
+    await handler.handle(
+      { command: 'sessionRestoreProgress', progress: 1, total: 2 } as any,
+      mockContext
+    );
     // BaseCommandHandler.log calls ctx.log(level, msg, ...args)
     // When no args are passed to this.log, args is an empty array in this.log(level, msg, ...args)
     // but context.log receives it as spread.
@@ -52,28 +57,51 @@ describe('SessionCommandHandler', () => {
   });
 
   it('should handle sessionRestoreCompleted command', async () => {
-    await handler.handle({ command: 'sessionRestoreCompleted', restoredCount: 5 } as any, mockContext);
-    expect(mockContext.log).toHaveBeenCalledWith('info', expect.stringContaining('5 terminals restored'));
+    await handler.handle(
+      { command: 'sessionRestoreCompleted', restoredCount: 5 } as any,
+      mockContext
+    );
+    expect(mockContext.log).toHaveBeenCalledWith(
+      'info',
+      expect.stringContaining('5 terminals restored')
+    );
   });
 
   it('should handle sessionRestoreError command', async () => {
     await handler.handle({ command: 'sessionRestoreError', error: 'fail' } as any, mockContext);
-    expect(mockContext.log).toHaveBeenCalledWith('error', expect.stringContaining('Session restore failed'), 'fail');
+    expect(mockContext.log).toHaveBeenCalledWith(
+      'error',
+      expect.stringContaining('Session restore failed'),
+      'fail'
+    );
   });
 
   it('should handle sessionSaved command', async () => {
     await handler.handle({ command: 'sessionSaved', terminalCount: 3 } as any, mockContext);
-    expect(mockContext.log).toHaveBeenCalledWith('info', expect.stringContaining('Session saved: 3 terminals'));
+    expect(mockContext.log).toHaveBeenCalledWith(
+      'info',
+      expect.stringContaining('Session saved: 3 terminals')
+    );
   });
 
   it('should handle sessionCleared command', async () => {
     await handler.handle({ command: 'sessionCleared' } as any, mockContext);
-    expect(mockContext.log).toHaveBeenCalledWith('info', expect.stringContaining('Session cleared'));
+    expect(mockContext.log).toHaveBeenCalledWith(
+      'info',
+      expect.stringContaining('Session cleared')
+    );
   });
 
   it('should handle terminalRestoreError command', async () => {
-    await handler.handle({ command: 'terminalRestoreError', terminalId: 't1', error: 'dead' } as any, mockContext);
-    expect(mockContext.log).toHaveBeenCalledWith('error', expect.stringContaining('Terminal restore error for t1'), 'dead');
+    await handler.handle(
+      { command: 'terminalRestoreError', terminalId: 't1', error: 'dead' } as any,
+      mockContext
+    );
+    expect(mockContext.log).toHaveBeenCalledWith(
+      'error',
+      expect.stringContaining('Terminal restore error for t1'),
+      'dead'
+    );
   });
 
   it('should continue if terminals missing in sessionRestore (validateRequired is guard only)', async () => {

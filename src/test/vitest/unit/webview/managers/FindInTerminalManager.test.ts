@@ -73,8 +73,8 @@ describe('FindInTerminalManager', () => {
     it('should setup styles on construction', () => {
       // Check that style element was added to head
       const styles = document.head.querySelectorAll('style');
-      const hasSearchStyles = Array.from(styles).some(
-        (style) => style.textContent?.includes('.find-in-terminal-panel')
+      const hasSearchStyles = Array.from(styles).some((style) =>
+        style.textContent?.includes('.find-in-terminal-panel')
       );
       expect(hasSearchStyles).toBe(true);
     });

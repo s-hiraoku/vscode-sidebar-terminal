@@ -37,6 +37,27 @@ export interface AgentPatternDefinition {
 
   /** Regex patterns for termination detection */
   terminationRegexPatterns: RegExp[];
+
+  /** Patterns that indicate agent is waiting for user input or approval */
+  waitingPatterns?: WaitingPatternDefinition;
+}
+
+/**
+ * Waiting pattern definitions for detecting when an agent is idle
+ */
+export interface WaitingPatternDefinition {
+  /** Regex patterns for input prompt detection */
+  inputPromptRegexPatterns?: RegExp[];
+  /** Regex patterns for tool approval prompt detection */
+  toolApprovalRegexPatterns?: RegExp[];
+}
+
+/**
+ * Result of a waiting pattern match
+ */
+export interface WaitingPatternMatch {
+  /** Type of waiting detected */
+  waitingType: 'input' | 'approval';
 }
 
 /**
@@ -86,6 +107,19 @@ export class CliAgentPatternRegistry {
       activityKeywords: ['claude', 'anthropic'],
       terminationPatterns: ['[Process completed]'],
       terminationRegexPatterns: [/\[Process completed\]/i, /\[process exited with code \d+\]/i],
+      waitingPatterns: {
+        inputPromptRegexPatterns: [
+          // Claude's waiting prompt can include inline hint text or terminal-mode residue.
+          /^❯(?:\s+.*)?$/,
+        ],
+        toolApprovalRegexPatterns: [
+          /Allow\s+(once|always)\?/i,
+          /needs your permission/i,
+          /\(Y\/n\)/,
+          /\(y\/N\)/,
+          /\(y\/n\/always\)/i,
+        ],
+      },
     });
 
     // Gemini CLI patterns
@@ -129,6 +163,17 @@ export class CliAgentPatternRegistry {
       activityKeywords: ['gemini', 'google', 'google ai'],
       terminationPatterns: ['Agent powering down. Goodbye!'],
       terminationRegexPatterns: [/Agent powering down\.\s*Goodbye!/i],
+      waitingPatterns: {
+        inputPromptRegexPatterns: [/^gemini\s*>\s*$/i],
+        toolApprovalRegexPatterns: [
+          /Do you approve/i,
+          /Allow\s+command/i,
+          /Approve\?\s*\(/i,
+          /Proceed\s+(Once|Always)/i,
+          /\[y\/N\]/,
+          /\(y\/n\/always\)/i,
+        ],
+      },
     });
 
     // OpenAI Codex patterns
@@ -140,6 +185,14 @@ export class CliAgentPatternRegistry {
       activityKeywords: ['codex', 'openai'],
       terminationPatterns: [],
       terminationRegexPatterns: [/\[process exited with code \d+\]/i],
+      waitingPatterns: {
+        inputPromptRegexPatterns: [/^codex\s*>\s*$/i],
+        toolApprovalRegexPatterns: [
+          /ask me to approve/i,
+          /\[y\/N\]/,
+          /\(Y\/n\)/,
+        ],
+      },
     });
 
     // GitHub Copilot CLI patterns
@@ -151,6 +204,15 @@ export class CliAgentPatternRegistry {
       activityKeywords: ['copilot', 'github'],
       terminationPatterns: [],
       terminationRegexPatterns: [/\[process exited with code \d+\]/i],
+      waitingPatterns: {
+        inputPromptRegexPatterns: [/^copilot\s*>\s*$/i],
+        toolApprovalRegexPatterns: [
+          /Yes,\s+proceed/i,
+          /Yes,\s+and\s+(remember|approve)/i,
+          /\[y\/N\]/,
+          /\(Y\/n\)/,
+        ],
+      },
     });
 
     // OpenCode patterns
@@ -158,12 +220,14 @@ export class CliAgentPatternRegistry {
       type: 'opencode',
       commandPrefixes: ['opencode ', 'opencode'],
       startupPatterns: [],
-      startupRegexPatterns: [
-        /OpenCode\s+(?:Zen|Base)/i,
-      ],
+      startupRegexPatterns: [/OpenCode\s+(?:Zen|Base)/i],
       activityKeywords: ['opencode', 'open code'],
       terminationPatterns: [],
       terminationRegexPatterns: [/\[process exited with code \d+\]/i],
+      waitingPatterns: {
+        inputPromptRegexPatterns: [/^opencode\s*>\s*$/i],
+        toolApprovalRegexPatterns: [],
+      },
     });
 
     return patterns;
@@ -594,6 +658,62 @@ export class CliAgentPatternRegistry {
   }
 
   /**
+   * Match output against waiting patterns for a specific agent type
+   * @param agentType Agent type to check
+   * @param output Cleaned terminal output
+   * @returns Waiting pattern match or null
+   */
+  public matchWaitingPattern(agentType: AgentType, output: string): WaitingPatternMatch | null {
+    if (!output || !output.trim()) {
+      return null;
+    }
+
+    const patterns = this.agentPatterns.get(agentType);
+    if (!patterns?.waitingPatterns) {
+      return null;
+    }
+
+    const { waitingPatterns } = patterns;
+    const lines = output
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean);
+
+    // Check each line against approval patterns first (more specific)
+    for (const line of lines) {
+      if (waitingPatterns.toolApprovalRegexPatterns) {
+        for (const regex of waitingPatterns.toolApprovalRegexPatterns) {
+          if (regex.test(line)) {
+            return { waitingType: 'approval' };
+          }
+        }
+      }
+    }
+
+    // Input waiting should be determined by the latest rendered line only.
+    // Older prompt lines can remain in a buffered redraw while the agent is actively working.
+    const lastLine = lines.at(-1);
+    if (lastLine && waitingPatterns.inputPromptRegexPatterns) {
+      for (const regex of waitingPatterns.inputPromptRegexPatterns) {
+        if (regex.test(lastLine)) {
+          return { waitingType: 'input' };
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Get waiting patterns for a specific agent type
+   * @param agentType Agent type
+   * @returns Waiting pattern definition or undefined
+   */
+  public getWaitingPatterns(agentType: AgentType): WaitingPatternDefinition | undefined {
+    return this.agentPatterns.get(agentType)?.waitingPatterns;
+  }
+
+  /**
    * Clean ANSI escape sequences from terminal data
    * @param text Raw terminal text
    * @returns Cleaned text
@@ -601,26 +721,23 @@ export class CliAgentPatternRegistry {
   public cleanAnsiEscapeSequences(text: string): string {
     return (
       text
-        // Basic ANSI escape sequences (colors, cursor movement, etc.)
+        // CSI sequences (colors, cursor, private modes)
         // eslint-disable-next-line no-control-regex
-        .replace(/\x1b\[[0-9;]*[A-Za-z]/g, '')
-        // OSC sequences (window title setting, etc.)
+        .replace(/\x1b\[[0-9;?]*[A-Za-z]/g, '')
+        // OSC sequences terminated by BEL (multi-digit parameter support)
         // eslint-disable-next-line no-control-regex
-        .replace(/\x1b\][0-9];[^\x07]*\x07/g, '')
-        // Escape sequence terminator
+        .replace(/\x1b\][0-9;]*[^\x07]*\x07/g, '')
+        // OSC sequences terminated by ST (ESC \)
         // eslint-disable-next-line no-control-regex
-        .replace(/\x1b\\/g, '')
+        .replace(/\x1b\][0-9;]*[^\x1b]*\x1b\\/g, '')
+        // Remaining lone ESC sequences (SS3, DCS, APC, keypad modes)
+        // eslint-disable-next-line no-control-regex
+        .replace(/\x1b[^[\]]/g, '')
         // Remove carriage return
         .replace(/\r/g, '')
-        // Private mode setting
+        // Remove control characters but preserve newlines for line-based matching
         // eslint-disable-next-line no-control-regex
-        .replace(/\x1b\?[0-9]*[hl]/g, '')
-        // Application/normal keypad mode
-        // eslint-disable-next-line no-control-regex
-        .replace(/\x1b[=>]/g, '')
-        // Remove control characters
-        // eslint-disable-next-line no-control-regex
-        .replace(/[\x00-\x1F\x7F]/g, '')
+        .replace(/[\x00-\x09\x0B-\x1F\x7F]/g, '')
         .trim()
     );
   }

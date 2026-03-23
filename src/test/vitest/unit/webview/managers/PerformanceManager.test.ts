@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { PerformanceManager } from '../../../../../webview/managers/PerformanceManager';
 
-
 import { ResizeManager } from '../../../../../webview/utils/ResizeManager';
 import { DOMUtils } from '../../../../../webview/utils/DOMUtils';
 
@@ -92,32 +91,32 @@ describe('PerformanceManager', () => {
     });
 
     it('should buffer moderate output if not urgent', () => {
-        // Create a moderate output that isn't "small" but not "large" enough to force flush immediately
-        // isSmallInput <= 10
-        // isModerateOutput >= 50
-        // isLargeOutput >= 500
-        const data = 'a'.repeat(40); 
-        manager.bufferedWrite(data, mockTerminal, 'term-1');
-        
-        expect(mockTerminal.write).not.toHaveBeenCalled();
-        
-        vi.advanceTimersByTime(100); // Advance time to trigger flush (default ~16ms)
-        expect(mockTerminal.write).toHaveBeenCalledWith(data);
+      // Create a moderate output that isn't "small" but not "large" enough to force flush immediately
+      // isSmallInput <= 10
+      // isModerateOutput >= 50
+      // isLargeOutput >= 500
+      const data = 'a'.repeat(40);
+      manager.bufferedWrite(data, mockTerminal, 'term-1');
+
+      expect(mockTerminal.write).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(100); // Advance time to trigger flush (default ~16ms)
+      expect(mockTerminal.write).toHaveBeenCalledWith(data);
     });
   });
-  
-  describe('scheduleOutputBuffer', () => {
-      it('should flush immediately for small input', () => {
-          const smallInput = 'cmd';
-          manager.scheduleOutputBuffer(smallInput, mockTerminal);
-          expect(mockTerminal.write).toHaveBeenCalledWith(smallInput);
-      });
 
-      it('should flush immediately for large output', () => {
-          const largeOutput = 'a'.repeat(600);
-          manager.scheduleOutputBuffer(largeOutput, mockTerminal);
-          expect(mockTerminal.write).toHaveBeenCalledWith(largeOutput);
-      });
+  describe('scheduleOutputBuffer', () => {
+    it('should flush immediately for small input', () => {
+      const smallInput = 'cmd';
+      manager.scheduleOutputBuffer(smallInput, mockTerminal);
+      expect(mockTerminal.write).toHaveBeenCalledWith(smallInput);
+    });
+
+    it('should flush immediately for large output', () => {
+      const largeOutput = 'a'.repeat(600);
+      manager.scheduleOutputBuffer(largeOutput, mockTerminal);
+      expect(mockTerminal.write).toHaveBeenCalledWith(largeOutput);
+    });
   });
 
   describe('debouncedResize', () => {
@@ -125,7 +124,7 @@ describe('PerformanceManager', () => {
       manager.debouncedResize(100, 50, mockTerminal, mockFitAddon);
 
       expect(ResizeManager.debounceResize).toHaveBeenCalled();
-      
+
       // Simulate the callback execution
       const callback = vi.mocked(ResizeManager.debounceResize).mock.calls[0][1];
       callback();
@@ -137,67 +136,67 @@ describe('PerformanceManager', () => {
   });
 
   describe('CliAgentMode', () => {
-      it('should set and get mode', () => {
-          expect(manager.getCliAgentMode()).toBe(false);
-          manager.setCliAgentMode(true);
-          expect(manager.getCliAgentMode()).toBe(true);
-      });
+    it('should set and get mode', () => {
+      expect(manager.getCliAgentMode()).toBe(false);
+      manager.setCliAgentMode(true);
+      expect(manager.getCliAgentMode()).toBe(true);
+    });
 
-      it('should flush buffer when disabling cli agent mode', () => {
-        manager.setCliAgentMode(true);
-        const data = 'a'.repeat(40);
-        manager.bufferedWrite(data, mockTerminal, 'term-1');
-        
-        // Should be buffered
-        expect(mockTerminal.write).not.toHaveBeenCalled();
+    it('should flush buffer when disabling cli agent mode', () => {
+      manager.setCliAgentMode(true);
+      const data = 'a'.repeat(40);
+      manager.bufferedWrite(data, mockTerminal, 'term-1');
 
-        manager.setCliAgentMode(false);
-        expect(mockTerminal.write).toHaveBeenCalledWith(data);
-      });
+      // Should be buffered
+      expect(mockTerminal.write).not.toHaveBeenCalled();
+
+      manager.setCliAgentMode(false);
+      expect(mockTerminal.write).toHaveBeenCalledWith(data);
+    });
   });
 
   describe('forceFlush', () => {
-      it('should flush all buffers', () => {
-          const data = 'a'.repeat(40);
-          manager.bufferedWrite(data, mockTerminal, 'term-1');
-          expect(mockTerminal.write).not.toHaveBeenCalled();
+    it('should flush all buffers', () => {
+      const data = 'a'.repeat(40);
+      manager.bufferedWrite(data, mockTerminal, 'term-1');
+      expect(mockTerminal.write).not.toHaveBeenCalled();
 
-          manager.forceFlush();
-          expect(mockTerminal.write).toHaveBeenCalledWith(data);
-      });
+      manager.forceFlush();
+      expect(mockTerminal.write).toHaveBeenCalledWith(data);
+    });
   });
 
   describe('clearBuffers', () => {
-      it('should clear buffers without writing', () => {
-           const data = 'a'.repeat(40);
-          manager.bufferedWrite(data, mockTerminal, 'term-1');
-          
-          manager.clearBuffers();
-          vi.advanceTimersByTime(100);
-          
-          expect(mockTerminal.write).not.toHaveBeenCalled();
-      });
+    it('should clear buffers without writing', () => {
+      const data = 'a'.repeat(40);
+      manager.bufferedWrite(data, mockTerminal, 'term-1');
 
-      it('should clear CLI mode timeout buffers without throwing', () => {
-          manager.setCliAgentMode(true);
-          const data = 'a'.repeat(40);
-          manager.bufferedWrite(data, mockTerminal, 'term-1');
+      manager.clearBuffers();
+      vi.advanceTimersByTime(100);
 
-          expect(() => manager.clearBuffers()).not.toThrow();
-          vi.advanceTimersByTime(100);
-          expect(mockTerminal.write).not.toHaveBeenCalled();
-      });
+      expect(mockTerminal.write).not.toHaveBeenCalled();
+    });
+
+    it('should clear CLI mode timeout buffers without throwing', () => {
+      manager.setCliAgentMode(true);
+      const data = 'a'.repeat(40);
+      manager.bufferedWrite(data, mockTerminal, 'term-1');
+
+      expect(() => manager.clearBuffers()).not.toThrow();
+      vi.advanceTimersByTime(100);
+      expect(mockTerminal.write).not.toHaveBeenCalled();
+    });
   });
 
   describe('getBufferStats', () => {
     it('should return correct stats', () => {
-        const data = 'a'.repeat(40);
-        manager.bufferedWrite(data, mockTerminal, 'term-1');
-        
-        const stats = manager.getBufferStats();
-        expect(stats.bufferSize).toBe(1);
-        expect(stats.isFlushScheduled).toBe(true);
-        expect(stats.currentTerminal).toBe(true);
+      const data = 'a'.repeat(40);
+      manager.bufferedWrite(data, mockTerminal, 'term-1');
+
+      const stats = manager.getBufferStats();
+      expect(stats.bufferSize).toBe(1);
+      expect(stats.isFlushScheduled).toBe(true);
+      expect(stats.currentTerminal).toBe(true);
     });
   });
 });

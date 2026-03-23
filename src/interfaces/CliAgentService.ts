@@ -25,6 +25,12 @@ export interface TerminationDetectionResult {
   detectedLine?: string;
 }
 
+export interface OutputChunkProcessingResult {
+  detection: CliAgentDetectionResult | null;
+  termination: TerminationDetectionResult | null;
+  state: CliAgentState;
+}
+
 // =================== Agent State Types ===================
 
 export interface CliAgentState {
@@ -72,12 +78,28 @@ export interface ICliAgentDetectionService {
   detectFromInput(terminalId: string, data: string): CliAgentDetectionResult | null;
 
   /**
+   * Handle raw terminal input chunks and detect agents only after command submission.
+   * @param terminalId Terminal ID where the input occurred
+   * @param data Raw input chunk to process
+   * @returns Detection result when a submitted command matches, otherwise null
+   */
+  handleInputChunk(terminalId: string, data: string): CliAgentDetectionResult | null;
+
+  /**
    * Detect CLI Agent from terminal output data
    * @param terminalId Terminal ID where the output occurred
    * @param data Output data to analyze
    * @returns Detection result or null if no agent detected
    */
   detectFromOutput(terminalId: string, data: string): CliAgentDetectionResult | null;
+
+  /**
+   * Handle a terminal output flush and run detection/termination/waiting in a fixed order.
+   * @param terminalId Terminal ID where the output occurred
+   * @param data Output chunk to analyze
+   * @returns Processing summary for the chunk
+   */
+  handleOutputChunk(terminalId: string, data: string): OutputChunkProcessingResult;
 
   /**
    * Detect CLI Agent termination from terminal data
@@ -100,7 +122,7 @@ export interface ICliAgentDetectionService {
    * Get currently connected CLI Agent across all terminals
    * @returns Connected agent info or null if none connected
    */
-  getConnectedAgent(): { terminalId: string; type: string } | null;
+  getConnectedAgent(): { terminalId: string; type: AgentType } | null;
 
   /**
    * Get all disconnected agents
@@ -117,7 +139,7 @@ export interface ICliAgentDetectionService {
     success: boolean;
     reason?: string;
     newStatus: 'connected' | 'disconnected' | 'none';
-    agentType: string | null;
+    agentType: AgentType | null;
   };
 
   // =================== Event Management ===================
@@ -129,8 +151,26 @@ export interface ICliAgentDetectionService {
   readonly onCliAgentStatusChange: vscode.Event<{
     terminalId: string;
     status: 'connected' | 'disconnected' | 'none';
-    type: string | null;
+    type: AgentType | null;
     terminalName?: string;
+  }>;
+
+  // =================== Waiting State Detection ===================
+
+  /**
+   * Detect if agent is in a waiting state from terminal output
+   * @param terminalId Terminal ID
+   * @param data Terminal output data
+   */
+  detectWaitingState(terminalId: string, data: string): void;
+
+  /**
+   * Agent waiting state change event
+   */
+  readonly onAgentWaitingChange: vscode.Event<{
+    terminalId: string;
+    isWaiting: boolean;
+    waitingType?: 'input' | 'approval' | 'idle';
   }>;
 
   // =================== Lifecycle Management ===================
@@ -146,7 +186,7 @@ export interface ICliAgentDetectionService {
    */
   dispose(): void;
 
-  // =================== 🚨 NEW: Enhanced State Management ===================
+  // =================== Enhanced State Management ===================
 
   /**
    * Start heartbeat mechanism for state validation
@@ -166,11 +206,7 @@ export interface ICliAgentDetectionService {
    * @param terminalName Optional terminal name
    * @returns True if force reconnect was successful
    */
-  forceReconnectAgent(
-    terminalId: string,
-    agentType?: AgentType,
-    terminalName?: string
-  ): boolean;
+  forceReconnectAgent(terminalId: string, agentType?: AgentType, terminalName?: string): boolean;
 
   /**
    * Clear detection errors and reset state (manual reset)
@@ -180,17 +216,13 @@ export interface ICliAgentDetectionService {
   clearDetectionError(terminalId: string): boolean;
 
   /**
-   * 🔄 BACKWARD COMPATIBILITY: Set agent connected (delegates to state manager)
+   * Set agent connected (backward compatibility, delegates to state manager)
    * This method maintains compatibility with existing tests and legacy code
    * @param terminalId Terminal ID to set as connected
    * @param type Agent type
    * @param terminalName Optional terminal name
    */
-  setAgentConnected(
-    terminalId: string,
-    type: AgentType,
-    terminalName?: string
-  ): void;
+  setAgentConnected(terminalId: string, type: AgentType, terminalName?: string): void;
 }
 
 // =================== Pattern Detection Interface ===================
@@ -251,11 +283,7 @@ export interface ICliAgentStateManager {
    * @param type Agent type
    * @param terminalName Terminal name
    */
-  setConnectedAgent(
-    terminalId: string,
-    type: AgentType,
-    terminalName?: string
-  ): void;
+  setConnectedAgent(terminalId: string, type: AgentType, terminalName?: string): void;
 
   /**
    * Set a CLI agent as terminated/disconnected
@@ -304,7 +332,7 @@ export interface ICliAgentStateManager {
   readonly onStatusChange: vscode.Event<{
     terminalId: string;
     status: 'connected' | 'disconnected' | 'none';
-    type: string | null;
+    type: AgentType | null;
     terminalName?: string;
   }>;
 
@@ -319,18 +347,18 @@ export interface ICliAgentStateManager {
   dispose(): void;
 
   /**
-   * 🚨 NEW: Validate connected agent state (heartbeat mechanism)
+   * Validate connected agent state (heartbeat mechanism)
    */
   validateConnectedAgentState(): void;
 
   /**
-   * 🚨 NEW: Force refresh connected agent state (fallback recovery)
+   * Force refresh connected agent state (fallback recovery)
    * @returns True if connected agent state is valid after refresh
    */
   refreshConnectedAgentState(): boolean;
 
   /**
-   * 🔧 NEW: Promote a DISCONNECTED agent to CONNECTED for legitimate user actions
+   * Promote a DISCONNECTED agent to CONNECTED for legitimate user actions
    * This bypasses the blocking logic in setConnectedAgent for explicit user operations like toggle button clicks
    * @param terminalId Terminal ID of the DISCONNECTED agent to promote
    */
@@ -343,11 +371,7 @@ export interface ICliAgentStateManager {
    * @param terminalName Optional terminal name
    * @returns True if force reconnect was successful
    */
-  forceReconnectAgent(
-    terminalId: string,
-    agentType: AgentType,
-    terminalName?: string
-  ): boolean;
+  forceReconnectAgent(terminalId: string, agentType: AgentType, terminalName?: string): boolean;
 
   /**
    * Clear detection errors and reset state (manual reset)

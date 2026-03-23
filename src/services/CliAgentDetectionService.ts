@@ -1,53 +1,72 @@
-/**
- * Refactored CLI Agent Detection Service
- *
- * This service uses the new consolidated architecture:
- * - CliAgentPatternRegistry: Single source of patterns
- * - CliAgentDetectionEngine: Unified detection logic
- * - CliAgentStateStore: Centralized state management
- *
- * Benefits:
- * - ~80% code reduction (from 400+ lines to ~80 lines)
- * - Single pattern definition source
- * - Consistent detection across all services
- * - Improved maintainability and extensibility
- */
-
 import { terminal as log } from '../utils/logger';
 import {
   ICliAgentDetectionService,
   CliAgentDetectionResult,
   TerminationDetectionResult,
   CliAgentState,
+  OutputChunkProcessingResult,
 } from '../interfaces/CliAgentService';
 import { CliAgentDetectionEngine } from './CliAgentDetectionEngine';
 import { CliAgentStateStore, AgentStatus } from './CliAgentStateStore';
+import { CliAgentWaitingDetector } from './CliAgentWaitingDetector';
+import { AudioNotificationService } from './AudioNotificationService';
+import { ToastNotificationService } from './ToastNotificationService';
 import type { AgentType } from '../types/shared';
+import { CliAgentInputAccumulator } from './CliAgentInputAccumulator';
+import { CliAgentIdleDetector } from './CliAgentIdleDetector';
 
-/**
- * Refactored CLI Agent Detection Service
- */
 export class CliAgentDetectionService implements ICliAgentDetectionService {
   private readonly detectionEngine: CliAgentDetectionEngine;
   private readonly stateStore: CliAgentStateStore;
-  // 🔧 FIX: Track heartbeat interval for proper cleanup on dispose
+  private readonly waitingDetector: CliAgentWaitingDetector;
+  private readonly audioService: AudioNotificationService;
+  private readonly toastService: ToastNotificationService;
+  private readonly inputAccumulator: CliAgentInputAccumulator;
+  private readonly idleDetector: CliAgentIdleDetector;
+  private waitingChangeSubscription: { dispose(): void } | undefined;
+  private statusChangeSubscription: { dispose(): void } | undefined;
   private heartbeatInterval: ReturnType<typeof setInterval> | undefined;
+  private readonly previousAgentInfo = new Map<string, { status: AgentStatus; agentType: AgentType | null }>();
+  private readonly removingTerminals = new Set<string>();
 
   constructor() {
     this.detectionEngine = new CliAgentDetectionEngine();
     this.stateStore = new CliAgentStateStore();
+    this.waitingDetector = new CliAgentWaitingDetector(
+      this.detectionEngine.getPatternRegistry(),
+      this.stateStore
+    );
+    this.audioService = new AudioNotificationService();
+    this.toastService = new ToastNotificationService();
+    this.inputAccumulator = new CliAgentInputAccumulator();
+    this.idleDetector = new CliAgentIdleDetector(this.stateStore);
 
-    log('✅ [CLI-AGENT-SERVICE] Initialized with refactored architecture');
+    this.waitingChangeSubscription = this.stateStore.onAgentWaitingChange((event) => {
+      if (event.isWaiting) {
+        this.audioService.playNotification(event.terminalId);
+        this.toastService.showWaitingNotification(event.terminalId, event.waitingType);
+      }
+    });
+
+    this.statusChangeSubscription = this.stateStore.onStatusChange((event) => {
+      const previous = this.previousAgentInfo.get(event.terminalId);
+      this.previousAgentInfo.set(event.terminalId, { status: event.status, agentType: event.type });
+
+      if (event.status === 'none' && (previous?.status === 'connected' || previous?.status === 'disconnected')) {
+        if (this.removingTerminals.has(event.terminalId)) {
+          this.removingTerminals.delete(event.terminalId);
+          return;
+        }
+        this.toastService.showCompletedNotification(event.terminalId, previous.agentType);
+      }
+    });
   }
 
-  /**
-   * Detect agent from user input
-   */
   detectFromInput(terminalId: string, input: string): CliAgentDetectionResult | null {
     try {
       const result = this.detectionEngine.detectFromInput(terminalId, input);
 
-      if (input.includes('\x03')) {
+      if (/\x03/.test(input)) {
         const terminalState = this.stateStore.getAgentState(terminalId);
         if (terminalState && terminalState.status !== 'none') {
           const immediateTermination = this.detectionEngine.detectImmediateInterruptTermination(
@@ -62,7 +81,6 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
       }
 
       if (result.isDetected && result.agentType) {
-        // Update state store
         this.stateStore.setConnectedAgent(terminalId, result.agentType);
 
         return {
@@ -80,15 +98,33 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     }
   }
 
-  /**
-   * Detect agent from terminal output
-   */
+  handleInputChunk(terminalId: string, input: string): CliAgentDetectionResult | null {
+    if (!input) {
+      return null;
+    }
+
+    const { submittedCommands, sawInterrupt } = this.inputAccumulator.consume(terminalId, input);
+
+    if (sawInterrupt) {
+      this.detectFromInput(terminalId, '\x03');
+    }
+
+    let lastDetection: CliAgentDetectionResult | null = null;
+    for (const command of submittedCommands) {
+      const detection = this.detectFromInput(terminalId, command);
+      if (detection) {
+        lastDetection = detection;
+      }
+    }
+
+    return lastDetection;
+  }
+
   detectFromOutput(terminalId: string, data: string): CliAgentDetectionResult | null {
     try {
       const result = this.detectionEngine.detectFromOutput(terminalId, data);
 
       if (result.isDetected && result.agentType) {
-        // Update state store
         this.stateStore.setConnectedAgent(terminalId, result.agentType);
 
         return {
@@ -106,22 +142,50 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     }
   }
 
-  /**
-   * Detect agent termination
-   */
+  handleOutputChunk(terminalId: string, data: string): OutputChunkProcessingResult {
+    let detection: CliAgentDetectionResult | null = null;
+    let termination: TerminationDetectionResult | null = null;
+
+    let state = this.getAgentState(terminalId);
+
+    if (state.status === 'none') {
+      detection = this.detectFromOutput(terminalId, data);
+      state = this.getAgentState(terminalId);
+    }
+
+    if (state.status !== 'none') {
+      const terminationResult = this.detectTermination(terminalId, data);
+      if (terminationResult.isTerminated) {
+        termination = terminationResult;
+      }
+      state = this.getAgentState(terminalId);
+    }
+
+    if (state.status === 'connected') {
+      // Clear idle waiting when new output arrives
+      this.idleDetector.clearIdleWaiting(terminalId);
+      // Reset idle timer (output received = agent is active)
+      this.idleDetector.resetTimer(terminalId);
+
+      this.waitingDetector.analyzeImmediately(terminalId, data);
+      state = this.getAgentState(terminalId);
+    }
+
+    return {
+      detection,
+      termination,
+      state,
+    };
+  }
+
   detectTermination(terminalId: string, data: string): TerminationDetectionResult {
     try {
       const terminalState = this.stateStore.getAgentState(terminalId);
-      const currentAgentType = terminalState?.agentType || undefined;
+      const currentAgentType = terminalState?.agentType ?? undefined;
 
-      const result = this.detectionEngine.detectTermination(
-        terminalId,
-        data,
-        currentAgentType
-      );
+      const result = this.detectionEngine.detectTermination(terminalId, data, currentAgentType);
 
       if (result.isTerminated) {
-        // Update state store
         this.stateStore.setAgentTerminated(terminalId);
       }
 
@@ -137,59 +201,24 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     }
   }
 
-  /**
-   * Get agent state for terminal
-   */
   getAgentState(terminalId: string): CliAgentState {
     const state = this.stateStore.getAgentState(terminalId);
-
-    if (state) {
-      return {
-        status: state.status,
-        agentType: state.agentType,
-      };
-    }
-
-    // Default to 'none'
     return {
-      status: 'none',
-      agentType: null,
+      status: state?.status ?? 'none',
+      agentType: state?.agentType ?? null,
     };
   }
 
-  /**
-   * Get connected agent info
-   */
-  getConnectedAgent(): {
-    terminalId: string;
-    type: AgentType;
-  } | null {
+  getConnectedAgent(): { terminalId: string; type: AgentType } | null {
     const terminalId = this.stateStore.getConnectedAgentTerminalId();
     const type = this.stateStore.getConnectedAgentType();
-
-    if (terminalId && type) {
-      return { terminalId, type };
-    }
-
-    return null;
+    return terminalId && type ? { terminalId, type } : null;
   }
 
-  /**
-   * Get disconnected agents
-   */
-  getDisconnectedAgents(): Map<
-    string,
-    { type: AgentType; startTime: Date }
-  > {
-    return this.stateStore.getDisconnectedAgents() as Map<
-      string,
-      { type: AgentType; startTime: Date }
-    >;
+  getDisconnectedAgents(): Map<string, { type: AgentType; startTime: Date }> {
+    return this.stateStore.getDisconnectedAgents();
   }
 
-  /**
-   * Switch agent connection (simplified)
-   */
   switchAgentConnection(terminalId: string): {
     success: boolean;
     reason?: string;
@@ -209,7 +238,6 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
       }
 
       this.stateStore.setConnectedAgent(terminalId, agentType, existingState.terminalName);
-      log(`✅ [CLI-AGENT-SERVICE] Agent connection activated for terminal ${terminalId}`);
 
       return {
         success: true,
@@ -227,94 +255,75 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     }
   }
 
-  /**
-   * Handle terminal removal
-   */
   handleTerminalRemoved(terminalId: string): void {
+    this.removingTerminals.add(terminalId);
+    this.idleDetector.cancelTimer(terminalId);
     this.detectionEngine.clearTerminalCache(terminalId);
+    this.waitingDetector.clearTerminalData(terminalId);
+    this.inputAccumulator.clear(terminalId);
     this.stateStore.removeTerminalCompletely(terminalId);
+    this.previousAgentInfo.delete(terminalId);
+    this.toastService.clearTerminal(terminalId);
   }
 
-  /**
-   * Force reconnect agent (manual user action)
-   */
   forceReconnectAgent(
     terminalId: string,
     agentType: AgentType = 'claude',
     terminalName?: string
   ): boolean {
-    log(`🔄 [CLI-AGENT-SERVICE] Force reconnect for terminal ${terminalId} as ${agentType}`);
-
     this.detectionEngine.clearTerminalCache(terminalId);
     return this.stateStore.forceReconnectAgent(terminalId, agentType, terminalName);
   }
 
-  /**
-   * Clear detection error
-   */
   clearDetectionError(terminalId: string): boolean {
-    log(`🧹 [CLI-AGENT-SERVICE] Clear detection error for terminal ${terminalId}`);
-
     this.detectionEngine.clearTerminalCache(terminalId);
     return this.stateStore.clearDetectionError(terminalId);
   }
 
-  /**
-   * Get status change event
-   */
+  detectWaitingState(terminalId: string, data: string): void {
+    this.waitingDetector.analyze(terminalId, data);
+  }
+
+  get onAgentWaitingChange() {
+    return this.stateStore.onAgentWaitingChange;
+  }
+
   get onCliAgentStatusChange() {
     return this.stateStore.onStatusChange;
   }
 
-  /**
-   * Dispose resources
-   */
   dispose(): void {
-    // 🔧 FIX: Clear heartbeat interval to prevent memory leaks
     if (this.heartbeatInterval) {
       clearInterval(this.heartbeatInterval);
       this.heartbeatInterval = undefined;
     }
+    this.waitingChangeSubscription?.dispose();
+    this.statusChangeSubscription?.dispose();
+    this.idleDetector.dispose();
+    this.waitingDetector.dispose();
+    this.audioService.dispose();
+    this.toastService.dispose();
     this.stateStore.dispose();
   }
 
-  /**
-   * Start heartbeat (validation)
-   */
   public startHeartbeat(): void {
-    // 🔧 FIX: Clear existing interval before starting a new one
     if (this.heartbeatInterval) {
       clearInterval(this.heartbeatInterval);
     }
 
-    // Validation every 30 seconds
     this.heartbeatInterval = setInterval(() => {
-      const stats = this.stateStore.getStateStats();
-      log(
-        `💓 [HEARTBEAT] State: ${stats.connectedAgents} connected, ${stats.disconnectedAgents} disconnected`
-      );
+      this.stateStore.getStateStats();
     }, 30000);
   }
 
-  /**
-   * Refresh agent state
-   */
   refreshAgentState(): boolean {
     return this.stateStore.getConnectedAgentTerminalId() !== null;
   }
 
-  /**
-   * Set agent connected (backward compatibility)
-   */
-  setAgentConnected(
-    terminalId: string,
-    type: AgentType,
-    terminalName?: string
-  ): void {
+  setAgentConnected(terminalId: string, type: AgentType, terminalName?: string): void {
     this.stateStore.setConnectedAgent(terminalId, type, terminalName);
   }
 
-  // Legacy properties for compatibility
   public get patternDetector() {
     return this.detectionEngine.getPatternRegistry();
   }
@@ -324,7 +333,6 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
   }
 
   public get configManager() {
-    // Return a simple config object for compatibility
     return {
       getConfig: () => ({
         debounceMs: 25,
@@ -337,16 +345,11 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
   }
 }
 
-// Export new components for direct use
 export { CliAgentPatternRegistry } from './CliAgentPatternRegistry';
 export { CliAgentDetectionEngine } from './CliAgentDetectionEngine';
 export { CliAgentStateStore } from './CliAgentStateStore';
 
-// Export compatible types
 export type { AgentType } from '../types/shared';
 export type { DetectionResult, TerminationResult } from './CliAgentDetectionEngine';
 export type { AgentState, AgentStatus, StateChangeEvent } from './CliAgentStateStore';
 
-// Legacy export for backward compatibility with tests
-export { CliAgentPatternRegistry as CliAgentPatternDetector } from './CliAgentPatternRegistry';
-export { CliAgentStateStore as CliAgentStateManager } from './CliAgentStateStore';

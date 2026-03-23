@@ -333,9 +333,15 @@ export class ExtensionLifecycle {
     logger.lifecycle('Sidebar Terminal deactivation complete');
   }
 
-  getTerminalManager(): TerminalManager | undefined { return this.terminalManager; }
-  getSidebarProvider(): SecondaryTerminalProvider | undefined { return this.sidebarProvider; }
-  getExtensionPersistenceService(): ExtensionPersistenceService | undefined { return this.extensionPersistenceService; }
+  getTerminalManager(): TerminalManager | undefined {
+    return this.terminalManager;
+  }
+  getSidebarProvider(): SecondaryTerminalProvider | undefined {
+    return this.sidebarProvider;
+  }
+  getExtensionPersistenceService(): ExtensionPersistenceService | undefined {
+    return this.extensionPersistenceService;
+  }
 
   private setupTelemetryEventListeners(): void {
     if (!this.telemetryService) {

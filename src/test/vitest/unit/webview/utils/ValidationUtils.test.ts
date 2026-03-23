@@ -1,4 +1,3 @@
-
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { JSDOM } from 'jsdom';
 import { ValidationUtils } from '../../../../../webview/utils/ValidationUtils';
@@ -27,7 +26,7 @@ describe('ValidationUtils', () => {
     it('should enforce min and max length', () => {
       const minRes = ValidationUtils.validateString('a', 'Field', { minLength: 3 });
       expect(minRes.isValid).toBe(false);
-      
+
       const maxRes = ValidationUtils.validateString('abcd', 'Field', { maxLength: 2 });
       expect(maxRes.isValid).toBe(false);
     });
@@ -95,9 +94,9 @@ describe('ValidationUtils', () => {
     it('should aggregate multiple errors', () => {
       const result = ValidationUtils.validateBatch([
         () => ValidationUtils.validateString('', 'F1'),
-        () => ValidationUtils.validateNumber('nan', 'F2')
+        () => ValidationUtils.validateNumber('nan', 'F2'),
       ]);
-      
+
       expect(result.isValid).toBe(false);
       expect(result.error).toContain('F1');
       expect(result.error).toContain('F2');

@@ -11,11 +11,11 @@ describe('SecondaryTerminalMessageRouter', () => {
   it('should register and dispatch messages', async () => {
     const handler = vi.fn().mockResolvedValue(undefined);
     router.register('testCommand', handler);
-    
+
     expect(router.has('testCommand')).toBe(true);
-    
+
     const result = await router.dispatch({ command: 'testCommand' } as any);
-    
+
     expect(result).toBe(true);
     expect(handler).toHaveBeenCalled();
   });

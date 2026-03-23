@@ -481,7 +481,7 @@ describe('MessageRouter Service', () => {
       const routerLogs = consoleLogSpy.mock.calls
         .map((args) => args[0])
         .filter((arg) => typeof arg === 'string' && arg.includes('[MessageRouter]'));
-      
+
       expect(routerLogs).toHaveLength(0);
 
       silentRouter.dispose();
@@ -525,7 +525,9 @@ describe('MessageRouter Service', () => {
       handler.handle({ requiredField: 'value' });
 
       // Verify logging - check if any call contains the expected message
-      expect(consoleLogSpy.mock.calls.some(args => args.includes('[TestHandler] Handler executed'))).toBe(true);
+      expect(
+        consoleLogSpy.mock.calls.some((args) => args.includes('[TestHandler] Handler executed'))
+      ).toBe(true);
     });
 
     it('should integrate with message router', async () => {
@@ -543,7 +545,9 @@ describe('MessageRouter Service', () => {
     it('should recover from handler disposal errors', () => {
       const mockHandler = {
         handle: vi.fn().mockResolvedValue('success'),
-        dispose: vi.fn().mockImplementation(() => { throw new Error('Dispose error'); }),
+        dispose: vi.fn().mockImplementation(() => {
+          throw new Error('Dispose error');
+        }),
       };
 
       messageRouter.registerHandler('disposableCommand', mockHandler);
@@ -614,23 +618,23 @@ describe('MessageRouter Service', () => {
       const mockHandler = { handle: vi.fn() };
 
       // Should not throw but operations should be no-ops or ignored
-      // Implementation might allow registration but it won't be usable or listable, 
+      // Implementation might allow registration but it won't be usable or listable,
       // OR MessageRouter clears handlers on dispose and might set a disposed flag.
       // If it allows registration but cleared list, it should be length 1 if re-registered?
       // Re-reading original test: expect(messageRouter.getRegisteredCommands()).to.have.length(0);
       // This implies registerHandler should be no-op when disposed.
-      
+
       messageRouter.registerHandler('postDisposeCommand', mockHandler);
       // The implementation seems to NOT check disposed status for registration in some versions?
       // Let's check what failed. It got 1 but expected 0.
-      // So registerHandler IS working after dispose. 
+      // So registerHandler IS working after dispose.
       // If this is a bug in implementation, we should fix implementation.
       // But if we are just migrating tests, let's see if we can adapt expectation or if test revealed regression.
       // Assuming "prevent operations" means effectively no-op.
-      
+
       // Checking MessageRouter implementation (not visible here but inferred).
       // If the original test passed, then MessageRouter MUST have a check.
-      
+
       // Let's just fix the assertion if behavior changed or if I need to mock state.
       // Actually, let's assume it *should* remain 0.
       expect(messageRouter.getRegisteredCommands()).toHaveLength(0);
@@ -672,7 +676,7 @@ describe('MessageRouter Service', () => {
       // Failure message: expected false to be true.
       // This means at least one result failed.
       // Let's debug by logging failures if any.
-      const failures = results.filter(r => !r.success);
+      const failures = results.filter((r) => !r.success);
       if (failures.length > 0) {
         console.log('Rapid messages failures:', failures);
       }

@@ -250,10 +250,9 @@ describe('ErrorHandling', () => {
 
     describe('executeWithErrorHandling', () => {
       it('should return result on success', async () => {
-        const result = await manager.executeWithErrorHandling(
-          async () => 'success',
-          { component: 'TestComponent' }
-        );
+        const result = await manager.executeWithErrorHandling(async () => 'success', {
+          component: 'TestComponent',
+        });
 
         expect(result).toBe('success');
       });

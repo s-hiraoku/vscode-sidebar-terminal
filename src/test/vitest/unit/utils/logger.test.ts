@@ -3,7 +3,16 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { logger, LogLevel, debug, info, warn, error, terminal, webview } from '../../../../utils/logger';
+import {
+  logger,
+  LogLevel,
+  debug,
+  info,
+  warn,
+  error,
+  terminal,
+  webview,
+} from '../../../../utils/logger';
 
 describe('Logger', () => {
   let consoleLogSpy: any;
@@ -14,7 +23,7 @@ describe('Logger', () => {
     consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    
+
     // Set to DEBUG level for testing
     logger.setLevel(LogLevel.DEBUG);
   });
@@ -36,7 +45,7 @@ describe('Logger', () => {
       info('test info');
       warn('test warn');
       error('test error');
-      
+
       expect(consoleLogSpy).not.toHaveBeenCalled();
       expect(consoleWarnSpy).not.toHaveBeenCalled();
       expect(consoleErrorSpy).toHaveBeenCalledWith('[ERROR]', 'test error');
@@ -57,7 +66,7 @@ describe('Logger', () => {
     it('should format terminal logs with emoji', () => {
       terminal('terminal message');
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('✨ [DEBUG:TERMINAL]'), 
+        expect.stringContaining('✨ [DEBUG:TERMINAL]'),
         'terminal message'
       );
     });
@@ -65,14 +74,18 @@ describe('Logger', () => {
     it('should format webview logs with emoji', () => {
       webview('webview message');
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('🌐 [DEBUG:WEBVIEW]'), 
+        expect.stringContaining('🌐 [DEBUG:WEBVIEW]'),
         'webview message'
       );
     });
 
     it('should handle object arguments by stringifying them', () => {
       info('data', { a: 1 });
-      expect(consoleLogSpy).toHaveBeenCalledWith('[INFO]', 'data', expect.stringContaining('"a": 1'));
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        '[INFO]',
+        'data',
+        expect.stringContaining('"a": 1')
+      );
     });
   });
 

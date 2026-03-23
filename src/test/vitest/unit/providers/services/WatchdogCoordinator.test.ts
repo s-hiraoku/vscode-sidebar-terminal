@@ -12,17 +12,14 @@ vi.mock('vscode', () => ({
 }));
 
 // Mock TerminalInitializationWatchdog
-vi.mock(
-  '../../../../../providers/services/TerminalInitializationWatchdog',
-  () => {
-    const MockWatchdog = vi.fn().mockImplementation(function(this: any) {
-      this.start = vi.fn();
-      this.stop = vi.fn();
-      this.dispose = vi.fn();
-    });
-    return { TerminalInitializationWatchdog: MockWatchdog };
-  }
-);
+vi.mock('../../../../../providers/services/TerminalInitializationWatchdog', () => {
+  const MockWatchdog = vi.fn().mockImplementation(function (this: any) {
+    this.start = vi.fn();
+    this.stop = vi.fn();
+    this.dispose = vi.fn();
+  });
+  return { TerminalInitializationWatchdog: MockWatchdog };
+});
 
 import {
   WatchdogCoordinator,

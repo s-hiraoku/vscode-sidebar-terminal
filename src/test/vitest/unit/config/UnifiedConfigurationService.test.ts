@@ -39,11 +39,15 @@ describe('UnifiedConfigurationService', () => {
     };
 
     // Configure vscode.workspace.getConfiguration
-    (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockWorkspaceConfiguration);
+    (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockReturnValue(
+      mockWorkspaceConfiguration
+    );
 
     // Configure vscode.workspace.onDidChangeConfiguration
     const mockDisposable = { dispose: vi.fn() };
-    (vscode.workspace.onDidChangeConfiguration as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockDisposable);
+    (
+      vscode.workspace.onDidChangeConfiguration as unknown as ReturnType<typeof vi.fn>
+    ).mockReturnValue(mockDisposable);
 
     // Get fresh instance - will create a new one since we disposed the old one
     service = getUnifiedConfigurationService();
@@ -148,7 +152,9 @@ describe('UnifiedConfigurationService', () => {
 
       expect(newValue).toBe(16);
       // Call count should have increased (cache was cleared by update)
-      expect(mockWorkspaceConfiguration.get.mock.calls.length).toBeGreaterThan(callCountAfterUpdate);
+      expect(mockWorkspaceConfiguration.get.mock.calls.length).toBeGreaterThan(
+        callCountAfterUpdate
+      );
     });
 
     it('should fire configuration change event', async () => {
@@ -192,15 +198,17 @@ describe('UnifiedConfigurationService', () => {
       });
 
       // Configure getConfiguration stub to return appropriate configs
-      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockImplementation((section?: string) => {
-        if (section === 'terminal.integrated') {
-          return { get: terminalConfigGet };
+      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+        (section?: string) => {
+          if (section === 'terminal.integrated') {
+            return { get: terminalConfigGet };
+          }
+          if (section === 'editor') {
+            return { get: editorConfigGet };
+          }
+          return mockWorkspaceConfiguration;
         }
-        if (section === 'editor') {
-          return { get: editorConfigGet };
-        }
-        return mockWorkspaceConfiguration;
-      });
+      );
     });
 
     it('should get extension terminal configuration', () => {
@@ -235,11 +243,13 @@ describe('UnifiedConfigurationService', () => {
       const terminalIntegratedConfig = { get: vi.fn() };
       const editorConfig = { get: vi.fn() };
 
-      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockImplementation((section?: string) => {
-        if (section === CONFIG_SECTIONS.TERMINAL_INTEGRATED) return terminalIntegratedConfig;
-        if (section === CONFIG_SECTIONS.EDITOR) return editorConfig;
-        return mockWorkspaceConfiguration;
-      });
+      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+        (section?: string) => {
+          if (section === CONFIG_SECTIONS.TERMINAL_INTEGRATED) return terminalIntegratedConfig;
+          if (section === CONFIG_SECTIONS.EDITOR) return editorConfig;
+          return mockWorkspaceConfiguration;
+        }
+      );
 
       terminalIntegratedConfig.get.mockImplementation((key: string, defaultValue: any) => {
         if (key === CONFIG_KEYS.ALT_CLICK_MOVES_CURSOR) return true;
@@ -305,12 +315,14 @@ describe('UnifiedConfigurationService', () => {
       const editorConfig = { get: vi.fn() };
       const extensionConfig = { get: vi.fn() };
 
-      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockImplementation((section?: string) => {
-        if (section === 'terminal.integrated') return terminalConfig;
-        if (section === 'editor') return editorConfig;
-        if (section === 'secondaryTerminal') return extensionConfig;
-        return mockWorkspaceConfiguration;
-      });
+      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+        (section?: string) => {
+          if (section === 'terminal.integrated') return terminalConfig;
+          if (section === 'editor') return editorConfig;
+          if (section === 'secondaryTerminal') return extensionConfig;
+          return mockWorkspaceConfiguration;
+        }
+      );
 
       // Set up font hierarchy
       terminalConfig.get.mockImplementation((key: string) => {
@@ -341,11 +353,13 @@ describe('UnifiedConfigurationService', () => {
       const terminalConfig = { get: vi.fn() };
       const editorConfig = { get: vi.fn() };
 
-      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockImplementation((section?: string) => {
-        if (section === 'terminal.integrated') return terminalConfig;
-        if (section === 'editor') return editorConfig;
-        return mockWorkspaceConfiguration;
-      });
+      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+        (section?: string) => {
+          if (section === 'terminal.integrated') return terminalConfig;
+          if (section === 'editor') return editorConfig;
+          return mockWorkspaceConfiguration;
+        }
+      );
 
       terminalConfig.get.mockImplementation((key: string) => {
         if (key === 'fontSize') return 16;
@@ -367,11 +381,13 @@ describe('UnifiedConfigurationService', () => {
       const terminalConfig = { get: vi.fn() };
       const editorConfig = { get: vi.fn() };
 
-      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockImplementation((section?: string) => {
-        if (section === 'terminal.integrated') return terminalConfig;
-        if (section === 'editor') return editorConfig;
-        return mockWorkspaceConfiguration;
-      });
+      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+        (section?: string) => {
+          if (section === 'terminal.integrated') return terminalConfig;
+          if (section === 'editor') return editorConfig;
+          return mockWorkspaceConfiguration;
+        }
+      );
 
       terminalConfig.get.mockImplementation((key: string) => {
         if (key === 'fontSize') return 0;
@@ -393,11 +409,13 @@ describe('UnifiedConfigurationService', () => {
       const terminalConfig = { get: vi.fn() };
       const editorConfig = { get: vi.fn() };
 
-      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockImplementation((section?: string) => {
-        if (section === 'terminal.integrated') return terminalConfig;
-        if (section === 'editor') return editorConfig;
-        return mockWorkspaceConfiguration;
-      });
+      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+        (section?: string) => {
+          if (section === 'terminal.integrated') return terminalConfig;
+          if (section === 'editor') return editorConfig;
+          return mockWorkspaceConfiguration;
+        }
+      );
 
       terminalConfig.get.mockImplementation((key: string) => {
         if (key === 'fontSize') return 0;
@@ -419,11 +437,13 @@ describe('UnifiedConfigurationService', () => {
       const terminalConfig = { get: vi.fn() };
       const extensionConfig = { get: vi.fn() };
 
-      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockImplementation((section?: string) => {
-        if (section === 'terminal.integrated') return terminalConfig;
-        if (section === 'secondaryTerminal') return extensionConfig;
-        return mockWorkspaceConfiguration;
-      });
+      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+        (section?: string) => {
+          if (section === 'terminal.integrated') return terminalConfig;
+          if (section === 'secondaryTerminal') return extensionConfig;
+          return mockWorkspaceConfiguration;
+        }
+      );
 
       // Extension overrides
       extensionConfig.get.mockImplementation((key: string) => {
@@ -461,10 +481,12 @@ describe('UnifiedConfigurationService', () => {
       Object.defineProperty(process, 'platform', { value: 'win32' });
 
       const terminalIntegratedConfig = { get: vi.fn() };
-      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockImplementation((section?: string) => {
-        if (section === CONFIG_SECTIONS.TERMINAL_INTEGRATED) return terminalIntegratedConfig;
-        return mockWorkspaceConfiguration;
-      });
+      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+        (section?: string) => {
+          if (section === CONFIG_SECTIONS.TERMINAL_INTEGRATED) return terminalIntegratedConfig;
+          return mockWorkspaceConfiguration;
+        }
+      );
 
       terminalIntegratedConfig.get.mockImplementation((key: string) => {
         if (key === CONFIG_KEYS.SHELL_WINDOWS) return 'powershell.exe';
@@ -482,10 +504,12 @@ describe('UnifiedConfigurationService', () => {
       Object.defineProperty(process, 'platform', { value: 'darwin' });
 
       const terminalIntegratedConfig = { get: vi.fn() };
-      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockImplementation((section?: string) => {
-        if (section === CONFIG_SECTIONS.TERMINAL_INTEGRATED) return terminalIntegratedConfig;
-        return mockWorkspaceConfiguration;
-      });
+      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+        (section?: string) => {
+          if (section === CONFIG_SECTIONS.TERMINAL_INTEGRATED) return terminalIntegratedConfig;
+          return mockWorkspaceConfiguration;
+        }
+      );
 
       terminalIntegratedConfig.get.mockImplementation((key: string) => {
         if (key === CONFIG_KEYS.SHELL_OSX) return '/bin/zsh';
@@ -503,10 +527,12 @@ describe('UnifiedConfigurationService', () => {
       Object.defineProperty(process, 'platform', { value: 'linux' });
 
       const terminalIntegratedConfig = { get: vi.fn() };
-      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockImplementation((section?: string) => {
-        if (section === CONFIG_SECTIONS.TERMINAL_INTEGRATED) return terminalIntegratedConfig;
-        return mockWorkspaceConfiguration;
-      });
+      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+        (section?: string) => {
+          if (section === CONFIG_SECTIONS.TERMINAL_INTEGRATED) return terminalIntegratedConfig;
+          return mockWorkspaceConfiguration;
+        }
+      );
 
       terminalIntegratedConfig.get.mockImplementation((key: string) => {
         if (key === CONFIG_KEYS.SHELL_LINUX) return '/bin/bash';
@@ -529,10 +555,12 @@ describe('UnifiedConfigurationService', () => {
       });
 
       const terminalIntegratedConfig = { get: vi.fn() };
-      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockImplementation((section?: string) => {
-        if (section === CONFIG_SECTIONS.TERMINAL_INTEGRATED) return terminalIntegratedConfig;
-        return mockWorkspaceConfiguration;
-      });
+      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+        (section?: string) => {
+          if (section === CONFIG_SECTIONS.TERMINAL_INTEGRATED) return terminalIntegratedConfig;
+          return mockWorkspaceConfiguration;
+        }
+      );
 
       terminalIntegratedConfig.get.mockImplementation((key: string) => {
         if (key === CONFIG_KEYS.SHELL_LINUX) return '';
@@ -552,11 +580,13 @@ describe('UnifiedConfigurationService', () => {
       const terminalIntegratedConfig = { get: vi.fn() };
       const editorConfig = { get: vi.fn() };
 
-      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockImplementation((section?: string) => {
-        if (section === CONFIG_SECTIONS.TERMINAL_INTEGRATED) return terminalIntegratedConfig;
-        if (section === CONFIG_SECTIONS.EDITOR) return editorConfig;
-        return mockWorkspaceConfiguration;
-      });
+      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+        (section?: string) => {
+          if (section === CONFIG_SECTIONS.TERMINAL_INTEGRATED) return terminalIntegratedConfig;
+          if (section === CONFIG_SECTIONS.EDITOR) return editorConfig;
+          return mockWorkspaceConfiguration;
+        }
+      );
 
       terminalIntegratedConfig.get.mockReturnValue(true);
       editorConfig.get.mockReturnValue('alt');
@@ -570,9 +600,11 @@ describe('UnifiedConfigurationService', () => {
     });
 
     it('should return defaults when configuration fails', () => {
-      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockImplementation(() => {
-        throw new Error('Configuration error');
-      });
+      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+        () => {
+          throw new Error('Configuration error');
+        }
+      );
 
       const settings = service.getAltClickSettings();
 
@@ -589,12 +621,14 @@ describe('UnifiedConfigurationService', () => {
       const terminalIntegratedConfig = { get: vi.fn() };
       const editorConfig = { get: vi.fn() };
 
-      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockImplementation((section?: string) => {
-        if (section === CONFIG_SECTIONS.SIDEBAR_TERMINAL) return sidebarConfig;
-        if (section === CONFIG_SECTIONS.TERMINAL_INTEGRATED) return terminalIntegratedConfig;
-        if (section === CONFIG_SECTIONS.EDITOR) return editorConfig;
-        return mockWorkspaceConfiguration;
-      });
+      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+        (section?: string) => {
+          if (section === CONFIG_SECTIONS.SIDEBAR_TERMINAL) return sidebarConfig;
+          if (section === CONFIG_SECTIONS.TERMINAL_INTEGRATED) return terminalIntegratedConfig;
+          if (section === CONFIG_SECTIONS.EDITOR) return editorConfig;
+          return mockWorkspaceConfiguration;
+        }
+      );
 
       // Default feature states
       sidebarConfig.get.mockImplementation((key: string) => {
@@ -672,10 +706,12 @@ describe('UnifiedConfigurationService', () => {
   describe('Configuration Validation', () => {
     it('should validate font size within bounds', () => {
       const terminalConfig = { get: vi.fn() };
-      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockImplementation((section?: string) => {
-        if (section === 'terminal.integrated') return terminalConfig;
-        return mockWorkspaceConfiguration;
-      });
+      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+        (section?: string) => {
+          if (section === 'terminal.integrated') return terminalConfig;
+          return mockWorkspaceConfiguration;
+        }
+      );
 
       // Test valid font size
       terminalConfig.get.mockReturnValue(16);
@@ -752,7 +788,9 @@ describe('UnifiedConfigurationService', () => {
       };
 
       // Get the registered change handler
-      const onDidChangeStub = vscode.workspace.onDidChangeConfiguration as unknown as ReturnType<typeof vi.fn>;
+      const onDidChangeStub = vscode.workspace.onDidChangeConfiguration as unknown as ReturnType<
+        typeof vi.fn
+      >;
 
       // Verify the stub was called (service registered its handler)
       expect(onDidChangeStub).toHaveBeenCalled();
@@ -798,7 +836,9 @@ describe('UnifiedConfigurationService', () => {
 
       // Force a new instance creation via getUnifiedConfigurationService which calls getInstance
       // But we need to clear the instance first.
-      const configManagerClass = UnifiedConfigurationService as unknown as { instance: UnifiedConfigurationService | undefined };
+      const configManagerClass = UnifiedConfigurationService as unknown as {
+        instance: UnifiedConfigurationService | undefined;
+      };
       configManagerClass.instance = undefined;
 
       const newService = UnifiedConfigurationService.getInstance();
@@ -824,8 +864,9 @@ describe('UnifiedConfigurationService', () => {
     it('should handle configuration update errors', async () => {
       mockWorkspaceConfiguration.update.mockRejectedValue(new Error('Update failed'));
 
-      await expect(service.update('terminal.integrated', 'fontSize', 16))
-        .rejects.toThrow('Update failed');
+      await expect(service.update('terminal.integrated', 'fontSize', 16)).rejects.toThrow(
+        'Update failed'
+      );
     });
   });
 

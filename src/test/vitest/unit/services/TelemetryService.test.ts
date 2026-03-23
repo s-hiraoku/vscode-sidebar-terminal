@@ -10,7 +10,9 @@ vi.mock('vscode', () => ({
   },
   Disposable: class {
     dispose = vi.fn();
-    static from(..._args: any[]) { return { dispose: vi.fn() }; }
+    static from(..._args: any[]) {
+      return { dispose: vi.fn() };
+    }
   },
 }));
 
@@ -61,10 +63,10 @@ describe('TelemetryService', () => {
   it('should track extension deactivation with duration', () => {
     const activationTime = Date.now() - 1000;
     service.trackActivation(activationTime);
-    
+
     // Fast forward usually requires fake timers, but here we just check if it calculates something
     service.trackDeactivation();
-    
+
     expect(mockLogger.logUsage).toHaveBeenCalledWith(
       TelemetryEventType.ExtensionDeactivated,
       expect.objectContaining({
@@ -76,13 +78,10 @@ describe('TelemetryService', () => {
 
   it('should track terminal created without sensitive info', () => {
     service.trackTerminalCreated('term-123', 'My Profile');
-    
-    expect(mockLogger.logUsage).toHaveBeenCalledWith(
-      TelemetryEventType.TerminalCreated,
-      {
-        hasProfile: true,
-      }
-    );
+
+    expect(mockLogger.logUsage).toHaveBeenCalledWith(TelemetryEventType.TerminalCreated, {
+      hasProfile: true,
+    });
     // Ensure no sensitive data
     expect(mockLogger.logUsage).not.toHaveBeenCalledWith(
       expect.anything(),
@@ -92,19 +91,16 @@ describe('TelemetryService', () => {
 
   it('should track cli agent detection', () => {
     service.trackCliAgentDetected('claude');
-    
-    expect(mockLogger.logUsage).toHaveBeenCalledWith(
-      TelemetryEventType.CliAgentDetected,
-      {
-        agentType: 'claude',
-      }
-    );
+
+    expect(mockLogger.logUsage).toHaveBeenCalledWith(TelemetryEventType.CliAgentDetected, {
+      agentType: 'claude',
+    });
   });
 
   it('should track errors', () => {
     const error = new Error('Test Error');
     service.trackError(error, 'test-context');
-    
+
     expect(mockLogger.logError).toHaveBeenCalledWith(
       TelemetryEventType.ErrorOccurred,
       expect.objectContaining({
@@ -118,7 +114,7 @@ describe('TelemetryService', () => {
     const result = service.measure('test-op', () => {
       return 'success';
     });
-    
+
     expect(result).toBe('success');
     expect(mockLogger.logUsage).toHaveBeenCalledWith(
       TelemetryEventType.PerformanceMetric,
@@ -134,7 +130,7 @@ describe('TelemetryService', () => {
     const result = await service.measureAsync('test-async', async () => {
       return 'async-success';
     });
-    
+
     expect(result).toBe('async-success');
     expect(mockLogger.logUsage).toHaveBeenCalledWith(
       TelemetryEventType.PerformanceMetric,
@@ -152,7 +148,7 @@ describe('TelemetryService', () => {
         throw new Error('Fail');
       });
     }).toThrow('Fail');
-    
+
     expect(mockLogger.logUsage).toHaveBeenCalledWith(
       TelemetryEventType.PerformanceMetric,
       expect.objectContaining({

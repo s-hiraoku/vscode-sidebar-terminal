@@ -79,7 +79,9 @@ const mockExtensionContext = {
     delete: vi.fn(),
     clear: vi.fn(),
     getScoped: vi.fn(),
-    [Symbol.iterator]: function* () { yield* []; },
+    [Symbol.iterator]: function* () {
+      yield* [];
+    },
   },
   secrets: {
     get: vi.fn().mockResolvedValue(undefined),
@@ -137,7 +139,9 @@ const mockTerminalManager = {
   getTerminalInfo: vi.fn().mockReturnValue(mockTerminalInfo),
   getIdleTerminalId: vi.fn().mockReturnValue(null),
   initializeShellForTerminal: vi.fn().mockResolvedValue(undefined),
-  getCurrentState: vi.fn().mockReturnValue({ terminals: [mockTerminalInfo], activeTerminalId: 'terminal-1' }),
+  getCurrentState: vi
+    .fn()
+    .mockReturnValue({ terminals: [mockTerminalInfo], activeTerminalId: 'terminal-1' }),
   // CLI Agent Status methods
   getConnectedAgentTerminalId: vi.fn().mockReturnValue('terminal-1'),
   getConnectedAgentType: vi.fn().mockReturnValue('claude'),
@@ -433,8 +437,13 @@ describe('SecondaryTerminalProvider - Integration Tests', () => {
 
       await capturedMessageHandler({ command: 'webviewReady' });
 
-      // Provider should be initialized
-      expect(provider._isInitialized).toBe(true);
+      // Handshake state is now owned by WebViewInitHandler
+      expect(provider._webViewInitHandler.isInitialized).toBe(true);
+      expect(mockWebview.postMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          command: 'extensionReady',
+        })
+      );
     });
   });
 
@@ -676,8 +685,13 @@ describe('SecondaryTerminalProvider - Integration Tests', () => {
         command: 'testCommand',
       });
 
-      // Message should be queued (pending)
-      expect(newProvider._pendingMessages.length).toBeGreaterThanOrEqual(0);
+      // Message queue is now owned by WebViewInitHandler and should not hit the WebView yet
+      expect(newProvider._webViewInitHandler.isInitialized).toBe(false);
+      expect(mockWebview.postMessage).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          command: 'testCommand',
+        })
+      );
 
       newProvider.dispose();
     });

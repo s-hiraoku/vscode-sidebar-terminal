@@ -10,10 +10,10 @@ describe('TerminalOperationsService', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
-    
+
     mockLogger = vi.fn();
     mockEmit = vi.fn();
-    
+
     service = new TerminalOperationsService(mockLogger, mockEmit);
 
     mockTerminal = {
@@ -29,7 +29,7 @@ describe('TerminalOperationsService', () => {
     mockManager = {
       getActiveTerminalId: vi.fn().mockReturnValue('term-1'),
       getTerminalInstance: vi.fn().mockReturnValue({
-        terminal: mockTerminal
+        terminal: mockTerminal,
       }),
     };
   });
@@ -90,12 +90,7 @@ describe('TerminalOperationsService', () => {
   describe('paste', () => {
     it('should emit paste-request event', () => {
       service.paste(mockManager);
-      expect(mockEmit).toHaveBeenCalledWith(
-        'paste-request',
-        'term-1',
-        {},
-        mockManager
-      );
+      expect(mockEmit).toHaveBeenCalledWith('paste-request', 'term-1', {}, mockManager);
     });
   });
 
@@ -131,22 +126,12 @@ describe('TerminalOperationsService', () => {
   describe('Navigation/Deletion operations', () => {
     it('deleteWordLeft should emit input event with Ctrl+W', () => {
       service.deleteWordLeft(mockManager);
-      expect(mockEmit).toHaveBeenCalledWith(
-        'input',
-        'term-1',
-        { data: '\x17' },
-        mockManager
-      );
+      expect(mockEmit).toHaveBeenCalledWith('input', 'term-1', { data: '\x17' }, mockManager);
     });
 
     it('moveToLineStart should emit input event with Ctrl+A', () => {
       service.moveToLineStart(mockManager);
-      expect(mockEmit).toHaveBeenCalledWith(
-        'input',
-        'term-1',
-        { data: '\x01' },
-        mockManager
-      );
+      expect(mockEmit).toHaveBeenCalledWith('input', 'term-1', { data: '\x01' }, mockManager);
     });
   });
 });

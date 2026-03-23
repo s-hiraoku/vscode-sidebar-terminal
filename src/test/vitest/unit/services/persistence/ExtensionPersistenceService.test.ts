@@ -129,7 +129,9 @@ describe('ExtensionPersistenceService', () => {
       .mockReturnValueOnce('new-3');
 
     const waitStub = vi.spyOn(service as any, 'waitForTerminalsReady').mockResolvedValue(undefined);
-    const restoreStub = vi.spyOn(service as any, 'requestScrollbackRestoration').mockResolvedValue(undefined);
+    const restoreStub = vi
+      .spyOn(service as any, 'requestScrollbackRestoration')
+      .mockResolvedValue(undefined);
 
     const sessionData = {
       terminals: [
@@ -147,11 +149,7 @@ describe('ExtensionPersistenceService', () => {
     expect(waitStub).toHaveBeenCalledOnce();
     expect(restoreStub).not.toHaveBeenCalled();
     expect(terminalManager.reorderTerminals).toHaveBeenCalledOnce();
-    expect(terminalManager.reorderTerminals.mock.calls[0][0]).toEqual([
-      'new-1',
-      'new-2',
-      'new-3',
-    ]);
+    expect(terminalManager.reorderTerminals.mock.calls[0][0]).toEqual(['new-1', 'new-2', 'new-3']);
     expect(terminalManager.setActiveTerminal).toHaveBeenCalledWith('new-2');
   });
 
@@ -223,9 +221,7 @@ describe('ExtensionPersistenceService', () => {
 
   describe('terminal name and indicatorColor restoration', () => {
     it('restores terminal name via renameTerminal after creation', async () => {
-      terminalManager.createTerminal
-        .mockReturnValueOnce('new-1')
-        .mockReturnValueOnce('new-2');
+      terminalManager.createTerminal.mockReturnValueOnce('new-1').mockReturnValueOnce('new-2');
 
       vi.spyOn(service as any, 'waitForTerminalsReady').mockResolvedValue(undefined);
       vi.spyOn(service as any, 'requestScrollbackRestoration').mockResolvedValue(undefined);
@@ -247,16 +243,21 @@ describe('ExtensionPersistenceService', () => {
     });
 
     it('restores indicatorColor via updateTerminalHeader after creation', async () => {
-      terminalManager.createTerminal
-        .mockReturnValueOnce('new-1')
-        .mockReturnValueOnce('new-2');
+      terminalManager.createTerminal.mockReturnValueOnce('new-1').mockReturnValueOnce('new-2');
 
       vi.spyOn(service as any, 'waitForTerminalsReady').mockResolvedValue(undefined);
       vi.spyOn(service as any, 'requestScrollbackRestoration').mockResolvedValue(undefined);
 
       const sessionData = {
         terminals: [
-          { id: 'old-1', name: 'Terminal 1', number: 1, cwd: '/tmp', isActive: false, indicatorColor: '#FF0000' },
+          {
+            id: 'old-1',
+            name: 'Terminal 1',
+            number: 1,
+            cwd: '/tmp',
+            isActive: false,
+            indicatorColor: '#FF0000',
+          },
           { id: 'old-2', name: 'Terminal 2', number: 2, cwd: '/tmp', isActive: true },
         ],
         activeTerminalId: 'old-2',
@@ -269,18 +270,30 @@ describe('ExtensionPersistenceService', () => {
       expect(terminalManager.updateTerminalHeader).toHaveBeenCalledWith('new-1', {
         indicatorColor: '#FF0000',
       });
-      expect(terminalManager.updateTerminalHeader).not.toHaveBeenCalledWith('new-2', expect.anything());
+      expect(terminalManager.updateTerminalHeader).not.toHaveBeenCalledWith(
+        'new-2',
+        expect.anything()
+      );
     });
 
     it('includes indicatorColor in TerminalRestoreData', async () => {
       terminalManager.createTerminal.mockReturnValueOnce('new-1');
 
       vi.spyOn(service as any, 'waitForTerminalsReady').mockResolvedValue(undefined);
-      const restoreStub = vi.spyOn(service as any, 'requestScrollbackRestoration').mockResolvedValue(undefined);
+      const restoreStub = vi
+        .spyOn(service as any, 'requestScrollbackRestoration')
+        .mockResolvedValue(undefined);
 
       const sessionData = {
         terminals: [
-          { id: 'old-1', name: 'Terminal 1', number: 1, cwd: '/tmp', isActive: true, indicatorColor: '#00FF00' },
+          {
+            id: 'old-1',
+            name: 'Terminal 1',
+            number: 1,
+            cwd: '/tmp',
+            isActive: true,
+            indicatorColor: '#00FF00',
+          },
         ],
         activeTerminalId: 'old-1',
         timestamp: Date.now(),
@@ -302,9 +315,7 @@ describe('ExtensionPersistenceService', () => {
       vi.spyOn(service as any, 'requestScrollbackRestoration').mockResolvedValue(undefined);
 
       const sessionData = {
-        terminals: [
-          { id: 'old-1', name: 'Terminal 1', number: 1, cwd: '/tmp', isActive: true },
-        ],
+        terminals: [{ id: 'old-1', name: 'Terminal 1', number: 1, cwd: '/tmp', isActive: true }],
         activeTerminalId: 'old-1',
         timestamp: Date.now(),
         version: '4.0.0',

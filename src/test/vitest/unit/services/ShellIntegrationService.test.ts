@@ -79,16 +79,16 @@ describe('ShellIntegrationService', () => {
     it('should detect command completion with exit code', () => {
       service.processTerminalData(termId, '\x1b]633;A\x07'); // Start
       service.processTerminalData(termId, '\x1b]633;B;ls\x07'); // Exec
-      
+
       vi.advanceTimersByTime(100);
-      
+
       service.processTerminalData(termId, '\x1b]633;C;0\x07'); // Finish success
-      
+
       const history = service.getCommandHistory(termId);
       expect(history).toHaveLength(1);
       expect(history[0].command).toBe('ls');
       expect(history[0].exitCode).toBe(0);
-      
+
       expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
         'secondaryTerminal.updateShellStatus',
         { terminalId: termId, status: 'success' }
@@ -97,13 +97,13 @@ describe('ShellIntegrationService', () => {
 
     it('should detect CWD change', () => {
       service.processTerminalData(termId, '\x1b]633;P;Cwd=/new/path\x07');
-      
+
       expect(service.getCurrentCwd(termId)).toBe('/new/path');
       expect(mockTerminalManager.updateTerminalCwd).toHaveBeenCalledWith(termId, '/new/path');
-      expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-        'secondaryTerminal.updateCwd',
-        { terminalId: termId, cwd: '/new/path' }
-      );
+      expect(vscode.commands.executeCommand).toHaveBeenCalledWith('secondaryTerminal.updateCwd', {
+        terminalId: termId,
+        cwd: '/new/path',
+      });
     });
   });
 
@@ -113,10 +113,10 @@ describe('ShellIntegrationService', () => {
     it('should detect prompt via pattern', () => {
       service.processTerminalData(termId, '\x1b]633;A\x07'); // Set executing true first
       expect(service.isExecuting(termId)).toBe(true);
-      
+
       // Send typical prompt
       service.processTerminalData(termId, 'user@host:~$ ');
-      
+
       expect(service.isExecuting(termId)).toBe(false);
       expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
         'secondaryTerminal.updateShellStatus',
@@ -126,7 +126,7 @@ describe('ShellIntegrationService', () => {
 
     it('should detect cd command pattern', () => {
       service.processTerminalData(termId, 'cd /tmp/test\n');
-      
+
       expect(service.getCurrentCwd(termId)).toBe('/tmp/test');
     });
   });
@@ -135,46 +135,49 @@ describe('ShellIntegrationService', () => {
     it('should inject bash/zsh integration', async () => {
       const pty = { write: vi.fn() };
       (vscode.window.showWarningMessage as any).mockResolvedValue('Allow');
-      
+
       await service.injectShellIntegration('t1', '/bin/bash', pty);
-      
+
       expect(pty.write).toHaveBeenCalledWith(expect.stringContaining('__vsc_prompt_cmd'));
     });
 
     it('should inject fish integration', async () => {
       const pty = { write: vi.fn() };
       (vscode.window.showWarningMessage as any).mockResolvedValue('Allow');
-      
+
       await service.injectShellIntegration('t1', '/usr/bin/fish', pty);
-      
+
       expect(pty.write).toHaveBeenCalledWith(expect.stringContaining('__vsc_prompt'));
     });
 
     it('should inject powershell integration', async () => {
       const pty = { write: vi.fn() };
       (vscode.window.showWarningMessage as any).mockResolvedValue('Allow');
-      
+
       await service.injectShellIntegration('t1', 'pwsh.exe', pty);
-      
+
       expect(pty.write).toHaveBeenCalledWith(expect.stringContaining('__VSCode-Prompt-Start'));
     });
 
     it('should respect permission denial', async () => {
       const pty = { write: vi.fn() };
       (vscode.window.showWarningMessage as any).mockResolvedValue('Deny');
-      
+
       await service.injectShellIntegration('t1', '/bin/bash', pty);
-      
+
       expect(pty.write).not.toHaveBeenCalled();
     });
 
     it('should persist permission choice', async () => {
       const pty = { write: vi.fn() };
       (vscode.window.showWarningMessage as any).mockResolvedValue('Always Allow');
-      
+
       await service.injectShellIntegration('t1', '/bin/bash', pty);
-      
-      expect(mockContext.globalState.update).toHaveBeenCalledWith('shellIntegrationPermission', true);
+
+      expect(mockContext.globalState.update).toHaveBeenCalledWith(
+        'shellIntegrationPermission',
+        true
+      );
     });
   });
 
@@ -182,7 +185,7 @@ describe('ShellIntegrationService', () => {
     it('should clear state on dispose terminal', () => {
       service.processTerminalData('t1', '\x1b]633;A\x07');
       expect(service.isExecuting('t1')).toBe(true);
-      
+
       service.disposeTerminal('t1');
       expect(service.isExecuting('t1')).toBe(false); // New state created on access, default false
     });

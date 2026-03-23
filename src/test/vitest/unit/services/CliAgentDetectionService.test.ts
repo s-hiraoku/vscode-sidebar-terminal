@@ -17,32 +17,28 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { CliAgentDetectionService } from '../../../../services/CliAgentDetectionService';
-import { CliAgentPatternDetector } from '../../../../services/CliAgentPatternDetector';
-import { CliAgentStateManager } from '../../../../services/CliAgentStateManager';
+import { CliAgentStateStore } from '../../../../services/CliAgentStateStore';
 import {
-  ICliAgentPatternDetector,
   ICliAgentStateManager,
 } from '../../../../interfaces/CliAgentService';
 
 describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
   let detectionService: CliAgentDetectionService;
-  let _patternDetector: ICliAgentPatternDetector;
   let stateManager: ICliAgentStateManager;
 
   // Test event tracking
-  let statusChangeEvents: Array < {
+  let statusChangeEvents: Array<{
     terminalId: string;
     status: 'connected' | 'disconnected' | 'none';
     type: string | null;
     terminalName?: string;
-  } > = [];
+  }> = [];
 
   beforeEach(() => {
     statusChangeEvents = [];
 
     // Create fresh instances for each test
-    _patternDetector = new CliAgentPatternDetector();
-    stateManager = new CliAgentStateManager();
+    stateManager = new CliAgentStateStore();
 
     detectionService = new CliAgentDetectionService();
 
@@ -94,7 +90,7 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
       'Here is some code that mentions claude in comments',
       '// Using Claude AI for this function',
       'Error: Claude connection failed',
-      'Installing claude-cli package...', 
+      'Installing claude-cli package...',
       'claude-3-5-sonnet-20241022', // Model identifier alone is not startup
     ];
 
@@ -148,11 +144,11 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
     const realGeminiOutputs = [
       // Startup messages
       'Welcome to Gemini CLI!',
-      'Welcome to Gemini', 
+      'Welcome to Gemini',
       'Google AI Gemini initialized',
       'gemini-1.5-pro-latest ready',
       'gemini-2.0-flash-thinking experimental model',
-      'Connecting to Gemini API...', 
+      'Connecting to Gemini API...',
       'Gemini session started successfully',
 
       // Model indicators
@@ -177,7 +173,7 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
       'Update available: gemini-cli v2.1.0',
       'New version is available!',
       'New Gemini model is available for testing',
-      'Installing gemini dependencies...', 
+      'Installing gemini dependencies...',
       'Error: Gemini API key not found',
       '// This function uses Gemini for processing',
     ];
@@ -484,10 +480,10 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
     beforeEach(() => {
       // Start an agent first
       detectionService.detectFromOutput('term1', 'Welcome to Claude Code!');
-      
+
       // Advance time to bypass "recent AI activity" check (10s timeout)
       vi.advanceTimersByTime(15000);
-      
+
       statusChangeEvents = []; // Clear startup event
     });
 
@@ -497,7 +493,13 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
 
     realShellPrompts.forEach((prompt, index) => {
       // Skip failing patterns
-      if (['dev@ubuntu:~/workspace% ', '➜ myproject git:(main) ✗ ', 'root@docker-container:/# '].includes(prompt)) {
+      if (
+        [
+          'dev@ubuntu:~/workspace% ',
+          '➜ myproject git:(main) ✗ ',
+          'root@docker-container:/# ',
+        ].includes(prompt)
+      ) {
         return;
       }
       it(`should detect termination from shell prompt #${index + 1}: "${prompt}"`, () => {
@@ -689,9 +691,9 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
       expect(detectionService.detectFromInput('term1', 'npx @openai/codex@latest\r')?.type).toBe(
         'codex'
       );
-      expect(
-        detectionService.detectFromInput('term1', 'pnpm dlx @google/gemini-cli\r')?.type
-      ).toBe('gemini');
+      expect(detectionService.detectFromInput('term1', 'pnpm dlx @google/gemini-cli\r')?.type).toBe(
+        'gemini'
+      );
       expect(
         detectionService.detectFromInput('term1', 'yarn dlx @anthropic-ai/claude-code\r')?.type
       ).toBe('claude');
@@ -892,6 +894,17 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
   // =================== HEARTBEAT AND MONITORING TESTS ===================
 
   describe('💓 Heartbeat and Monitoring Tests', () => {
+    it('should keep heartbeat startup idempotent', () => {
+      const setIntervalSpy = vi.spyOn(global, 'setInterval');
+      const clearIntervalSpy = vi.spyOn(global, 'clearInterval');
+
+      detectionService.startHeartbeat();
+      detectionService.startHeartbeat();
+
+      expect(setIntervalSpy).toHaveBeenCalledTimes(2);
+      expect(clearIntervalSpy).toHaveBeenCalledTimes(1);
+    });
+
     it('should provide agent state refresh functionality', () => {
       // ARRANGE: Setup disconnected agent
       detectionService.detectFromOutput('term1', 'Welcome to Claude Code!');
@@ -915,12 +928,64 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
       // ACT: Start heartbeat (this would normally run in background)
       detectionService.startHeartbeat();
 
-      // Simulate heartbeat validation
-      stateManager.validateConnectedAgentState();
-
-      // ASSERT: State should remain unchanged
+      // ASSERT: State should remain unchanged after heartbeat
       const finalState = detectionService.getAgentState('term1');
       expect(finalState).toEqual(initialState);
+    });
+  });
+
+  describe('🧭 Refactored detection pipeline tests', () => {
+    it('accumulates input chunks until Enter submits the command', () => {
+      detectionService.handleInputChunk('term1', 'g');
+      detectionService.handleInputChunk('term1', 'e');
+      detectionService.handleInputChunk('term1', 'm');
+      detectionService.handleInputChunk('term1', 'i');
+      detectionService.handleInputChunk('term1', 'n');
+      detectionService.handleInputChunk('term1', 'i');
+
+      expect(detectionService.getAgentState('term1')).toEqual({
+        status: 'none',
+        agentType: null,
+      });
+
+      const result = detectionService.handleInputChunk('term1', '\r');
+
+      expect(result).toMatchObject({
+        type: 'gemini',
+        source: 'input',
+      });
+      expect(detectionService.getAgentState('term1')).toEqual({
+        status: 'connected',
+        agentType: 'gemini',
+      });
+    });
+
+    it('detects waiting in the same output flush that fallback-connects an agent', () => {
+      const waitingEvents: Array<{
+        terminalId: string;
+        isWaiting: boolean;
+        waitingType?: 'input' | 'approval';
+      }> = [];
+
+      detectionService.onAgentWaitingChange((event) => {
+        waitingEvents.push(event);
+      });
+
+      const result = detectionService.handleOutputChunk(
+        'term1',
+        'Gemini CLI v0.1.0\r\ngemini > '
+      );
+
+      expect(result?.detection).toMatchObject({
+        type: 'gemini',
+        source: 'output',
+      });
+      expect(result?.state.status).toBe('connected');
+      expect(waitingEvents).toContainEqual({
+        terminalId: 'term1',
+        isWaiting: true,
+        waitingType: 'input',
+      });
     });
   });
 });

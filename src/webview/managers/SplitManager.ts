@@ -345,7 +345,9 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
     DOMUtils.forceReflow(terminalsWrapper);
 
     const baseHeight =
-      newHeight > 0 ? newHeight : terminalsWrapper?.clientHeight ?? terminalBody?.clientHeight ?? 0;
+      newHeight > 0
+        ? newHeight
+        : (terminalsWrapper?.clientHeight ?? terminalBody?.clientHeight ?? 0);
 
     this.splitManagerLogger.debug(`baseHeight=${baseHeight}px, targetCount=${targetCount}`);
 
@@ -363,7 +365,8 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
           (child): child is HTMLElement =>
             child instanceof HTMLElement &&
             isVisibleElement(child) &&
-            (child.hasAttribute('data-terminal-wrapper-id') || child.classList.contains('split-resizer'))
+            (child.hasAttribute('data-terminal-wrapper-id') ||
+              child.classList.contains('split-resizer'))
         )
       : [];
     const gapCount = Math.max(splitItems.length - 1, 0);

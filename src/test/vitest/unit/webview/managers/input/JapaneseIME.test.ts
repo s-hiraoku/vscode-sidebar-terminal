@@ -512,7 +512,7 @@ describe('Japanese IME Input Handling TDD Test Suite', () => {
         // Act: Rapid mode switching
         for (let i = 0; i < 5; i++) {
           // Start composition
-          japaneseIME.dispatchCompositionEvent('compositionstart', `test${i}`,);
+          japaneseIME.dispatchCompositionEvent('compositionstart', `test${i}`);
 
           // Toggle IME mode
           const toggleEvent = new KeyboardEvent('keydown', {
@@ -855,10 +855,16 @@ describe('Japanese IME Input Handling TDD Test Suite', () => {
 
             // Simulate complex phrase
             for (let stage = 0; stage < 15; stage++) {
-              japaneseIME.dispatchCompositionEvent('compositionupdate', `日本語テスト${session}${phrase}${stage}`);
+              japaneseIME.dispatchCompositionEvent(
+                'compositionupdate',
+                `日本語テスト${session}${phrase}${stage}`
+              );
             }
 
-            japaneseIME.dispatchCompositionEvent('compositionend', `日本語テスト完了${session}${phrase}`);
+            japaneseIME.dispatchCompositionEvent(
+              'compositionend',
+              `日本語テスト完了${session}${phrase}`
+            );
           }
         }
 

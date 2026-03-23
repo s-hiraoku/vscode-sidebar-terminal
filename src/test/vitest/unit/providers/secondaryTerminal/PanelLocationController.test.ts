@@ -40,11 +40,13 @@ describe('PanelLocationController', () => {
 
     serviceStub = {
       determineSplitDirection: vi.fn().mockReturnValue('horizontal'),
-      handlePanelLocationReport: vi.fn().mockImplementation(async (_location: unknown, callback?: any) => {
-        if (callback) {
-          await callback('sidebar', 'panel');
-        }
-      }),
+      handlePanelLocationReport: vi
+        .fn()
+        .mockImplementation(async (_location: unknown, callback?: any) => {
+          if (callback) {
+            await callback('sidebar', 'panel');
+          }
+        }),
       requestPanelLocationDetection: vi.fn().mockResolvedValue(undefined),
       initialize: vi.fn(),
     };

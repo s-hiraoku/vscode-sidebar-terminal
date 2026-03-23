@@ -38,7 +38,7 @@ export class TerminalIOCoordinator {
     }
 
     try {
-      this._cliAgentService.detectFromInput(resolvedTerminalId, data);
+      this._cliAgentService.handleInputChunk(resolvedTerminalId, data);
       const result = this.writeToPtyWithValidation(terminal, data);
       if (!result.success && !this.attemptPtyRecovery(terminal, data)) {
         throw new Error(result.error || 'PTY write failed');
@@ -163,7 +163,10 @@ export class TerminalIOCoordinator {
       ptyInstance.write(data);
       return { success: true };
     } catch (error) {
-      return { success: false, error: `Write failed: ${error instanceof Error ? error.message : String(error)}` };
+      return {
+        success: false,
+        error: `Write failed: ${error instanceof Error ? error.message : String(error)}`,
+      };
     }
   }
 
@@ -228,7 +231,10 @@ export class TerminalIOCoordinator {
       ptyInstance.resize(cols, rows);
       return { success: true };
     } catch (error) {
-      return { success: false, error: `Resize failed: ${error instanceof Error ? error.message : String(error)}` };
+      return {
+        success: false,
+        error: `Resize failed: ${error instanceof Error ? error.message : String(error)}`,
+      };
     }
   }
 }

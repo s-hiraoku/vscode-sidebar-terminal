@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "skills": {
+    "code-quality": {
+      "source": "s-hiraoku/synapse-a2a",
+      "sourceType": "github",
+      "computedHash": "6937970e78743968ca9e930f0f4c12bb73dca564ab84e26027d79c3975912b72"
+    },
+    "code-review": {
+      "source": "s-hiraoku/synapse-a2a",
+      "sourceType": "github",
+      "computedHash": "c28e7405bb845b3c7da0bb4c6c06061c4d765770d830d447e11e3eb2df2287cf"
+    },
+    "code-simplifier": {
+      "source": "s-hiraoku/synapse-a2a",
+      "sourceType": "github",
+      "computedHash": "b346c7ec8e126629c5ea94215338b2ff3323d91182943226d98e6aec876ccc11"
+    },
+    "frontend-design": {
+      "source": "s-hiraoku/synapse-a2a",
+      "sourceType": "github",
+      "computedHash": "57f03bbc048abb87441052e46e9f7b2a60bf5ca45a463ade52e038a2c3eb5c09"
+    },
+    "parallel-docs-simplify-sync": {
+      "source": "s-hiraoku/synapse-a2a",
+      "sourceType": "github",
+      "computedHash": "709ad3a572abbd7b6304c308613b28f3b1abf5a03f9efe4065fe373f93b511a1"
+    },
+    "release": {
+      "source": "s-hiraoku/synapse-a2a",
+      "sourceType": "github",
+      "computedHash": "fc119c50320e629962cc93b4c9d2dd1574f3e14a314175a80e9fa6b778f00027"
+    },
+    "skill-creator": {
+      "source": "s-hiraoku/synapse-a2a",
+      "sourceType": "github",
+      "computedHash": "9b03bb78ec5c81c4e0546dbb78cfc970368c72dcae5482e8c59690175abbc8e7"
+    },
+    "synapse-a2a": {
+      "source": "s-hiraoku/synapse-a2a",
+      "sourceType": "github",
+      "computedHash": "54301af42d9f858328cdb6f25915dede1768d58d8fca306f668e45fe701c2d49"
+    },
+    "synapse-manager": {
+      "source": "s-hiraoku/synapse-a2a",
+      "sourceType": "github",
+      "computedHash": "8027ef01c842a9c10e61cb6e4368348a3469d1f234028e4780616870eb80feb9"
+    },
+    "synapse-reinst": {
+      "source": "s-hiraoku/synapse-a2a",
+      "sourceType": "github",
+      "computedHash": "2f6fb1f5351ce293406da962c3fcc9a218df03e23bd4c7e3d6b2c4e5db2dd854"
+    },
+    "sync-plugin-skills": {
+      "source": "s-hiraoku/synapse-a2a",
+      "sourceType": "github",
+      "computedHash": "9eb52be8d4929999464353331f6a6bb6f5605b57b29aef9f3f20b33ce0220e41"
+    }
+  }
+}

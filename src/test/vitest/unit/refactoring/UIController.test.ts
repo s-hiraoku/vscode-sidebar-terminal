@@ -5,7 +5,10 @@
 
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 import { JSDOM } from 'jsdom';
-import { UIController, UIControllerFactory } from '../../../../../src/webview/services/UIController';
+import {
+  UIController,
+  UIControllerFactory,
+} from '../../../../../src/webview/services/UIController';
 import { UIControllerConfig } from '../../../../../src/webview/services/IUIController';
 
 describe('UIController Service', () => {
@@ -201,7 +204,7 @@ describe('UIController Service', () => {
     it('should update active terminal indicator when terminalId is undefined', () => {
       const terminalInfos = [{ id: 'terminal-1', number: 1, isActive: true }];
       uiController.updateTerminalTabs(terminalInfos);
-      
+
       uiController.updateActiveTerminalIndicator(undefined);
       const activeTab = document.querySelector('.terminal-tab.active');
       expect(activeTab).toBeFalsy();
@@ -314,7 +317,7 @@ describe('UIController Service', () => {
       const container = document.createElement('div');
       container.className = 'terminal-container';
       uiController.showTerminalContainer('test-3', container);
-      
+
       const terminalArea = document.getElementById('terminal-area');
       expect(terminalArea?.contains(container)).toBe(true);
     });
@@ -323,7 +326,7 @@ describe('UIController Service', () => {
       document.getElementById('terminal-area')?.remove();
       const container = document.createElement('div');
       container.className = 'terminal-container';
-      
+
       uiController.showTerminalContainer('test-4', container);
       // Should not throw
     });
@@ -463,7 +466,9 @@ describe('UIController Service', () => {
         revokeObjectURL: vi.fn(),
       } as any;
 
-      global.Blob = vi.fn().mockImplementation(function(this: any) { return {}; }) as any;
+      global.Blob = vi.fn().mockImplementation(function (this: any) {
+        return {};
+      }) as any;
 
       uiController.exportSystemDiagnostics();
 
@@ -532,7 +537,7 @@ describe('UIController Service', () => {
       expect(document.querySelector('.notification')).toBeTruthy();
 
       await vi.advanceTimersByTimeAsync(100);
-      
+
       expect(document.querySelector('.notification')).toBeFalsy();
       vi.useRealTimers();
     });
@@ -591,7 +596,7 @@ describe('UIController Service', () => {
       uiController.showNotification({ type: 'info', message: 'test' });
       const notification = document.querySelector('.notification') as HTMLElement;
       notification.remove(); // Manually remove from DOM
-      
+
       uiController.clearNotifications(); // Should not throw
       expect(document.querySelector('.notification')).toBeFalsy();
     });
@@ -730,7 +735,7 @@ describe('UIController Service', () => {
       const container = document.createElement('div');
       container.className = 'terminal-container';
       document.body.appendChild(container);
-      
+
       uiController.resizeTerminalContainers(80, 24);
       // Should not throw
     });

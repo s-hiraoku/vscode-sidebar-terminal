@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ClipboardMessageHandler } from '../../../../../../webview/managers/handlers/ClipboardMessageHandler';
-import type { IManagerCoordinator, TerminalInstance } from '../../../../../../webview/interfaces/ManagerInterfaces';
+import type {
+  IManagerCoordinator,
+  TerminalInstance,
+} from '../../../../../../webview/interfaces/ManagerInterfaces';
 import { ManagerLogger } from '../../../../../../webview/utils/ManagerLogger';
 import type { MessageCommand } from '../../../../../../webview/managers/messageTypes';
 
@@ -56,7 +59,9 @@ describe('ClipboardMessageHandler', () => {
     it('should warn on unknown command', () => {
       const msg: MessageCommand = { command: 'unknown' };
       handler.handleMessage(msg, mockCoordinator);
-      expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Unknown clipboard command'));
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Unknown clipboard command')
+      );
     });
   });
 
@@ -66,9 +71,9 @@ describe('ClipboardMessageHandler', () => {
         command: 'clipboardContent',
         text: 'paste me',
       };
-      
+
       handler.handleMessage(msg, mockCoordinator);
-      
+
       expect(mockCoordinator.getTerminalInstance).not.toHaveBeenCalled();
       expect(mockTerminal.paste).not.toHaveBeenCalled();
     });
@@ -78,9 +83,9 @@ describe('ClipboardMessageHandler', () => {
         command: 'clipboardContent',
         terminalId: 'term-1',
       };
-      
+
       handler.handleMessage(msg, mockCoordinator);
-      
+
       expect(mockCoordinator.getTerminalInstance).not.toHaveBeenCalled();
       expect(mockTerminal.paste).not.toHaveBeenCalled();
     });
@@ -97,7 +102,9 @@ describe('ClipboardMessageHandler', () => {
 
       handler.handleMessage(msg, mockCoordinator);
 
-      expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Terminal term-1 not found'));
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Terminal term-1 not found')
+      );
       expect(mockTerminal.paste).not.toHaveBeenCalled();
     });
   });

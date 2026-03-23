@@ -9,7 +9,7 @@ describe('PluginManager', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
-    
+
     mockEventBus = {
       publish: vi.fn(),
       subscribe: vi.fn(),
@@ -79,13 +79,15 @@ describe('PluginManager', () => {
   describe('error handling', () => {
     it('should throw if manager is disposed', async () => {
       manager.dispose();
-      await expect(manager.activatePlugin('any')).rejects.toThrow('PluginManager has been disposed');
+      await expect(manager.activatePlugin('any')).rejects.toThrow(
+        'PluginManager has been disposed'
+      );
     });
 
     it('should handle activation failures', async () => {
       await manager.registerPlugin(mockPlugin);
       mockPlugin.activate.mockRejectedValue(new Error('Fail'));
-      
+
       await expect(manager.activatePlugin('test-plugin')).rejects.toThrow('Fail');
     });
   });

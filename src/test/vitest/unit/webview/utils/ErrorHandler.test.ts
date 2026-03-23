@@ -1,4 +1,3 @@
-
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ErrorHandler } from '../../../../../webview/utils/ErrorHandler';
 import { terminalLogger } from '../../../../../webview/utils/ManagerLogger';
@@ -9,8 +8,8 @@ vi.mock('../../../../../webview/utils/ManagerLogger', () => ({
     info: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
-    debug: vi.fn()
-  }
+    debug: vi.fn(),
+  },
 }));
 
 describe('ErrorHandler', () => {
@@ -24,7 +23,7 @@ describe('ErrorHandler', () => {
   describe('handleOperationError', () => {
     it('should log error and return result', () => {
       const result = ErrorHandler.handleOperationError(op, err);
-      
+
       expect(result.handled).toBe(true);
       expect(result.severity).toBe('error');
       expect(result.message).toContain('❌');
@@ -51,13 +50,10 @@ describe('ErrorHandler', () => {
 
     it('should include context in logs', () => {
       const context = { id: 123 };
-      
+
       ErrorHandler.handleOperationError(op, err, { context });
-      
-      expect(terminalLogger.error).toHaveBeenCalledWith(
-        expect.stringContaining('"id":123'),
-        err
-      );
+
+      expect(terminalLogger.error).toHaveBeenCalledWith(expect.stringContaining('"id":123'), err);
     });
   });
 

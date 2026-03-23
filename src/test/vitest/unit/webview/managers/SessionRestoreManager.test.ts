@@ -51,7 +51,9 @@ function createMockTerminalInstance(terminal?: Terminal): TerminalInstance {
 }
 
 // Helper to create mock callbacks
-function createMockCallbacks(overrides: Partial<ISessionRestoreCallbacks> = {}): ISessionRestoreCallbacks {
+function createMockCallbacks(
+  overrides: Partial<ISessionRestoreCallbacks> = {}
+): ISessionRestoreCallbacks {
   return {
     getTerminalInstance: vi.fn().mockReturnValue(undefined),
     createTerminal: vi.fn().mockResolvedValue(createMockTerminal()),
@@ -68,7 +70,8 @@ describe('SessionRestoreManager', () => {
   beforeEach(async () => {
     vi.useFakeTimers();
 
-    const terminalCreationModule = await import('../../../../../webview/services/TerminalCreationService');
+    const terminalCreationModule =
+      await import('../../../../../webview/services/TerminalCreationService');
     TerminalCreationService = terminalCreationModule.TerminalCreationService;
 
     vi.mocked(TerminalCreationService.isTerminalRestoring).mockReturnValue(false);
@@ -193,7 +196,8 @@ describe('SessionRestoreManager', () => {
       const mockInstance = createMockTerminalInstance(mockTerminal);
 
       mockCallbacks = createMockCallbacks({
-        getTerminalInstance: vi.fn()
+        getTerminalInstance: vi
+          .fn()
           .mockReturnValueOnce(undefined) // First call: terminal doesn't exist
           .mockReturnValue(mockInstance), // After creation: terminal exists
         createTerminal: vi.fn().mockResolvedValue(mockTerminal),

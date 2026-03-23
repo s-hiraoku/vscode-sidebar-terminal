@@ -232,13 +232,19 @@ export class SplitResizeManager {
 
     this.startDragEvents(event, resizer, 'vertical');
 
-    log(`📐 [SPLIT-RESIZE] Grid row drag started: row1=${row1Height.toFixed(0)}px, row2=${row2Height.toFixed(0)}px`);
+    log(
+      `📐 [SPLIT-RESIZE] Grid row drag started: row1=${row1Height.toFixed(0)}px, row2=${row2Height.toFixed(0)}px`
+    );
   }
 
   /**
    * Common setup for drag event listeners and visual feedback
    */
-  private startDragEvents(event: PointerEvent, resizer: HTMLElement, cursorDirection: 'horizontal' | 'vertical'): void {
+  private startDragEvents(
+    event: PointerEvent,
+    resizer: HTMLElement,
+    cursorDirection: 'horizontal' | 'vertical'
+  ): void {
     // Add visual feedback classes
     document.body.classList.add('resizing-split');
     document.body.classList.add(`resizing-${cursorDirection}`);
@@ -258,18 +264,12 @@ export class SplitResizeManager {
     );
 
     // Register document-level event listeners
-    this.eventRegistry.register(
-      'split-resize:document-pointermove',
-      document,
-      'pointermove',
-      (e) => this.handlePointerMove(e as PointerEvent)
+    this.eventRegistry.register('split-resize:document-pointermove', document, 'pointermove', (e) =>
+      this.handlePointerMove(e as PointerEvent)
     );
 
-    this.eventRegistry.register(
-      'split-resize:document-pointerup',
-      document,
-      'pointerup',
-      (e) => this.handlePointerUp(e as PointerEvent)
+    this.eventRegistry.register('split-resize:document-pointerup', document, 'pointerup', (e) =>
+      this.handlePointerUp(e as PointerEvent)
     );
 
     // Handle pointer leaving window

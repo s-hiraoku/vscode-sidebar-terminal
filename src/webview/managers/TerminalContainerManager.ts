@@ -210,17 +210,16 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
       // Fallback heuristic: derive panelLocation from splitDirection when not available
       // on TerminalDisplayState. Matches PanelLocationService mapping:
       // panel → horizontal, sidebar → vertical.
-      const panelLocation: 'sidebar' | 'panel' = splitDirection === 'horizontal' ? 'panel' : 'sidebar';
+      const panelLocation: 'sidebar' | 'panel' =
+        splitDirection === 'horizontal' ? 'panel' : 'sidebar';
       const viewportArea = terminalBody.clientWidth * terminalBody.clientHeight;
       const isCompactPanelArea =
         panelLocation === 'panel' &&
         viewportArea <= PANEL_LOCATION_CONSTANTS.COMPACT_VIEWPORT_AREA_THRESHOLD;
 
       if (shouldUseGrid(orderedIds.length, panelLocation, true) && !isCompactPanelArea) {
-        this.splitLayoutService.activateGridLayout(
-          terminalBody,
-          orderedIds,
-          (id) => this.containerCache.get(id)
+        this.splitLayoutService.activateGridLayout(terminalBody, orderedIds, (id) =>
+          this.containerCache.get(id)
         );
       } else {
         this.splitLayoutService.activateSplitLayout(
@@ -345,7 +344,9 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
           if (wrapperParent) {
             wrapperParent.appendChild(container);
           } else {
-            this.log(`Warning: could not reparent container for terminal ${terminalId} — no parent found`);
+            this.log(
+              `Warning: could not reparent container for terminal ${terminalId} — no parent found`
+            );
           }
         }
       }
@@ -554,7 +555,9 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
     }
     parentContainer.appendChild(fragment);
 
-    this.log(`✅ Successfully reordered ${reorderedContainers.length} containers, cache order updated`);
+    this.log(
+      `✅ Successfully reordered ${reorderedContainers.length} containers, cache order updated`
+    );
   }
 
   /**

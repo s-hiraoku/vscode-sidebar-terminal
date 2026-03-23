@@ -61,7 +61,7 @@ describe('DOMUtils', () => {
       const el = document.createElement('div');
       document.body.appendChild(el);
       expect(document.body.contains(el)).toBe(true);
-      
+
       DOMUtils.safeRemove(el);
       expect(document.body.contains(el)).toBe(false);
     });
@@ -87,7 +87,7 @@ describe('DOMUtils', () => {
       const parent = document.createElement('div');
       const c1 = document.createElement('span');
       const c2 = document.createElement('span');
-      
+
       DOMUtils.appendChildren(parent, c1, c2);
       expect(parent.children.length).toBe(2);
       expect(parent.firstChild).toBe(c1);
@@ -97,10 +97,10 @@ describe('DOMUtils', () => {
       const parent = document.createElement('div');
       const c1 = document.createElement('span');
       const c2 = document.createElement('span');
-      
+
       parent.appendChild(c1);
       DOMUtils.prependChild(parent, c2);
-      
+
       expect(parent.firstChild).toBe(c2);
     });
   });

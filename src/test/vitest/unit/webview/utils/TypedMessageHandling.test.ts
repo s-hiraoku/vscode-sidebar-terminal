@@ -244,7 +244,11 @@ describe('TypedMessageHandling - 型安全なメッセージシステム', () =>
     let sender: TypedMessageSender;
 
     beforeEach(() => {
-      sender = new TypedMessageSender(mockVSCodeAPI as unknown as VSCodeWebviewAPI, 'test-sender', mockLogger);
+      sender = new TypedMessageSender(
+        mockVSCodeAPI as unknown as VSCodeWebviewAPI,
+        'test-sender',
+        mockLogger
+      );
     });
 
     describe('基本的な送信機能', () => {
@@ -449,7 +453,11 @@ describe('TypedMessageHandling - 型安全なメッセージシステム', () =>
   describe('統合テスト - エンドツーエンドシナリオ', () => {
     it('should handle complete terminal creation workflow', async () => {
       const router = new TypedMessageRouter('integration-test', mockLogger);
-      const sender = new TypedMessageSender(mockVSCodeAPI as unknown as VSCodeWebviewAPI, 'integration-sender', mockLogger);
+      const sender = new TypedMessageSender(
+        mockVSCodeAPI as unknown as VSCodeWebviewAPI,
+        'integration-sender',
+        mockLogger
+      );
 
       // Set up terminal creation handler
       const createHandler = vi.fn().mockResolvedValue(undefined);

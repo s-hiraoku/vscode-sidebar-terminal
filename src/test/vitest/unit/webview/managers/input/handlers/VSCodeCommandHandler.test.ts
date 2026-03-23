@@ -1,4 +1,3 @@
-
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { VSCodeCommandHandler } from '../../../../../../../webview/managers/input/handlers/VSCodeCommandHandler';
 import { TerminalOperationsService } from '../../../../../../../webview/managers/input/services/TerminalOperationsService';
@@ -27,11 +26,7 @@ describe('VSCodeCommandHandler', () => {
     mockEmitEvent = vi.fn();
     mockLogger = vi.fn();
 
-    handler = new VSCodeCommandHandler(
-      mockTerminalOperations,
-      mockEmitEvent,
-      mockLogger
-    );
+    handler = new VSCodeCommandHandler(mockTerminalOperations, mockEmitEvent, mockLogger);
   });
 
   describe('handleCommand', () => {
@@ -54,7 +49,10 @@ describe('VSCodeCommandHandler', () => {
       // Using a command that calls getActiveTerminalId, e.g., split
       const result = await handler.handleCommand('workbench.action.terminal.split', mockManager);
       expect(result).toBe(false);
-      expect(mockLogger).toHaveBeenCalledWith(expect.stringContaining('Error handling command'), expect.any(Error));
+      expect(mockLogger).toHaveBeenCalledWith(
+        expect.stringContaining('Error handling command'),
+        expect.any(Error)
+      );
     });
   });
 
@@ -67,7 +65,12 @@ describe('VSCodeCommandHandler', () => {
     it('should handle split terminal', async () => {
       (mockManager.getActiveTerminalId as any).mockReturnValue('term-1');
       await handler.handleCommand('workbench.action.terminal.split', mockManager);
-      expect(mockEmitEvent).toHaveBeenCalledWith('split-terminal', 'term-1', undefined, mockManager);
+      expect(mockEmitEvent).toHaveBeenCalledWith(
+        'split-terminal',
+        'term-1',
+        undefined,
+        mockManager
+      );
     });
 
     it('should handle kill terminal', async () => {
@@ -103,7 +106,12 @@ describe('VSCodeCommandHandler', () => {
     it('should handle focus previous', async () => {
       (mockManager.getActiveTerminalId as any).mockReturnValue('term-1');
       await handler.handleCommand('workbench.action.terminal.focusPrevious', mockManager);
-      expect(mockEmitEvent).toHaveBeenCalledWith('switch-previous', 'term-1', undefined, mockManager);
+      expect(mockEmitEvent).toHaveBeenCalledWith(
+        'switch-previous',
+        'term-1',
+        undefined,
+        mockManager
+      );
     });
 
     it('should handle toggle terminal', async () => {

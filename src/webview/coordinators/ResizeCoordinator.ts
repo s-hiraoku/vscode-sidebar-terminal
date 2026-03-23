@@ -17,11 +17,17 @@ import { RESIZE_COORDINATOR_CONSTANTS } from '../constants/webview';
  * リサイズに必要な外部依存
  */
 export interface IResizeDependencies {
-  getTerminals(): Map<string, {
-    terminal: { cols: number; rows: number; refresh?: (start: number, end: number) => void };
-    fitAddon: { fit(): void; proposeDimensions(): { cols?: number; rows?: number } | undefined } | null;
-    container: HTMLElement | null;
-  }>;
+  getTerminals(): Map<
+    string,
+    {
+      terminal: { cols: number; rows: number; refresh?: (start: number, end: number) => void };
+      fitAddon: {
+        fit(): void;
+        proposeDimensions(): { cols?: number; rows?: number } | undefined;
+      } | null;
+      container: HTMLElement | null;
+    }
+  >;
   /**
    * PTYプロセスへリサイズを通知
    * VS Code pattern: fit()後にPTYのcols/rowsを更新する必要がある

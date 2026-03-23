@@ -18,11 +18,7 @@ export class CliAgentStateManager implements ICliAgentStateManager {
     terminalName?: string;
   }>();
 
-  setConnectedAgent(
-    terminalId: string,
-    type: AgentType,
-    terminalName?: string
-  ): void {
+  setConnectedAgent(terminalId: string, type: AgentType, terminalName?: string): void {
     // 🚨 FIX: Prevent unnecessary state changes for already connected agent
     if (this._connectedAgentTerminalId === terminalId && this._connectedAgentType === type) {
       log(
@@ -345,11 +341,7 @@ export class CliAgentStateManager implements ICliAgentStateManager {
    * 🆕 MANUAL RESET: Force reconnect an AI Agent in a specific terminal
    * This is used when user manually clicks the AI Agent toggle to fix detection errors
    */
-  forceReconnectAgent(
-    terminalId: string,
-    agentType: AgentType,
-    terminalName?: string
-  ): boolean {
+  forceReconnectAgent(terminalId: string, agentType: AgentType, terminalName?: string): boolean {
     log(`🔄 [MANUAL-RESET] Force reconnecting ${agentType} agent in terminal ${terminalId}`);
 
     // Clear any existing state for this terminal

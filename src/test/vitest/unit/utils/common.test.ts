@@ -1,26 +1,26 @@
 import { describe, it, expect } from 'vitest';
 
-import { 
-  safeProcessCwd, 
-  generateTerminalId, 
-  generateNonce, 
-  getFirstItem, 
-  getFirstValue, 
+import {
+  safeProcessCwd,
+  generateTerminalId,
+  generateNonce,
+  getFirstItem,
+  getFirstValue,
   safeStringify,
   ActiveTerminalManager,
-  normalizeTerminalInfo
+  normalizeTerminalInfo,
 } from '../../../../utils/common';
 
 // Mock vscode
 vi.mock('vscode', () => ({
   workspace: {
-    workspaceFolders: []
+    workspaceFolders: [],
   },
   window: {
     activeTextEditor: undefined,
     showErrorMessage: vi.fn(),
-    showWarningMessage: vi.fn()
-  }
+    showWarningMessage: vi.fn(),
+  },
 }));
 
 describe('Common Utils', () => {
@@ -61,7 +61,10 @@ describe('Common Utils', () => {
     });
 
     it('should get first value from Map safely', () => {
-      const map = new Map([['key1', 'val1'], ['key2', 'val2']]);
+      const map = new Map([
+        ['key1', 'val1'],
+        ['key2', 'val2'],
+      ]);
       expect(getFirstValue(map)).toBe('val1');
       expect(getFirstValue(new Map())).toBeUndefined();
     });
@@ -69,7 +72,7 @@ describe('Common Utils', () => {
     it('should stringify objects safely', () => {
       const obj = { a: 1 };
       expect(safeStringify(obj)).toBe('{"a":1}');
-      
+
       // Handle circular reference
       const circular: any = { a: 1 };
       circular.self = circular;
@@ -81,13 +84,13 @@ describe('Common Utils', () => {
     it('should manage active terminal state', () => {
       const mgr = new ActiveTerminalManager();
       expect(mgr.hasActive()).toBe(false);
-      
+
       mgr.setActive('t1');
       expect(mgr.getActive()).toBe('t1');
       expect(mgr.hasActive()).toBe(true);
       expect(mgr.isActive('t1')).toBe(true);
       expect(mgr.isActive('t2')).toBe(false);
-      
+
       mgr.clearActive();
       expect(mgr.hasActive()).toBe(false);
     });

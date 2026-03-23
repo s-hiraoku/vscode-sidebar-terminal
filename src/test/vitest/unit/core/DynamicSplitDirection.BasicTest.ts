@@ -52,9 +52,7 @@ describe('Dynamic Split Direction - Basic Logic Tests', function () {
         const isPanel = aspectRatio > 2.0;
         const location = isPanel ? 'panel' : 'sidebar';
 
-        expect(location).toBe(
-          expected
-        );
+        expect(location).toBe(expected);
       });
     });
   });

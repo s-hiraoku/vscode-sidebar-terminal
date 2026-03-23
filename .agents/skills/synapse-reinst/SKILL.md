@@ -3,8 +3,9 @@ name: synapse-reinst
 description: >-
   Re-inject Synapse A2A initial instructions after context has been cleared.
   Use this skill when the agent has lost its identity, A2A communication
-  protocol, or configuration after /clear or context reset. Triggered by
-  /synapse-reinst command.
+  protocol, or configuration after /clear or context reset, when synapse
+  send/reply commands stop working, or when the agent no longer recognizes
+  its SYNAPSE_AGENT_ID. Triggered by /synapse-reinst command.
 ---
 
 # Synapse Re-Instruction
@@ -23,7 +24,11 @@ Restore Synapse A2A agent identity and instructions after `/clear` or context re
 Run the reinst script to output your full Synapse instructions:
 
 ```bash
+# From the source tree
 python plugins/synapse-a2a/skills/synapse-reinst/scripts/reinst.py
+
+# From a synced or installed skill copy
+cd .claude/skills/synapse-reinst && python scripts/reinst.py
 ```
 
 The script reads environment variables set by Synapse at startup (`SYNAPSE_AGENT_ID`, `SYNAPSE_AGENT_TYPE`, `SYNAPSE_PORT`) which persist even after `/clear`.

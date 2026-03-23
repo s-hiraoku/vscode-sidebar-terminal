@@ -197,7 +197,9 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
       if (displayModeOverride === 'normal') {
         if ('setForceNormalModeForNextCreate' in coordinator) {
           (
-            coordinator as unknown as { setForceNormalModeForNextCreate: (enabled: boolean) => void }
+            coordinator as unknown as {
+              setForceNormalModeForNextCreate: (enabled: boolean) => void;
+            }
           ).setForceNormalModeForNextCreate(true);
         }
         coordinator.getDisplayModeManager?.()?.setDisplayMode('normal');
@@ -258,7 +260,9 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
           // The createTerminal() has internal setTimeout(150) that was overriding fullscreen
           // Use 200ms to ensure fullscreen is applied AFTER all createTerminal() side effects
           setTimeout(() => {
-            this.logger.info(`🔍 [FULLSCREEN-DEBUG] Applying fullscreen for ${terminalId} after delay`);
+            this.logger.info(
+              `🔍 [FULLSCREEN-DEBUG] Applying fullscreen for ${terminalId} after delay`
+            );
             displayModeManager?.showTerminalFullscreen?.(terminalId);
           }, 200);
         }
@@ -670,7 +674,10 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
     return settings?.enableTerminalHeaderEnhancements !== false;
   }
 
-  private canShowProcessingIndicator(terminalId: string, coordinator: IManagerCoordinator): boolean {
+  private canShowProcessingIndicator(
+    terminalId: string,
+    coordinator: IManagerCoordinator
+  ): boolean {
     if (!this.isHeaderEnhancementsEnabled(coordinator)) {
       return false;
     }

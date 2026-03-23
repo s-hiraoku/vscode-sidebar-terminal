@@ -1,4 +1,3 @@
-
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { SplitManager } from '../../../../../webview/managers/SplitManager';
 import { IManagerCoordinator } from '../../../../../webview/interfaces/ManagerInterfaces';
@@ -33,7 +32,7 @@ describe('SplitManager', () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
-    
+
     mockContainerManager = {
       getContainerOrder: vi.fn().mockReturnValue(['t1', 't2']),
       applyDisplayState: vi.fn(),
@@ -48,8 +47,14 @@ describe('SplitManager', () => {
     // Reset document
     document.body.innerHTML = '<div id="terminal-body" style="height: 500px; width: 500px;"></div>';
     // Mock clientHeight/Width since JSDOM defaults to 0
-    Object.defineProperty(document.getElementById('terminal-body'), 'clientHeight', { value: 500, configurable: true });
-    Object.defineProperty(document.getElementById('terminal-body'), 'clientWidth', { value: 500, configurable: true });
+    Object.defineProperty(document.getElementById('terminal-body'), 'clientHeight', {
+      value: 500,
+      configurable: true,
+    });
+    Object.defineProperty(document.getElementById('terminal-body'), 'clientWidth', {
+      value: 500,
+      configurable: true,
+    });
 
     manager = new SplitManager(mockCoordinator);
   });
@@ -71,7 +76,7 @@ describe('SplitManager', () => {
     it('should handle multiple terminals', () => {
       // Add a mock terminal
       manager.terminals.set('t1', {} as any);
-      
+
       // 1 current, adding 1 -> total 2
       const result = manager.calculateSplitLayout();
       expect(result.canSplit).toBe(true);
@@ -83,7 +88,7 @@ describe('SplitManager', () => {
       for (let i = 0; i < 10; i++) {
         manager.terminals.set(`t${i}`, {} as any);
       }
-      
+
       const result = manager.calculateSplitLayout();
       expect(result.canSplit).toBe(false);
       expect(result.reason).toContain('Maximum');
@@ -91,8 +96,10 @@ describe('SplitManager', () => {
 
     it('should prevent split if terminal height too small', () => {
       // Reduce body height
-      Object.defineProperty(document.getElementById('terminal-body'), 'clientHeight', { value: 50 });
-      
+      Object.defineProperty(document.getElementById('terminal-body'), 'clientHeight', {
+        value: 50,
+      });
+
       const result = manager.calculateSplitLayout();
       expect(result.canSplit).toBe(false);
       expect(result.reason).toContain('too small');
@@ -102,7 +109,7 @@ describe('SplitManager', () => {
   describe('updateSplitDirection', () => {
     it('should update direction and panel location', () => {
       manager.updateSplitDirection('horizontal', 'panel');
-      
+
       expect(manager.getCurrentPanelLocation()).toBe('panel');
       // @ts-ignore - access private
       expect(manager['splitDirection']).toBe('horizontal');
@@ -112,9 +119,9 @@ describe('SplitManager', () => {
       manager.isSplitMode = true;
       manager.terminals.set('t1', {} as any);
       manager.terminals.set('t2', {} as any);
-      
+
       manager.updateSplitDirection('horizontal', 'panel');
-      
+
       expect(mockContainerManager.applyDisplayState).toHaveBeenCalled();
     });
   });
@@ -135,12 +142,12 @@ describe('SplitManager', () => {
     it('should remove terminal and container', () => {
       const mockTerminal = { terminal: { dispose: vi.fn() } };
       const mockContainer = document.createElement('div');
-      
+
       manager.setTerminal('t1', mockTerminal as any);
       manager.setTerminalContainer('t1', mockContainer);
-      
+
       manager.removeTerminal('t1');
-      
+
       expect(manager.getTerminals().has('t1')).toBe(false);
       expect(manager.getTerminalContainers().has('t1')).toBe(false);
       expect(mockTerminal.terminal.dispose).toHaveBeenCalled();
@@ -151,11 +158,11 @@ describe('SplitManager', () => {
       manager.terminals.set('t1', {} as any);
       manager.terminals.set('t2', {} as any);
       manager.terminals.set('t3', {} as any); // 3 terminals
-      
+
       manager.removeTerminal('t3');
-      
+
       vi.advanceTimersByTime(100);
-      
+
       // Should still be in split mode and update layout
       expect(manager.isSplitMode).toBe(true);
       expect(mockContainerManager.applyDisplayState).toHaveBeenCalled();
@@ -165,11 +172,11 @@ describe('SplitManager', () => {
       manager.isSplitMode = true;
       manager.terminals.set('t1', {} as any);
       manager.terminals.set('t2', {} as any);
-      
+
       manager.removeTerminal('t2');
-      
+
       vi.advanceTimersByTime(100);
-      
+
       expect(manager.isSplitMode).toBe(false);
     });
   });
@@ -179,17 +186,17 @@ describe('SplitManager', () => {
       manager.isSplitMode = true;
       const t1 = document.createElement('div');
       const t2 = document.createElement('div');
-      
+
       // Add to DOM as container targets
       document.getElementById('terminal-body')?.appendChild(t1);
       document.getElementById('terminal-body')?.appendChild(t2);
-      
+
       // Mark them as terminal containers
       t1.setAttribute('data-terminal-container', 'true');
       t2.setAttribute('data-terminal-container', 'true');
-      
+
       manager.redistributeSplitTerminals(400);
-      
+
       // 400px / 2 = 200px
       expect(t1.style.height).toBe('200px');
       expect(t2.style.height).toBe('200px');
@@ -232,7 +239,9 @@ describe('SplitManager', () => {
       const totalGapHeight = 4 * 4; // 5 items => 4 gaps
       const totalPadding = 8;
 
-      expect(totalWrapperHeight + totalResizerHeight + totalGapHeight + totalPadding).toBeLessThanOrEqual(600);
+      expect(
+        totalWrapperHeight + totalResizerHeight + totalGapHeight + totalPadding
+      ).toBeLessThanOrEqual(600);
     });
 
     it('should assign remainder pixels to the last split wrapper', () => {
