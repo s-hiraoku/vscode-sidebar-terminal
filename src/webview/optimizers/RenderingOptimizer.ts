@@ -125,12 +125,11 @@ export class RenderingOptimizer implements Disposable {
   private isProblematicWebGLEnvironment(): boolean {
     try {
       // Check if we're in a VS Code WebView (limited WebGL support)
-      const isVSCodeWebView = typeof window !== 'undefined' &&
-        window.navigator.userAgent.includes('Electron');
+      const isVSCodeWebView =
+        typeof window !== 'undefined' && window.navigator.userAgent.includes('Electron');
 
       // Check if we're on macOS
-      const isMacOS = typeof window !== 'undefined' &&
-        window.navigator.userAgent.includes('Mac');
+      const isMacOS = typeof window !== 'undefined' && window.navigator.userAgent.includes('Mac');
 
       // Test WebGL context creation
       const canvas = document.createElement('canvas');
@@ -149,8 +148,8 @@ export class RenderingOptimizer implements Disposable {
 
       // Some integrated GPUs on macOS have issues with WebGL in WebViews
       const problematicPatterns = [
-        /SwiftShader/i,    // Software renderer (indicates GPU issues)
-        /llvmpipe/i,       // Software renderer on Linux
+        /SwiftShader/i, // Software renderer (indicates GPU issues)
+        /llvmpipe/i, // Software renderer on Linux
       ];
 
       for (const pattern of problematicPatterns) {
@@ -191,7 +190,9 @@ export class RenderingOptimizer implements Disposable {
 
     // Check for problematic WebGL environments first
     if (this.isProblematicWebGLEnvironment()) {
-      terminalLogger.info(`🔧 Skipping WebGL for terminal ${terminalId} due to problematic environment`);
+      terminalLogger.info(
+        `🔧 Skipping WebGL for terminal ${terminalId} due to problematic environment`
+      );
       return false;
     }
 
@@ -262,12 +263,14 @@ export class RenderingOptimizer implements Disposable {
           }
         }
       }
-      await new Promise(resolve => setTimeout(resolve, checkIntervalMs));
+      await new Promise((resolve) => setTimeout(resolve, checkIntervalMs));
       elapsed += checkIntervalMs;
     }
 
     // Theme didn't apply in time — still allow WebGL with a warning
-    terminalLogger.warn(`⚠️ Theme wait timed out for ${terminalId} after ${maxWaitMs}ms, proceeding with WebGL`);
+    terminalLogger.warn(
+      `⚠️ Theme wait timed out for ${terminalId} after ${maxWaitMs}ms, proceeding with WebGL`
+    );
     return true;
   }
 
@@ -277,13 +280,13 @@ export class RenderingOptimizer implements Disposable {
    */
   private async verifyWebGLRendering(terminal: Terminal, terminalId: string): Promise<void> {
     // Wait a frame for WebGL to initialize
-    await new Promise(resolve => requestAnimationFrame(resolve));
+    await new Promise((resolve) => requestAnimationFrame(resolve));
 
     // Force a refresh to ensure all layers render
     terminal.refresh(0, terminal.rows - 1);
 
     // Wait another frame
-    await new Promise(resolve => requestAnimationFrame(resolve));
+    await new Promise((resolve) => requestAnimationFrame(resolve));
 
     terminalLogger.debug(`✅ WebGL rendering verified for terminal: ${terminalId}`);
   }

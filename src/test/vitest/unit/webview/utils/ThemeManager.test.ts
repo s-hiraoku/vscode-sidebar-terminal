@@ -30,10 +30,10 @@ describe('ThemeManager', () => {
 
     it('should update colors from CSS variables', () => {
       document.documentElement.style.setProperty('--vscode-editor-background', '#ff0000');
-      
+
       ThemeManager.initialize();
       const colors = ThemeManager.getThemeColors();
-      
+
       expect(colors.background).toBe('#ff0000');
     });
   });
@@ -42,7 +42,7 @@ describe('ThemeManager', () => {
     it('should apply colors to element style', () => {
       const element = document.createElement('div');
       ThemeManager.applyTheme(element, { background: '#00ff00', foreground: '#0000ff' });
-      
+
       expect(element.style.background).toBe('rgb(0, 255, 0)');
       expect(element.style.color).toBe('rgb(0, 0, 255)');
     });
@@ -51,7 +51,7 @@ describe('ThemeManager', () => {
       const element = document.createElement('div');
       document.documentElement.style.setProperty('--vscode-editor-background', '#ff0000');
       ThemeManager.initialize();
-      
+
       ThemeManager.applyTheme(element);
       expect(element.style.background).toBe('rgb(255, 0, 0)');
     });
@@ -61,7 +61,7 @@ describe('ThemeManager', () => {
     it('should create a terminal theme with VS Code colors', () => {
       document.documentElement.style.setProperty('--vscode-terminalCursor-foreground', '#ffff00');
       ThemeManager.initialize();
-      
+
       const theme = ThemeManager.createTerminalTheme();
       expect(theme.cursor).toBe('#ffff00');
     });
@@ -80,9 +80,9 @@ describe('ThemeManager', () => {
       el2.className = 'my-class';
       document.body.appendChild(el1);
       document.body.appendChild(el2);
-      
+
       ThemeManager.updateElementTheme('.my-class', { backgroundColor: 'red' } as any);
-      
+
       expect(el1.style.backgroundColor).toBe('red');
       expect(el2.style.backgroundColor).toBe('red');
     });
@@ -91,7 +91,7 @@ describe('ThemeManager', () => {
   describe('getThemeVariables', () => {
     it('should return map of VS Code variables', () => {
       document.documentElement.style.setProperty('--vscode-editor-background', '#123456');
-      
+
       const variables = ThemeManager.getThemeVariables();
       expect(variables['--vscode-editor-background']).toBe('#123456');
     });

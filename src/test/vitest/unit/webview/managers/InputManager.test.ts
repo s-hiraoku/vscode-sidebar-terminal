@@ -9,7 +9,7 @@ vi.mock('../../../../../webview/managers/input/handlers/IMEHandler', () => ({
     dispose = vi.fn();
     clearPendingInputEvents = vi.fn();
     isIMEComposing = vi.fn().mockReturnValue(false);
-  }
+  },
 }));
 
 vi.mock('../../../../../webview/managers/input/services/InputStateManager', () => ({
@@ -18,13 +18,13 @@ vi.mock('../../../../../webview/managers/input/services/InputStateManager', () =
     updateAltClickState = vi.fn();
     updateIMEState = vi.fn();
     getStateSection = vi.fn().mockReturnValue({ isActive: false });
-  }
+  },
 }));
 
 vi.mock('../../../../../webview/managers/input/services/InputEventService', () => ({
   InputEventService: class {
     dispose = vi.fn();
-  }
+  },
 }));
 
 vi.mock('../../../../../webview/managers/input/services/KeybindingService', () => ({
@@ -32,7 +32,7 @@ vi.mock('../../../../../webview/managers/input/services/KeybindingService', () =
     updateSettings = vi.fn();
     shouldSkipShell = vi.fn().mockReturnValue(false);
     resolveKeybinding = vi.fn().mockReturnValue(null);
-  }
+  },
 }));
 
 vi.mock('../../../../../webview/managers/input/services/TerminalOperationsService', () => ({
@@ -47,8 +47,8 @@ vi.mock('../../../../../webview/managers/input/services/TerminalOperationsServic
   },
   ScrollDirection: {
     UP: 'up',
-    DOWN: 'down'
-  }
+    DOWN: 'down',
+  },
 }));
 
 // Mock logger
@@ -66,7 +66,7 @@ describe('InputManager', () => {
     // Setup DOM environment
     dom = new JSDOM('<!DOCTYPE html><html><body><div id="container"></div></body></html>', {
       url: 'http://localhost',
-      pretendToBeVisual: true
+      pretendToBeVisual: true,
     });
     vi.stubGlobal('window', dom.window);
     vi.stubGlobal('document', dom.window.document);
@@ -96,12 +96,12 @@ describe('InputManager', () => {
       getTerminalInstance: vi.fn().mockReturnValue({
         terminal: mockTerminal,
         id: 'terminal-1',
-        searchAddon: { findNext: vi.fn(), findPrevious: vi.fn() }
+        searchAddon: { findNext: vi.fn(), findPrevious: vi.fn() },
       }),
       postMessageToExtension: vi.fn().mockResolvedValue(undefined),
       getMessageManager: vi.fn().mockReturnValue({
-        sendInput: vi.fn()
-      })
+        sendInput: vi.fn(),
+      }),
     };
 
     manager = new InputManager(mockCoordinator);
@@ -130,9 +130,16 @@ describe('InputManager', () => {
 
   describe('Alt+Click Handling', () => {
     it('should determine if Alt+Click is enabled based on settings', () => {
-      expect(manager.isVSCodeAltClickEnabled({ altClickMovesCursor: true, multiCursorModifier: 'alt' })).toBe(true);
+      expect(
+        manager.isVSCodeAltClickEnabled({ altClickMovesCursor: true, multiCursorModifier: 'alt' })
+      ).toBe(true);
       expect(manager.isVSCodeAltClickEnabled({ altClickMovesCursor: false })).toBe(false);
-      expect(manager.isVSCodeAltClickEnabled({ altClickMovesCursor: true, multiCursorModifier: 'ctrlCmd' })).toBe(false);
+      expect(
+        manager.isVSCodeAltClickEnabled({
+          altClickMovesCursor: true,
+          multiCursorModifier: 'ctrlCmd',
+        })
+      ).toBe(false);
     });
 
     it('should update state when settings change', () => {
@@ -216,7 +223,10 @@ describe('InputManager', () => {
       manager.setPanelNavigationEnabled(true);
       manager.setupKeyboardShortcuts(mockCoordinator);
       const enterEvent = new dom.window.KeyboardEvent('keydown', {
-        key: 'p', ctrlKey: true, bubbles: true, cancelable: true,
+        key: 'p',
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
       });
       dom.window.document.dispatchEvent(enterEvent);
       mockCoordinator.postMessageToExtension.mockClear();
@@ -248,14 +258,21 @@ describe('InputManager', () => {
       manager.initialize();
       manager.setPanelNavigationEnabled(true);
       manager.setupKeyboardShortcuts(mockCoordinator);
-      dom.window.document.dispatchEvent(new dom.window.KeyboardEvent('keydown', {
-        key: 'p', ctrlKey: true, bubbles: true, cancelable: true,
-      }));
+      dom.window.document.dispatchEvent(
+        new dom.window.KeyboardEvent('keydown', {
+          key: 'p',
+          ctrlKey: true,
+          bubbles: true,
+          cancelable: true,
+        })
+      );
       mockCoordinator.postMessageToExtension.mockClear();
 
       // When: press Escape
       const escapeEvent = new dom.window.KeyboardEvent('keydown', {
-        key: 'Escape', bubbles: true, cancelable: true,
+        key: 'Escape',
+        bubbles: true,
+        cancelable: true,
       });
       vi.spyOn(escapeEvent, 'preventDefault');
       vi.spyOn(escapeEvent, 'stopPropagation');
@@ -265,9 +282,13 @@ describe('InputManager', () => {
       expect(escapeEvent.preventDefault).toHaveBeenCalled();
       expect(escapeEvent.stopPropagation).toHaveBeenCalled();
 
-      dom.window.document.dispatchEvent(new dom.window.KeyboardEvent('keydown', {
-        key: 'ArrowRight', bubbles: true, cancelable: true,
-      }));
+      dom.window.document.dispatchEvent(
+        new dom.window.KeyboardEvent('keydown', {
+          key: 'ArrowRight',
+          bubbles: true,
+          cancelable: true,
+        })
+      );
       expect(mockCoordinator.postMessageToExtension).not.toHaveBeenCalled();
     });
 
@@ -276,13 +297,21 @@ describe('InputManager', () => {
       manager.initialize();
       manager.setPanelNavigationEnabled(true);
       manager.setupKeyboardShortcuts(mockCoordinator);
-      dom.window.document.dispatchEvent(new dom.window.KeyboardEvent('keydown', {
-        key: 'p', ctrlKey: true, bubbles: true, cancelable: true,
-      }));
+      dom.window.document.dispatchEvent(
+        new dom.window.KeyboardEvent('keydown', {
+          key: 'p',
+          ctrlKey: true,
+          bubbles: true,
+          cancelable: true,
+        })
+      );
 
       // When: press Ctrl+P again to toggle off
       const exitEvent = new dom.window.KeyboardEvent('keydown', {
-        key: 'p', ctrlKey: true, bubbles: true, cancelable: true,
+        key: 'p',
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
       });
       vi.spyOn(exitEvent, 'preventDefault');
       vi.spyOn(exitEvent, 'stopPropagation');
@@ -328,21 +357,26 @@ describe('InputManager', () => {
       ['r', 'create-terminal'],
       ['d', 'create-terminal'],
       ['x', 'kill-terminal'],
-    ])(
-      'should handle %s key in panel navigation mode and emit %s',
-      (key, expectedType) => {
+    ])('should handle %s key in panel navigation mode and emit %s', (key, expectedType) => {
       manager.initialize();
       manager.setPanelNavigationEnabled(true);
       manager.setupKeyboardShortcuts(mockCoordinator);
 
       // Enter panel navigation mode
-      dom.window.document.dispatchEvent(new dom.window.KeyboardEvent('keydown', {
-        key: 'p', ctrlKey: true, bubbles: true, cancelable: true,
-      }));
+      dom.window.document.dispatchEvent(
+        new dom.window.KeyboardEvent('keydown', {
+          key: 'p',
+          ctrlKey: true,
+          bubbles: true,
+          cancelable: true,
+        })
+      );
       mockCoordinator.postMessageToExtension.mockClear();
 
       const keyEvent = new dom.window.KeyboardEvent('keydown', {
-        key, bubbles: true, cancelable: true,
+        key,
+        bubbles: true,
+        cancelable: true,
       });
       vi.spyOn(keyEvent, 'preventDefault');
       vi.spyOn(keyEvent, 'stopPropagation');
@@ -368,7 +402,9 @@ describe('InputManager', () => {
       // Press r/d/x keys — they should NOT be intercepted
       for (const key of ['r', 'd', 'x']) {
         const event = new dom.window.KeyboardEvent('keydown', {
-          key, bubbles: true, cancelable: true,
+          key,
+          bubbles: true,
+          cancelable: true,
         });
         vi.spyOn(event, 'preventDefault');
         vi.spyOn(event, 'stopPropagation');
@@ -683,7 +719,7 @@ describe('InputManager', () => {
       const event = new dom.window.KeyboardEvent('keydown', {
         ctrlKey: true,
         key: 'c',
-        keyCode: 67
+        keyCode: 67,
       });
 
       mockTerminal.hasSelection.mockReturnValue(false);
@@ -691,16 +727,18 @@ describe('InputManager', () => {
       const handled = manager.handleSpecialKeys(event, 'terminal-1', mockCoordinator);
 
       expect(handled).toBe(true);
-      expect(mockCoordinator.postMessageToExtension).toHaveBeenCalledWith(expect.objectContaining({
-        type: 'interrupt'
-      }));
+      expect(mockCoordinator.postMessageToExtension).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'interrupt',
+        })
+      );
     });
 
     it('should handle Ctrl+C as copy when selection exists', () => {
       const event = new dom.window.KeyboardEvent('keydown', {
         ctrlKey: true,
         key: 'c',
-        keyCode: 67
+        keyCode: 67,
       });
 
       mockTerminal.hasSelection.mockReturnValue(true);
@@ -709,10 +747,12 @@ describe('InputManager', () => {
       const handled = manager.handleSpecialKeys(event, 'terminal-1', mockCoordinator);
 
       expect(handled).toBe(true);
-      expect(mockCoordinator.postMessageToExtension).toHaveBeenCalledWith(expect.objectContaining({
-        command: 'copyToClipboard',
-        text: 'selected text'
-      }));
+      expect(mockCoordinator.postMessageToExtension).toHaveBeenCalledWith(
+        expect.objectContaining({
+          command: 'copyToClipboard',
+          text: 'selected text',
+        })
+      );
     });
 
     it('should handle Shift+Enter for multiline', () => {
@@ -737,7 +777,7 @@ describe('InputManager', () => {
 
       const event = new dom.window.KeyboardEvent('keydown', {
         ctrlKey: true,
-        key: 'c'
+        key: 'c',
       });
 
       const handled = manager.handleSpecialKeys(event, 'terminal-1', mockCoordinator);
@@ -783,10 +823,14 @@ describe('InputManager', () => {
   describe('Keyboard Shortcut Interception', () => {
     it('should allow arrow keys to pass to shell (VS Code standard)', () => {
       const event = new dom.window.KeyboardEvent('keydown', {
-        key: 'ArrowUp'
+        key: 'ArrowUp',
       });
 
-      const intercepted = (manager as any).shouldInterceptKeyForVSCode(event, mockTerminal, mockCoordinator);
+      const intercepted = (manager as any).shouldInterceptKeyForVSCode(
+        event,
+        mockTerminal,
+        mockCoordinator
+      );
 
       expect(intercepted).toBe(false); // Pass to shell
     });
@@ -797,10 +841,14 @@ describe('InputManager', () => {
 
       const event = new dom.window.KeyboardEvent('keydown', {
         metaKey: true,
-        key: 'k'
+        key: 'k',
       });
 
-      const intercepted = (manager as any).shouldInterceptKeyForVSCode(event, mockTerminal, mockCoordinator);
+      const intercepted = (manager as any).shouldInterceptKeyForVSCode(
+        event,
+        mockTerminal,
+        mockCoordinator
+      );
 
       expect(intercepted).toBe(true);
     });

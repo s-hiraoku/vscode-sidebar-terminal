@@ -1,4 +1,3 @@
-
 /**
  * UIManager Unit Tests
  */
@@ -62,13 +61,16 @@ describe('UIManager', () => {
   let dom: JSDOM;
 
   beforeEach(() => {
-    dom = new JSDOM('<!DOCTYPE html><div id="terminal-container"></div><div id="terminal-body"></div>', {
-      url: 'http://localhost',
-    });
+    dom = new JSDOM(
+      '<!DOCTYPE html><div id="terminal-container"></div><div id="terminal-body"></div>',
+      {
+        url: 'http://localhost',
+      }
+    );
     global.document = dom.window.document;
     global.window = dom.window as any;
     global.HTMLElement = dom.window.HTMLElement;
-    
+
     uiManager = new UIManager();
   });
 
@@ -86,12 +88,12 @@ describe('UIManager', () => {
         cursor: '#ffffff',
         selectionBackground: '#333333',
       };
-      
+
       const tabUpdater = vi.fn();
       uiManager.setTabThemeUpdater(tabUpdater);
-      
+
       uiManager.updateTheme(theme);
-      
+
       expect(tabUpdater).toHaveBeenCalledWith(theme);
       expect(uiManager.getCurrentTheme().background).toBe('#000000');
       expect(uiManager.getCurrentTheme().applied).toBe(true);
@@ -102,11 +104,11 @@ describe('UIManager', () => {
         options: {},
         refresh: vi.fn(),
         rows: 24,
-        element: document.createElement('div')
+        element: document.createElement('div'),
       } as any;
-      
+
       uiManager.applyTerminalTheme(mockTerminal, {});
-      
+
       expect(mockTerminal.options.theme).toBeDefined();
       expect(mockTerminal.refresh).toHaveBeenCalled();
     });
@@ -127,7 +129,7 @@ describe('UIManager', () => {
   describe('Header Management', () => {
     it('should create and cache terminal header', () => {
       const header = uiManager.createTerminalHeader('term-1', 'Test Terminal');
-      
+
       expect(header).toBeTruthy();
       expect(header.id).toBe('header-term-1');
       expect(uiManager.headerElementsCache.has('term-1')).toBe(true);
@@ -136,7 +138,7 @@ describe('UIManager', () => {
     it('should update terminal header title', () => {
       uiManager.createTerminalHeader('term-1', 'Old Name');
       uiManager.updateTerminalHeader('term-1', 'New Name');
-      
+
       const elements = uiManager.headerElementsCache.get('term-1');
       expect(elements?.nameSpan?.textContent).toBe('New Name');
     });
@@ -173,9 +175,9 @@ describe('UIManager', () => {
       vi.useFakeTimers();
       const element = document.createElement('div');
       uiManager.addFocusIndicator(element);
-      
+
       expect(element.classList.contains('focused')).toBe(true);
-      
+
       vi.advanceTimersByTime(300);
       expect(element.classList.contains('focused')).toBe(false);
       vi.useRealTimers();
@@ -186,9 +188,9 @@ describe('UIManager', () => {
     it('should setup resize observer', () => {
       const callback = vi.fn();
       const container = document.createElement('div');
-      
+
       uiManager.setupResizeObserver(container, callback);
-      
+
       expect(ResizeManager.observeResize).toHaveBeenCalled();
     });
   });
@@ -297,7 +299,7 @@ describe('UIManager', () => {
         options: {},
         refresh: vi.fn(),
         rows: 24,
-        element: document.createElement('div')
+        element: document.createElement('div'),
       } as any;
 
       const settings = {
@@ -319,7 +321,7 @@ describe('UIManager', () => {
         options: {},
         refresh: vi.fn(),
         rows: 24,
-        element: document.createElement('div')
+        element: document.createElement('div'),
       } as any;
 
       uiManager.applyAllVisualSettings(mockTerminal, { cursorBlink: false });

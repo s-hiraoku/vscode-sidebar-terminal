@@ -24,16 +24,16 @@ describe('TerminalFocusService', () => {
     setupCompleteTestEnvironment();
     vi.useFakeTimers();
     service = new TerminalFocusService();
-    
+
     mockTerminal = {
       focus: vi.fn(),
     };
-    
+
     mockContainer = document.createElement('div');
     mockTextarea = document.createElement('textarea');
     mockTextarea.className = 'xterm-helper-textarea';
     mockContainer.appendChild(mockTextarea);
-    
+
     // Stub requestAnimationFrame
     vi.stubGlobal('requestAnimationFrame', (cb: any) => cb());
   });
@@ -47,7 +47,7 @@ describe('TerminalFocusService', () => {
   describe('ensureTerminalFocus', () => {
     it('should focus terminal and textarea immediately if available', () => {
       service.ensureTerminalFocus(mockTerminal, 't1', mockContainer);
-      
+
       expect(mockTerminal.focus).toHaveBeenCalled();
       // focusTerminalTextarea has a 10ms verification timeout
       vi.advanceTimersByTime(10);
@@ -56,15 +56,15 @@ describe('TerminalFocusService', () => {
     it('should retry if textarea is missing', () => {
       const emptyContainer = document.createElement('div');
       service.ensureTerminalFocus(mockTerminal, 't1', emptyContainer);
-      
+
       expect(mockTerminal.focus).not.toHaveBeenCalled();
-      
+
       // Add textarea after call
       emptyContainer.appendChild(mockTextarea);
-      
+
       // Advance by retry delay (50ms)
       vi.advanceTimersByTime(50);
-      
+
       expect(mockTerminal.focus).toHaveBeenCalled();
     });
   });
@@ -73,9 +73,9 @@ describe('TerminalFocusService', () => {
     it('should register click listener on container', () => {
       const spy = vi.spyOn(mockContainer, 'addEventListener');
       service.setupContainerFocusHandler(mockTerminal, 't1', mockContainer, mockContainer);
-      
+
       expect(spy).toHaveBeenCalledWith('click', expect.any(Function));
-      
+
       // Trigger click
       mockContainer.click();
       expect(mockTerminal.focus).toHaveBeenCalled();
@@ -83,11 +83,11 @@ describe('TerminalFocusService', () => {
 
     it('should ignore clicks on buttons', () => {
       service.setupContainerFocusHandler(mockTerminal, 't1', mockContainer, mockContainer);
-      
+
       const btn = document.createElement('button');
       btn.className = 'terminal-control';
       mockContainer.appendChild(btn);
-      
+
       btn.click();
       expect(mockTerminal.focus).not.toHaveBeenCalled();
     });

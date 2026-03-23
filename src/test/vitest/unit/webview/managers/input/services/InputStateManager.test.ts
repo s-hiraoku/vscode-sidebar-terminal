@@ -48,7 +48,7 @@ describe('InputStateManager', () => {
     it('should deep clone state to prevent external mutations', () => {
       const state = manager.getState();
       (state.ime as any).isActive = true; // Attempt mutation
-      
+
       expect(manager.getStateSection('ime').isActive).toBe(false);
     });
   });
@@ -56,7 +56,9 @@ describe('InputStateManager', () => {
   describe('Validation', () => {
     it('should log warning for invalid IME state (active but empty)', () => {
       manager.updateIMEState({ isActive: true, data: '', lastEvent: 'update' });
-      expect(mockLogger).toHaveBeenCalledWith(expect.stringContaining('IME active but no composition data'));
+      expect(mockLogger).toHaveBeenCalledWith(
+        expect.stringContaining('IME active but no composition data')
+      );
     });
 
     it('should log error for negative offsets', () => {
@@ -77,13 +79,13 @@ describe('InputStateManager', () => {
 
     it('should detect critical state correctly', () => {
       expect(manager.hasCriticalStateActive()).toBe(false);
-      
+
       manager.updateIMEState({ isActive: true });
       expect(manager.hasCriticalStateActive()).toBe(true);
-      
+
       manager.resetAllState();
       expect(manager.hasCriticalStateActive()).toBe(false);
-      
+
       manager.updateKeyboardState({ isInChordMode: true });
       expect(manager.hasCriticalStateActive()).toBe(true);
     });
@@ -108,7 +110,7 @@ describe('InputStateManager', () => {
     it('should cleanup on dispose', () => {
       manager.addStateListener('ime', vi.fn());
       manager.dispose();
-      
+
       // Verification of internal cleanup (listeners cleared)
       expect(manager.getStateHistory()).toEqual([]);
     });

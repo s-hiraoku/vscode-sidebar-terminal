@@ -254,7 +254,8 @@ export abstract class BaseInputHandler extends BaseManager implements IInputHand
     const state: Record<string, unknown> = {};
     for (const [key, value] of this.handlerState) {
       // Return a deep copy to prevent external modification
-      state[key] = typeof value === 'object' && value !== null ? JSON.parse(JSON.stringify(value)) : value;
+      state[key] =
+        typeof value === 'object' && value !== null ? JSON.parse(JSON.stringify(value)) : value;
     }
     return state;
   }

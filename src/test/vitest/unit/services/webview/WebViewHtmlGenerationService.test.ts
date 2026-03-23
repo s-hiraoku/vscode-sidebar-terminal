@@ -9,7 +9,10 @@ import { WebViewHtmlGenerationService } from '../../../../../services/webview/We
 // Mock VS Code API
 vi.mock('vscode', () => ({
   Uri: {
-    joinPath: vi.fn((uri, ...parts) => ({ fsPath: `${uri.fsPath}/${parts.join('/')}`, toString: () => `vscode-resource://${uri.fsPath}/${parts.join('/')}` })),
+    joinPath: vi.fn((uri, ...parts) => ({
+      fsPath: `${uri.fsPath}/${parts.join('/')}`,
+      toString: () => `vscode-resource://${uri.fsPath}/${parts.join('/')}`,
+    })),
     parse: vi.fn((url) => ({ toString: () => url })),
   },
 }));
@@ -44,7 +47,7 @@ describe('WebViewHtmlGenerationService', () => {
         webview: mockWebview,
         extensionUri: mockExtensionUri,
       });
-      
+
       expect(html).toContain('<!DOCTYPE html>');
       expect(html).toContain('Content-Security-Policy');
       expect(html).toContain('nonce="mock-nonce"');
@@ -59,7 +62,7 @@ describe('WebViewHtmlGenerationService', () => {
         includeSplitStyles: true,
         includeCliAgentStyles: true,
       });
-      
+
       expect(html).toContain('.claude-indicator');
     });
 
@@ -68,7 +71,7 @@ describe('WebViewHtmlGenerationService', () => {
         webview: mockWebview,
         extensionUri: mockExtensionUri,
       });
-      
+
       const validation = service.validateHtml(html);
       expect(validation.isValid).toBe(true);
     });
@@ -85,7 +88,7 @@ describe('WebViewHtmlGenerationService', () => {
       const html = service.generateFallbackHtml({
         title: 'Custom Title',
         message: 'Custom Message',
-        isLoading: false
+        isLoading: false,
       });
       expect(html).toContain('Custom Title');
       expect(html).toContain('Custom Message');
@@ -97,7 +100,7 @@ describe('WebViewHtmlGenerationService', () => {
     it('should generate error page with details', () => {
       const error = new Error('Epic fail');
       const html = service.generateErrorHtml({ error, allowRetry: true });
-      
+
       expect(html).toContain('❌ Terminal Error');
       expect(html).toContain('Epic fail');
       expect(html).toContain('retry-btn');

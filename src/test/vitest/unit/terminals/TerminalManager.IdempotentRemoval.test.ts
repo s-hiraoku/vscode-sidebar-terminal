@@ -4,8 +4,12 @@ import { TerminalManager } from '../../../../terminals/TerminalManager';
 
 class MockPtyProcess {
   public pid = 12345;
-  onData() { return { dispose: () => {} }; }
-  onExit() { return { dispose: () => {} }; }
+  onData() {
+    return { dispose: () => {} };
+  }
+  onExit() {
+    return { dispose: () => {} };
+  }
   write() {}
   resize() {}
   kill() {}
@@ -57,23 +61,25 @@ describe('TerminalManager - Idempotent Removal', () => {
     });
 
     // Trigger pty exit
-    (terminalManager as any)._processCoordinator.setupTerminalEvents = vi.fn().mockImplementation((terminal, callback) => {
+    (terminalManager as any)._processCoordinator.setupTerminalEvents = vi
+      .fn()
+      .mockImplementation((terminal, callback) => {
         // Keep track of callback
         (terminalManager as any)._lastExitCallback = callback;
-    });
-    
+      });
+
     // Re-create terminal to use our mocked setupTerminalEvents
     const terminalId2 = terminalManager.createTerminal();
     const exitCallback = (terminalManager as any)._lastExitCallback;
-    
+
     expect(exitCallback).toBeDefined();
 
     // Start cleanup
     (terminalManager as any)._performCleanup(terminalId2);
-    
+
     // Call exit callback AFTER cleanup finished
     exitCallback(terminalId2, 0);
-    
+
     expect(exitEventCount).toBe(0);
   });
 });

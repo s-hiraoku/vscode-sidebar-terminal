@@ -129,8 +129,10 @@ export class TerminalDataBufferManager {
   }
 
   private _filterEraseScrollbackSequence(terminalId: string, data: string): string {
-    const state =
-      this._ansiFilterState.get(terminalId) ?? { mode: 'normal' as const, csiParams: '' };
+    const state = this._ansiFilterState.get(terminalId) ?? {
+      mode: 'normal' as const,
+      csiParams: '',
+    };
 
     let out = '';
     for (let i = 0; i < data.length; i++) {

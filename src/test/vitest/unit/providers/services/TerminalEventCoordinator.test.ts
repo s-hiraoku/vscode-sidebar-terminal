@@ -26,11 +26,13 @@ const { mockUnifiedConfig } = vi.hoisted(() => ({
   mockUnifiedConfig: {
     getExtensionTerminalConfig: vi.fn().mockReturnValue({ cursorBlink: true, theme: 'auto' }),
     getCompleteTerminalSettings: vi.fn().mockReturnValue({ cursorBlink: true, theme: 'auto' }),
-    getAltClickSettings: vi.fn().mockReturnValue({ altClickMovesCursor: true, multiCursorModifier: 'alt' }),
+    getAltClickSettings: vi
+      .fn()
+      .mockReturnValue({ altClickMovesCursor: true, multiCursorModifier: 'alt' }),
     getWebViewFontSettings: vi.fn().mockReturnValue({ fontSize: 14, fontFamily: 'monospace' }),
     isFeatureEnabled: vi.fn().mockReturnValue(true),
     get: vi.fn((section, key, def) => def),
-  }
+  },
 }));
 
 vi.mock('../../../../../config/UnifiedConfigurationService', () => ({
@@ -54,7 +56,7 @@ describe('TerminalEventCoordinator', () => {
       onTerminalFocus: vi.fn(() => ({ dispose: vi.fn() })),
       onCliAgentStatusChange: vi.fn(() => ({ dispose: vi.fn() })),
     };
-    
+
     mockSendMessage = vi.fn().mockResolvedValue(undefined);
     mockSendCliState = vi.fn();
     mockInitState = {
@@ -78,7 +80,7 @@ describe('TerminalEventCoordinator', () => {
   describe('Initialization', () => {
     it('should setup all listeners', () => {
       coordinator.initialize();
-      
+
       expect(mockTerminalManager.onData).toHaveBeenCalled();
       expect(mockTerminalManager.onExit).toHaveBeenCalled();
       expect(mockTerminalManager.onCliAgentStatusChange).toHaveBeenCalled();
@@ -94,28 +96,28 @@ describe('TerminalEventCoordinator', () => {
     it('should forward terminal data to WebView when allowed', () => {
       const onDataHandler = mockTerminalManager.onData.mock.calls[0][0];
       mockInitState.isOutputAllowed.mockReturnValue(true);
-      
+
       onDataHandler({ terminalId: 't1', data: 'hello' });
-      
+
       expect(mockSendMessage).toHaveBeenCalledWith({
         command: 'output',
         terminalId: 't1',
-        data: 'hello'
+        data: 'hello',
       });
     });
 
     it('should buffer output if not allowed and flush later', () => {
       const onDataHandler = mockTerminalManager.onData.mock.calls[0][0];
       mockInitState.isOutputAllowed.mockReturnValue(false);
-      
+
       onDataHandler({ terminalId: 't1', data: 'buffered' });
       expect(mockSendMessage).not.toHaveBeenCalled();
-      
+
       coordinator.flushBufferedOutput('t1');
       expect(mockSendMessage).toHaveBeenCalledWith({
         command: 'output',
         terminalId: 't1',
-        data: 'buffered'
+        data: 'buffered',
       });
     });
 
@@ -141,21 +143,21 @@ describe('TerminalEventCoordinator', () => {
     it('should forward exit event', () => {
       const onExitHandler = mockTerminalManager.onExit.mock.calls[0][0];
       onExitHandler({ terminalId: 't1', exitCode: 0 });
-      
+
       expect(mockSendMessage).toHaveBeenCalledWith({
         command: 'exit',
         terminalId: 't1',
-        exitCode: 0
+        exitCode: 0,
       });
     });
 
     it('should forward focus event', () => {
       const onFocusHandler = mockTerminalManager.onTerminalFocus.mock.calls[0][0];
       onFocusHandler('t1');
-      
+
       expect(mockSendMessage).toHaveBeenCalledWith({
         command: 'focusTerminal',
-        terminalId: 't1'
+        terminalId: 't1',
       });
     });
   });
@@ -164,20 +166,24 @@ describe('TerminalEventCoordinator', () => {
     it('should debounce and send settings update', async () => {
       vi.useFakeTimers();
       coordinator.initialize();
-      
+
       const configHandler = (vscode.workspace.onDidChangeConfiguration as any).mock.calls[0][0];
-      
+
       // Simulate multiple changes
       configHandler({ affectsConfiguration: (key: string) => key === 'secondaryTerminal.theme' });
-      configHandler({ affectsConfiguration: (key: string) => key === 'secondaryTerminal.cursorBlink' });
-      
+      configHandler({
+        affectsConfiguration: (key: string) => key === 'secondaryTerminal.cursorBlink',
+      });
+
       expect(mockSendMessage).not.toHaveBeenCalled();
-      
+
       vi.advanceTimersByTime(100);
-      
-      expect(mockSendMessage).toHaveBeenCalledWith(expect.objectContaining({
-        command: 'settingsResponse'
-      }));
+
+      expect(mockSendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          command: 'settingsResponse',
+        })
+      );
       vi.useRealTimers();
     });
 
@@ -185,14 +191,18 @@ describe('TerminalEventCoordinator', () => {
       vi.useFakeTimers();
       coordinator.initialize();
       const configHandler = (vscode.workspace.onDidChangeConfiguration as any).mock.calls[0][0];
-      
-      configHandler({ affectsConfiguration: (key: string) => key === 'terminal.integrated.fontSize' });
-      
+
+      configHandler({
+        affectsConfiguration: (key: string) => key === 'terminal.integrated.fontSize',
+      });
+
       vi.advanceTimersByTime(100);
-      
-      expect(mockSendMessage).toHaveBeenCalledWith(expect.objectContaining({
-        command: 'fontSettingsUpdate'
-      }));
+
+      expect(mockSendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          command: 'fontSettingsUpdate',
+        })
+      );
       vi.useRealTimers();
     });
   });
@@ -201,9 +211,9 @@ describe('TerminalEventCoordinator', () => {
     it('should trigger full sync on status change', () => {
       coordinator.initialize();
       const onStatusChangeHandler = mockTerminalManager.onCliAgentStatusChange.mock.calls[0][0];
-      
+
       onStatusChangeHandler({ terminalId: 't1', status: 'connected' });
-      
+
       expect(mockSendCliState).toHaveBeenCalled();
     });
   });

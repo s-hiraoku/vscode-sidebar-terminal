@@ -10,7 +10,7 @@ import { WebViewCommunicationService } from '../../../../../providers/services/W
 vi.mock('vscode', () => ({
   extensions: {
     getExtension: vi.fn().mockReturnValue({
-      packageJSON: { version: '1.2.3' }
+      packageJSON: { version: '1.2.3' },
     }),
   },
 }));
@@ -59,29 +59,29 @@ describe('WebViewCommunicationService', () => {
     it('should send message directly if view is available', async () => {
       service.setView(mockWebviewView);
       const message = { command: 'test' };
-      
+
       await service.sendMessage(message);
-      
+
       expect(mockWebviewView.webview.postMessage).toHaveBeenCalledWith(message);
     });
 
     it('should queue messages if view is not available and flush when set', async () => {
       const message = { command: 'queued' };
       await service.sendMessage(message);
-      
+
       expect(mockWebviewView.webview.postMessage).not.toHaveBeenCalled();
-      
+
       service.setView(mockWebviewView);
-      
+
       expect(mockWebviewView.webview.postMessage).toHaveBeenCalledWith(message);
     });
 
     it('should handle disposed webview error gracefully', async () => {
       service.setView(mockWebviewView);
       mockWebviewView.webview.postMessage.mockRejectedValue(new Error('Webview is disposed'));
-      
+
       await service.sendMessage({ command: 'test' });
-      
+
       // Should log warning but not re-throw or call error handler for 'disposed' error
       const { TerminalErrorHandler } = await import('../../../../../utils/feedback');
       expect(TerminalErrorHandler.handleWebviewError).not.toHaveBeenCalled();
@@ -91,9 +91,9 @@ describe('WebViewCommunicationService', () => {
       service.setView(mockWebviewView);
       const error = new Error('Generic failure');
       mockWebviewView.webview.postMessage.mockRejectedValue(error);
-      
+
       await service.sendMessage({ command: 'test' });
-      
+
       const { TerminalErrorHandler } = await import('../../../../../utils/feedback');
       expect(TerminalErrorHandler.handleWebviewError).toHaveBeenCalledWith(error);
     });
@@ -108,7 +108,7 @@ describe('WebViewCommunicationService', () => {
       await service.sendVersionInfo();
       expect(mockWebviewView.webview.postMessage).toHaveBeenCalledWith({
         command: 'versionInfo',
-        version: 'v1.2.3'
+        version: 'v1.2.3',
       });
     });
 
@@ -116,11 +116,11 @@ describe('WebViewCommunicationService', () => {
       const settings = { theme: 'dark' };
       const fontSettings = { fontSize: 14 };
       await service.sendSettings(settings, fontSettings);
-      
+
       expect(mockWebviewView.webview.postMessage).toHaveBeenCalledWith({
         command: 'updateSettings',
         settings,
-        fontSettings
+        fontSettings,
       });
     });
 
@@ -128,14 +128,14 @@ describe('WebViewCommunicationService', () => {
       await service.sendInitializationComplete(2);
       expect(mockWebviewView.webview.postMessage).toHaveBeenCalledWith({
         command: 'initializationComplete',
-        terminalCount: 2
+        terminalCount: 2,
       });
     });
 
     it('should request panel location detection', async () => {
       await service.requestPanelLocationDetection();
       expect(mockWebviewView.webview.postMessage).toHaveBeenCalledWith({
-        command: 'requestPanelLocationDetection'
+        command: 'requestPanelLocationDetection',
       });
     });
   });

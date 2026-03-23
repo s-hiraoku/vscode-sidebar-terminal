@@ -19,16 +19,16 @@ describe('SimpleWebViewBridge', () => {
 
   beforeEach(() => {
     bridge = new SimpleWebViewBridge();
-    
+
     mockWebview = {
       onDidReceiveMessage: vi.fn().mockReturnValue({ dispose: vi.fn() }),
       postMessage: vi.fn().mockResolvedValue(true),
     };
-    
+
     mockView = {
       webview: mockWebview,
     };
-    
+
     mockCallbacks = {
       onWebViewReady: vi.fn(),
       onTerminalReady: vi.fn(),
@@ -63,22 +63,24 @@ describe('SimpleWebViewBridge', () => {
     it('should handle webviewReady and notify extension', () => {
       const handler = mockWebview.onDidReceiveMessage.mock.calls[0][0];
       handler({ command: 'webviewReady' });
-      
+
       expect(bridge.isReady()).toBe(true);
       expect(mockCallbacks.onWebViewReady).toHaveBeenCalled();
-      expect(mockWebview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
-        command: 'extensionReady'
-      }));
+      expect(mockWebview.postMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          command: 'extensionReady',
+        })
+      );
     });
 
     it('should dispatch terminalReady to callbacks', () => {
       const handler = mockWebview.onDidReceiveMessage.mock.calls[0][0];
       handler({ command: 'terminalReady', terminalId: 't1', cols: 80, rows: 24 });
-      
+
       expect(mockCallbacks.onTerminalReady).toHaveBeenCalledWith({
         terminalId: 't1',
         cols: 80,
-        rows: 24
+        rows: 24,
       });
     });
 
@@ -111,35 +113,41 @@ describe('SimpleWebViewBridge', () => {
     it('should queue messages if not ready', () => {
       bridge.setView(mockView, mockCallbacks);
       bridge.sendOutput('t1', 'hello');
-      
-      expect(mockWebview.postMessage).not.toHaveBeenCalledWith(expect.objectContaining({
-        command: 'output'
-      }));
+
+      expect(mockWebview.postMessage).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          command: 'output',
+        })
+      );
     });
 
     it('should flush queued messages when webviewReady is received', () => {
       bridge.setView(mockView, mockCallbacks);
       bridge.sendOutput('t1', 'hello');
-      
+
       const handler = mockWebview.onDidReceiveMessage.mock.calls[0][0];
       handler({ command: 'webviewReady' });
-      
-      expect(mockWebview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
-        command: 'output',
-        data: 'hello'
-      }));
+
+      expect(mockWebview.postMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          command: 'output',
+          data: 'hello',
+        })
+      );
     });
 
     it('should send immediately if ready', () => {
       bridge.setView(mockView, mockCallbacks);
       const handler = mockWebview.onDidReceiveMessage.mock.calls[0][0];
       handler({ command: 'webviewReady' });
-      
+
       bridge.sendOutput('t1', 'now');
-      expect(mockWebview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
-        command: 'output',
-        data: 'now'
-      }));
+      expect(mockWebview.postMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          command: 'output',
+          data: 'now',
+        })
+      );
     });
   });
 
@@ -152,31 +160,39 @@ describe('SimpleWebViewBridge', () => {
 
     it('should send createTerminal', () => {
       bridge.createTerminal('t1', 'Term 1', 1, { fontSize: 14 });
-      expect(mockWebview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
-        command: 'createTerminal',
-        terminalId: 't1'
-      }));
+      expect(mockWebview.postMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          command: 'createTerminal',
+          terminalId: 't1',
+        })
+      );
     });
 
     it('should send removeTerminal', () => {
       bridge.removeTerminal('t1');
-      expect(mockWebview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
-        command: 'removeTerminal'
-      }));
+      expect(mockWebview.postMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          command: 'removeTerminal',
+        })
+      );
     });
 
     it('should send focusTerminal', () => {
       bridge.focusTerminal('t1');
-      expect(mockWebview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
-        command: 'focusTerminal'
-      }));
+      expect(mockWebview.postMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          command: 'focusTerminal',
+        })
+      );
     });
 
     it('should send updateTheme', () => {
       bridge.updateTheme({ '--bg': '#000' });
-      expect(mockWebview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
-        command: 'updateTheme'
-      }));
+      expect(mockWebview.postMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          command: 'updateTheme',
+        })
+      );
     });
   });
 });

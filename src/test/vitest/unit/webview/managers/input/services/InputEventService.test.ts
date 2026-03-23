@@ -14,7 +14,7 @@ describe('InputEventService', () => {
     vi.stubGlobal('document', dom.window.document);
     vi.stubGlobal('HTMLElement', dom.window.HTMLElement);
     vi.stubGlobal('performance', dom.window.performance);
-    
+
     vi.useFakeTimers();
     vi.clearAllTimers();
     mockLogger = vi.fn();
@@ -33,12 +33,12 @@ describe('InputEventService', () => {
     it('should register and trigger a wrapped event handler', () => {
       const handler = vi.fn();
       service.registerEventHandler('h1', element, 'click', handler);
-      
+
       expect(service.hasEventHandler('h1')).toBe(true);
-      
+
       element.dispatchEvent(new dom.window.MouseEvent('click'));
       expect(handler).toHaveBeenCalled();
-      
+
       const metrics = service.getEventHandlerMetrics('h1');
       expect(metrics?.callCount).toBe(1);
     });
@@ -46,10 +46,10 @@ describe('InputEventService', () => {
     it('should handle preventDefault based on config', () => {
       const handler = vi.fn();
       service.registerEventHandler('h1', element, 'click', handler, { preventDefault: true });
-      
+
       const event = new dom.window.MouseEvent('click');
       const preventSpy = vi.spyOn(event, 'preventDefault');
-      
+
       element.dispatchEvent(event);
       expect(preventSpy).toHaveBeenCalled();
     });
@@ -58,21 +58,21 @@ describe('InputEventService', () => {
   describe('Debouncing', () => {
     it('should debounce event execution', async () => {
       const handler = vi.fn();
-      service.registerEventHandler('h1', element, 'input', handler, { 
-        debounce: true, 
-        debounceDelay: 100 
+      service.registerEventHandler('h1', element, 'input', handler, {
+        debounce: true,
+        debounceDelay: 100,
       });
 
       // Dispatch multiple events
       element.dispatchEvent(new dom.window.Event('input'));
       element.dispatchEvent(new dom.window.Event('input'));
       element.dispatchEvent(new dom.window.Event('input'));
-      
+
       expect(handler).not.toHaveBeenCalled();
-      
+
       // Advance time beyond delay
       vi.advanceTimersByTime(150);
-      
+
       // Should be called exactly once
       expect(handler).toHaveBeenCalledTimes(1);
     });
@@ -80,12 +80,14 @@ describe('InputEventService', () => {
 
   describe('Metrics & Health', () => {
     it('should track errors in handlers', () => {
-      const failingHandler = () => { throw new Error('Boom'); };
+      const failingHandler = () => {
+        throw new Error('Boom');
+      };
       service.registerEventHandler('fail', element, 'click', failingHandler);
-      
+
       const event = new dom.window.MouseEvent('click');
       element.dispatchEvent(event);
-      
+
       expect(service.getGlobalMetrics().totalErrors).toBe(1);
       expect(service.getEventHandlerMetrics('fail')?.errorCount).toBe(1);
       expect(service.getHealthStatus().isHealthy).toBe(false);
@@ -93,10 +95,10 @@ describe('InputEventService', () => {
 
     it('should calculate average processing time', () => {
       service.registerEventHandler('h1', element, 'click', () => {});
-      
+
       element.dispatchEvent(new dom.window.MouseEvent('click'));
       element.dispatchEvent(new dom.window.MouseEvent('click'));
-      
+
       const status = service.getHealthStatus();
       expect(status.averageProcessingTime).toBeGreaterThanOrEqual(0);
     });
@@ -107,7 +109,7 @@ describe('InputEventService', () => {
       const handler = vi.fn();
       service.registerEventHandler('h1', element, 'click', handler);
       service.unregisterEventHandler('h1');
-      
+
       element.dispatchEvent(new dom.window.MouseEvent('click'));
       expect(handler).not.toHaveBeenCalled();
     });
@@ -115,7 +117,7 @@ describe('InputEventService', () => {
     it('should clear timers on dispose', () => {
       service.registerEventHandler('h1', element, 'click', vi.fn(), { debounce: true });
       element.dispatchEvent(new dom.window.MouseEvent('click'));
-      
+
       service.dispose();
       vi.advanceTimersByTime(1000);
       // Logic: if dispose clears timers, no callback fires (implied coverage)

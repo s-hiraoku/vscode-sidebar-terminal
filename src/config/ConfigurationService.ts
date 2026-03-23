@@ -191,7 +191,11 @@ export class ConfigurationService extends DisposableBase {
   getTerminalSettings(): Record<string, unknown> {
     return {
       // Secondary Terminal設定
-      maxTerminals: this.getCachedValue('secondaryTerminal', 'maxTerminals', TERMINAL_CONSTANTS.MAX_TERMINAL_COUNT),
+      maxTerminals: this.getCachedValue(
+        'secondaryTerminal',
+        'maxTerminals',
+        TERMINAL_CONSTANTS.MAX_TERMINAL_COUNT
+      ),
       shell: this.getCachedValue('secondaryTerminal', 'shell', ''),
       shellArgs: this.getCachedValue('secondaryTerminal', 'shellArgs', []),
       cwd: this.getCachedValue('secondaryTerminal', 'cwd', ''),
@@ -216,11 +220,7 @@ export class ConfigurationService extends DisposableBase {
         'drawBoldTextInBrightColors',
         true
       ),
-      minimumContrastRatio: this.getCachedValue(
-        'secondaryTerminal',
-        'minimumContrastRatio',
-        1
-      ),
+      minimumContrastRatio: this.getCachedValue('secondaryTerminal', 'minimumContrastRatio', 1),
 
       // ヘッダー設定
       showHeader: this.getCachedValue('secondaryTerminal', 'showHeader', true),

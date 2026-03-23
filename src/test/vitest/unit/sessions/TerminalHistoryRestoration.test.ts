@@ -70,9 +70,8 @@ describe('Terminal History Restoration', () => {
 
       // Import the service dynamically to allow mocking dependencies if needed
       // but here we inject mocks via constructor
-      const { ExtensionPersistenceService } = await import(
-        '../../../../services/persistence/ExtensionPersistenceService'
-      );
+      const { ExtensionPersistenceService } =
+        await import('../../../../services/persistence/ExtensionPersistenceService');
 
       const service = new ExtensionPersistenceService(
         mockContext,
@@ -111,7 +110,7 @@ describe('Terminal History Restoration', () => {
       // 3. Assert
       expect(result.success).toBe(true);
       expect(mockTerminalManager.createTerminal).toHaveBeenCalledTimes(1);
-      
+
       // Verify message sent to WebView
       expect(mockSidebarProvider.sendMessageToWebview).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -130,9 +129,9 @@ describe('Terminal History Restoration', () => {
     it('should fail: terminal serialization should capture actual content', async () => {
       // 1. Arrange
       const mockTerminalManager = {
-        getTerminals: vi.fn().mockReturnValue([
-          { id: 'term-1', name: 'Terminal 1', cwd: '/cwd', number: 1 }
-        ]),
+        getTerminals: vi
+          .fn()
+          .mockReturnValue([{ id: 'term-1', name: 'Terminal 1', cwd: '/cwd', number: 1 }]),
         getActiveTerminalId: vi.fn().mockReturnValue('term-1'),
       } as any;
 
@@ -140,9 +139,8 @@ describe('Terminal History Restoration', () => {
         sendMessageToWebview: vi.fn().mockResolvedValue(undefined),
       };
 
-      const { ExtensionPersistenceService } = await import(
-        '../../../../services/persistence/ExtensionPersistenceService'
-      );
+      const { ExtensionPersistenceService } =
+        await import('../../../../services/persistence/ExtensionPersistenceService');
 
       const service = new ExtensionPersistenceService(
         mockContext,
@@ -198,11 +196,20 @@ describe('Terminal History Restoration', () => {
         getActiveTerminalId: vi.fn().mockReturnValue('t1'),
       } as any;
       const mockSidebarProvider = { sendMessageToWebview: vi.fn() };
-      const { ExtensionPersistenceService } = await import('../../../../services/persistence/ExtensionPersistenceService');
-      const service = new ExtensionPersistenceService(mockContext, mockTerminalManager, mockSidebarProvider);
+      const { ExtensionPersistenceService } =
+        await import('../../../../services/persistence/ExtensionPersistenceService');
+      const service = new ExtensionPersistenceService(
+        mockContext,
+        mockTerminalManager,
+        mockSidebarProvider
+      );
 
       // Act
-      service.handleScrollbackDataCollected({ terminalId: 't1', requestId: 'any', scrollbackData: ['data'] });
+      service.handleScrollbackDataCollected({
+        terminalId: 't1',
+        requestId: 'any',
+        scrollbackData: ['data'],
+      });
       await service.saveCurrentSession({ preferCache: true });
 
       // Assert
@@ -221,7 +228,7 @@ describe('Terminal History Restoration', () => {
         scrollbackData: { 'orig-1': ['history'] },
       };
       mockContext.workspaceState.get.mockReturnValue(sessionData);
-      
+
       const mockTerminalManager = {
         getTerminals: vi.fn().mockReturnValue([]),
         createTerminal: vi.fn().mockReturnValue('new-1'),
@@ -231,8 +238,13 @@ describe('Terminal History Restoration', () => {
         updateTerminalHeader: vi.fn().mockReturnValue(true),
       } as any;
       const mockSidebarProvider = { sendMessageToWebview: vi.fn() };
-      const { ExtensionPersistenceService } = await import('../../../../services/persistence/ExtensionPersistenceService');
-      const service = new ExtensionPersistenceService(mockContext, mockTerminalManager, mockSidebarProvider);
+      const { ExtensionPersistenceService } =
+        await import('../../../../services/persistence/ExtensionPersistenceService');
+      const service = new ExtensionPersistenceService(
+        mockContext,
+        mockTerminalManager,
+        mockSidebarProvider
+      );
 
       await service.restoreSession();
 
@@ -240,8 +252,8 @@ describe('Terminal History Restoration', () => {
         expect.objectContaining({
           command: 'restoreTerminalSessions',
           terminals: expect.arrayContaining([
-            expect.objectContaining({ terminalId: 'new-1', scrollbackData: ['history'] })
-          ])
+            expect.objectContaining({ terminalId: 'new-1', scrollbackData: ['history'] }),
+          ]),
         })
       );
     });
@@ -265,15 +277,20 @@ describe('Terminal History Restoration', () => {
         updateTerminalHeader: vi.fn().mockReturnValue(true),
       } as any;
       const mockSidebarProvider = { sendMessageToWebview: vi.fn() };
-      const { ExtensionPersistenceService } = await import('../../../../services/persistence/ExtensionPersistenceService');
-      const service = new ExtensionPersistenceService(mockContext, mockTerminalManager, mockSidebarProvider);
+      const { ExtensionPersistenceService } =
+        await import('../../../../services/persistence/ExtensionPersistenceService');
+      const service = new ExtensionPersistenceService(
+        mockContext,
+        mockTerminalManager,
+        mockSidebarProvider
+      );
 
       // Act: start restore
       const restorePromise = service.restoreSession();
-      
+
       // Simulate terminal readiness from WebView
       service.handleTerminalReady('new-1');
-      
+
       await restorePromise;
 
       // Verify restoration message was eventually sent
@@ -287,48 +304,56 @@ describe('Terminal History Restoration', () => {
     it('should fail: CLI Agent commands should be preserved across VS Code restarts', async () => {
       // 1. Arrange - Initial State
       const _mockStorage = new Map<string, any>();
-      
+
       // Mock Context for First Session (Save)
       const context1 = {
         globalState: { get: vi.fn(), update: vi.fn(), keys: vi.fn().mockReturnValue([]) },
         workspaceState: {
           get: vi.fn().mockImplementation((k) => _mockStorage.get(k)),
-          update: vi.fn().mockImplementation((k, v) => { _mockStorage.set(k, v); return Promise.resolve(); }),
+          update: vi.fn().mockImplementation((k, v) => {
+            _mockStorage.set(k, v);
+            return Promise.resolve();
+          }),
         },
       } as any;
 
       const terminalManager1 = {
-        getTerminals: vi.fn().mockReturnValue([
-          { id: 'term-1', name: 'Terminal 1', cwd: '/cwd', number: 1, isActive: true }
-        ]),
+        getTerminals: vi
+          .fn()
+          .mockReturnValue([
+            { id: 'term-1', name: 'Terminal 1', cwd: '/cwd', number: 1, isActive: true },
+          ]),
         getActiveTerminalId: vi.fn().mockReturnValue('term-1'),
       } as any;
 
       const sidebarProvider1 = {
         sendMessageToWebview: vi.fn().mockImplementation(async (msg: any) => {
           if (msg.command === 'extractScrollbackData') {
-             // Simulate WebView response
-             setTimeout(() => {
-                service1.handleScrollbackDataCollected({
-                  terminalId: msg.terminalId,
-                  requestId: msg.requestId,
-                  scrollbackData: ['cmd: ls', 'file1.txt file2.txt'],
-                });
-             }, 5);
+            // Simulate WebView response
+            setTimeout(() => {
+              service1.handleScrollbackDataCollected({
+                terminalId: msg.terminalId,
+                requestId: msg.requestId,
+                scrollbackData: ['cmd: ls', 'file1.txt file2.txt'],
+              });
+            }, 5);
           }
         }),
       };
 
-      const { ExtensionPersistenceService } = await import(
-        '../../../../services/persistence/ExtensionPersistenceService'
-      );
+      const { ExtensionPersistenceService } =
+        await import('../../../../services/persistence/ExtensionPersistenceService');
 
-      const service1 = new ExtensionPersistenceService(context1, terminalManager1, sidebarProvider1);
+      const service1 = new ExtensionPersistenceService(
+        context1,
+        terminalManager1,
+        sidebarProvider1
+      );
 
       // 2. Act - Save Session
       const saveResult = await service1.saveCurrentSession();
       expect(saveResult.success).toBe(true);
-      
+
       // Simulate VS Code Restart (Dispose service1, create service2)
       service1.dispose();
 
@@ -337,7 +362,10 @@ describe('Terminal History Restoration', () => {
         globalState: { get: vi.fn(), update: vi.fn(), keys: vi.fn().mockReturnValue([]) },
         workspaceState: {
           get: vi.fn().mockImplementation((k) => _mockStorage.get(k)),
-          update: vi.fn().mockImplementation((k, v) => { _mockStorage.set(k, v); return Promise.resolve(); }),
+          update: vi.fn().mockImplementation((k, v) => {
+            _mockStorage.set(k, v);
+            return Promise.resolve();
+          }),
         },
       } as any;
 
@@ -354,7 +382,11 @@ describe('Terminal History Restoration', () => {
         sendMessageToWebview: vi.fn().mockResolvedValue(undefined),
       };
 
-      const service2 = new ExtensionPersistenceService(context2, terminalManager2, sidebarProvider2);
+      const service2 = new ExtensionPersistenceService(
+        context2,
+        terminalManager2,
+        sidebarProvider2
+      );
 
       // 3. Act - Restore Session
       const restoreResult = await service2.restoreSession();
@@ -362,7 +394,7 @@ describe('Terminal History Restoration', () => {
       // 4. Assert
       expect(restoreResult.success).toBe(true);
       expect(terminalManager2.createTerminal).toHaveBeenCalled();
-      
+
       // Verify restoration message
       expect(sidebarProvider2.sendMessageToWebview).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -399,9 +431,7 @@ describe('Terminal History Restoration', () => {
 
       const mockTerminalManager = {
         getTerminals: vi.fn().mockReturnValue([]),
-        createTerminal: vi.fn()
-          .mockReturnValueOnce('t1-new')
-          .mockReturnValueOnce('t2-new'),
+        createTerminal: vi.fn().mockReturnValueOnce('t1-new').mockReturnValueOnce('t2-new'),
         setActiveTerminal: vi.fn(),
         reorderTerminals: vi.fn(),
         renameTerminal: vi.fn().mockReturnValue(true),
@@ -412,9 +442,8 @@ describe('Terminal History Restoration', () => {
         sendMessageToWebview: vi.fn().mockResolvedValue(undefined),
       };
 
-      const { ExtensionPersistenceService } = await import(
-        '../../../../services/persistence/ExtensionPersistenceService'
-      );
+      const { ExtensionPersistenceService } =
+        await import('../../../../services/persistence/ExtensionPersistenceService');
 
       const service = new ExtensionPersistenceService(
         mockContext,
@@ -429,7 +458,7 @@ describe('Terminal History Restoration', () => {
       expect(result.success).toBe(true);
       expect(result.restoredCount).toBe(2);
       expect(mockTerminalManager.createTerminal).toHaveBeenCalledTimes(2);
-      
+
       // Verify active terminal set correctly (Term 2 was active)
       expect(mockTerminalManager.setActiveTerminal).toHaveBeenCalledWith('t2-new');
 

@@ -452,9 +452,21 @@ describe('SecondaryTerminalProvider - Dynamic Split Direction (Issue #148)', fun
         (call: any[]) => call[0] === 'setContext' && call[1] === 'secondaryTerminal.panelLocation'
       );
       expect(setContextCalls).toHaveLength(3);
-      expect(setContextCalls[0]).toEqual(['setContext', 'secondaryTerminal.panelLocation', 'panel']);
-      expect(setContextCalls[1]).toEqual(['setContext', 'secondaryTerminal.panelLocation', 'sidebar']);
-      expect(setContextCalls[2]).toEqual(['setContext', 'secondaryTerminal.panelLocation', 'panel']);
+      expect(setContextCalls[0]).toEqual([
+        'setContext',
+        'secondaryTerminal.panelLocation',
+        'panel',
+      ]);
+      expect(setContextCalls[1]).toEqual([
+        'setContext',
+        'secondaryTerminal.panelLocation',
+        'sidebar',
+      ]);
+      expect(setContextCalls[2]).toEqual([
+        'setContext',
+        'secondaryTerminal.panelLocation',
+        'panel',
+      ]);
     });
 
     it('should handle WebView message delays gracefully', async function () {

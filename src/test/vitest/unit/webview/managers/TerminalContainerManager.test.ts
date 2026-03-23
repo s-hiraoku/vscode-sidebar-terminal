@@ -22,7 +22,7 @@ vi.mock('../../../../../webview/managers/container/SplitLayoutService', () => ({
     deactivateGridLayout = vi.fn();
     clear = vi.fn();
     setCoordinator = vi.fn(); // 🔧 FIX: Added for split resizer initialization
-  }
+  },
 }));
 
 vi.mock('../../../../../webview/managers/container/ContainerVisibilityService', () => ({
@@ -34,7 +34,7 @@ vi.mock('../../../../../webview/managers/container/ContainerVisibilityService', 
     ensureContainerInBody = vi.fn();
     isElementVisible = vi.fn().mockReturnValue(true);
     clearHiddenStorage = vi.fn();
-  }
+  },
 }));
 
 vi.mock('../../../../../webview/utils/DOMUtils', () => ({
@@ -78,10 +78,10 @@ describe('TerminalContainerManager', () => {
       const container = document.createElement('div');
       document.body.appendChild(container); // Attach to DOM for document.contains check
       manager.registerContainer('t1', container);
-      
+
       expect(manager.getContainer('t1')).toBe(container);
       expect(manager.getContainerMode('t1')).toBe('normal');
-      
+
       manager.unregisterContainer('t1');
       expect(manager.getContainer('t1')).toBeNull();
     });
@@ -89,7 +89,7 @@ describe('TerminalContainerManager', () => {
     it('should register split wrappers', () => {
       const wrapper = document.createElement('div');
       manager.registerSplitWrapper('t1', wrapper);
-      
+
       expect(wrapper.classList.contains('split-terminal-container')).toBe(true);
       expect(wrapper.getAttribute('data-terminal-wrapper-id')).toBe('t1');
     });
@@ -100,11 +100,11 @@ describe('TerminalContainerManager', () => {
       const container = document.createElement('div');
       document.body.appendChild(container); // Attach to DOM
       manager.registerContainer('t1', container);
-      
+
       manager.setContainerVisibility('t1', true);
       // Detailed logic delegated to ContainerVisibilityService, verified via mock
       expect((manager as any).visibilityService.showContainer).toHaveBeenCalledWith(container);
-      
+
       manager.setContainerVisibility('t1', false);
       expect((manager as any).visibilityService.hideContainer).toHaveBeenCalled();
     });
@@ -121,13 +121,13 @@ describe('TerminalContainerManager', () => {
       const c2 = document.createElement('div');
       manager.registerContainer('t1', c1);
       manager.registerContainer('t2', c2);
-      
+
       manager.applyDisplayState({
         mode: 'fullscreen',
         activeTerminalId: 't1',
-        orderedTerminalIds: ['t1', 't2']
+        orderedTerminalIds: ['t1', 't2'],
       });
-      
+
       expect((manager as any).visibilityService.enforceFullscreenState).toHaveBeenCalled();
       expect(c1.classList.contains('terminal-container--fullscreen')).toBe(true);
       expect(c2.classList.contains('terminal-container--fullscreen')).toBe(false);
@@ -136,14 +136,14 @@ describe('TerminalContainerManager', () => {
     it('should apply split mode', () => {
       const c1 = document.createElement('div');
       manager.registerContainer('t1', c1);
-      
+
       manager.applyDisplayState({
         mode: 'split',
         activeTerminalId: 't1',
         orderedTerminalIds: ['t1'],
-        splitDirection: 'vertical'
+        splitDirection: 'vertical',
       });
-      
+
       expect((manager as any).splitLayoutService.activateSplitLayout).toHaveBeenCalled();
       expect(c1.classList.contains('terminal-container--split')).toBe(true);
     });
@@ -197,13 +197,13 @@ describe('TerminalContainerManager', () => {
     it('should apply normal mode', () => {
       const c1 = document.createElement('div');
       manager.registerContainer('t1', c1);
-      
+
       manager.applyDisplayState({
         mode: 'normal',
         activeTerminalId: 't1',
-        orderedTerminalIds: ['t1']
+        orderedTerminalIds: ['t1'],
       });
-      
+
       expect((manager as any).visibilityService.normalizeTerminalBody).toHaveBeenCalled();
       expect(c1.classList.contains('terminal-container--fullscreen')).toBe(false);
       expect(c1.classList.contains('terminal-container--split')).toBe(false);
@@ -213,7 +213,7 @@ describe('TerminalContainerManager', () => {
   describe('Split Artifacts', () => {
     it('should clear split artifacts', () => {
       manager.clearSplitArtifacts();
-      
+
       expect((manager as any).splitLayoutService.getSplitResizers).toHaveBeenCalled();
       expect((manager as any).splitLayoutService.getSplitWrapperCache).toHaveBeenCalled();
       expect((manager as any).visibilityService.normalizeTerminalBody).toHaveBeenCalled();
@@ -244,9 +244,9 @@ describe('TerminalContainerManager', () => {
       existing.className = 'terminal-container';
       existing.setAttribute('data-terminal-id', 'existing-1');
       document.body.appendChild(existing);
-      
+
       await manager.initialize();
-      
+
       expect(manager.getContainer('existing-1')).toBe(existing);
     });
 
@@ -311,11 +311,11 @@ describe('TerminalContainerManager', () => {
     it('should provide debug info and snapshot', () => {
       const container = document.createElement('div');
       manager.registerContainer('t1', container);
-      
+
       const info = manager.getDebugInfo();
       expect(info.cachedContainers).toBe(1);
       expect(info.modes['t1']).toBe('normal');
-      
+
       const snapshot = manager.getDisplaySnapshot();
       expect(snapshot.registeredContainers).toBe(1);
     });

@@ -114,7 +114,10 @@ describe('CliAgentWaitingDetector', () => {
       vi.advanceTimersByTime(350);
       expect(stateStore.getAgentState('terminal-1')?.isWaitingForInput).toBe(true);
 
-      detector.analyze('terminal-1', '❯ Continue\nReading file src/main.ts...\nProcessing content...');
+      detector.analyze(
+        'terminal-1',
+        '❯ Continue\nReading file src/main.ts...\nProcessing content...'
+      );
       vi.advanceTimersByTime(350);
 
       expect(stateStore.getAgentState('terminal-1')?.isWaitingForInput).toBe(false);

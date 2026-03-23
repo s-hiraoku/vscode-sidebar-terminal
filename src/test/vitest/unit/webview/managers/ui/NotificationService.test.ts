@@ -12,7 +12,7 @@ describe('NotificationService', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     service = new NotificationService();
-    
+
     // Mock DOMUtils.createElement
     vi.mocked(DOMUtils.createElement).mockImplementation((tag, styles, props) => {
       const el = document.createElement(tag);
@@ -35,7 +35,7 @@ describe('NotificationService', () => {
       };
 
       const element = service.createNotificationElement(config);
-      
+
       expect(element.classList.contains('terminal-notification')).toBe(true);
       expect(element.textContent).toContain('Test Title');
       expect(element.textContent).toContain('Test Message');
@@ -51,7 +51,7 @@ describe('NotificationService', () => {
       };
 
       const element = service.createNotificationElement(config);
-      
+
       expect(element.textContent).toContain('🚀');
     });
 
@@ -63,7 +63,7 @@ describe('NotificationService', () => {
       };
 
       service.createNotificationElement(config);
-      
+
       expect(DOMUtils.createElement).toHaveBeenCalledWith(
         'div',
         expect.objectContaining({
@@ -77,11 +77,11 @@ describe('NotificationService', () => {
   describe('ensureAnimationsLoaded', () => {
     it('should inject style tag once', () => {
       service.ensureAnimationsLoaded();
-      
+
       const style = document.getElementById('ui-manager-animations');
       expect(style).not.toBeNull();
       expect(style?.textContent).toContain('@keyframes slideInFromRight');
-      
+
       // Call again, should not duplicate (though difficult to test duplication without spying on appendChild, checking count is enough)
       service.ensureAnimationsLoaded();
       expect(document.querySelectorAll('#ui-manager-animations').length).toBe(1);
@@ -92,13 +92,13 @@ describe('NotificationService', () => {
     it('getNotificationColors returns correct values', () => {
       const errorColors = service.getNotificationColors('error');
       expect(errorColors.border).toContain('Error');
-      
+
       const warningColors = service.getNotificationColors('warning');
       expect(warningColors.border).toContain('Warning');
-      
+
       const successColors = service.getNotificationColors('success');
       expect(successColors.border).toContain('success');
-      
+
       const infoColors = service.getNotificationColors('info');
       expect(infoColors.border).toContain('info');
     });

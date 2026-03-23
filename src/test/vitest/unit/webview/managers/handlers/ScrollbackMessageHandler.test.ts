@@ -5,7 +5,10 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { ScrollbackMessageHandler, ScrollbackLine } from '../../../../../../webview/managers/handlers/ScrollbackMessageHandler';
+import {
+  ScrollbackMessageHandler,
+  ScrollbackLine,
+} from '../../../../../../webview/managers/handlers/ScrollbackMessageHandler';
 import { IManagerCoordinator } from '../../../../../../webview/interfaces/ManagerInterfaces';
 import { MessageQueue } from '../../../../../../webview/utils/MessageQueue';
 import { ManagerLogger } from '../../../../../../webview/utils/ManagerLogger';
@@ -34,7 +37,9 @@ describe('ScrollbackMessageHandler', () => {
         getLine: vi.fn((i: number) => {
           if (i >= 0 && i < lines.length) {
             return {
-              translateToString: vi.fn((trim?: boolean) => (trim ? lines[i]?.trim() : lines[i]) ?? ''),
+              translateToString: vi.fn(
+                (trim?: boolean) => (trim ? lines[i]?.trim() : lines[i]) ?? ''
+              ),
             };
           }
           return null;
@@ -155,12 +160,11 @@ describe('ScrollbackMessageHandler', () => {
     });
 
     it('should log warning for unknown command', async () => {
-      await handler.handleMessage(
-        { command: 'unknownCommand' },
-        mockCoordinator
-      );
+      await handler.handleMessage({ command: 'unknownCommand' }, mockCoordinator);
 
-      expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Unknown scrollback command'));
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Unknown scrollback command')
+      );
     });
   });
 
@@ -206,10 +210,7 @@ describe('ScrollbackMessageHandler', () => {
     });
 
     it('should handle missing terminal ID', async () => {
-      await handler.handleMessage(
-        { command: 'getScrollback' },
-        mockCoordinator
-      );
+      await handler.handleMessage({ command: 'getScrollback' }, mockCoordinator);
 
       expect(mockLogger.error).toHaveBeenCalledWith(
         expect.stringContaining('No terminal ID provided')
@@ -240,9 +241,7 @@ describe('ScrollbackMessageHandler', () => {
         mockCoordinator
       );
 
-      expect(mockLogger.debug).toHaveBeenCalledWith(
-        expect.stringContaining('max 1000 lines')
-      );
+      expect(mockLogger.debug).toHaveBeenCalledWith(expect.stringContaining('max 1000 lines'));
     });
   });
 
@@ -491,9 +490,7 @@ describe('ScrollbackMessageHandler', () => {
         mockCoordinator
       );
 
-      expect(mockLogger.info).toHaveBeenCalledWith(
-        expect.stringContaining('no scrollback data')
-      );
+      expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining('no scrollback data'));
     });
 
     it('should handle empty terminals array', async () => {
@@ -514,16 +511,12 @@ describe('ScrollbackMessageHandler', () => {
       await handler.handleMessage(
         {
           command: 'restoreTerminalSessions',
-          terminals: [
-            { scrollbackData: ['line1'], restoreScrollback: true },
-          ],
+          terminals: [{ scrollbackData: ['line1'], restoreScrollback: true }],
         },
         mockCoordinator
       );
 
-      expect(mockLogger.warn).toHaveBeenCalledWith(
-        expect.stringContaining('missing terminalId')
-      );
+      expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('missing terminalId'));
     });
   });
 
@@ -543,19 +536,12 @@ describe('ScrollbackMessageHandler', () => {
         mockCoordinator
       );
 
-      expect(mockLogger.info).toHaveBeenCalledWith(
-        expect.stringContaining('75%')
-      );
-      expect(mockLogger.info).toHaveBeenCalledWith(
-        expect.stringContaining('750/1000')
-      );
+      expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining('75%'));
+      expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining('750/1000'));
     });
 
     it('should handle missing progress information', async () => {
-      await handler.handleMessage(
-        { command: 'scrollbackProgress' },
-        mockCoordinator
-      );
+      await handler.handleMessage({ command: 'scrollbackProgress' }, mockCoordinator);
 
       expect(mockLogger.error).toHaveBeenCalledWith(
         expect.stringContaining('No progress information provided')

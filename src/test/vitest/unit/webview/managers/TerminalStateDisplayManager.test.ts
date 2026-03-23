@@ -5,11 +5,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { JSDOM } from 'jsdom';
 import { TerminalStateDisplayManager } from '../../../../../webview/managers/TerminalStateDisplayManager';
-import { 
-  IUIManager, 
-  INotificationManager, 
-  ITerminalTabManager, 
-  ITerminalContainerManager 
+import {
+  IUIManager,
+  INotificationManager,
+  ITerminalTabManager,
+  ITerminalContainerManager,
 } from '../../../../../webview/interfaces/ManagerInterfaces';
 import { TerminalState } from '../../../../../types/shared';
 
@@ -80,12 +80,12 @@ describe('TerminalStateDisplayManager', () => {
     const mockState: TerminalState = {
       terminals: [
         { id: 't1', name: 'Terminal 1', isActive: true },
-        { id: 't2', name: 'Terminal 2', isActive: false }
+        { id: 't2', name: 'Terminal 2', isActive: false },
       ],
       activeTerminalId: 't1',
       maxTerminals: 5,
       availableSlots: [3, 4, 5],
-      config: {} as any
+      config: {} as any,
     };
 
     it('should update all UI elements from state', () => {
@@ -94,7 +94,7 @@ describe('TerminalStateDisplayManager', () => {
       expect(mockContainerManager.reorderContainers).toHaveBeenCalledWith(['t1', 't2']);
       expect(mockTabManager.syncTabs).toHaveBeenCalled();
       expect(mockUIManager.updateSplitTerminalBorders).toHaveBeenCalledWith('t1');
-      
+
       const countEl = document.querySelector('[data-terminal-count]');
       expect(countEl?.textContent).toBe('2/5');
 
@@ -126,7 +126,7 @@ describe('TerminalStateDisplayManager', () => {
         activeTerminalId: null,
         maxTerminals: 5,
         availableSlots: [1],
-        config: {} as any
+        config: {} as any,
       };
 
       manager.updateCreationState(state);
@@ -134,7 +134,7 @@ describe('TerminalStateDisplayManager', () => {
       const button = document.querySelector('[data-action="create-terminal"]') as HTMLButtonElement;
       expect(button.disabled).toBe(false);
       expect(button.title).toBe('Create new terminal');
-      
+
       expect(mockNotificationManager.clearWarnings).toHaveBeenCalled();
     });
 
@@ -144,7 +144,7 @@ describe('TerminalStateDisplayManager', () => {
         activeTerminalId: null,
         maxTerminals: 1,
         availableSlots: [],
-        config: {} as any
+        config: {} as any,
       };
 
       manager.updateCreationState(state);
@@ -152,9 +152,9 @@ describe('TerminalStateDisplayManager', () => {
       const button = document.querySelector('[data-action="create-terminal"]') as HTMLButtonElement;
       expect(button.disabled).toBe(true);
       expect(button.title).toBe('Maximum terminals reached');
-      
+
       expect(mockNotificationManager.showWarning).toHaveBeenCalled();
-      
+
       const statusEl = document.querySelector('[data-terminal-status]');
       expect(statusEl?.textContent).toContain('Terminal limit reached');
       expect(statusEl?.className).toContain('warning');
@@ -166,12 +166,12 @@ describe('TerminalStateDisplayManager', () => {
       const state: TerminalState = {
         terminals: [
           { id: 't1', name: 'T1', isActive: true },
-          { id: 't2', name: 'T2', isActive: false }
+          { id: 't2', name: 'T2', isActive: false },
         ],
         activeTerminalId: 't1',
         maxTerminals: 5,
         availableSlots: [],
-        config: {} as any
+        config: {} as any,
       };
 
       (mockTabManager.hasPendingDeletion as any).mockImplementation((id: string) => id === 't2');
@@ -179,9 +179,7 @@ describe('TerminalStateDisplayManager', () => {
 
       manager.updateFromState(state);
 
-      expect(mockTabManager.syncTabs).toHaveBeenCalledWith([
-        expect.objectContaining({ id: 't1' })
-      ]);
+      expect(mockTabManager.syncTabs).toHaveBeenCalledWith([expect.objectContaining({ id: 't1' })]);
       // t2 should be filtered out
       expect(mockTabManager.syncTabs).not.toHaveBeenCalledWith(
         expect.arrayContaining([expect.objectContaining({ id: 't2' })])
@@ -207,10 +205,14 @@ describe('TerminalStateDisplayManager', () => {
       manager.updateFromState(state);
 
       expect((mockUIManager as any).updateTerminalHeader).toHaveBeenCalledWith(
-        't1', 'My Custom Name', undefined
+        't1',
+        'My Custom Name',
+        undefined
       );
       expect((mockUIManager as any).updateTerminalHeader).toHaveBeenCalledWith(
-        't2', 'Terminal 2', undefined
+        't2',
+        'Terminal 2',
+        undefined
       );
     });
 
@@ -218,9 +220,7 @@ describe('TerminalStateDisplayManager', () => {
       (mockUIManager as any).updateTerminalHeader = vi.fn();
 
       const state: TerminalState = {
-        terminals: [
-          { id: 't1', name: 'My Terminal', isActive: true, indicatorColor: '#FF0000' },
-        ],
+        terminals: [{ id: 't1', name: 'My Terminal', isActive: true, indicatorColor: '#FF0000' }],
         activeTerminalId: 't1',
         maxTerminals: 5,
         availableSlots: [3, 4, 5],
@@ -230,7 +230,9 @@ describe('TerminalStateDisplayManager', () => {
       manager.updateFromState(state);
 
       expect((mockUIManager as any).updateTerminalHeader).toHaveBeenCalledWith(
-        't1', 'My Terminal', '#FF0000'
+        't1',
+        'My Terminal',
+        '#FF0000'
       );
     });
 
@@ -238,9 +240,7 @@ describe('TerminalStateDisplayManager', () => {
       (mockUIManager as any).updateTerminalHeader = vi.fn();
 
       const state: TerminalState = {
-        terminals: [
-          { id: 't1', name: 'Renamed Terminal', isActive: true },
-        ],
+        terminals: [{ id: 't1', name: 'Renamed Terminal', isActive: true }],
         activeTerminalId: 't1',
         maxTerminals: 5,
         availableSlots: [],
@@ -250,7 +250,9 @@ describe('TerminalStateDisplayManager', () => {
       manager.updateFromState(state);
 
       expect((mockUIManager as any).updateTerminalHeader).toHaveBeenCalledWith(
-        't1', 'Renamed Terminal', undefined
+        't1',
+        'Renamed Terminal',
+        undefined
       );
     });
   });
@@ -261,7 +263,7 @@ describe('TerminalStateDisplayManager', () => {
         mockUIManager,
         mockNotificationManager,
         null, // No tab manager
-        null  // No container manager
+        null // No container manager
       );
 
       const state: TerminalState = {
@@ -269,7 +271,7 @@ describe('TerminalStateDisplayManager', () => {
         activeTerminalId: 't1',
         maxTerminals: 5,
         availableSlots: [],
-        config: {} as any
+        config: {} as any,
       };
 
       // Should not throw

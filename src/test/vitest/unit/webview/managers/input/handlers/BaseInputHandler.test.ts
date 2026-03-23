@@ -437,8 +437,12 @@ describe('BaseInputHandler TDD Test Suite', () => {
         // Assert: Error should be logged
         expect(consoleLogSpy).toHaveBeenCalled();
         const logCalls = consoleLogSpy.mock.calls;
-        const errorLogs = logCalls.some(
-          (call) => call.some(arg => typeof arg === 'string' && arg.includes('Error in event handler TestHandler-error-test'))
+        const errorLogs = logCalls.some((call) =>
+          call.some(
+            (arg) =>
+              typeof arg === 'string' &&
+              arg.includes('Error in event handler TestHandler-error-test')
+          )
         );
         expect(errorLogs).toBe(true);
       });
@@ -505,7 +509,7 @@ describe('BaseInputHandler TDD Test Suite', () => {
         let defaultPrevented = false;
 
         const event = new Event('click', { bubbles: true, cancelable: true });
-        
+
         // Mock stopPropagation and preventDefault on the event instance
         const originalStopPropagation = event.stopPropagation.bind(event);
         const originalPreventDefault = event.preventDefault.bind(event);

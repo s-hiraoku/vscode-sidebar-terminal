@@ -91,9 +91,27 @@ describe('CommandRegistry', () => {
     it('should order handlers by priority', async () => {
       const executionOrder: string[] = [];
 
-      registry.register('testCommand', () => { executionOrder.push('low'); }, { priority: 'low' });
-      registry.register('testCommand', () => { executionOrder.push('high'); }, { priority: 'high' });
-      registry.register('testCommand', () => { executionOrder.push('normal'); }, { priority: 'normal' });
+      registry.register(
+        'testCommand',
+        () => {
+          executionOrder.push('low');
+        },
+        { priority: 'low' }
+      );
+      registry.register(
+        'testCommand',
+        () => {
+          executionOrder.push('high');
+        },
+        { priority: 'high' }
+      );
+      registry.register(
+        'testCommand',
+        () => {
+          executionOrder.push('normal');
+        },
+        { priority: 'normal' }
+      );
 
       await registry.dispatch({ command: 'testCommand' });
 
@@ -183,8 +201,12 @@ describe('CommandRegistry', () => {
     });
 
     it('should add multiple middlewares', () => {
-      const middleware1: CommandMiddleware = async (_msg, _ctx, next) => { await next(); };
-      const middleware2: CommandMiddleware = async (_msg, _ctx, next) => { await next(); };
+      const middleware1: CommandMiddleware = async (_msg, _ctx, next) => {
+        await next();
+      };
+      const middleware2: CommandMiddleware = async (_msg, _ctx, next) => {
+        await next();
+      };
 
       registry.use(middleware1);
       registry.use(middleware2);
@@ -268,13 +290,7 @@ describe('CommandRegistry', () => {
 
       await registry.dispatch({ command: 'testCommand' });
 
-      expect(executionOrder).toEqual([
-        'm1-before',
-        'm2-before',
-        'handler',
-        'm2-after',
-        'm1-after',
-      ]);
+      expect(executionOrder).toEqual(['m1-before', 'm2-before', 'handler', 'm2-after', 'm1-after']);
     });
 
     it('should provide context to handlers', async () => {
@@ -388,7 +404,9 @@ describe('CommandRegistry', () => {
       registry.register('cmd1', vi.fn(), { category: 'cat1' });
       registry.register('cmd2', vi.fn(), { category: 'cat2' });
       registry.register('cmd1', vi.fn()); // Second handler for cmd1
-      registry.use(async (_m, _c, next) => { await next(); });
+      registry.use(async (_m, _c, next) => {
+        await next();
+      });
 
       const stats = registry.getStats();
 
@@ -404,7 +422,9 @@ describe('CommandRegistry', () => {
     it('should remove all handlers', () => {
       registry.register('cmd1', vi.fn());
       registry.register('cmd2', vi.fn());
-      registry.use(async (_m, _c, next) => { await next(); });
+      registry.use(async (_m, _c, next) => {
+        await next();
+      });
 
       registry.clear();
 
@@ -479,9 +499,7 @@ describe('createLoggingMiddleware', () => {
     await registry.dispatch({ command: 'testCommand' });
 
     // Check that the log contains time in milliseconds
-    const successCall = mockLogger.mock.calls.find((call) =>
-      call[0].includes('✅ testCommand')
-    );
+    const successCall = mockLogger.mock.calls.find((call) => call[0].includes('✅ testCommand'));
     expect(successCall?.[0]).toMatch(/\d+\.\d+ms/);
   });
 
@@ -550,9 +568,7 @@ describe('createPerformanceMiddleware', () => {
 
     await registry.dispatch({ command: 'slowCommand' });
 
-    expect(mockLog).toHaveBeenCalledWith(
-      expect.stringContaining('⚠️ Slow command: slowCommand')
-    );
+    expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('⚠️ Slow command: slowCommand'));
   });
 
   it('should use custom threshold', async () => {
@@ -572,9 +588,7 @@ describe('createPerformanceMiddleware', () => {
 
     await registry.dispatch({ command: 'mediumCommand' });
 
-    expect(mockLog).toHaveBeenCalledWith(
-      expect.stringContaining('⚠️ Slow command: mediumCommand')
-    );
+    expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('⚠️ Slow command: mediumCommand'));
   });
 
   it('should use default threshold of 100ms when not specified', async () => {
@@ -615,8 +629,20 @@ describe('priority ordering', () => {
   it('should execute high priority before normal', async () => {
     const order: string[] = [];
 
-    registry.register('cmd', () => { order.push('normal'); }, { priority: 'normal' });
-    registry.register('cmd', () => { order.push('high'); }, { priority: 'high' });
+    registry.register(
+      'cmd',
+      () => {
+        order.push('normal');
+      },
+      { priority: 'normal' }
+    );
+    registry.register(
+      'cmd',
+      () => {
+        order.push('high');
+      },
+      { priority: 'high' }
+    );
 
     await registry.dispatch({ command: 'cmd' });
 
@@ -627,8 +653,20 @@ describe('priority ordering', () => {
   it('should execute normal priority before low', async () => {
     const order: string[] = [];
 
-    registry.register('cmd', () => { order.push('low'); }, { priority: 'low' });
-    registry.register('cmd', () => { order.push('normal'); }, { priority: 'normal' });
+    registry.register(
+      'cmd',
+      () => {
+        order.push('low');
+      },
+      { priority: 'low' }
+    );
+    registry.register(
+      'cmd',
+      () => {
+        order.push('normal');
+      },
+      { priority: 'normal' }
+    );
 
     await registry.dispatch({ command: 'cmd' });
 
@@ -639,9 +677,27 @@ describe('priority ordering', () => {
   it('should maintain insertion order for same priority', async () => {
     const order: string[] = [];
 
-    registry.register('cmd', () => { order.push('first'); }, { priority: 'normal' });
-    registry.register('cmd', () => { order.push('second'); }, { priority: 'normal' });
-    registry.register('cmd', () => { order.push('third'); }, { priority: 'normal' });
+    registry.register(
+      'cmd',
+      () => {
+        order.push('first');
+      },
+      { priority: 'normal' }
+    );
+    registry.register(
+      'cmd',
+      () => {
+        order.push('second');
+      },
+      { priority: 'normal' }
+    );
+    registry.register(
+      'cmd',
+      () => {
+        order.push('third');
+      },
+      { priority: 'normal' }
+    );
 
     await registry.dispatch({ command: 'cmd' });
 
@@ -730,9 +786,7 @@ describe('edge cases', () => {
 
     // Dispatch 10 times rapidly
     await Promise.all(
-      Array.from({ length: 10 }, () =>
-        registry.dispatch({ command: 'testCommand' })
-      )
+      Array.from({ length: 10 }, () => registry.dispatch({ command: 'testCommand' }))
     );
 
     expect(callCount).toBe(10);

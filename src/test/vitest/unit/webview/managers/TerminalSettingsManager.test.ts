@@ -18,7 +18,7 @@ vi.mock('../../../../../webview/services/FontSettingsService', () => ({
     setApplicator = vi.fn();
     getCurrentSettings = vi.fn().mockReturnValue({ fontSize: 14 });
     updateSettings = vi.fn();
-  }
+  },
 }));
 
 describe('TerminalSettingsManager', () => {
@@ -41,7 +41,7 @@ describe('TerminalSettingsManager', () => {
       getCurrentSettings: vi.fn().mockReturnValue({}),
       setFontSettingsService: vi.fn(),
     } as any;
-    
+
     // Simulate instance of ConfigManager for type check
     Object.setPrototypeOf(mockConfigManager, ConfigManager.prototype);
 
@@ -64,7 +64,7 @@ describe('TerminalSettingsManager', () => {
       // Construction should trigger setApplicator and setFontSettingsService
       // FontSettingsService is instantiated in constructor, so we check if mock method called
       // We can't easily access the private instance, but we can assume it works if no error
-      
+
       // Since we mocked FontSettingsService constructor via vi.mock return class
       // But we can't inspect the instance created inside manager easily without spyOn constructor
       // However, mockConfigManager.setFontSettingsService call is verifiable
@@ -78,9 +78,9 @@ describe('TerminalSettingsManager', () => {
         theme: 'dark',
         activeBorderMode: 'always' as const,
       };
-      
+
       manager.applySettings(settings);
-      
+
       expect(mockUIManager.setActiveBorderMode).toHaveBeenCalledWith('always');
       expect(mockConfigManager.applySettings).toHaveBeenCalled();
     });
@@ -88,19 +88,24 @@ describe('TerminalSettingsManager', () => {
     it('should update borders for active terminal', () => {
       const container = document.createElement('div');
       mockCallbacks.getAllTerminalContainers.mockReturnValue(new Map([['t1', container]]));
-      
+
       manager.applySettings({});
-      
+
       expect(mockUIManager.updateTerminalBorders).toHaveBeenCalled();
     });
 
     it('should apply visual settings to all terminals', () => {
       const mockTerminal = { options: {} };
-      mockCallbacks.getAllTerminalInstances.mockReturnValue(new Map([['t1', { terminal: mockTerminal }]]));
-      
+      mockCallbacks.getAllTerminalInstances.mockReturnValue(
+        new Map([['t1', { terminal: mockTerminal }]])
+      );
+
       manager.applySettings({});
-      
-      expect(mockUIManager.applyAllVisualSettings).toHaveBeenCalledWith(mockTerminal, expect.anything());
+
+      expect(mockUIManager.applyAllVisualSettings).toHaveBeenCalledWith(
+        mockTerminal,
+        expect.anything()
+      );
     });
   });
 
@@ -108,14 +113,14 @@ describe('TerminalSettingsManager', () => {
     it('should apply font settings via service', () => {
       const fontSettings = { fontSize: 16 };
       const terminals = new Map();
-      
+
       manager.applyFontSettings(fontSettings as any, terminals);
-      
+
       // Access the private service if we want to be strict, but verifying no error is good start
       // Better: we can spy on the prototype method if we want to check internal call
       // Or check if log was called
     });
-    
+
     it('should get current font settings', () => {
       const settings = manager.getCurrentFontSettings();
       expect(settings).toEqual({ fontSize: 14 });
@@ -127,18 +132,18 @@ describe('TerminalSettingsManager', () => {
       const state = {
         settings: { theme: 'light' },
         fontSettings: { fontSize: 12 },
-        timestamp: 123
+        timestamp: 123,
       } as any;
-      
+
       manager.loadFromState(state);
-      
+
       expect(mockUIManager.setActiveBorderMode).toHaveBeenCalled(); // via applySettings
       // applyFontSettings called too
     });
 
     it('should return state for saving', () => {
       const state = manager.getStateForSave();
-      
+
       expect(state.settings).toBeDefined();
       expect(state.fontSettings).toBeDefined();
       expect(state.timestamp).toBeGreaterThan(0);
@@ -154,7 +159,7 @@ describe('TerminalSettingsManager', () => {
     it('should update single setting', () => {
       manager.updateSetting('theme', 'dark');
       expect(mockConfigManager.applySettings).toHaveBeenCalledWith(
-        expect.objectContaining({ theme: 'dark' }), 
+        expect.objectContaining({ theme: 'dark' }),
         expect.anything()
       );
     });

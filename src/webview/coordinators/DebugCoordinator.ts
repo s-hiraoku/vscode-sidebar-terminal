@@ -65,9 +65,7 @@ export class DebugCoordinator {
   /**
    * Export system diagnostics for troubleshooting
    */
-  public exportSystemDiagnostics(
-    maxTerminals: number | string
-  ): SystemDiagnostics {
+  public exportSystemDiagnostics(maxTerminals: number | string): SystemDiagnostics {
     const diagnostics = this.deps.debugPanelManager.exportDiagnostics(
       this.deps.getSystemStatus(),
       maxTerminals

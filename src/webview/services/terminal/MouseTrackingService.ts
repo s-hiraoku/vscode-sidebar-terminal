@@ -92,7 +92,7 @@ export class MouseTrackingService {
       (params) => {
         for (let i = 0; i < params.length; i++) {
           const mode = params.toArray ? params.toArray()[i] : params[i];
-          if (MOUSE_TRACKING_MODES.includes(mode as typeof MOUSE_TRACKING_MODES[number])) {
+          if (MOUSE_TRACKING_MODES.includes(mode as (typeof MOUSE_TRACKING_MODES)[number])) {
             const wasEmpty = state.activeModes.size === 0;
             state.activeModes.add(mode);
 
@@ -127,7 +127,7 @@ export class MouseTrackingService {
       (params) => {
         for (const param of params) {
           const mode = typeof param === 'number' ? param : param[0];
-          if (MOUSE_TRACKING_MODES.includes(mode as typeof MOUSE_TRACKING_MODES[number])) {
+          if (MOUSE_TRACKING_MODES.includes(mode as (typeof MOUSE_TRACKING_MODES)[number])) {
             state.activeModes.delete(mode);
 
             if (state.activeModes.size === 0) {
@@ -136,7 +136,9 @@ export class MouseTrackingService {
 
               // Remove wheel handler
               if (state.wheelHandler && state.wheelTarget) {
-                state.wheelTarget.removeEventListener('wheel', state.wheelHandler, { capture: true });
+                state.wheelTarget.removeEventListener('wheel', state.wheelHandler, {
+                  capture: true,
+                });
                 state.wheelHandler = undefined;
                 state.wheelTarget = undefined;
               }

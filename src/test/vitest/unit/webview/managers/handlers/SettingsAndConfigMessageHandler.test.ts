@@ -8,7 +8,7 @@ describe('SettingsAndConfigMessageHandler', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
-    
+
     mockLogger = {
       info: vi.fn(),
       warn: vi.fn(),
@@ -41,20 +41,24 @@ describe('SettingsAndConfigMessageHandler', () => {
     it('should handle fontSettingsUpdate', () => {
       const fontSettings = { fontFamily: 'Arial' };
       handler.handleMessage({ command: 'fontSettingsUpdate', fontSettings }, mockCoordinator);
-      
+
       expect(mockCoordinator.applyFontSettings).toHaveBeenCalledWith(fontSettings);
       expect(mockCoordinator.emitTerminalInteractionEvent).toHaveBeenCalledWith(
-        'font-settings-update', '', fontSettings
+        'font-settings-update',
+        '',
+        fontSettings
       );
     });
 
     it('should handle settingsResponse', () => {
       const settings = { theme: 'dark' };
       handler.handleMessage({ command: 'settingsResponse', settings }, mockCoordinator);
-      
+
       expect(mockCoordinator.applySettings).toHaveBeenCalledWith(settings);
       expect(mockCoordinator.emitTerminalInteractionEvent).toHaveBeenCalledWith(
-        'settings-update', '', settings
+        'settings-update',
+        '',
+        settings
       );
     });
 
@@ -78,14 +82,14 @@ describe('SettingsAndConfigMessageHandler', () => {
       // Mock getComputedStyle for theme colors
       const originalGetComputedStyle = window.getComputedStyle;
       window.getComputedStyle = vi.fn().mockReturnValue({
-        getPropertyValue: vi.fn().mockReturnValue('#ffffff')
+        getPropertyValue: vi.fn().mockReturnValue('#ffffff'),
       });
 
       handler.handleMessage({ command: 'themeChanged', theme: 'dark' }, mockCoordinator);
-      
+
       expect(mockCoordinator.updateAllTerminalThemes).toHaveBeenCalled();
       expect(mockCoordinator.getManagers().ui.updateTheme).toHaveBeenCalled();
-      
+
       window.getComputedStyle = originalGetComputedStyle;
     });
   });

@@ -3,7 +3,13 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import * as vscode from 'vscode';
-import { AgentType, TerminalInstance, TerminalEvent, TerminalState, DeleteResult } from '../types/shared';
+import {
+  AgentType,
+  TerminalInstance,
+  TerminalEvent,
+  TerminalState,
+  DeleteResult,
+} from '../types/shared';
 import { PERFORMANCE_CONSTANTS } from '../constants';
 import { ShellIntegrationService } from '../services/ShellIntegrationService';
 import { TerminalProfileService } from '../services/TerminalProfileService';
@@ -426,10 +432,7 @@ export class TerminalManager {
     return this._cliAgentService.switchAgentConnection(terminalId);
   }
 
-  public forceReconnectAiAgent(
-    terminalId: string,
-    agentType: AgentType = 'claude'
-  ): boolean {
+  public forceReconnectAiAgent(terminalId: string, agentType: AgentType = 'claude'): boolean {
     const terminalName = this._terminals.get(terminalId)?.name;
     return this._cliAgentService.forceReconnectAgent(terminalId, agentType, terminalName);
   }

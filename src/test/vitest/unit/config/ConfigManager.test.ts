@@ -20,10 +20,14 @@ describe('ConfigManager', () => {
     };
 
     // Mock vscode.workspace.getConfiguration
-    (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockWorkspaceConfiguration);
+    (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockReturnValue(
+      mockWorkspaceConfiguration
+    );
 
     // Mock vscode.workspace.onDidChangeConfiguration
-    (vscode.workspace.onDidChangeConfiguration as unknown as ReturnType<typeof vi.fn>).mockReturnValue({ dispose: vi.fn() });
+    (
+      vscode.workspace.onDidChangeConfiguration as unknown as ReturnType<typeof vi.fn>
+    ).mockReturnValue({ dispose: vi.fn() });
 
     configManager = getConfigManager();
   });
@@ -90,7 +94,9 @@ describe('ConfigManager', () => {
       const callback = vi.fn();
       const mockDisposable = { dispose: vi.fn() };
 
-      (vscode.workspace.onDidChangeConfiguration as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockDisposable);
+      (
+        vscode.workspace.onDidChangeConfiguration as unknown as ReturnType<typeof vi.fn>
+      ).mockReturnValue(mockDisposable);
 
       const disposable = configManager.onConfigurationChange(callback);
 

@@ -150,7 +150,9 @@ describe('OperationResultHandler', () => {
     });
 
     it('should handle failed operation with reason', async () => {
-      const operation = vi.fn().mockResolvedValue(OperationResultHandler.failure('Terminal not found'));
+      const operation = vi
+        .fn()
+        .mockResolvedValue(OperationResultHandler.failure('Terminal not found'));
 
       const result = await OperationResultHandler.handleTerminalOperation(
         operation,
@@ -177,9 +179,7 @@ describe('OperationResultHandler', () => {
       );
 
       expect(result).toBeNull();
-      expect(logSpy).toHaveBeenCalledWith(
-        '⚠️ [TEST_CONTEXT] Operation failed: Operation failed'
-      );
+      expect(logSpy).toHaveBeenCalledWith('⚠️ [TEST_CONTEXT] Operation failed: Operation failed');
       expect(mockNotificationService.showError).toHaveBeenCalledWith('Operation failed');
     });
 
@@ -457,9 +457,7 @@ describe('OperationResultHandler', () => {
 
       expect(result).toBeNull();
       expect(logSpy).toHaveBeenCalledWith('❌ [UNDEFINED_ERROR] Operation error: undefined');
-      expect(mockNotificationService.showError).toHaveBeenCalledWith(
-        'Operation error: undefined'
-      );
+      expect(mockNotificationService.showError).toHaveBeenCalledWith('Operation error: undefined');
     });
   });
 

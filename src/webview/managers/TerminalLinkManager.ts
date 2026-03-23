@@ -172,9 +172,7 @@ export class TerminalLinkManager extends BaseManager {
         activate: (event: MouseEvent, linkText: string) => {
           // Check if the correct modifier key is pressed
           if (!this.isValidLinkActivation(event)) {
-            terminalLogger.debug(
-              `Link activation blocked - modifier key not pressed: ${linkText}`
-            );
+            terminalLogger.debug(`Link activation blocked - modifier key not pressed: ${linkText}`);
             return;
           }
 
