@@ -5,6 +5,24 @@ All notable changes to the "Secondary Terminal" extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+### [0.3.1](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v0.3.0...v0.3.1) (2026-03-23)
+
+
+### Added
+
+* add idle detection and enhanced approval patterns for CLI agents ([#521](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/521)) ([e0c20e7](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/e0c20e7f748117580096cf9e8905aaf6922ece32))
+
+
+### Fixed
+
+* guard document access in setTimeout callback for test stability ([c9bb1c4](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/c9bb1c47ae8ab0c93dc392c7860a2c4b55309a6b))
+
+
+### Changed
+
+* decompose God Objects and clean up detection pipeline ([#516](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/516)) ([d6e54ec](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/d6e54ec4988dd55bda12b438da124051e632769b)), closes [#518](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/518)
+* simplify terminal command handlers ([#505](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/505)) ([7c8c6df](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/7c8c6dfdbaaf66ef492316d75f17125bde11b46e))
+
 ## [0.3.0](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v0.2.27...v0.3.0) (2026-03-15)
 
 
