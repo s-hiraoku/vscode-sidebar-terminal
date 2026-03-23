@@ -29,9 +29,13 @@ vi.mock('../../../../../webview/managers/container/ContainerVisibilityService', 
   ContainerVisibilityService: class {
     showContainer = vi.fn();
     hideContainer = vi.fn();
+    restoreFromHiddenStorage = vi.fn();
     enforceFullscreenState = vi.fn();
     normalizeTerminalBody = vi.fn();
     ensureContainerInBody = vi.fn();
+    getHiddenStorage = vi.fn((terminalBody: HTMLElement) =>
+      terminalBody.querySelector('#terminal-hidden-storage')
+    );
     isElementVisible = vi.fn().mockReturnValue(true);
     clearHiddenStorage = vi.fn();
   },
@@ -112,6 +116,28 @@ describe('TerminalContainerManager', () => {
     it('should handle missing container gracefully', () => {
       // Should not throw
       manager.setContainerVisibility('unknown', true);
+    });
+
+    it('should restore a hidden container through ContainerVisibilityService when showing it again', () => {
+      const terminalBody = document.getElementById('terminal-body') as HTMLElement;
+      const hiddenStorage = document.createElement('div');
+      hiddenStorage.id = 'terminal-hidden-storage';
+      terminalBody.appendChild(hiddenStorage);
+
+      const container = document.createElement('div');
+      hiddenStorage.appendChild(container);
+      manager.registerContainer('t1', container);
+
+      const terminal = { refresh: vi.fn(), rows: 24 } as any;
+      mockCoordinator.getTerminalInstance = vi.fn().mockReturnValue({ terminal });
+
+      manager.setContainerVisibility('t1', true);
+
+      expect((manager as any).visibilityService.restoreFromHiddenStorage).toHaveBeenCalledWith(
+        container,
+        terminalBody,
+        terminal
+      );
     });
   });
 

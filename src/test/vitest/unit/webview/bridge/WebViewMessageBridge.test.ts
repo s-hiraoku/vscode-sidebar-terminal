@@ -87,5 +87,35 @@ describe('WebViewMessageBridge', () => {
       expect(bridge.getHandlerCount()).toBe(0);
       expect(bridge.isReady()).toBe(false);
     });
+
+    it('Bug #9: should remove window message listener on dispose', async () => {
+      const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
+
+      await bridge.initialize();
+      bridge.dispose();
+
+      // Should have called removeEventListener for 'message'
+      const messageRemoveCalls = removeEventListenerSpy.mock.calls.filter(
+        (call) => call[0] === 'message'
+      );
+      expect(messageRemoveCalls.length).toBe(1);
+    });
+
+    it('Bug #9: should not process messages after dispose', async () => {
+      const handler = vi.fn().mockResolvedValue({ success: true });
+
+      await bridge.initialize();
+      bridge.registerHandler('test-cmd', handler);
+      bridge.dispose();
+
+      // Simulate a message event after dispose
+      const event = new MessageEvent('message', {
+        data: { command: 'test-cmd' },
+      });
+      window.dispatchEvent(event);
+
+      // Handler should not be called because listener was removed
+      expect(handler).not.toHaveBeenCalled();
+    });
   });
 });

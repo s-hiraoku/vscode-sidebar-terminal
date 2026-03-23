@@ -573,6 +573,18 @@ describe('FindInTerminalManager', () => {
       const state = manager.getSearchState();
       expect(state.isVisible).toBe(false);
     });
+
+    it('Bug #8: should remove document keydown listener on dispose', () => {
+      const removeEventListenerSpy = vi.spyOn(document, 'removeEventListener');
+
+      manager.dispose();
+
+      // Should have called removeEventListener for 'keydown'
+      const keydownRemoveCalls = removeEventListenerSpy.mock.calls.filter(
+        (call) => call[0] === 'keydown'
+      );
+      expect(keydownRemoveCalls.length).toBe(1);
+    });
   });
 
   describe('error handling', () => {

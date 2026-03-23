@@ -80,6 +80,8 @@ export class UnifiedMessageDispatcher implements IManagerLifecycle, Disposable {
   private coordinator?: IManagerCoordinator;
   private disposed = false;
 
+  private messageEventHandler: ((event: MessageEvent) => void) | null = null;
+
   // Performance monitoring
   private totalMessages = 0;
   private errorCount = 0;
@@ -173,7 +175,8 @@ export class UnifiedMessageDispatcher implements IManagerLifecycle, Disposable {
 
     // Setup message listener for incoming messages
     if (typeof window !== 'undefined') {
-      window.addEventListener('message', this.handleIncomingMessage.bind(this));
+      this.messageEventHandler = this.handleIncomingMessage.bind(this);
+      window.addEventListener('message', this.messageEventHandler);
     }
 
     this.logger.info('UnifiedMessageDispatcher fully initialized');
@@ -185,6 +188,12 @@ export class UnifiedMessageDispatcher implements IManagerLifecycle, Disposable {
     this.logger.info('Disposing UnifiedMessageDispatcher');
 
     this.disposed = true;
+
+    if (this.messageEventHandler && typeof window !== 'undefined') {
+      window.removeEventListener('message', this.messageEventHandler);
+      this.messageEventHandler = null;
+    }
+
     this.messageQueue.dispose();
     this.handlers.clear();
     this.coordinator = undefined;

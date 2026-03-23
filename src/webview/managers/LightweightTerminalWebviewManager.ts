@@ -450,6 +450,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       displayModeManager: this.displayModeManager,
       uiManager: this.uiManager,
       cliAgentStateManager: this.cliAgentStateManager,
+      performanceManager: this.performanceManager,
       getTerminalInstance: (id) => this.getTerminalInstance(id),
       getActiveTerminalId: () => this.getActiveTerminalId(),
       setActiveTerminalId: (id) => this.setActiveTerminalId(id),

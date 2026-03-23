@@ -176,6 +176,14 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
     const terminalBody = this.getTerminalBody();
     if (visible) {
       this.visibilityService.showContainer(container);
+
+      const hiddenStorage = terminalBody
+        ? this.visibilityService.getHiddenStorage(terminalBody, false)
+        : null;
+      if (terminalBody && hiddenStorage && container.parentElement === hiddenStorage) {
+        const terminal = this.coordinator.getTerminalInstance(terminalId)?.terminal ?? null;
+        this.visibilityService.restoreFromHiddenStorage(container, terminalBody, terminal);
+      }
     } else if (terminalBody) {
       this.visibilityService.hideContainer(container, terminalBody);
     }

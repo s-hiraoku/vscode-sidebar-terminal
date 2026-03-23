@@ -29,6 +29,9 @@ export class TerminalAutoSaveService {
     { terminal: Terminal; serializeAddon: SerializeAddon }
   >();
 
+  // Track xterm.js event listener disposables per terminal for proper cleanup
+  private static terminalListenerDisposables = new Map<string, { dispose(): void }[]>();
+
   // Track if visibility change handler is set up
   private static visibilityHandlerSetup = false;
 
@@ -51,6 +54,12 @@ export class TerminalAutoSaveService {
       TerminalAutoSaveService.periodicSaveTimers.delete(terminalId);
       // eslint-disable-next-line no-console
       console.log(`[AUTO-SAVE] Cleared periodic save timer for: ${terminalId}`);
+    }
+    // Dispose xterm.js event listeners to prevent accumulation
+    const disposables = TerminalAutoSaveService.terminalListenerDisposables.get(terminalId);
+    if (disposables) {
+      disposables.forEach((d) => d.dispose());
+      TerminalAutoSaveService.terminalListenerDisposables.delete(terminalId);
     }
     // Also remove from registered terminals
     TerminalAutoSaveService.registeredTerminals.delete(terminalId);
@@ -208,6 +217,24 @@ export class TerminalAutoSaveService {
   }
 
   /**
+   * Dispose all static state, clearing all Maps and Sets to allow GC.
+   * Should be called when the WebView is fully torn down.
+   */
+  public static disposeAll(): void {
+    // Collect keys first to avoid mutating the Map during iteration
+    const terminalIds = [...TerminalAutoSaveService.periodicSaveTimers.keys()];
+    for (const terminalId of terminalIds) {
+      TerminalAutoSaveService.clearPeriodicSaveTimer(terminalId);
+    }
+    TerminalAutoSaveService.periodicSaveTimers.clear();
+    TerminalAutoSaveService.registeredTerminals.clear();
+    TerminalAutoSaveService.terminalListenerDisposables.clear();
+    TerminalAutoSaveService.restoringTerminals.clear();
+    // eslint-disable-next-line no-console
+    console.log('[AUTO-SAVE] All static state disposed');
+  }
+
+  /**
    * Mark a terminal as currently being restored (blocks auto-save)
    * Called from ScrollbackMessageHandler at restoration start
    */
@@ -311,9 +338,18 @@ export class TerminalAutoSaveService {
     };
 
     // Capture both user input (onData) and process output (onLineFeed) so AI-generated output is saved
-    terminal.onData(pushScrollbackToExtension);
-    terminal.onLineFeed(pushScrollbackToExtension);
-    setTimeout(pushScrollbackToExtension, 2000);
+    // Store disposables for proper cleanup on terminal removal
+    const onDataDisposable = terminal.onData(pushScrollbackToExtension);
+    const onLineFeedDisposable = terminal.onLineFeed(pushScrollbackToExtension);
+    const initialTimer = setTimeout(pushScrollbackToExtension, 2000);
+
+    // Track all disposables for this terminal
+    const disposables: { dispose(): void }[] = [
+      onDataDisposable,
+      onLineFeedDisposable,
+      { dispose: () => clearTimeout(initialTimer) },
+    ];
+    TerminalAutoSaveService.terminalListenerDisposables.set(terminalId, disposables);
 
     // 🔧 FIX: Add periodic save to ensure scrollback is captured even during long idle periods
     // This fixes the issue where scrollback data is lost when terminal is left idle for extended time

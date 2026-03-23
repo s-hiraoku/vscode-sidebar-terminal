@@ -87,6 +87,7 @@ export class DOMBatcher {
  */
 export class PerformanceMonitor {
   private static instance: PerformanceMonitor;
+  private static readonly MAX_METRICS_SIZE = 1000;
   private metrics: Map<string, { start: number; duration?: number }> = new Map();
 
   public static getInstance(): PerformanceMonitor {
@@ -97,6 +98,15 @@ export class PerformanceMonitor {
   }
 
   public startTimer(name: string): void {
+    if (
+      !this.metrics.has(name) &&
+      this.metrics.size >= PerformanceMonitor.MAX_METRICS_SIZE
+    ) {
+      const firstKey = this.metrics.keys().next().value;
+      if (firstKey !== undefined) {
+        this.metrics.delete(firstKey);
+      }
+    }
     this.metrics.set(name, { start: performance.now() });
   }
 

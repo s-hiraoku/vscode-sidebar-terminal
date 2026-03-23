@@ -39,6 +39,7 @@ export class ResizeCoordinator {
   private parentResizeObserver: ResizeObserver | null = null;
   private bodyResizeObserver: ResizeObserver | null = null;
   private isInitialized = false;
+  private readonly boundWindowResizeHandler: () => void;
 
   // Use Debouncer utility for consistent debouncing
   private readonly parentResizeDebouncer: Debouncer;
@@ -46,6 +47,8 @@ export class ResizeCoordinator {
   private readonly bodyResizeDebouncer: Debouncer;
 
   constructor(private readonly deps: IResizeDependencies) {
+    this.boundWindowResizeHandler = () => this.windowResizeDebouncer.trigger();
+
     // Initialize debouncers with appropriate delays
     this.parentResizeDebouncer = new Debouncer(
       () => {
@@ -126,7 +129,7 @@ export class ResizeCoordinator {
    * ウィンドウリサイズリスナーを設定
    */
   private setupWindowResizeListener(): void {
-    window.addEventListener('resize', () => this.windowResizeDebouncer.trigger());
+    window.addEventListener('resize', this.boundWindowResizeHandler);
     log('🔍 Window resize listener added');
   }
 
@@ -226,6 +229,9 @@ export class ResizeCoordinator {
       this.bodyResizeObserver.disconnect();
       this.bodyResizeObserver = null;
     }
+
+    // Remove window resize listener
+    window.removeEventListener('resize', this.boundWindowResizeHandler);
 
     // Dispose debouncers (cancels pending operations and cleans up timers)
     this.parentResizeDebouncer.dispose();

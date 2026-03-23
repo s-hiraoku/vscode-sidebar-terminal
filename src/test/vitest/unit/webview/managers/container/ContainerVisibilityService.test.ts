@@ -137,4 +137,39 @@ describe('ContainerVisibilityService', () => {
       expect(storage?.contains(t1)).toBe(true);
     });
   });
+
+  describe('restoreFromHiddenStorage', () => {
+    it('should call terminal.refresh after restoring container from hidden storage', () => {
+      const t1 = document.createElement('div');
+      t1.className = 'terminal-container';
+      t1.dataset.terminalId = 'term-1';
+
+      // Hide it first
+      service.hideContainer(t1, terminalBody);
+
+      const storage = document.getElementById('terminal-hidden-storage');
+      expect(storage?.contains(t1)).toBe(true);
+
+      // Create a mock terminal with refresh method
+      const mockTerminal = {
+        refresh: vi.fn(),
+        rows: 24,
+      };
+
+      // Show it and call restoreFromHiddenStorage
+      service.showContainer(t1);
+      service.restoreFromHiddenStorage(t1, terminalBody, mockTerminal as any);
+
+      // Should move the container to terminalsWrapper
+      expect(terminalsWrapper.contains(t1)).toBe(true);
+
+      // Should refresh the terminal canvas
+      expect(mockTerminal.refresh).toHaveBeenCalledWith(0, 23);
+    });
+
+    it('should handle null terminal gracefully', () => {
+      const t1 = document.createElement('div');
+      expect(() => service.restoreFromHiddenStorage(t1, terminalBody, null as any)).not.toThrow();
+    });
+  });
 });

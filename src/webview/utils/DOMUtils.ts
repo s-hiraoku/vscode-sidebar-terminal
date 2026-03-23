@@ -243,13 +243,11 @@ export namespace DOMUtils {
       xtermHelpers.style.width = '';
     }
 
-    // Reset canvas elements (not cached — NodeList changes with addons)
-    const canvasElements = screen?.querySelectorAll('canvas');
-    if (canvasElements) {
-      canvasElements.forEach((canvas) => {
-        (canvas as HTMLCanvasElement).style.width = '100%';
-      });
-    }
+    // Reset canvas wrapper elements only — DO NOT touch canvas elements directly.
+    // xterm.js requires precise pixel dimensions on its canvas layers (text, cursor,
+    // selection, link) for correct rendering and hit-testing. Setting width to 100%
+    // desynchronizes the selection overlay and causes text to become unselectable.
+    // xterm.js manages canvas sizing internally via FitAddon.fit().
 
     // Reset parent/wrapper elements (outside container — not cached in WeakMap)
     const terminalsWrapper = document.getElementById('terminals-wrapper');

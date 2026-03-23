@@ -68,6 +68,7 @@ export class WebViewPersistenceService {
   private serializeAddons = new Map<string, SerializeAddon>();
   private autoSaveTimers = new Map<string, number>();
   private serializedCache = new Map<string, SerializedTerminalData>();
+  private terminalListenerDisposables = new Map<string, { dispose(): void }[]>();
 
   private vscodeApi: {
     postMessage: (message: unknown) => void;
@@ -143,6 +144,13 @@ export class WebViewPersistenceService {
     if (timer) {
       clearTimeout(timer);
       this.autoSaveTimers.delete(terminalId);
+    }
+
+    // Dispose xterm.js event listeners to prevent accumulation
+    const disposables = this.terminalListenerDisposables.get(terminalId);
+    if (disposables) {
+      disposables.forEach((d) => d.dispose());
+      this.terminalListenerDisposables.delete(terminalId);
     }
 
     this.terminals.delete(terminalId);
@@ -434,9 +442,10 @@ export class WebViewPersistenceService {
       this.autoSaveTimers.set(terminalId, timer);
     };
 
-    // Trigger auto-save on terminal data changes
-    terminal.onData(() => scheduleAutoSave());
-    terminal.onLineFeed(() => scheduleAutoSave());
+    // Trigger auto-save on terminal data changes — store disposables for cleanup
+    const onDataDisposable = terminal.onData(() => scheduleAutoSave());
+    const onLineFeedDisposable = terminal.onLineFeed(() => scheduleAutoSave());
+    this.terminalListenerDisposables.set(terminalId, [onDataDisposable, onLineFeedDisposable]);
 
     log(
       `[WV-PERSISTENCE] Auto-save configured for ${terminalId} (${WebViewPersistenceService.AUTO_SAVE_DEBOUNCE_MS}ms debounce)`

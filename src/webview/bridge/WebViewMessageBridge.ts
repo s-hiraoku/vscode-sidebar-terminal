@@ -34,6 +34,7 @@ export class WebViewMessageBridge implements IWebViewCommunicationBridge {
   >();
   private _isReady = false;
   private _vscodeApi: VSCodeAPI;
+  private _boundMessageHandler: ((event: MessageEvent) => void) | null = null;
 
   constructor() {
     this._vscodeApi = acquireVsCodeApi();
@@ -134,6 +135,10 @@ export class WebViewMessageBridge implements IWebViewCommunicationBridge {
    * Dispose of the bridge
    */
   dispose(): void {
+    if (this._boundMessageHandler) {
+      window.removeEventListener('message', this._boundMessageHandler);
+      this._boundMessageHandler = null;
+    }
     this.handlers.clear();
     this._isReady = false;
   }
@@ -142,10 +147,11 @@ export class WebViewMessageBridge implements IWebViewCommunicationBridge {
    * Setup message listener for incoming messages
    */
   private setupMessageListener(): void {
-    window.addEventListener('message', async (event: MessageEvent) => {
+    this._boundMessageHandler = async (event: MessageEvent) => {
       const message = event.data as Message;
       await this.handleFromExtension(message);
-    });
+    };
+    window.addEventListener('message', this._boundMessageHandler);
   }
 
   /**

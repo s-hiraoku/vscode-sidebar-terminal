@@ -156,5 +156,39 @@ describe('TerminalAutoSaveService', () => {
 
       expect((TerminalAutoSaveService as any).periodicSaveTimers.has('t1')).toBe(false);
     });
+
+    it('should also remove from registeredTerminals when clearing periodic timer', () => {
+      service.setupScrollbackAutoSave(mockTerminal, 't1', mockSerializeAddon);
+
+      // Verify registered
+      expect((TerminalAutoSaveService as any).registeredTerminals.has('t1')).toBe(true);
+
+      TerminalAutoSaveService.clearPeriodicSaveTimer('t1');
+
+      // Should be removed from registeredTerminals too
+      expect((TerminalAutoSaveService as any).registeredTerminals.has('t1')).toBe(false);
+    });
+  });
+
+  describe('Bug #5: disposeAll clears all static Maps', () => {
+    it('should provide a disposeAll method that clears all static state', () => {
+      // Setup multiple terminals
+      service.setupScrollbackAutoSave(mockTerminal, 't1', mockSerializeAddon);
+      service.setupScrollbackAutoSave(mockTerminal, 't2', mockSerializeAddon);
+      TerminalAutoSaveService.markTerminalRestoring('t3');
+
+      // Verify state exists
+      expect((TerminalAutoSaveService as any).periodicSaveTimers.size).toBeGreaterThan(0);
+      expect((TerminalAutoSaveService as any).registeredTerminals.size).toBeGreaterThan(0);
+      expect((TerminalAutoSaveService as any).restoringTerminals.size).toBeGreaterThan(0);
+
+      // Call disposeAll
+      TerminalAutoSaveService.disposeAll();
+
+      // All static Maps should be cleared
+      expect((TerminalAutoSaveService as any).periodicSaveTimers.size).toBe(0);
+      expect((TerminalAutoSaveService as any).registeredTerminals.size).toBe(0);
+      expect((TerminalAutoSaveService as any).restoringTerminals.size).toBe(0);
+    });
   });
 });

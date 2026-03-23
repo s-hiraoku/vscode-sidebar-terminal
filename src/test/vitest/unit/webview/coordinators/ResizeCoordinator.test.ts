@@ -432,6 +432,19 @@ describe('ResizeCoordinator', () => {
       const resizeCalls = addEventListenerSpy.mock.calls.filter((call) => call[0] === 'resize');
       expect(resizeCalls.length).toBe(1);
     });
+
+    it('Bug #7: should remove window resize listener on dispose', () => {
+      const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
+
+      coordinator.initialize();
+      coordinator.dispose();
+
+      // Should have called removeEventListener for 'resize'
+      const resizeRemoveCalls = removeEventListenerSpy.mock.calls.filter(
+        (call) => call[0] === 'resize'
+      );
+      expect(resizeRemoveCalls.length).toBe(1);
+    });
   });
 
   describe('window resize handling', () => {

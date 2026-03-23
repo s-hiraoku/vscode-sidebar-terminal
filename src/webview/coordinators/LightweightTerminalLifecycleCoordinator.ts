@@ -53,6 +53,10 @@ interface ICliAgentStateManager {
   removeTerminalState(terminalId: string): void;
 }
 
+interface IPerformanceManager {
+  removeTerminal(terminal: Terminal): void;
+}
+
 export interface IDependencies {
   terminalOperations: ITerminalOperations;
   terminalLifecycleManager: ITerminalLifecycleManager;
@@ -62,6 +66,7 @@ export interface IDependencies {
   displayModeManager?: IDisplayModeManager;
   uiManager?: IUIManager;
   cliAgentStateManager: ICliAgentStateManager;
+  performanceManager?: IPerformanceManager;
   getTerminalInstance(terminalId: string): { terminal?: Terminal } | undefined;
   getActiveTerminalId(): string | null;
   setActiveTerminalId(terminalId: string | null): void;
@@ -150,6 +155,11 @@ export class LightweightTerminalLifecycleCoordinator {
 
   public async removeTerminal(terminalId: string): Promise<boolean> {
     log(`🗑️ [REMOVAL] Starting removal for terminal: ${terminalId}`);
+
+    const terminalInstance = this.dependencies.getTerminalInstance(terminalId);
+    if (terminalInstance?.terminal) {
+      this.dependencies.performanceManager?.removeTerminal(terminalInstance.terminal);
+    }
 
     this.dependencies.cliAgentStateManager.removeTerminalState(terminalId);
 

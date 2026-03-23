@@ -238,6 +238,30 @@ describe('RenderingOptimizer', () => {
 
       noWebGLOptimizer.dispose();
     });
+
+    it('should clear selection and refresh after DOM renderer fallback', () => {
+      vi.useFakeTimers();
+      mockTerminal.clearSelection = vi.fn();
+
+      // Simulate webglAddon
+      const mockAddon = { dispose: vi.fn(), onContextLoss: vi.fn() };
+      (optimizer as any).webglAddon = mockAddon;
+
+      // Call fallbackToDOMRenderer
+      (optimizer as any).fallbackToDOMRenderer(mockTerminal, 'test-terminal');
+
+      // Addon should be disposed
+      expect(mockAddon.dispose).toHaveBeenCalled();
+
+      // clearSelection should be called synchronously
+      expect(mockTerminal.clearSelection).toHaveBeenCalled();
+
+      // refresh should be called after the setTimeout
+      vi.advanceTimersByTime(50);
+      expect(mockTerminal.refresh).toHaveBeenCalledWith(0, mockTerminal.rows - 1);
+
+      vi.useRealTimers();
+    });
   });
 
   describe('Dispose', () => {

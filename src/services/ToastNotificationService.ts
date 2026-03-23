@@ -70,10 +70,7 @@ export class ToastNotificationService implements vscode.Disposable {
     vscode.window.showInformationMessage(message);
   }
 
-  public showCompletedNotification(
-    terminalId: string,
-    agentType?: AgentType | null
-  ): void {
+  public showCompletedNotification(terminalId: string, agentType?: AgentType | null): void {
     if (this.isDisposed) {
       return;
     }
@@ -83,8 +80,7 @@ export class ToastNotificationService implements vscode.Disposable {
       return;
     }
 
-    const agentName =
-      agentType ? (AGENT_DISPLAY_NAMES[agentType] ?? 'CLI Agent') : 'CLI Agent';
+    const agentName = agentType ? (AGENT_DISPLAY_NAMES[agentType] ?? 'CLI Agent') : 'CLI Agent';
     const message = `${agentName} has completed (${terminalId})`;
 
     log('[TOAST]', message);
