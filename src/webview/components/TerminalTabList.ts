@@ -860,7 +860,7 @@ export class TerminalTabList {
     // This mirrors the pattern used in HeaderFactory.setupHeaderEditor.
     setTimeout(() => {
       if (finished) return;
-      if (document.activeElement !== input) {
+      if (typeof document !== 'undefined' && document.activeElement !== input) {
         input.focus();
       }
     }, 30);
