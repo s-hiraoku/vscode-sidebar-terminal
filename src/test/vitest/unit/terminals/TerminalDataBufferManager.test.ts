@@ -90,9 +90,7 @@ describe('TerminalDataBufferManager', () => {
 
     const emitter = new vscode.EventEmitter<TerminalEvent>();
     const cliAgentService = {
-      detectFromOutput: vi.fn(),
-      detectTermination: vi.fn(),
-      getAgentState: vi.fn().mockReturnValue({ status: 'connected', agentType: 'claude' }),
+      handleOutputChunk: vi.fn(),
     } as any;
 
     const bufferManager = new TerminalDataBufferManager(terminals, emitter, cliAgentService);
@@ -100,11 +98,7 @@ describe('TerminalDataBufferManager', () => {
     bufferManager.bufferData('terminal-1', 'user@host:~$ ');
     bufferManager.flushBuffer('terminal-1');
 
-    expect(cliAgentService.detectFromOutput).toHaveBeenCalledWith('terminal-1', 'user@host:~$ ');
-    expect(cliAgentService.detectTermination).toHaveBeenCalledWith(
-      'terminal-1',
-      'user@host:~$ '
-    );
+    expect(cliAgentService.handleOutputChunk).toHaveBeenCalledWith('terminal-1', 'user@host:~$ ');
 
     bufferManager.dispose();
   });
@@ -115,9 +109,7 @@ describe('TerminalDataBufferManager', () => {
 
     const emitter = new vscode.EventEmitter<TerminalEvent>();
     const cliAgentService = {
-      detectFromOutput: vi.fn(),
-      detectTermination: vi.fn(),
-      getAgentState: vi.fn().mockReturnValue({ status: 'none', agentType: null }),
+      handleOutputChunk: vi.fn(),
     } as any;
 
     const bufferManager = new TerminalDataBufferManager(terminals, emitter, cliAgentService);
@@ -125,8 +117,10 @@ describe('TerminalDataBufferManager', () => {
     bufferManager.bufferData('terminal-1', 'plain shell output');
     bufferManager.flushBuffer('terminal-1');
 
-    expect(cliAgentService.detectFromOutput).toHaveBeenCalledWith('terminal-1', 'plain shell output');
-    expect(cliAgentService.detectTermination).not.toHaveBeenCalled();
+    expect(cliAgentService.handleOutputChunk).toHaveBeenCalledWith(
+      'terminal-1',
+      'plain shell output'
+    );
 
     bufferManager.dispose();
   });
@@ -138,11 +132,11 @@ describe('TerminalDataBufferManager', () => {
     const emitter = new vscode.EventEmitter<TerminalEvent>();
 
     class BoundCliService {
-      public readonly detectFromOutput = vi.fn();
-      public readonly detectTermination = vi.fn();
+      public readonly handleOutputChunk = vi.fn((id: string, data: string) => {
+        return { id, data };
+      });
 
-      getAgentState(id: string): { status: 'connected' | 'none'; agentType: string | null } {
-        this.detectFromOutput(id, 'state-check');
+      getAgentState(): { status: 'connected' | 'none'; agentType: string | null } {
         return { status: 'connected', agentType: 'claude' };
       }
     }
@@ -153,9 +147,32 @@ describe('TerminalDataBufferManager', () => {
     bufferManager.bufferData('terminal-1', 'user@host:~$ ');
     bufferManager.flushBuffer('terminal-1');
 
-    expect(cliAgentService.detectTermination).toHaveBeenCalledWith(
+    expect(cliAgentService.handleOutputChunk).toHaveBeenCalledWith(
       'terminal-1',
       'user@host:~$ '
+    );
+
+    bufferManager.dispose();
+  });
+
+  it('delegates each flush to a single handleOutputChunk call', () => {
+    const terminals = new Map<string, TerminalInstance>();
+    terminals.set('terminal-1', { id: 'terminal-1', name: 'Terminal 1' } as TerminalInstance);
+
+    const emitter = new vscode.EventEmitter<TerminalEvent>();
+    const cliAgentService = {
+      handleOutputChunk: vi.fn(),
+    } as any;
+
+    const bufferManager = new TerminalDataBufferManager(terminals, emitter, cliAgentService);
+
+    bufferManager.bufferData('terminal-1', 'Gemini CLI v0.1.0\r\ngemini > ');
+    bufferManager.flushBuffer('terminal-1');
+
+    expect(cliAgentService.handleOutputChunk).toHaveBeenCalledTimes(1);
+    expect(cliAgentService.handleOutputChunk).toHaveBeenCalledWith(
+      'terminal-1',
+      'Gemini CLI v0.1.0\r\ngemini > '
     );
 
     bufferManager.dispose();

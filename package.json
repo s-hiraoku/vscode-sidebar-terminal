@@ -498,6 +498,25 @@
           "maximum": 60000,
           "description": "Minimum interval between notifications per terminal (ms)"
         },
+        "secondaryTerminal.agentToastNotification.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show toast notifications when a CLI agent is waiting for input or completes processing"
+        },
+        "secondaryTerminal.agentToastNotification.cooldownMs": {
+          "type": "number",
+          "default": 10000,
+          "minimum": 1000,
+          "maximum": 60000,
+          "description": "Minimum interval between toast notifications per terminal (ms)"
+        },
+        "secondaryTerminal.agentIdleDetection.timeoutMs": {
+          "type": "number",
+          "default": 3000,
+          "minimum": 1000,
+          "maximum": 30000,
+          "description": "Time in ms without output to consider agent idle/waiting"
+        },
         "secondaryTerminal.enableTerminalHeaderEnhancements": {
           "type": "boolean",
           "default": true,
@@ -1160,6 +1179,7 @@
     "lint": "eslint src --ext ts",
     "lint:memory-leaks": "eslint src --ext ts --config .eslintrc.memory-leaks.json",
     "test": "vitest run",
+    "test:unit": "vitest run src/test/vitest/unit",
     "test:watch": "vitest watch",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
@@ -1253,7 +1273,7 @@
     "happy-dom": "^20.6.2",
     "http-server": "^14.1.1",
     "husky": "^9.1.7",
-    "jsdom": "^28.1.0",
+    "jsdom": "^29.0.0",
     "lint-staged": "^16.3.1",
     "mocha": "^11.7.5",
     "nyc": "^18.0.0",

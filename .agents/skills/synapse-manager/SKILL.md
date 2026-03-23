@@ -12,6 +12,18 @@ description: >-
 
 Orchestrate multi-agent work with structured delegation, monitoring, and quality gates.
 
+## Task Board Rule
+
+**Every delegation MUST have a matching task board entry.**
+
+Before sending work to any agent via `synapse send`, you must:
+1. `synapse tasks create "<task>" -d "<description>"` — register the work unit
+2. `synapse tasks assign <id> <agent>` — record ownership
+3. Only then `synapse send <agent> "..." --force`
+
+Task board is the **team contract** — it makes ownership, blocking, and completion
+state visible to every agent. TodoList is for your personal micro-step tracking only.
+
 ## When to Use
 
 - Coordinating 2+ agents on related subtasks
@@ -29,6 +41,10 @@ Orchestrate multi-agent work with structured delegation, monitoring, and quality
 New tests first. Follow this order for every implementation task: create tests -> present/confirm spec -> then implement.
 
 Edit `plugins/synapse-a2a/skills/` first, then sync generated copies with `sync-plugin-skills`.
+
+Task board is the default coordination surface for manager-led work.
+Create or refresh task board entries before delegation starts so ownership,
+blocking, and completion state are visible to the whole team.
 
 **Check existing agents before spawning** — reuse is faster (avoids startup overhead,
 instruction injection, and readiness wait):
@@ -70,17 +86,30 @@ implementation is blocked on confirmed tests/spec:
 synapse tasks create "Write auth tests" \
   -d "Create tests/spec for valid login, invalid credentials, token expiry, refresh flow" \
   --priority 5
+# Returns: 3f2a1b4c (displayed prefix of a UUID such as 3f2a1b4c-1111-2222-3333-444444444444)
 
 synapse tasks create "Implement auth module" \
   -d "Add OAuth2 with JWT in synapse/auth.py after tests/spec are confirmed. Follow patterns in synapse/server.py." \
   --priority 4 \
-  --blocked-by 1
+  --blocked-by 3f2a1b4c
+# Returns: 7a9d2e10 (displayed prefix of a UUID such as 7a9d2e10-5555-6666-7777-888888888888)
 ```
+
+`synapse tasks create` stores a full UUID and prints its first 8 characters.
+Use that prefix (or the full UUID) for `--blocked-by`, `synapse tasks assign`,
+and `synapse tasks complete`.
+In practice that means the implementation task should use a dependency like
+`--blocked-by 3f2a1b4c`, where `3f2a1b4c` is the created test task's UUID prefix.
+Conceptually this is still "implementation --blocked-by tests"; the concrete
+value just needs to be the created test task's UUID prefix.
 
 **Assign the test/spec task and confirm scope before implementation starts:**
 ```bash
-synapse tasks assign 1 Tester
-synapse send Tester "Write the tests first and confirm the spec for task #1.
+TESTS_ID=3f2a1b4c
+IMPL_ID=7a9d2e10
+
+synapse tasks assign "$TESTS_ID" Tester
+synapse send Tester "Write the tests first and confirm the spec for task $TESTS_ID (Write auth tests).
 - Cover valid login, invalid credentials, token expiry, refresh flow
 - Report any scope gaps before implementation starts" --attach synapse/server.py --force --wait
 ```
@@ -88,14 +117,26 @@ synapse send Tester "Write the tests first and confirm the spec for task #1.
 Use `--attach` to send reference files the agent should study.
 Use `--wait` while confirming tests/spec, then `--silent` or `--notify` once execution is unblocked.
 
+Default expectation:
+- `synapse tasks create` for each meaningful work unit
+- `synapse tasks assign` when ownership changes
+- `synapse tasks complete` when verification passes
+- `synapse tasks fail` when blocked or broken, with a reason the next agent can act on
+
 ### Step 3: Delegate Implementation and Monitor
 
 After tests/spec are confirmed, assign the implementation task:
 ```bash
-synapse tasks assign 2 Impl
-synapse send Impl "Implement auth module — tests/spec are confirmed in task #1.
+synapse tasks assign "$IMPL_ID" Impl
+synapse send Impl "Implement auth module — tests/spec are confirmed in task $TESTS_ID (Write auth tests).
 - Add OAuth2 flow in synapse/auth.py
 - Follow existing patterns" --attach synapse/server.py --force --silent
+```
+
+**Shortcut — task-linked send:** For simple delegations, use `--task` / `-T` to create,
+assign, and send in one step (auto-claim on receive, auto-complete on finalize):
+```bash
+synapse send Impl "Implement auth module" --task --attach synapse/server.py --force --silent
 ```
 
 ```bash
@@ -119,6 +160,24 @@ synapse interrupt Impl "Status update — what is your current progress?" --forc
 ```bash
 synapse approve <task_id>
 synapse reject <task_id> --reason "Use refresh tokens instead of long-lived JWTs."
+```
+
+**Plan Card workflow** — for structured plans posted to Canvas:
+```bash
+# Accept a plan card and register its steps as task board tasks
+synapse tasks accept-plan <plan_id>
+
+# Sync task board progress back to the plan card
+synapse tasks sync-plan <plan_id>
+```
+
+**Update task board after decision:**
+```bash
+# After approve — keep the approved plan moving via assignment/delegation.
+# The task board changes at lifecycle checkpoints (assign, complete, fail, reopen).
+
+# After reject — mark for rework
+synapse tasks reopen <task_id>
 ```
 
 ### Step 5: Verify
@@ -171,7 +230,10 @@ synapse memory save auth-middleware-pattern \
   --tags auth,middleware --notify
 ```
 
-After sending feedback, return to Step 3 (Monitor).
+After sending feedback, reopen the task and return to Step 3 (Monitor):
+```bash
+synapse tasks reopen <task_id>
+```
 
 ### Step 7: Review & Wrap-up
 
@@ -186,9 +248,14 @@ synapse send Impl "Review test coverage. Focus on: missing cases, assertion qual
 **Final verification and cleanup:**
 ```bash
 pytest --tb=short -q                      # All tests pass
-synapse tasks complete 1 && synapse tasks complete 2
+synapse tasks list                        # Confirm the UUID prefixes before completion
+synapse tasks complete "$TESTS_ID"
+synapse tasks complete "$IMPL_ID"
 synapse kill Impl -f && synapse kill Tester -f
 synapse list                              # Verify cleanup
+synapse tasks purge --status completed    # Clean up finished tasks
+synapse tasks purge --older-than 7d      # Clean up old tasks
+synapse tasks purge --dry-run            # Preview what would be deleted
 ```
 
 Killing spawned agents frees ports, memory, and PTY sessions. Orphaned agents
@@ -204,8 +271,10 @@ may accidentally accept future tasks intended for other agents.
 | Regression test fails | `scripts/regression_triage.sh` to classify |
 | Agent READY but no output | Check `git diff`, re-send if needed |
 | Agent submits a plan | `synapse approve` or `synapse reject --reason "..."` |
+| Agent posts a plan card | `synapse tasks accept-plan <plan_id>` to register steps, `synapse tasks sync-plan <plan_id>` to update |
 | Discovered a reusable pattern | `synapse memory save <key> "<pattern>" --notify` |
 | Cross-review finds issue | Send fix request with `--attach`, re-verify |
+| Delegating work to an agent | `synapse tasks create` + `synapse tasks assign` before `synapse send` |
 | All tests pass, reviews clean | Complete tasks, kill agents, report done |
 
 ## References
