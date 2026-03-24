@@ -414,4 +414,59 @@ describe('LifecycleController', () => {
       expect(lifecycleController.getAddon('test-1', 'MockAddon')).toBeNull();
     });
   });
+
+  describe('Bug #4: Addon cache serves disposed addons', () => {
+    it('should not serve cached addon from a disposed terminal to a new terminal', () => {
+      class MockAddon {
+        public activate() {}
+        public dispose = vi.fn();
+      }
+
+      // Load addon for terminal-1 with caching enabled
+      lifecycleController.attachTerminal('test-1', mockTerminal);
+      const addon1 = lifecycleController.loadAddonLazy('test-1', 'MockAddon', MockAddon, {
+        cache: true,
+      });
+
+      // Dispose terminal-1 (addon gets disposed)
+      lifecycleController.disposeTerminal('test-1');
+
+      // The addon's dispose should have been called
+      expect(addon1!.dispose).toHaveBeenCalled();
+
+      // Attach a new terminal
+      const mockTerminal2 = { loadAddon: vi.fn(), dispose: vi.fn() };
+      lifecycleController.attachTerminal('test-2', mockTerminal2);
+
+      // Load same addon for terminal-2 — should NOT get the disposed cached addon
+      const addon2 = lifecycleController.loadAddonLazy('test-2', 'MockAddon', MockAddon, {
+        cache: true,
+      });
+
+      // addon2 should be a fresh instance, not the disposed one
+      expect(addon2).not.toBe(addon1);
+      expect(mockTerminal2.loadAddon).toHaveBeenCalled();
+    });
+
+    it('should clear cache entries belonging to disposed terminal on disposeTerminal', () => {
+      class MockAddon {
+        public activate() {}
+        public dispose = vi.fn();
+      }
+
+      lifecycleController.attachTerminal('test-1', mockTerminal);
+      lifecycleController.loadAddonLazy('test-1', 'MockAddon', MockAddon, {
+        cache: true,
+      });
+
+      // Before dispose, cache should have the addon
+      expect(lifecycleController.getStats().cachedAddons).toBeGreaterThan(0);
+
+      // Dispose terminal
+      lifecycleController.disposeTerminal('test-1');
+
+      // After dispose, cache entries for that terminal's addons should be cleared
+      expect(lifecycleController.getStats().cachedAddons).toBe(0);
+    });
+  });
 });

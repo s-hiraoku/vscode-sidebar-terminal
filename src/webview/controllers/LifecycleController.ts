@@ -226,6 +226,14 @@ export class LifecycleController implements ILifecycleController, Disposable {
     const startTime = performance.now();
 
     try {
+      // Clear cached addons that belong to this terminal to prevent serving disposed addons
+      for (const [addonName, addonInstance] of resources.addons) {
+        const cacheKey = `${addonName}`;
+        if (this.addonCache.get(cacheKey) === addonInstance) {
+          this.addonCache.delete(cacheKey);
+        }
+      }
+
       resources.disposables.dispose();
       resources.addons.clear();
       resources.eventListeners.clear();

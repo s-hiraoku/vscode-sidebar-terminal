@@ -2,7 +2,7 @@
  * TerminalAutoSaveService Unit Tests
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { TerminalAutoSaveService } from '../../../../../../webview/services/terminal/TerminalAutoSaveService';
 
 // Mock dependencies
@@ -37,7 +37,12 @@ describe('TerminalAutoSaveService', () => {
 
     service = new TerminalAutoSaveService(mockCoordinator);
 
-    TerminalAutoSaveService.disposeAll();
+    // Reset static state
+    (TerminalAutoSaveService as any).restoringTerminals.clear();
+    (TerminalAutoSaveService as any).periodicSaveTimers.forEach((t: any) => clearInterval(t));
+    (TerminalAutoSaveService as any).periodicSaveTimers.clear();
+    (TerminalAutoSaveService as any).registeredTerminals.clear();
+    (TerminalAutoSaveService as any).visibilityHandlerSetup = false;
 
     // Mock vscodeApi
     (window as any).vscodeApi = {
@@ -46,7 +51,6 @@ describe('TerminalAutoSaveService', () => {
   });
 
   afterEach(() => {
-    TerminalAutoSaveService.disposeAll();
     vi.useRealTimers();
     vi.clearAllMocks();
   });
@@ -146,22 +150,45 @@ describe('TerminalAutoSaveService', () => {
   describe('Cleanup', () => {
     it('should clear periodic timer on terminal removal', () => {
       service.setupScrollbackAutoSave(mockTerminal, 't1', mockSerializeAddon);
+      const _timer = (TerminalAutoSaveService as any).periodicSaveTimers.get('t1');
 
       TerminalAutoSaveService.clearPeriodicSaveTimer('t1');
 
       expect((TerminalAutoSaveService as any).periodicSaveTimers.has('t1')).toBe(false);
     });
 
-    it('should clear all static auto-save state on disposeAll', () => {
+    it('should also remove from registeredTerminals when clearing periodic timer', () => {
       service.setupScrollbackAutoSave(mockTerminal, 't1', mockSerializeAddon);
-      TerminalAutoSaveService.markTerminalRestoring('t1');
 
+      // Verify registered
+      expect((TerminalAutoSaveService as any).registeredTerminals.has('t1')).toBe(true);
+
+      TerminalAutoSaveService.clearPeriodicSaveTimer('t1');
+
+      // Should be removed from registeredTerminals too
+      expect((TerminalAutoSaveService as any).registeredTerminals.has('t1')).toBe(false);
+    });
+  });
+
+  describe('Bug #5: disposeAll clears all static Maps', () => {
+    it('should provide a disposeAll method that clears all static state', () => {
+      // Setup multiple terminals
+      service.setupScrollbackAutoSave(mockTerminal, 't1', mockSerializeAddon);
+      service.setupScrollbackAutoSave(mockTerminal, 't2', mockSerializeAddon);
+      TerminalAutoSaveService.markTerminalRestoring('t3');
+
+      // Verify state exists
+      expect((TerminalAutoSaveService as any).periodicSaveTimers.size).toBeGreaterThan(0);
+      expect((TerminalAutoSaveService as any).registeredTerminals.size).toBeGreaterThan(0);
+      expect((TerminalAutoSaveService as any).restoringTerminals.size).toBeGreaterThan(0);
+
+      // Call disposeAll
       TerminalAutoSaveService.disposeAll();
 
+      // All static Maps should be cleared
       expect((TerminalAutoSaveService as any).periodicSaveTimers.size).toBe(0);
-      expect((TerminalAutoSaveService as any).pendingSaveTimers.size).toBe(0);
       expect((TerminalAutoSaveService as any).registeredTerminals.size).toBe(0);
-      expect(TerminalAutoSaveService.isTerminalRestoring('t1')).toBe(false);
+      expect((TerminalAutoSaveService as any).restoringTerminals.size).toBe(0);
     });
   });
 });

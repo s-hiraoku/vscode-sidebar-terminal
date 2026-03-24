@@ -522,6 +522,46 @@ describe('SessionRestoreManager', () => {
     it('should handle clearing non-existent terminal state', () => {
       expect(() => manager.clearRestorationState('non-existent')).not.toThrow();
     });
+
+    it('should allow re-restoration after clearRestorationState with recycled ID', async () => {
+      const mockTerminal = createMockTerminal();
+      const mockInstance = createMockTerminalInstance(mockTerminal);
+      mockCallbacks = createMockCallbacks({
+        getTerminalInstance: vi.fn().mockReturnValue(mockInstance),
+      });
+      manager = new SessionRestoreManager(mockCallbacks);
+
+      // First terminal with ID "1" is restored
+      const sessionData: SessionData = {
+        terminalId: '1',
+        terminalName: 'Terminal 1',
+        scrollbackData: ['old-line'],
+      };
+      const firstRestore = manager.restoreSession(sessionData);
+      await vi.advanceTimersByTimeAsync(200);
+      await firstRestore;
+
+      expect(manager.isTerminalRestored('1')).toBe(true);
+
+      // Terminal is deleted, state cleared
+      manager.clearRestorationState('1');
+      vi.mocked(TerminalCreationService.isTerminalRestoring).mockReturnValue(false);
+      expect(manager.isTerminalRestored('1')).toBe(false);
+
+      // New terminal with recycled ID "1" should be restorable
+      const newSessionData: SessionData = {
+        terminalId: '1',
+        terminalName: 'New Terminal 1',
+        scrollbackData: ['new-line'],
+      };
+      const secondRestore = manager.restoreSession(newSessionData);
+      await vi.advanceTimersByTimeAsync(200);
+      const result = await secondRestore;
+
+      expect(result.success).toBe(true);
+      expect(result.linesRestored).toBe(1);
+      expect(result.reason).toBeUndefined(); // Not 'already_restored'
+    });
   });
 
   describe('dispose', () => {

@@ -126,7 +126,9 @@ describe('DOMUtils', () => {
 
       expect(container.style.width).toBe('');
       expect(xterm.style.height).toBe('');
-      expect(canvas.style.width).toBe('100%');
+      // Canvas elements should NOT be reset — xterm.js requires precise pixel dimensions
+      // for its canvas layers (text, cursor, selection). See DOMUtils.resetXtermInlineStyles.
+      expect(canvas.style.width).toBe('');
     });
 
     it('should return false for null container', () => {

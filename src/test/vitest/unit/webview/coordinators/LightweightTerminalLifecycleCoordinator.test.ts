@@ -49,6 +49,9 @@ describe('LightweightTerminalLifecycleCoordinator', () => {
       cliAgentStateManager: {
         removeTerminalState: vi.fn(),
       },
+      performanceManager: {
+        removeTerminal: vi.fn(),
+      },
       getTerminalInstance: vi.fn().mockReturnValue(undefined),
       getActiveTerminalId: vi.fn().mockReturnValue('active-1'),
       setActiveTerminalId: vi.fn(),
@@ -143,6 +146,17 @@ describe('LightweightTerminalLifecycleCoordinator', () => {
 
     await vi.advanceTimersByTimeAsync(100);
     expect(dependencies.webViewPersistenceService.saveSession).toHaveBeenCalled();
+  });
+
+  it('removes terminal performance buffers before lifecycle removal when an instance exists', async () => {
+    const terminal = { write: vi.fn() } as any;
+    dependencies.getTerminalInstance.mockReturnValue({ terminal });
+
+    const result = await coordinator.removeTerminal('terminal-3');
+
+    expect(result).toBe(true);
+    expect(dependencies.performanceManager.removeTerminal).toHaveBeenCalledWith(terminal);
+    expect(dependencies.terminalLifecycleManager.removeTerminal).toHaveBeenCalledWith('terminal-3');
   });
 
   it('updates borders after a successful terminal switch', async () => {

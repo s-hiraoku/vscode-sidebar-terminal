@@ -5,8 +5,8 @@
  * Handles container visibility control and display state enforcement.
  */
 
-import { containerLogger } from '../../utils/ManagerLogger';
 import { Terminal } from '@xterm/xterm';
+import { containerLogger } from '../../utils/ManagerLogger';
 
 /**
  * Service for managing terminal container visibility
@@ -161,7 +161,8 @@ export class ContainerVisibilityService {
   }
 
   /**
-   * Restore a container from hidden storage and refresh the terminal canvas
+   * Restore a container from hidden storage back to visible DOM.
+   * After moving, refreshes the xterm.js canvas layers so they render correctly.
    */
   public restoreFromHiddenStorage(
     container: HTMLElement,
@@ -173,18 +174,19 @@ export class ContainerVisibilityService {
       terminalsWrapper.appendChild(container);
     }
 
-    if (!terminal) {
-      return;
-    }
-
-    try {
-      terminal.refresh(0, terminal.rows - 1);
-      containerLogger.debug(`Terminal canvas refreshed after restore: ${container.dataset.terminalId}`);
-    } catch (error) {
-      containerLogger.warn(
-        `Failed to refresh terminal after restore: ${container.dataset.terminalId}`,
-        error
-      );
+    // After restoring from hidden storage, xterm.js canvas layers need a refresh
+    if (terminal) {
+      try {
+        terminal.refresh(0, terminal.rows - 1);
+        containerLogger.debug(
+          `Terminal canvas refreshed after restore: ${container.dataset.terminalId}`
+        );
+      } catch (error) {
+        containerLogger.warn(
+          `Failed to refresh terminal after restore: ${container.dataset.terminalId}`,
+          error
+        );
+      }
     }
   }
 

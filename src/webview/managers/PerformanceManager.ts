@@ -374,6 +374,24 @@ export class PerformanceManager extends BaseManager {
     };
   }
 
+  /**
+   * Remove a terminal from the buffer entries map to allow GC.
+   * Flushes any pending data before removal.
+   * Should be called when a terminal is destroyed.
+   */
+  public removeTerminal(terminal: Terminal): void {
+    const entry = this.bufferEntries.get(terminal);
+    if (entry) {
+      this.flushEntry(terminal, entry);
+      this.clearEntryTimer(entry);
+      this.bufferEntries.delete(terminal);
+
+      if (this.debugLoggingEnabled) {
+        this.logger('Removed terminal from buffer entries');
+      }
+    }
+  }
+
   public forceFlush(): void {
     if (this.debugLoggingEnabled) {
       this.logger('Force flushing all buffers');

@@ -302,6 +302,13 @@ export class RenderingOptimizer implements Disposable {
       }
       terminalLogger.info(`✅ Terminal ${terminalId} using DOM renderer`);
 
+      // Clear selection state immediately to prevent stale selection layer
+      try {
+        terminal.clearSelection();
+      } catch {
+        // clearSelection may not be available in all terminal states
+      }
+
       // Force terminal refresh to ensure DOM renderer redraws text properly
       // This is critical when switching from failed WebGL to DOM renderer
       setTimeout(() => {

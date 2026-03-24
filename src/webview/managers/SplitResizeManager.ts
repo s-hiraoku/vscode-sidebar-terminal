@@ -272,11 +272,19 @@ export class SplitResizeManager {
       this.handlePointerUp(e as PointerEvent)
     );
 
-    // Handle pointer leaving window
+    // Handle pointer cancel (e.g., focus loss during drag)
     this.eventRegistry.register(
       'split-resize:document-pointercancel',
       document,
       'pointercancel',
+      () => this.endDrag(false)
+    );
+
+    // Safety net: handle pointer leaving the document entirely
+    this.eventRegistry.register(
+      'split-resize:document-pointerleave',
+      document,
+      'pointerleave',
       () => this.endDrag(false)
     );
   }
@@ -400,6 +408,7 @@ export class SplitResizeManager {
     this.eventRegistry.unregister('split-resize:document-pointermove');
     this.eventRegistry.unregister('split-resize:document-pointerup');
     this.eventRegistry.unregister('split-resize:document-pointercancel');
+    this.eventRegistry.unregister('split-resize:document-pointerleave');
 
     if (this.moveThrottler) {
       this.moveThrottler.dispose();
@@ -487,6 +496,11 @@ export class SplitResizeManager {
     log('📐 [SPLIT-RESIZE] Disposing SplitResizeManager');
 
     this.cancelDrag();
+
+    // Safety net: always remove resizing CSS classes to prevent stuck user-select: none
+    if (typeof document !== 'undefined') {
+      document.body.classList.remove('resizing-split', 'resizing-horizontal', 'resizing-vertical');
+    }
 
     if (this.ptyNotifyTimer !== null) {
       clearTimeout(this.ptyNotifyTimer);

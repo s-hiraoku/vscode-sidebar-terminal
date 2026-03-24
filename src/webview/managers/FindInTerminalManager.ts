@@ -61,7 +61,10 @@ export class FindInTerminalManager implements IFindInTerminalManager {
   private currentMatchIndex = 0;
   private totalMatches = 0;
 
+  private readonly boundKeydownHandler: (event: KeyboardEvent) => void;
+
   constructor() {
+    this.boundKeydownHandler = this.handleKeydown.bind(this);
     this.setupStyles();
     this.setupKeyboardShortcuts();
   }
@@ -232,43 +235,48 @@ export class FindInTerminalManager implements IFindInTerminalManager {
    * Setup keyboard shortcuts for search functionality
    */
   private setupKeyboardShortcuts(): void {
-    document.addEventListener('keydown', (event) => {
-      // Ctrl+F / Cmd+F - Open search
-      if ((event.ctrlKey || event.metaKey) && event.key === 'f') {
-        event.preventDefault();
-        this.showSearch();
-        return;
-      }
+    document.addEventListener('keydown', this.boundKeydownHandler);
+  }
 
-      // Escape - Close search
-      if (event.key === 'Escape' && this.isSearchVisible) {
-        event.preventDefault();
-        this.hideSearch();
-        return;
-      }
+  /**
+   * Keyboard event handler for search shortcuts
+   */
+  private handleKeydown(event: KeyboardEvent): void {
+    // Ctrl+F / Cmd+F - Open search
+    if ((event.ctrlKey || event.metaKey) && event.key === 'f') {
+      event.preventDefault();
+      this.showSearch();
+      return;
+    }
 
-      // F3 - Find next
-      if (event.key === 'F3' && this.isSearchVisible) {
-        event.preventDefault();
-        if (event.shiftKey) {
-          this.findPrevious();
-        } else {
-          this.findNext();
-        }
-        return;
-      }
+    // Escape - Close search
+    if (event.key === 'Escape' && this.isSearchVisible) {
+      event.preventDefault();
+      this.hideSearch();
+      return;
+    }
 
-      // Enter in search input - Find next
-      if (event.key === 'Enter' && this.isSearchVisible && event.target === this.searchInput) {
-        event.preventDefault();
-        if (event.shiftKey) {
-          this.findPrevious();
-        } else {
-          this.findNext();
-        }
-        return;
+    // F3 - Find next
+    if (event.key === 'F3' && this.isSearchVisible) {
+      event.preventDefault();
+      if (event.shiftKey) {
+        this.findPrevious();
+      } else {
+        this.findNext();
       }
-    });
+      return;
+    }
+
+    // Enter in search input - Find next
+    if (event.key === 'Enter' && this.isSearchVisible && event.target === this.searchInput) {
+      event.preventDefault();
+      if (event.shiftKey) {
+        this.findPrevious();
+      } else {
+        this.findNext();
+      }
+      return;
+    }
   }
 
   /**
@@ -606,6 +614,9 @@ export class FindInTerminalManager implements IFindInTerminalManager {
    */
   public dispose(): void {
     this.hideSearch();
+
+    // Remove keyboard shortcut listener
+    document.removeEventListener('keydown', this.boundKeydownHandler);
 
     if (this.searchPanel) {
       this.searchPanel.remove();

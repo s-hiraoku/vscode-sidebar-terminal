@@ -21,10 +21,7 @@ export class TerminalAutoSaveService {
   private static readonly PERIODIC_SAVE_INTERVAL = 30000;
 
   // Track periodic save timers for cleanup
-  private static periodicSaveTimers = new Map<string, ReturnType<typeof globalThis.setInterval>>();
-
-  // Track pending delayed save timers for cleanup
-  private static pendingSaveTimers = new Map<string, ReturnType<typeof globalThis.setTimeout>>();
+  private static periodicSaveTimers = new Map<string, number>();
 
   // Track registered terminals for visibility change recovery
   private static registeredTerminals = new Map<
@@ -32,11 +29,11 @@ export class TerminalAutoSaveService {
     { terminal: Terminal; serializeAddon: SerializeAddon }
   >();
 
+  // Track xterm.js event listener disposables per terminal for proper cleanup
+  private static terminalListenerDisposables = new Map<string, { dispose(): void }[]>();
+
   // Track if visibility change handler is set up
   private static visibilityHandlerSetup = false;
-
-  private static visibilityChangeHandler: (() => void) | null = null;
-  private static pageHideHandler: (() => void) | null = null;
 
   // Track last hidden timestamp to detect sleep/wake
   private static lastHiddenAt = 0;
@@ -52,59 +49,20 @@ export class TerminalAutoSaveService {
    */
   public static clearPeriodicSaveTimer(terminalId: string): void {
     const timer = TerminalAutoSaveService.periodicSaveTimers.get(terminalId);
-    if (timer !== undefined) {
-      globalThis.clearInterval(timer);
+    if (timer) {
+      window.clearInterval(timer);
       TerminalAutoSaveService.periodicSaveTimers.delete(terminalId);
       // eslint-disable-next-line no-console
       console.log(`[AUTO-SAVE] Cleared periodic save timer for: ${terminalId}`);
     }
+    // Dispose xterm.js event listeners to prevent accumulation
+    const disposables = TerminalAutoSaveService.terminalListenerDisposables.get(terminalId);
+    if (disposables) {
+      disposables.forEach((d) => d.dispose());
+      TerminalAutoSaveService.terminalListenerDisposables.delete(terminalId);
+    }
     // Also remove from registered terminals
     TerminalAutoSaveService.registeredTerminals.delete(terminalId);
-  }
-
-  public static clearPendingSaveTimer(terminalId: string): void {
-    const timer = TerminalAutoSaveService.pendingSaveTimers.get(terminalId);
-    if (timer !== undefined) {
-      globalThis.clearTimeout(timer);
-      TerminalAutoSaveService.pendingSaveTimers.delete(terminalId);
-    }
-  }
-
-  public static clearTerminalRestorationState(terminalId: string): void {
-    TerminalAutoSaveService.restoringTerminals.delete(terminalId);
-    TerminalAutoSaveService.clearPendingSaveTimer(terminalId);
-    TerminalAutoSaveService.clearPeriodicSaveTimer(terminalId);
-  }
-
-  public static clearAllRestorationState(): void {
-    TerminalAutoSaveService.restoringTerminals.clear();
-  }
-
-  public static disposeAll(): void {
-    TerminalAutoSaveService.pendingSaveTimers.forEach((timer) => globalThis.clearTimeout(timer));
-    TerminalAutoSaveService.pendingSaveTimers.clear();
-
-    TerminalAutoSaveService.periodicSaveTimers.forEach((timer) => globalThis.clearInterval(timer));
-    TerminalAutoSaveService.periodicSaveTimers.clear();
-
-    TerminalAutoSaveService.registeredTerminals.clear();
-    TerminalAutoSaveService.restoringTerminals.clear();
-    TerminalAutoSaveService.lastHiddenAt = 0;
-
-    if (TerminalAutoSaveService.visibilityChangeHandler) {
-      document.removeEventListener(
-        'visibilitychange',
-        TerminalAutoSaveService.visibilityChangeHandler
-      );
-      TerminalAutoSaveService.visibilityChangeHandler = null;
-    }
-
-    if (TerminalAutoSaveService.pageHideHandler) {
-      window.removeEventListener('pagehide', TerminalAutoSaveService.pageHideHandler);
-      TerminalAutoSaveService.pageHideHandler = null;
-    }
-
-    TerminalAutoSaveService.visibilityHandlerSetup = false;
   }
 
   /**
@@ -116,7 +74,7 @@ export class TerminalAutoSaveService {
       return;
     }
 
-    TerminalAutoSaveService.visibilityChangeHandler = () => {
+    document.addEventListener('visibilitychange', () => {
       const now = Date.now();
 
       if (document.visibilityState === 'hidden') {
@@ -146,16 +104,13 @@ export class TerminalAutoSaveService {
           TerminalAutoSaveService.requestScrollbackRefresh();
         }
       }
-    };
+    });
 
-    TerminalAutoSaveService.pageHideHandler = () => {
+    window.addEventListener('pagehide', () => {
       // Ensure latest scrollback is pushed before the webview unloads.
       TerminalAutoSaveService.saveAllScrollbackImmediately();
       TerminalAutoSaveService.requestSessionSaveOnExit();
-    };
-
-    document.addEventListener('visibilitychange', TerminalAutoSaveService.visibilityChangeHandler);
-    window.addEventListener('pagehide', TerminalAutoSaveService.pageHideHandler);
+    });
 
     TerminalAutoSaveService.visibilityHandlerSetup = true;
     // eslint-disable-next-line no-console
@@ -262,6 +217,24 @@ export class TerminalAutoSaveService {
   }
 
   /**
+   * Dispose all static state, clearing all Maps and Sets to allow GC.
+   * Should be called when the WebView is fully torn down.
+   */
+  public static disposeAll(): void {
+    // Collect keys first to avoid mutating the Map during iteration
+    const terminalIds = [...TerminalAutoSaveService.periodicSaveTimers.keys()];
+    for (const terminalId of terminalIds) {
+      TerminalAutoSaveService.clearPeriodicSaveTimer(terminalId);
+    }
+    TerminalAutoSaveService.periodicSaveTimers.clear();
+    TerminalAutoSaveService.registeredTerminals.clear();
+    TerminalAutoSaveService.terminalListenerDisposables.clear();
+    TerminalAutoSaveService.restoringTerminals.clear();
+    // eslint-disable-next-line no-console
+    console.log('[AUTO-SAVE] All static state disposed');
+  }
+
+  /**
    * Mark a terminal as currently being restored (blocks auto-save)
    * Called from ScrollbackMessageHandler at restoration start
    */
@@ -309,13 +282,11 @@ export class TerminalAutoSaveService {
         return;
       }
 
-      if (saveTimer !== null) {
-        globalThis.clearTimeout(saveTimer);
+      if (saveTimer) {
+        window.clearTimeout(saveTimer);
       }
 
-      saveTimer = globalThis.setTimeout(() => {
-        TerminalAutoSaveService.pendingSaveTimers.delete(terminalId);
-
+      saveTimer = window.setTimeout(() => {
         // Double-check restoration status before actually saving
         if (TerminalAutoSaveService.isTerminalRestoring(terminalId)) {
           // eslint-disable-next-line no-console
@@ -364,21 +335,25 @@ export class TerminalAutoSaveService {
           );
         }
       }, 3000);
-      TerminalAutoSaveService.pendingSaveTimers.set(terminalId, saveTimer);
     };
 
     // Capture both user input (onData) and process output (onLineFeed) so AI-generated output is saved
-    terminal.onData(pushScrollbackToExtension);
-    terminal.onLineFeed(pushScrollbackToExtension);
-    saveTimer = globalThis.setTimeout(() => {
-      TerminalAutoSaveService.pendingSaveTimers.delete(terminalId);
-      pushScrollbackToExtension();
-    }, 2000);
-    TerminalAutoSaveService.pendingSaveTimers.set(terminalId, saveTimer);
+    // Store disposables for proper cleanup on terminal removal
+    const onDataDisposable = terminal.onData(pushScrollbackToExtension);
+    const onLineFeedDisposable = terminal.onLineFeed(pushScrollbackToExtension);
+    const initialTimer = setTimeout(pushScrollbackToExtension, 2000);
+
+    // Track all disposables for this terminal
+    const disposables: { dispose(): void }[] = [
+      onDataDisposable,
+      onLineFeedDisposable,
+      { dispose: () => clearTimeout(initialTimer) },
+    ];
+    TerminalAutoSaveService.terminalListenerDisposables.set(terminalId, disposables);
 
     // 🔧 FIX: Add periodic save to ensure scrollback is captured even during long idle periods
     // This fixes the issue where scrollback data is lost when terminal is left idle for extended time
-    const periodicTimer = globalThis.setInterval(() => {
+    const periodicTimer = window.setInterval(() => {
       // Skip if terminal is being restored
       if (TerminalAutoSaveService.isTerminalRestoring(terminalId)) {
         return;

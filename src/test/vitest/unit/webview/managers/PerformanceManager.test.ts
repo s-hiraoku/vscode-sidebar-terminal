@@ -199,4 +199,60 @@ describe('PerformanceManager', () => {
       expect(stats.currentTerminal).toBe(true);
     });
   });
+
+  describe('removeTerminal', () => {
+    it('should remove the terminal entry from bufferEntries', () => {
+      // Buffer some data to create an entry
+      const data = 'a'.repeat(40);
+      manager.bufferedWrite(data, mockTerminal, 'term-1');
+
+      // Verify entry exists
+      let stats = manager.getBufferStats();
+      expect(stats.currentTerminal).toBe(true);
+
+      // Remove terminal
+      manager.removeTerminal(mockTerminal);
+
+      // Entry should be gone
+      stats = manager.getBufferStats();
+      expect(stats.currentTerminal).toBe(false);
+      expect(stats.bufferSize).toBe(0);
+    });
+
+    it('should flush pending data before removing terminal', () => {
+      const data = 'a'.repeat(40);
+      manager.bufferedWrite(data, mockTerminal, 'term-1');
+
+      manager.removeTerminal(mockTerminal);
+
+      // Data should have been flushed
+      expect(mockTerminal.write).toHaveBeenCalledWith(data);
+    });
+
+    it('should cancel pending timer when removing terminal', () => {
+      const data = 'a'.repeat(40);
+      manager.bufferedWrite(data, mockTerminal, 'term-1');
+
+      manager.removeTerminal(mockTerminal);
+
+      // Advancing timers should not cause errors (timer was cleared)
+      expect(() => vi.advanceTimersByTime(100)).not.toThrow();
+    });
+
+    it('should handle removing a terminal that has no buffer entry', () => {
+      const unknownTerminal = { write: vi.fn() } as any;
+      expect(() => manager.removeTerminal(unknownTerminal)).not.toThrow();
+    });
+
+    it('should allow GC of terminal object after removal', () => {
+      const data = 'a'.repeat(40);
+      manager.bufferedWrite(data, mockTerminal, 'term-1');
+
+      manager.removeTerminal(mockTerminal);
+
+      // The map should no longer hold a reference to the terminal
+      const stats = manager.getBufferStats();
+      expect(stats.currentTerminal).toBe(false);
+    });
+  });
 });
