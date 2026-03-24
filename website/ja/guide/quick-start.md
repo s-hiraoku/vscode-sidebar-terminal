@@ -56,6 +56,6 @@ codex
 ## 次のステップ
 
 - [AIエージェントと使う](/ja/guide/ai-agents) -- AIエージェントワークフローの詳細
-- [機能](/ja/features/terminal-management) -- すべての機能を探索
+- [機能](/features/terminal-management) -- すべての機能を探索
 - [キーボードショートカット](/reference/keyboard-shortcuts) -- 全ショートカットリファレンス
 - [設定](/reference/settings) -- すべての設定オプション
