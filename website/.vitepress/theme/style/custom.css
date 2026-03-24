@@ -1,0 +1,52 @@
+:root {
+  --vp-c-brand-1: #4a9eff;
+  --vp-c-brand-2: #3b8de8;
+  --vp-c-brand-3: #2d7cd1;
+  --vp-c-brand-soft: rgba(74, 158, 255, 0.14);
+}
+
+.dark {
+  --vp-c-brand-1: #5aadff;
+  --vp-c-brand-2: #4a9eff;
+  --vp-c-brand-3: #3b8de8;
+  --vp-c-brand-soft: rgba(90, 173, 255, 0.14);
+}
+
+:root {
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(135deg, #4a9eff 0%, #6c5ce7 100%);
+  --vp-home-hero-image-background-image: linear-gradient(135deg, #4a9eff33 0%, #6c5ce733 100%);
+  --vp-home-hero-image-filter: blur(44px);
+}
+
+.VPHero .VPImage {
+  max-width: 240px;
+  max-height: 240px;
+}
+
+/* Demo video on landing page */
+.demo-video {
+  max-width: 100%;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  margin: 2rem auto;
+  display: block;
+}
+
+.dark .demo-video {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* Feature cards enhancement */
+.VPFeatures .VPFeature {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.VPFeatures .VPFeature:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.dark .VPFeatures .VPFeature:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
