@@ -3,6 +3,7 @@ import { terminal as log } from '../utils/logger';
 import type { AgentType } from '../types/shared';
 
 const SETTING_PREFIX = 'secondaryTerminal';
+const STATUS_BAR_DISPLAY_MS = 5000;
 
 const AGENT_DISPLAY_NAMES: Record<string, string> = {
   claude: 'Claude',
@@ -67,7 +68,7 @@ export class ToastNotificationService implements vscode.Disposable {
     const message = `CLI Agent is ${typeLabel} (${terminalId})`;
 
     log('[TOAST]', message);
-    vscode.window.showInformationMessage(message);
+    vscode.window.setStatusBarMessage(`$(terminal) ${message}`, STATUS_BAR_DISPLAY_MS);
   }
 
   public showCompletedNotification(
@@ -88,7 +89,7 @@ export class ToastNotificationService implements vscode.Disposable {
     const message = `${agentName} has completed (${terminalId})`;
 
     log('[TOAST]', message);
-    vscode.window.showInformationMessage(message);
+    vscode.window.setStatusBarMessage(`$(terminal) ${message}`, STATUS_BAR_DISPLAY_MS);
   }
 
   public clearTerminal(terminalId: string): void {
