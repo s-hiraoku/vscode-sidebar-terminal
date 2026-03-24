@@ -25,16 +25,16 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
-          cache-dependency-path: website/package.json
+          cache-dependency-path: website/package-lock.json
 
       - name: Install dependencies
-        run: cd website && npm ci
+        run: cd website && npm install
 
       - name: Sync docs content
         run: cd website && npm run sync-docs
@@ -44,7 +44,7 @@ jobs:
 
       - uses: actions/configure-pages@v5
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v4
         with:
           path: website/.vitepress/dist
 

@@ -11,8 +11,8 @@ title: Keyboard Shortcuts
 | Secondary Terminal: Insert File Reference (Cmd+Option+L) | `ctrl+alt+l` | `cmd+alt+l` |
 | Secondary Terminal: Insert All Open Files (Cmd+Option+A) | `ctrl+alt+a` | `cmd+alt+a` |
 | Secondary Terminal: Activate GitHub Copilot Chat | `ctrl+k ctrl+c` | `cmd+k cmd+c` |
-| Secondary Terminal: Focus Terminal | `ctrl+`` | `ctrl+`` |
-| Secondary Terminal: Create New Terminal | `ctrl+shift+`` | `ctrl+shift+`` |
+| Secondary Terminal: Focus Terminal | <code>ctrl+`</code> | <code>ctrl+`</code> |
+| Secondary Terminal: Create New Terminal | <code>ctrl+shift+`</code> | <code>ctrl+shift+`</code> |
 | Split Terminal Vertically | `ctrl+shift+5` | `cmd+\` |
 | Kill Terminal | `ctrl+shift+x` | `cmd+shift+x` |
 | Secondary Terminal: Clear Terminal | `ctrl+k` | `cmd+k` |

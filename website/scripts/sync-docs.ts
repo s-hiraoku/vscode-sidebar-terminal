@@ -112,10 +112,11 @@ function generateKeyboardShortcutsPage(pkg: PackageJson): string {
   md += `## General Shortcuts\n\n`
   md += `| Action | Windows / Linux | macOS |\n`
   md += `|--------|----------------|-------|\n`
+  const fmtKey = (k: string) => k.includes('`') ? `<code>${k}</code>` : `\`${k}\``
   for (const kb of general) {
     const title = cmdMap.get(kb.command) ?? kb.command.replace('secondaryTerminal.', '')
-    const winKey = kb.key ? `\`${kb.key}\`` : '-'
-    const macKey = kb.mac ? `\`${kb.mac}\`` : winKey
+    const winKey = kb.key ? fmtKey(kb.key) : '-'
+    const macKey = kb.mac ? fmtKey(kb.mac) : winKey
     md += `| ${title} | ${winKey} | ${macKey} |\n`
   }
 
