@@ -54,6 +54,7 @@ import { TerminalSettingsManager } from './TerminalSettingsManager';
 
 // Services
 import { FontSettingsService } from '../services/FontSettingsService';
+import { TerminalAutoSaveService } from '../services/terminal/TerminalAutoSaveService';
 
 // Types
 import { TerminalTheme } from '../types/theme.types';
@@ -1367,6 +1368,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       // Coordinators のクリーンアップ
       this.terminalOperations.dispose();
       this.resizeCoordinator.dispose();
+      TerminalAutoSaveService.disposeAll();
       // Note: cliAgentCoordinator and debugCoordinator are lightweight wrappers
       // and don't own resources to dispose
 

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { JSDOM } from 'jsdom';
 import { LightweightTerminalWebviewManager } from '../../../../../webview/managers/LightweightTerminalWebviewManager';
+import { TerminalAutoSaveService } from '../../../../../webview/services/terminal/TerminalAutoSaveService';
 
 // Mock all internal managers to avoid complex DOM/Logic setups
 vi.mock('../../../../../webview/managers/WebViewApiManager', () => ({
@@ -781,11 +782,13 @@ describe('LightweightTerminalWebviewManager', () => {
     it('should dispose all managers on dispose', () => {
       const apiManager = (manager as any).webViewApiManager;
       const lifecycle = (manager as any).terminalLifecycleManager;
+      const disposeAllSpy = vi.spyOn(TerminalAutoSaveService, 'disposeAll');
 
       manager.dispose();
 
       expect(apiManager.dispose).toHaveBeenCalled();
       expect(lifecycle.dispose).toHaveBeenCalled();
+      expect(disposeAllSpy).toHaveBeenCalled();
     });
   });
 });
