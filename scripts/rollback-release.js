@@ -111,14 +111,18 @@ class RollbackManager {
   }
 
   async gitRollback(targetVersion) {
+    // Validate version format to prevent command injection
+    if (!/^\d+\.\d+\.\d+(-[\w.]+)?$/.test(targetVersion)) {
+      throw new Error(`Invalid version format: ${targetVersion}`);
+    }
     const tagName = `v${targetVersion}`;
 
     try {
       // Check if tag exists
-      execSync(`git rev-parse ${tagName}`, { stdio: 'ignore' });
+      execSync('git rev-parse --verify ' + JSON.stringify(tagName), { stdio: 'ignore' });
 
       // Checkout the specific version
-      execSync(`git checkout ${tagName} -- package.json`, { stdio: 'inherit' });
+      execSync('git checkout ' + JSON.stringify(tagName) + ' -- package.json', { stdio: 'inherit' });
 
       console.log(`✅ Rolled back package.json to version ${targetVersion}`);
 
