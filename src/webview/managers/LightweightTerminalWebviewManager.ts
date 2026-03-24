@@ -1368,7 +1368,6 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       // Coordinators のクリーンアップ
       this.terminalOperations.dispose();
       this.resizeCoordinator.dispose();
-      TerminalAutoSaveService.disposeAll();
       // Note: cliAgentCoordinator and debugCoordinator are lightweight wrappers
       // and don't own resources to dispose
 
@@ -1376,6 +1375,9 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       log('✅ RefactoredTerminalWebviewManager disposed');
     } catch (error) {
       log('❌ Error disposing RefactoredTerminalWebviewManager:', error);
+    } finally {
+      // Always clean up static state even if dispose partially fails
+      TerminalAutoSaveService.disposeAll();
     }
   }
 
