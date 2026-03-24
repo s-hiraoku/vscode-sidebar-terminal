@@ -5,6 +5,20 @@ All notable changes to the "Secondary Terminal" extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+### [0.3.3](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v0.3.1...v0.3.3) (2026-03-24)
+
+
+### Changed
+
+* **marketplace:** point homepage to GitHub Pages ([#538](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/538)) ([3024283](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/302428315b38c1ef177a0801601afccd6f974025))
+
+
+### Fixed
+
+* **ci:** use npm install instead of npm ci for docs build ([1344072](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/13440727d71e37371fe1a3b7bfd465d82cd19d6c))
+* prevent toast notifications from stealing focus away from terminal ([#539](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/539)) ([eec5507](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/eec5507c0026bfb6125b7d5af8e572616f4026dd))
+* **webview:** clean up terminal restore teardown ([18ea9cd](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/18ea9cd7c77f3641b44c8aab696f62379fd67b9b))
+
 ### [0.3.2](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v0.3.1...v0.3.2) (2026-03-24)
 
 ### [0.3.1](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v0.3.0...v0.3.1) (2026-03-23)
