@@ -104,6 +104,20 @@ export class TerminalCreationService implements Disposable {
   }
 
   /**
+   * Clear restoration state for a terminal immediately.
+   */
+  public static clearTerminalRestorationState(terminalId: string): void {
+    TerminalAutoSaveService.clearTerminalRestorationState(terminalId);
+  }
+
+  /**
+   * Clear all restoration state.
+   */
+  public static clearAllRestorationState(): void {
+    TerminalAutoSaveService.clearAllRestorationState();
+  }
+
+  /**
    * Check if a terminal is currently being restored
    * Delegates to TerminalAutoSaveService
    */

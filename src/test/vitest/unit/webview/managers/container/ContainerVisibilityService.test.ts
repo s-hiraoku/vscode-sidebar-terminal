@@ -137,4 +137,39 @@ describe('ContainerVisibilityService', () => {
       expect(storage?.contains(t1)).toBe(true);
     });
   });
+
+  describe('restoreFromHiddenStorage', () => {
+    it('should call terminal.refresh after restoring container from hidden storage', () => {
+      // Given: a hidden terminal container stored off-screen with a live terminal instance
+      const t1 = document.createElement('div');
+      t1.className = 'terminal-container';
+      t1.dataset.terminalId = 'term-1';
+      service.hideContainer(t1, terminalBody);
+
+      const mockTerminal = {
+        refresh: vi.fn(),
+        rows: 24,
+      };
+
+      // When: restoreFromHiddenStorage is triggered after service.showContainer on the same terminal
+      service.showContainer(t1);
+      service.restoreFromHiddenStorage(t1, terminalBody, mockTerminal as never);
+
+      // Then: terminalsWrapper receives the container and mockTerminal.refresh is called
+      expect(terminalsWrapper.contains(t1)).toBe(true);
+      expect(mockTerminal.refresh).toHaveBeenCalledWith(0, 23);
+    });
+
+    it('should handle null terminal gracefully', () => {
+      // Given: a terminal container without an attached xterm instance
+      const t1 = document.createElement('div');
+
+      // When: restoreFromHiddenStorage is called with a null terminal reference
+      const restoreFromHiddenStorage = () =>
+        service.restoreFromHiddenStorage(t1, terminalBody, null);
+
+      // Then: restoreFromHiddenStorage completes without throwing
+      expect(restoreFromHiddenStorage).not.toThrow();
+    });
+  });
 });

@@ -208,6 +208,7 @@ export class SessionRestoreManager {
    */
   public clearRestorationState(terminalId: string): void {
     this.processedScrollbackRequests.delete(terminalId);
+    TerminalCreationService.clearTerminalRestorationState(terminalId);
     log(`[SESSION-RESTORE] Cleared restoration state for terminal: ${terminalId}`);
   }
 
@@ -216,6 +217,7 @@ export class SessionRestoreManager {
    */
   public dispose(): void {
     this.processedScrollbackRequests.clear();
+    TerminalCreationService.clearAllRestorationState();
     this._isRestoringSession = false;
     log('[SESSION-RESTORE] SessionRestoreManager disposed');
   }

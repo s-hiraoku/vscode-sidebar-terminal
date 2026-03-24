@@ -28,6 +28,8 @@ vi.mock('../../../../../webview/services/TerminalCreationService', () => ({
     isTerminalRestoring: vi.fn().mockReturnValue(false),
     markTerminalRestoring: vi.fn(),
     markTerminalRestored: vi.fn(),
+    clearTerminalRestorationState: vi.fn(),
+    clearAllRestorationState: vi.fn(),
   },
 }));
 
@@ -481,6 +483,15 @@ describe('SessionRestoreManager', () => {
 
   describe('clearRestorationState', () => {
     it('should clear restoration state for terminal', async () => {
+      let isRestoring = false;
+      vi.mocked(TerminalCreationService.isTerminalRestoring).mockImplementation(() => isRestoring);
+      vi.mocked(TerminalCreationService.markTerminalRestoring).mockImplementation(() => {
+        isRestoring = true;
+      });
+      vi.mocked(TerminalCreationService.clearTerminalRestorationState).mockImplementation(() => {
+        isRestoring = false;
+      });
+
       const mockTerminal = createMockTerminal();
       const mockInstance = createMockTerminalInstance(mockTerminal);
       mockCallbacks = createMockCallbacks({
@@ -488,7 +499,7 @@ describe('SessionRestoreManager', () => {
       });
       manager = new SessionRestoreManager(mockCallbacks);
 
-      // First restore
+      // Given: a terminal that has been restored and is still flagged as restoring
       const sessionData: SessionData = {
         terminalId: 'terminal-1',
         terminalName: 'Test Terminal',
@@ -498,12 +509,13 @@ describe('SessionRestoreManager', () => {
       await restorePromise;
 
       expect(manager.isTerminalRestored('terminal-1')).toBe(true);
+      expect(isRestoring).toBe(true);
 
-      // Clear state
+      // When: clearRestorationState removes both the processed request and restoration flag
       manager.clearRestorationState('terminal-1');
 
-      // Now should not be considered restored (unless TerminalCreationService says so)
-      vi.mocked(TerminalCreationService.isTerminalRestoring).mockReturnValue(false);
+      // Then: isTerminalRestored reflects that both restoration guards were cleared
+      expect(isRestoring).toBe(false);
       expect(manager.isTerminalRestored('terminal-1')).toBe(false);
     });
 
@@ -514,6 +526,15 @@ describe('SessionRestoreManager', () => {
 
   describe('dispose', () => {
     it('should clear all processed requests', async () => {
+      let isRestoring = false;
+      vi.mocked(TerminalCreationService.isTerminalRestoring).mockImplementation(() => isRestoring);
+      vi.mocked(TerminalCreationService.markTerminalRestoring).mockImplementation(() => {
+        isRestoring = true;
+      });
+      vi.mocked(TerminalCreationService.clearAllRestorationState).mockImplementation(() => {
+        isRestoring = false;
+      });
+
       const mockTerminal = createMockTerminal();
       const mockInstance = createMockTerminalInstance(mockTerminal);
       mockCallbacks = createMockCallbacks({
@@ -521,7 +542,7 @@ describe('SessionRestoreManager', () => {
       });
       manager = new SessionRestoreManager(mockCallbacks);
 
-      // Restore a terminal
+      // Given: a restored terminal that still has restoration state tracked
       const sessionData: SessionData = {
         terminalId: 'terminal-1',
         terminalName: 'Test Terminal',
@@ -531,13 +552,13 @@ describe('SessionRestoreManager', () => {
       await restorePromise;
 
       expect(manager.isTerminalRestored('terminal-1')).toBe(true);
+      expect(isRestoring).toBe(true);
 
-      // Dispose
+      // When: dispose clears manager and shared restoration state
       manager.dispose();
 
-      // After dispose, terminal should not be in processed set
-      // Note: TerminalCreationService might still report it as restoring
-      vi.mocked(TerminalCreationService.isTerminalRestoring).mockReturnValue(false);
+      // Then: isTerminalRestored reports that restoration state is fully gone
+      expect(isRestoring).toBe(false);
       expect(manager.isTerminalRestored('terminal-1')).toBe(false);
     });
 

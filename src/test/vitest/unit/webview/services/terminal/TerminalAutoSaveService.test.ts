@@ -2,7 +2,7 @@
  * TerminalAutoSaveService Unit Tests
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { TerminalAutoSaveService } from '../../../../../../webview/services/terminal/TerminalAutoSaveService';
 
 // Mock dependencies
@@ -37,12 +37,7 @@ describe('TerminalAutoSaveService', () => {
 
     service = new TerminalAutoSaveService(mockCoordinator);
 
-    // Reset static state
-    (TerminalAutoSaveService as any).restoringTerminals.clear();
-    (TerminalAutoSaveService as any).periodicSaveTimers.forEach((t: any) => clearInterval(t));
-    (TerminalAutoSaveService as any).periodicSaveTimers.clear();
-    (TerminalAutoSaveService as any).registeredTerminals.clear();
-    (TerminalAutoSaveService as any).visibilityHandlerSetup = false;
+    TerminalAutoSaveService.disposeAll();
 
     // Mock vscodeApi
     (window as any).vscodeApi = {
@@ -51,6 +46,7 @@ describe('TerminalAutoSaveService', () => {
   });
 
   afterEach(() => {
+    TerminalAutoSaveService.disposeAll();
     vi.useRealTimers();
     vi.clearAllMocks();
   });
@@ -150,11 +146,22 @@ describe('TerminalAutoSaveService', () => {
   describe('Cleanup', () => {
     it('should clear periodic timer on terminal removal', () => {
       service.setupScrollbackAutoSave(mockTerminal, 't1', mockSerializeAddon);
-      const _timer = (TerminalAutoSaveService as any).periodicSaveTimers.get('t1');
 
       TerminalAutoSaveService.clearPeriodicSaveTimer('t1');
 
       expect((TerminalAutoSaveService as any).periodicSaveTimers.has('t1')).toBe(false);
+    });
+
+    it('should clear all static auto-save state on disposeAll', () => {
+      service.setupScrollbackAutoSave(mockTerminal, 't1', mockSerializeAddon);
+      TerminalAutoSaveService.markTerminalRestoring('t1');
+
+      TerminalAutoSaveService.disposeAll();
+
+      expect((TerminalAutoSaveService as any).periodicSaveTimers.size).toBe(0);
+      expect((TerminalAutoSaveService as any).pendingSaveTimers.size).toBe(0);
+      expect((TerminalAutoSaveService as any).registeredTerminals.size).toBe(0);
+      expect(TerminalAutoSaveService.isTerminalRestoring('t1')).toBe(false);
     });
   });
 });

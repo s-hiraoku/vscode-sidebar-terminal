@@ -6,6 +6,7 @@
  */
 
 import { containerLogger } from '../../utils/ManagerLogger';
+import { Terminal } from '@xterm/xterm';
 
 /**
  * Service for managing terminal container visibility
@@ -157,6 +158,34 @@ export class ContainerVisibilityService {
       hiddenStorage.appendChild(container);
     }
     containerLogger.debug(`Container hidden: ${container.dataset.terminalId}`);
+  }
+
+  /**
+   * Restore a container from hidden storage and refresh the terminal canvas
+   */
+  public restoreFromHiddenStorage(
+    container: HTMLElement,
+    terminalBody: HTMLElement,
+    terminal: Terminal | null
+  ): void {
+    const terminalsWrapper = this.getTerminalsWrapper(terminalBody);
+    if (container.parentElement !== terminalsWrapper) {
+      terminalsWrapper.appendChild(container);
+    }
+
+    if (!terminal) {
+      return;
+    }
+
+    try {
+      terminal.refresh(0, terminal.rows - 1);
+      containerLogger.debug(`Terminal canvas refreshed after restore: ${container.dataset.terminalId}`);
+    } catch (error) {
+      containerLogger.warn(
+        `Failed to refresh terminal after restore: ${container.dataset.terminalId}`,
+        error
+      );
+    }
   }
 
   /**
