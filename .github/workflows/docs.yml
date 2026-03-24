@@ -31,10 +31,10 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: website/package.json
+          cache-dependency-path: website/package-lock.json
 
       - name: Install dependencies
-        run: cd website && npm ci
+        run: cd website && npm install
 
       - name: Sync docs content
         run: cd website && npm run sync-docs
