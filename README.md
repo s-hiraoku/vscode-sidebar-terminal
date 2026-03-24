@@ -9,6 +9,8 @@
 
 **English** | [日本語](README.ja.md) | [中文](README.zh-CN.md) | [한국어](README.ko.md) | [Español](README.es.md) | [Français](README.fr.md) | [Deutsch](README.de.md)
 
+Docs: https://s-hiraoku.github.io/vscode-sidebar-terminal/
+
 Your sidebar, your terminal, your AI agents -- all in one place. A full-featured terminal that lives in the VS Code sidebar, with built-in AI agent detection for Claude Code, Codex CLI, Gemini CLI, GitHub Copilot CLI.
 
 <video src="resources/demo/demo.mov" controls muted loop playsinline poster="resources/readme-hero.png"></video>
