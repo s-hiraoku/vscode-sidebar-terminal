@@ -42,7 +42,20 @@ export class FileReferenceCommand {
         return;
       }
 
-      // CONNECTED状態の全CLI Agentに送信
+      const text = this.formatFileReference(fileInfo);
+
+      // Priority: if terminal has focus, send directly to the active terminal
+      if (this.terminalManager.isTerminalFocused()) {
+        const activeId = this.terminalManager.getActiveTerminalId();
+        if (activeId) {
+          this.terminalManager.sendInput(text, activeId);
+          log(`📤 [DEBUG] Sent file reference to focused terminal: "${text}"`);
+          void vscode.window.setStatusBarMessage(`$(terminal) Sent file reference to terminal`, 3000);
+          return;
+        }
+      }
+
+      // Fallback: send to all connected agents (editor focus mode)
       const connectedAgents = this.getConnectedAgents();
       if (connectedAgents.length === 0) {
         void vscode.window.showWarningMessage(
@@ -51,10 +64,7 @@ export class FileReferenceCommand {
         return;
       }
 
-      // ファイル参照を送信（フォーカス→送信の統一フロー）
       connectedAgents.forEach((agent) => {
-        const text = this.formatFileReference(fileInfo);
-
         // サイドバーターミナルビューにフォーカス
         void vscode.commands.executeCommand(VSCODE_COMMANDS.SECONDARY_TERMINAL_FOCUS);
 
@@ -68,14 +78,14 @@ export class FileReferenceCommand {
         }, 50);
       });
 
-      // 成功メッセージ
+      // 成功メッセージ（ステータスバーに表示、フォーカスを奪わない）
       const agentTypes = connectedAgents.map((a) => a.agentType).join(', ');
       const message =
         connectedAgents.length === 1
-          ? `✅ Sent file reference to ${agentTypes}`
-          : `✅ Sent file reference to ${connectedAgents.length} CLI Agents (${agentTypes})`;
+          ? `Sent file reference to ${agentTypes}`
+          : `Sent file reference to ${connectedAgents.length} CLI Agents (${agentTypes})`;
 
-      void vscode.window.showInformationMessage(message);
+      void vscode.window.setStatusBarMessage(`$(terminal) ${message}`, 3000);
       log(`✅ [DEBUG] File reference sent to ${connectedAgents.length} CLI agents`);
     } catch (error) {
       log('❌ [ERROR] Error in handleSendAtMention:', error);
@@ -114,7 +124,20 @@ export class FileReferenceCommand {
         return;
       }
 
-      // CONNECTED状態の全CLI Agentに送信
+      const text = openFiles.map((file) => `@${file}`).join('\n') + ' ';
+
+      // Priority: if terminal has focus, send directly to the active terminal
+      if (this.terminalManager.isTerminalFocused()) {
+        const activeId = this.terminalManager.getActiveTerminalId();
+        if (activeId) {
+          this.terminalManager.sendInput(text, activeId);
+          log(`📤 [DEBUG] Sent ${openFiles.length} file references to focused terminal`);
+          void vscode.window.setStatusBarMessage(`$(terminal) Sent ${openFiles.length} file references`, 3000);
+          return;
+        }
+      }
+
+      // Fallback: send to all connected agents (editor focus mode)
       const connectedAgents = this.getConnectedAgents();
       if (connectedAgents.length === 0) {
         void vscode.window.showWarningMessage(
@@ -123,10 +146,7 @@ export class FileReferenceCommand {
         return;
       }
 
-      // 全ファイル参照を送信（1ファイルごとに改行）
       connectedAgents.forEach((agent) => {
-        const text = openFiles.map((file) => `@${file}`).join('\n');
-
         // サイドバーターミナルビューにフォーカス
         void vscode.commands.executeCommand(VSCODE_COMMANDS.SECONDARY_TERMINAL_FOCUS);
 
@@ -134,16 +154,16 @@ export class FileReferenceCommand {
         setTimeout(() => {
           this.terminalManager.focusTerminal(agent.terminalId);
           setTimeout(() => {
-            this.terminalManager.sendInput(text + ' ', agent.terminalId);
+            this.terminalManager.sendInput(text, agent.terminalId);
             log(`📤 [DEBUG] Sent ${openFiles.length} file references to ${agent.agentType}`);
           }, 100);
         }, 50);
       });
 
-      // 成功メッセージ
+      // 成功メッセージ（ステータスバーに表示）
       const agentTypes = connectedAgents.map((a) => a.agentType).join(', ');
-      void vscode.window.showInformationMessage(
-        `✅ Sent ${openFiles.length} file references to ${agentTypes}`
+      void vscode.window.setStatusBarMessage(
+        `$(terminal) Sent ${openFiles.length} file references to ${agentTypes}`, 3000
       );
       log(
         `✅ [DEBUG] ${openFiles.length} file references sent to ${connectedAgents.length} CLI agents`
