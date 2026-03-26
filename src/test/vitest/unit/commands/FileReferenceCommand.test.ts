@@ -20,6 +20,7 @@ describe('FileReferenceCommand', () => {
     mockTerminalManager = {
       hasActiveTerminal: vi.fn().mockReturnValue(true),
       getActiveTerminalId: vi.fn().mockReturnValue('terminal-1'),
+      isTerminalFocused: vi.fn().mockReturnValue(false),
       getConnectedAgents: vi.fn().mockReturnValue([
         {
           terminalId: 'terminal-1',
@@ -251,6 +252,49 @@ describe('FileReferenceCommand', () => {
       expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
         'File reference shortcuts are disabled. Enable them in Terminal Settings.'
       );
+    });
+
+    describe('terminal focus behavior', () => {
+      it('should send to focused terminal directly when terminal has focus, even without connected agent', async () => {
+        // Terminal has focus, no connected agents
+        mockTerminalManager.isTerminalFocused = vi.fn().mockReturnValue(true);
+        mockTerminalManager.getConnectedAgents.mockReturnValue([]);
+
+        fileReferenceCommand.handleSendAtMention();
+
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        // Should send to active terminal directly, not require connected agent
+        expect(mockTerminalManager.sendInput).toHaveBeenCalledWith('@src/test.ts ', 'terminal-1');
+      });
+
+      it('should send to focused terminal (not connected agent terminal) when terminal has focus', async () => {
+        // Terminal 2 has focus, agent is connected on terminal 1
+        mockTerminalManager.isTerminalFocused = vi.fn().mockReturnValue(true);
+        mockTerminalManager.getActiveTerminalId.mockReturnValue('terminal-2');
+        mockTerminalManager.getConnectedAgents.mockReturnValue([
+          { terminalId: 'terminal-1', agentInfo: { type: 'claude' } },
+        ]);
+
+        fileReferenceCommand.handleSendAtMention();
+
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        // Should send to terminal-2 (focused), not terminal-1 (agent)
+        expect(mockTerminalManager.sendInput).toHaveBeenCalledWith('@src/test.ts ', 'terminal-2');
+      });
+
+      it('should fall back to connected agent behavior when editor has focus', async () => {
+        // Editor has focus (terminal not focused)
+        mockTerminalManager.isTerminalFocused = vi.fn().mockReturnValue(false);
+        mockTerminalManager.getConnectedAgents.mockReturnValue([
+          { terminalId: 'terminal-1', agentInfo: { type: 'claude' } },
+        ]);
+
+        fileReferenceCommand.handleSendAtMention();
+
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        // Should use connected agent behavior
+        expect(mockTerminalManager.sendInput).toHaveBeenCalledWith('@src/test.ts ', 'terminal-1');
+      });
     });
   });
 });

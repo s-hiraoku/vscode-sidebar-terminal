@@ -230,6 +230,20 @@ export class TerminalManager {
     return this._stateCoordinator.getActiveTerminalId();
   }
 
+  /**
+   * Whether the Secondary Terminal WebView currently has focus.
+   * Tracked via the terminalFocused/terminalBlurred messages from WebView.
+   */
+  private _isTerminalFocused = false;
+
+  public setTerminalFocused(focused: boolean): void {
+    this._isTerminalFocused = focused;
+  }
+
+  public isTerminalFocused(): boolean {
+    return this._isTerminalFocused;
+  }
+
   public setActiveTerminal(terminalId: string): void {
     this._stateCoordinator.setActiveTerminal(terminalId);
   }

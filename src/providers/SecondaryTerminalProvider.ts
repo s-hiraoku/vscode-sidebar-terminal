@@ -261,6 +261,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       settingsMessageHandler: this._settingsMessageHandler,
       scrollbackMessageHandler: this._scrollbackMessageHandler,
       debugMessageHandler: this._debugMessageHandler,
+      onTerminalFocusChanged: (focused) => this._terminalManager.setTerminalFocused(focused),
     });
 
     // Initialize terminal init lifecycle handler

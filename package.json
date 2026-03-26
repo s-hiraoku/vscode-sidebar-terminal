@@ -969,13 +969,13 @@
         "command": "secondaryTerminal.sendAtMention",
         "key": "ctrl+alt+l",
         "mac": "cmd+alt+l",
-        "when": "editorTextFocus"
+        "when": "editorTextFocus || secondaryTerminalFocus"
       },
       {
         "command": "secondaryTerminal.sendAllOpenFiles",
         "key": "ctrl+alt+a",
         "mac": "cmd+alt+a",
-        "when": "editorTextFocus"
+        "when": "editorTextFocus || secondaryTerminalFocus"
       },
       {
         "command": "secondaryTerminal.activateCopilot",

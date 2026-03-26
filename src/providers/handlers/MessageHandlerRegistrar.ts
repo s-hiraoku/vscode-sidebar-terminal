@@ -39,6 +39,7 @@ export interface IMessageHandlerRegistrarDependencies {
   settingsMessageHandler: SettingsMessageHandler;
   scrollbackMessageHandler: ScrollbackMessageHandler;
   debugMessageHandler: DebugMessageHandler;
+  onTerminalFocusChanged?: (focused: boolean) => void;
 }
 
 /**
@@ -216,6 +217,7 @@ export class MessageHandlerRegistrar {
         handler: async (msg) => {
           log(`🎯 [PROVIDER] Terminal focused: ${msg.terminalId}`);
           await vscode.commands.executeCommand('setContext', 'secondaryTerminalFocus', true);
+          this.deps.onTerminalFocusChanged?.(true);
         },
         category: 'terminal',
       },
@@ -224,6 +226,7 @@ export class MessageHandlerRegistrar {
         handler: async (msg) => {
           log(`🎯 [PROVIDER] Terminal blurred: ${msg.terminalId}`);
           await vscode.commands.executeCommand('setContext', 'secondaryTerminalFocus', false);
+          this.deps.onTerminalFocusChanged?.(false);
         },
         category: 'terminal',
       },
