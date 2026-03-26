@@ -6,7 +6,7 @@
 [![Open VSX](https://img.shields.io/open-vsx/v/s-hiraoku/vscode-sidebar-terminal)](https://open-vsx.org/extension/s-hiraoku/vscode-sidebar-terminal)
 [![License](https://img.shields.io/github/license/s-hiraoku/vscode-sidebar-terminal)](https://github.com/s-hiraoku/vscode-sidebar-terminal/blob/main/LICENSE)
 [![Ask DeepWiki](https://img.shields.io/badge/Ask-DeepWiki-blue)](https://deepwiki.com/s-hiraoku/vscode-sidebar-terminal)
-
+[![Documentation](https://img.shields.io/badge/Docs-GitHub%20Pages-blue?logo=github)](https://s-hiraoku.github.io/vscode-sidebar-terminal/)
 [English](README.md) | [日本語](README.ja.md) | **中文** | [한국어](README.ko.md) | [Español](README.es.md) | [Français](README.fr.md) | [Deutsch](README.de.md)
 
 侧边栏、终端、AI 代理——一切尽在一处。一个常驻于 VS Code 侧边栏的全功能终端，内置 Claude Code、Codex CLI、Gemini CLI、GitHub Copilot CLI 的 AI 代理检测功能。

@@ -6,7 +6,7 @@
 [![Open VSX](https://img.shields.io/open-vsx/v/s-hiraoku/vscode-sidebar-terminal)](https://open-vsx.org/extension/s-hiraoku/vscode-sidebar-terminal)
 [![License](https://img.shields.io/github/license/s-hiraoku/vscode-sidebar-terminal)](https://github.com/s-hiraoku/vscode-sidebar-terminal/blob/main/LICENSE)
 [![Ask DeepWiki](https://img.shields.io/badge/Ask-DeepWiki-blue)](https://deepwiki.com/s-hiraoku/vscode-sidebar-terminal)
-
+[![Documentation](https://img.shields.io/badge/Docs-GitHub%20Pages-blue?logo=github)](https://s-hiraoku.github.io/vscode-sidebar-terminal/)
 [English](README.md) | [日本語](README.ja.md) | [中文](README.zh-CN.md) | [한국어](README.ko.md) | **Español** | [Français](README.fr.md) | [Deutsch](README.de.md)
 
 Tu barra lateral, tu terminal, tus agentes de IA — todo en un solo lugar. Un terminal completo que vive en la barra lateral de VS Code, con detección integrada de agentes de IA para Claude Code, Codex CLI, Gemini CLI y GitHub Copilot CLI.

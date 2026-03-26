@@ -6,7 +6,7 @@
 [![Open VSX](https://img.shields.io/open-vsx/v/s-hiraoku/vscode-sidebar-terminal)](https://open-vsx.org/extension/s-hiraoku/vscode-sidebar-terminal)
 [![License](https://img.shields.io/github/license/s-hiraoku/vscode-sidebar-terminal)](https://github.com/s-hiraoku/vscode-sidebar-terminal/blob/main/LICENSE)
 [![Ask DeepWiki](https://img.shields.io/badge/Ask-DeepWiki-blue)](https://deepwiki.com/s-hiraoku/vscode-sidebar-terminal)
-
+[![Documentation](https://img.shields.io/badge/Docs-GitHub%20Pages-blue?logo=github)](https://s-hiraoku.github.io/vscode-sidebar-terminal/)
 [English](README.md) | [日本語](README.ja.md) | [中文](README.zh-CN.md) | **한국어** | [Español](README.es.md) | [Français](README.fr.md) | [Deutsch](README.de.md)
 
 사이드바, 터미널, AI 에이전트 -- 모두 한 곳에. VS Code 사이드바에 상주하는 완전한 기능의 터미널로, Claude Code, Codex CLI, Gemini CLI, GitHub Copilot CLI의 AI 에이전트 감지 기능이 내장되어 있습니다.
