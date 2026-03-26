@@ -22,22 +22,22 @@ Deine Seitenleiste, dein Terminal, deine KI-Agenten -- alles an einem Ort.
 ## Schnellstart
 
 1. **Installieren**: Suche "Secondary Terminal" in der VS Code Erweiterungsansicht
-2. **Offnen**: Klicke auf das Terminal-Symbol (ST) in der Aktivitatsleiste
-3. **Verwenden**: Fuhre `claude`, `codex`, `gemini` oder `copilot` aus und beobachte den KI-Agenten-Status
+2. **Öffnen**: Klicke auf das Terminal-Symbol (ST) in der Aktivitätsleiste
+3. **Verwenden**: Führe `claude`, `codex`, `gemini` oder `copilot` aus und beobachte den KI-Agenten-Status
 
 ## Funktionen
 
 - **Mehrere Terminals** -- Bis zu 10 gleichzeitige Terminals mit Tabs, Drag & Drop, Umbenennung
-- **Geteilte Ansichten** -- Vertikale/horizontale Teilung mit Grossenanpassung
+- **Geteilte Ansichten** -- Vertikale/horizontale Teilung mit Größenanpassung
 - **KI-Agenten-Erkennung** -- Claude Code, Codex CLI, Gemini CLI, GitHub Copilot CLI
 - **Sitzungspersistenz** -- Automatisches Speichern/Wiederherstellen mit ANSI-Farberhaltung
 - **Shell-Integration** -- Befehlsstatus, Arbeitsverzeichnis, Befehlsverlauf
-- **Dateireferenzen** -- `Cmd+Alt+L` / `Ctrl+Alt+L` fugt Dateipfad ins Terminal ein
-- **Suche im Terminal** -- `Cmd+F` / `Ctrl+F` (Regex-Unterstutzung)
-- **Volle IME-Unterstutzung** -- Japanische, chinesische, koreanische Eingabe
-- **Plattformubergreifend** -- Windows, macOS, Linux (9 Plattform-Builds)
+- **Dateireferenzen** -- `Cmd+Alt+L` / `Ctrl+Alt+L` fügt Dateipfad ins Terminal ein
+- **Suche im Terminal** -- `Cmd+F` / `Ctrl+F` (Regex-Unterstützung)
+- **Volle IME-Unterstützung** -- Japanische, chinesische, koreanische Eingabe
+- **Plattformübergreifend** -- Windows, macOS, Linux (9 Plattform-Builds)
 
-> **[Vollstandige Dokumentation, Tastaturkurzel und Einstellungsreferenz](https://s-hiraoku.github.io/vscode-sidebar-terminal/de/)**
+> **[Vollständige Dokumentation, Tastaturkürzel und Einstellungsreferenz](https://s-hiraoku.github.io/vscode-sidebar-terminal/de/)**
 
 ## Datenschutz
 

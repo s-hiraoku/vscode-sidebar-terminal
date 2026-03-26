@@ -9,39 +9,39 @@
 
 [English](README.md) | [日本語](README.ja.md) | [中文](README.zh-CN.md) | [한국어](README.ko.md) | [Español](README.es.md) | **Français** | [Deutsch](README.de.md)
 
-Votre barre laterale, votre terminal, vos agents IA -- tout en un seul endroit.
+Votre barre latérale, votre terminal, vos agents IA -- tout en un seul endroit.
 
 <video src="resources/demo/demo.mov" controls muted loop playsinline poster="resources/readme-hero.png"></video>
 
 ## Pourquoi Secondary Terminal ?
 
-- **Terminal natif dans la barre laterale** -- Gardez votre terminal visible pendant l'edition.
-- **Compatible avec les agents IA** -- Detecte automatiquement Claude Code, Copilot, Gemini, Codex avec statut en temps reel et rendu optimise a 250fps.
-- **Complet** -- Vues divisees, persistance de session, integration shell, 90+ parametres. Un terminal de production.
+- **Terminal natif dans la barre latérale** -- Gardez votre terminal visible pendant l'édition.
+- **Compatible avec les agents IA** -- Détecte automatiquement Claude Code, Copilot, Gemini, Codex avec statut en temps réel et rendu optimisé à 250fps.
+- **Complet** -- Vues divisées, persistance de session, intégration shell, 90+ paramètres. Un terminal de production.
 
-## Demarrage rapide
+## Démarrage rapide
 
 1. **Installer**: Recherchez "Secondary Terminal" dans la vue des extensions VS Code
-2. **Ouvrir**: Cliquez sur l'icone du terminal (ST) dans la barre d'activite
-3. **Utiliser**: Executez `claude`, `codex`, `gemini` ou `copilot` et observez le statut de l'agent IA
+2. **Ouvrir**: Cliquez sur l'icône du terminal (ST) dans la barre d'activité
+3. **Utiliser**: Exécutez `claude`, `codex`, `gemini` ou `copilot` et observez le statut de l'agent IA
 
-## Fonctionnalites
+## Fonctionnalités
 
-- **Terminaux multiples** -- Jusqu'a 10 terminaux simultanees avec onglets, glisser-deposer, renommage
-- **Vues divisees** -- Division verticale/horizontale avec redimensionnement
-- **Detection d'agents IA** -- Claude Code, Codex CLI, Gemini CLI, GitHub Copilot CLI
-- **Persistance de session** -- Sauvegarde/restauration automatique avec preservation des couleurs ANSI
-- **Integration shell** -- Statut des commandes, repertoire de travail, historique
-- **References de fichiers** -- `Cmd+Alt+L` / `Ctrl+Alt+L` insere le chemin du fichier dans le terminal
+- **Terminaux multiples** -- Jusqu'à 10 terminaux simultanés avec onglets, glisser-déposer, renommage
+- **Vues divisées** -- Division verticale/horizontale avec redimensionnement
+- **Détection d'agents IA** -- Claude Code, Codex CLI, Gemini CLI, GitHub Copilot CLI
+- **Persistance de session** -- Sauvegarde/restauration automatique avec préservation des couleurs ANSI
+- **Intégration shell** -- Statut des commandes, répertoire de travail, historique
+- **Références de fichiers** -- `Cmd+Alt+L` / `Ctrl+Alt+L` insère le chemin du fichier dans le terminal
 - **Recherche dans le terminal** -- `Cmd+F` / `Ctrl+F` (support des regex)
-- **Support complet IME** -- Saisie japonaise, chinoise, coreenne
+- **Support complet IME** -- Saisie japonaise, chinoise, coréenne
 - **Multiplateforme** -- Windows, macOS, Linux (9 builds par plateforme)
 
-> **[Documentation complete, raccourcis clavier et reference des parametres](https://s-hiraoku.github.io/vscode-sidebar-terminal/fr/)**
+> **[Documentation complète, raccourcis clavier et référence des paramètres](https://s-hiraoku.github.io/vscode-sidebar-terminal/fr/)**
 
-## Confidentialite
+## Confidentialité
 
-Respecte les parametres de telemetrie de VS Code. Ne collecte jamais le contenu du terminal ni les chemins de fichiers. Voir [PRIVACY.md](PRIVACY.md).
+Respecte les paramètres de télémétrie de VS Code. Ne collecte jamais le contenu du terminal ni les chemins de fichiers. Voir [PRIVACY.md](PRIVACY.md).
 
 ## Liens
 
