@@ -47,12 +47,41 @@ The image is sent directly to the AI agent.
 
 Get notified when an AI agent is waiting for your input:
 
+### Sound Notifications
+
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `agentWaitingNotification.enabled` | `true` | Enable/disable notifications |
+| `agentWaitingNotification.enabled` | `true` | Enable/disable sound notifications |
 | `agentWaitingNotification.soundFile` | - | Custom notification sound file path |
 | `agentWaitingNotification.volume` | `50` | Sound volume (0-100) |
 | `agentWaitingNotification.cooldownMs` | `5000` | Minimum time between notifications |
+
+### OS-Native Notifications (v0.3.4+)
+
+Desktop notifications that work even when VS Code is not in the foreground. When an AI agent is waiting for input or completes processing, you'll get an OS-level notification and optionally VS Code will be brought to the front.
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `nativeNotification.enabled` | `true` | Show OS-native desktop notifications |
+| `nativeNotification.activateWindow` | `true` | Bring VS Code window to foreground |
+| `nativeNotification.cooldownMs` | `10000` | Minimum time between native notifications (ms) |
+
+**Platform support:**
+
+| Platform | Notification | Window Activation |
+|----------|-------------|-------------------|
+| macOS | `osascript` (Notification Center) | AppleScript app activate |
+| Windows | PowerShell ToastNotification | PowerShell SetForegroundWindow |
+| Linux | `notify-send` | `wmctrl` (install separately if needed) |
+
+### Toast Notifications
+
+Status bar messages inside VS Code:
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `agentToastNotification.enabled` | `true` | Show status bar toast notifications |
+| `agentToastNotification.cooldownMs` | `10000` | Minimum time between toast notifications (ms) |
 
 ## Multi-Agent Workflows
 

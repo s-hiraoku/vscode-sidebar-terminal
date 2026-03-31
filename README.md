@@ -32,6 +32,7 @@ Also available on [Open VSX](https://open-vsx.org/extension/s-hiraoku/vscode-sid
 - **Multiple terminals** -- Up to 10 concurrent terminals with tabs, drag & drop, rename
 - **Split views** -- Vertical / horizontal splitting with drag-to-resize
 - **AI agent detection** -- Claude Code, Codex CLI, Gemini CLI, GitHub Copilot CLI
+- **OS-native notifications** -- Desktop alerts + window activation when AI agents need attention (macOS/Windows/Linux)
 - **Session persistence** -- Auto-save/restore with ANSI color preservation
 - **Shell integration** -- Command status, working directory, command history
 - **File references** -- `Cmd+Alt+L` / `Ctrl+Alt+L` inserts file path into terminal
