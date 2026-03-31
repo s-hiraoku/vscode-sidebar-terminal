@@ -130,7 +130,7 @@ export class NativeNotificationService implements vscode.Disposable {
     ];
     if (activate) {
       lines.push(
-        `$vscode = Get-Process -Name 'Code' -ErrorAction SilentlyContinue | Select-Object -First 1;`,
+        `$vscode = Get-Process | Where-Object { $_.ProcessName -match '^Code( - Insiders)?$' -and $_.MainWindowHandle -ne 0 } | Select-Object -First 1;`,
         `if ($vscode) {`,
         `  Add-Type -TypeDefinition 'using System; using System.Runtime.InteropServices; public class Win32 { [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd); }';`,
         `  [Win32]::SetForegroundWindow($vscode.MainWindowHandle) > $null;`,
