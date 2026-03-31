@@ -5,6 +5,28 @@ All notable changes to the "Secondary Terminal" extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+### [0.3.4](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v0.3.1...v0.3.4) (2026-03-31)
+
+
+### Fixed
+
+* **ci:** use npm install instead of npm ci for docs build ([1344072](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/13440727d71e37371fe1a3b7bfd465d82cd19d6c))
+* prevent toast notifications from stealing focus away from terminal ([#539](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/539)) ([eec5507](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/eec5507c0026bfb6125b7d5af8e572616f4026dd))
+* resolve 14 long-running session bugs causing selection failure and memory leaks ([#528](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/528)) ([f5a7346](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/f5a73466565f1ff58416dbbf0cb3fc85ac97cae7))
+* **webview:** clean up terminal restore teardown ([18ea9cd](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/18ea9cd7c77f3641b44c8aab696f62379fd67b9b))
+
+
+### Changed
+
+* **marketplace:** point homepage to GitHub Pages ([#538](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/538)) ([3024283](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/302428315b38c1ef177a0801601afccd6f974025))
+* simplify README and direct users to documentation site ([#546](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/546)) ([0eb5229](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/0eb52297f1f189241e47cc83e680d4a6ad692df2))
+
+
+### Added
+
+* add OS-native notifications for CLI agent events ([a549521](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/a5495215ac5115f135923173b9e660c9e8b20ed8))
+* send file reference to focused terminal directly ([#545](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/545)) ([2b1a73b](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/2b1a73b0a88ca18b33707703ab3426c6a0ec1553))
+
 ### [0.3.3](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v0.3.1...v0.3.3) (2026-03-24)
 
 
