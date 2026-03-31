@@ -11,6 +11,8 @@ import { CliAgentStateStore, AgentStatus } from './CliAgentStateStore';
 import { CliAgentWaitingDetector } from './CliAgentWaitingDetector';
 import { AudioNotificationService } from './AudioNotificationService';
 import { ToastNotificationService } from './ToastNotificationService';
+import { NativeNotificationService } from './NativeNotificationService';
+import { getAgentDisplayName, getWaitingTypeLabel, NOTIFICATION_TITLE } from './agentConstants';
 import type { AgentType } from '../types/shared';
 import { CliAgentInputAccumulator } from './CliAgentInputAccumulator';
 import { CliAgentIdleDetector } from './CliAgentIdleDetector';
@@ -21,6 +23,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
   private readonly waitingDetector: CliAgentWaitingDetector;
   private readonly audioService: AudioNotificationService;
   private readonly toastService: ToastNotificationService;
+  private readonly nativeNotificationService: NativeNotificationService;
   private readonly inputAccumulator: CliAgentInputAccumulator;
   private readonly idleDetector: CliAgentIdleDetector;
   private waitingChangeSubscription: { dispose(): void } | undefined;
@@ -38,6 +41,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     );
     this.audioService = new AudioNotificationService();
     this.toastService = new ToastNotificationService();
+    this.nativeNotificationService = new NativeNotificationService();
     this.inputAccumulator = new CliAgentInputAccumulator();
     this.idleDetector = new CliAgentIdleDetector(this.stateStore);
 
@@ -45,6 +49,11 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
       if (event.isWaiting) {
         this.audioService.playNotification(event.terminalId);
         this.toastService.showWaitingNotification(event.terminalId, event.waitingType);
+        this.nativeNotificationService.notifyAndActivate(
+          event.terminalId,
+          NOTIFICATION_TITLE,
+          `CLI Agent is ${getWaitingTypeLabel(event.waitingType)} (${event.terminalId})`
+        );
       }
     });
 
@@ -58,6 +67,11 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
           return;
         }
         this.toastService.showCompletedNotification(event.terminalId, previous.agentType);
+        this.nativeNotificationService.notifyAndActivate(
+          event.terminalId,
+          NOTIFICATION_TITLE,
+          `${getAgentDisplayName(previous.agentType)} has completed (${event.terminalId})`
+        );
       }
     });
   }
@@ -264,6 +278,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     this.stateStore.removeTerminalCompletely(terminalId);
     this.previousAgentInfo.delete(terminalId);
     this.toastService.clearTerminal(terminalId);
+    this.nativeNotificationService.clearTerminal(terminalId);
   }
 
   forceReconnectAgent(
@@ -303,6 +318,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     this.waitingDetector.dispose();
     this.audioService.dispose();
     this.toastService.dispose();
+    this.nativeNotificationService.dispose();
     this.stateStore.dispose();
   }
 
