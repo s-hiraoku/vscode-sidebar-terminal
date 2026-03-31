@@ -1,17 +1,10 @@
 import * as vscode from 'vscode';
 import { terminal as log } from '../utils/logger';
 import type { AgentType } from '../types/shared';
+import { getAgentDisplayName, getWaitingTypeLabel } from './agentConstants';
 
 const SETTING_PREFIX = 'secondaryTerminal';
 const STATUS_BAR_DISPLAY_MS = 5000;
-
-const AGENT_DISPLAY_NAMES: Record<string, string> = {
-  claude: 'Claude',
-  copilot: 'GitHub Copilot',
-  gemini: 'Gemini',
-  codex: 'Codex',
-  opencode: 'OpenCode',
-};
 
 export class ToastNotificationService implements vscode.Disposable {
   private readonly lastNotifiedAt = new Map<string, number>();
@@ -59,13 +52,7 @@ export class ToastNotificationService implements vscode.Disposable {
       return;
     }
 
-    const typeLabel =
-      waitingType === 'approval'
-        ? 'waiting for approval'
-        : waitingType === 'idle'
-          ? 'idle (no output)'
-          : 'waiting for input';
-    const message = `CLI Agent is ${typeLabel} (${terminalId})`;
+    const message = `CLI Agent is ${getWaitingTypeLabel(waitingType)} (${terminalId})`;
 
     log('[TOAST]', message);
     vscode.window.setStatusBarMessage(`$(terminal) ${message}`, STATUS_BAR_DISPLAY_MS);
@@ -81,7 +68,7 @@ export class ToastNotificationService implements vscode.Disposable {
       return;
     }
 
-    const agentName = agentType ? (AGENT_DISPLAY_NAMES[agentType] ?? 'CLI Agent') : 'CLI Agent';
+    const agentName = getAgentDisplayName(agentType);
     const message = `${agentName} has completed (${terminalId})`;
 
     log('[TOAST]', message);
