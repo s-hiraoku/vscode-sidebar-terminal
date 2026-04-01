@@ -50,12 +50,12 @@ export default defineConfig({
       return false;
     },
 
-    // Parallel execution (Vitest 4 - pool options are now top-level)
-    pool: 'forks',
-    forks: {
-      singleFork: false,
-      isolate: true,
-    },
+    // Parallel execution
+    // Use 'threads' instead of 'forks' to prevent EnvironmentTeardownError.
+    // The 'forks' pool creates child processes where onConsoleLog config
+    // doesn't suppress RPC calls, causing "Closing rpc while onUserConsoleLog
+    // was pending" on CI (especially Windows/macOS).
+    pool: 'threads',
 
     // Sequence for consistent ordering
     sequence: {
