@@ -18,7 +18,7 @@ import { CONFIG_SECTIONS, CONFIG_KEYS } from '../../../../types/shared';
 
 describe('UnifiedConfigurationService', () => {
   let service: UnifiedConfigurationService;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   let mockWorkspaceConfiguration: any;
 
   beforeEach(() => {
@@ -158,7 +158,6 @@ describe('UnifiedConfigurationService', () => {
     });
 
     it('should fire configuration change event', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let changeEvent: any = null;
       service.onDidChangeConfiguration((event) => {
         changeEvent = event;
@@ -735,7 +734,6 @@ describe('UnifiedConfigurationService', () => {
 
   describe('Event Handling', () => {
     it('should emit configuration change events', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let eventResult: any = null;
 
       service.onDidChangeConfiguration((event) => {

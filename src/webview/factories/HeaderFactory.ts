@@ -75,7 +75,7 @@ export const HEADER_INDICATOR_COLOR_PALETTE = [
  *   </div>
  * </div>
  */
-// eslint-disable-next-line @typescript-eslint/no-extraneous-class
+
 export class HeaderFactory {
   /**
    * 統一されたターミナルヘッダーを作成

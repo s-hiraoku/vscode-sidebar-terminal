@@ -112,15 +112,11 @@ export class NativeNotificationService implements vscode.Disposable {
     });
   }
 
-  private notifyAndActivateWindows(
-    title: string,
-    message: string,
-    activate: boolean
-  ): void {
+  private notifyAndActivateWindows(title: string, message: string, activate: boolean): void {
     const safeTitle = title.replace(/'/g, "''");
     const safeMessage = message.replace(/'/g, "''");
     const lines = [
-      "[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] > $null;",
+      '[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] > $null;',
       `$template = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02);`,
       `$textNodes = $template.GetElementsByTagName('text');`,
       `$textNodes.Item(0).AppendChild($template.CreateTextNode('${safeTitle}')) > $null;`,
@@ -144,11 +140,7 @@ export class NativeNotificationService implements vscode.Disposable {
     });
   }
 
-  private notifyAndActivateLinux(
-    title: string,
-    message: string,
-    activate: boolean
-  ): void {
+  private notifyAndActivateLinux(title: string, message: string, activate: boolean): void {
     this.execFileFn('notify-send', [title, message], (error) => {
       if (error) {
         log('[NATIVE_NOTIFY] Linux notification error:', error);

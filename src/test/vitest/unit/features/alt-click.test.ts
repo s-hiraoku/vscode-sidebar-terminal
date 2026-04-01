@@ -2,9 +2,7 @@
  * Alt+Click functionality tests
  * Tests the VS Code standard Alt+Click cursor positioning feature
  */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
+
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
@@ -16,7 +14,6 @@ interface MockVSCode {
 }
 
 describe('Alt+Click Cursor Positioning', () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockVSCode: any;
 
   beforeEach(() => {

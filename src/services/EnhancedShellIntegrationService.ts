@@ -49,7 +49,6 @@ export class EnhancedShellIntegrationService extends ShellIntegrationService {
   public readonly onCommandHistoryUpdate = this._commandHistoryEmitter.event;
 
   constructor(terminalManager: any, context?: vscode.ExtensionContext) {
-    // eslint-disable-line @typescript-eslint/no-explicit-any
     super(terminalManager, context);
     this.setupAdvancedPatterns();
   }

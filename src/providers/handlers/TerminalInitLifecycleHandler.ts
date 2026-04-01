@@ -9,9 +9,7 @@
 import { WebviewMessage } from '../../types/common';
 import { TERMINAL_CONSTANTS } from '../../constants';
 import { provider as log } from '../../utils/logger';
-import {
-  TerminalInitializationState,
-} from '../services/TerminalInitializationStateMachine';
+import { TerminalInitializationState } from '../services/TerminalInitializationStateMachine';
 
 /**
  * Subset of WatchdogCoordinator methods used by this handler
@@ -63,7 +61,9 @@ interface IDisposable {
  */
 export interface ITerminalInitLifecycleDependencies {
   // TerminalManager methods
-  getTerminal(terminalId: string): { id: string; ptyProcess?: unknown; name?: string; cwd?: string } | undefined;
+  getTerminal(
+    terminalId: string
+  ): { id: string; ptyProcess?: unknown; name?: string; cwd?: string } | undefined;
   getTerminals(): Array<{ id: string; name?: string; cwd?: string }>;
   getActiveTerminalId(): string | undefined;
   createTerminal(): string;
@@ -89,7 +89,7 @@ export interface ITerminalInitLifecycleDependencies {
   // Coordinated services
   readonly watchdogCoordinator: IWatchdogCoordinatorLike;
   readonly terminalInitStateMachine: ITerminalInitStateMachineLike;
-  eventCoordinator: IEventCoordinatorLike | null;  // mutable: set lazily after view creation
+  eventCoordinator: IEventCoordinatorLike | null; // mutable: set lazily after view creation
 
   // Utils
   safeProcessCwd(): string;
@@ -280,11 +280,13 @@ export class TerminalInitLifecycleHandler {
         log(`🎯 [ENSURE] Set terminal as active: ${terminalId}`);
 
         log('🎯 [ENSURE] About to call initializeTerminal...');
-        void this.initializeTerminal().then(() => {
-          log('🎯 [ENSURE] initializeTerminal completed');
-        }).catch((err) => {
-          log(`❌ [ENSURE] initializeTerminal failed: ${err}`);
-        });
+        void this.initializeTerminal()
+          .then(() => {
+            log('🎯 [ENSURE] initializeTerminal completed');
+          })
+          .catch((err) => {
+            log(`❌ [ENSURE] initializeTerminal failed: ${err}`);
+          });
         log('🎯 [ENSURE] Called initializeTerminal (async)');
       } else {
         log(`✅ [ENSURE] Sufficient terminals already exist: ${currentTerminals}`);

@@ -133,7 +133,7 @@ export class MessageValidator {
     expectedType: string,
     fieldName: string
   ): value is T {
-    let actualType = typeof value;
+    const actualType = typeof value;
 
     // Special handling for arrays
     if (expectedType === 'array') {

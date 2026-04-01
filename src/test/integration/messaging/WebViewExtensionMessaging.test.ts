@@ -497,7 +497,7 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
         }
 
         // Restore connection
-        let sentMessages: any[] = [];
+        const sentMessages: any[] = [];
         mockWebviewApi.postMessage.callsFake((message: any) => {
           sentMessages.push(message);
           return Promise.resolve();
@@ -716,7 +716,7 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
           } as MessagePayload,
         };
 
-        let _negotiatedVersion: string | null = null;
+        const _negotiatedVersion: string | null = null;
         // messageManager.onVersionNegotiated((version: any) => {
         //   negotiatedVersion = version;
         // });
@@ -779,7 +779,7 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
           },
         };
 
-        let _unsupportedMessageHandled = false;
+        const _unsupportedMessageHandled = false;
         // messageManager.onUnsupportedMessage((messageType: any) => {
         //   if (messageType === 'FUTURE_MESSAGE_TYPE') {
         //     unsupportedMessageHandled = true;
@@ -909,7 +909,7 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
       it('should detect and report connection health status', async () => {
         // RED: Connection health should be monitored and reported
 
-        let _healthStatus: string | null = null;
+        const _healthStatus: string | null = null;
         // messageManager.onHealthStatusChange((status: any) => {
         //   healthStatus = status;
         // });
@@ -940,8 +940,8 @@ describe('WebView ↔ Extension Messaging Integration - TDD Suite', () => {
       it('should implement heartbeat mechanism for connection monitoring', async () => {
         // RED: Heartbeat should detect connection issues early
 
-        let _heartbeatReceived = false;
-        let _connectionLost = false;
+        const _heartbeatReceived = false;
+        const _connectionLost = false;
 
         // messageManager.onHeartbeat(() => {
         //   heartbeatReceived = true;

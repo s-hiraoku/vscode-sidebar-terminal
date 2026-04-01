@@ -248,9 +248,7 @@ describe('SettingsCoordinator', () => {
         throw new Error('Font error');
       });
 
-      expect(() =>
-        coordinator.applyFontSettings({ fontFamily: 'monospace' } as any)
-      ).not.toThrow();
+      expect(() => coordinator.applyFontSettings({ fontFamily: 'monospace' } as any)).not.toThrow();
     });
   });
 

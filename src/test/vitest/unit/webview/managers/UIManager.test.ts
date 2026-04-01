@@ -117,7 +117,7 @@ describe('UIManager', () => {
   describe('Terminal Placeholder', () => {
     it('should show and hide placeholder', () => {
       uiManager.showTerminalPlaceholder();
-      let placeholder = document.getElementById('terminal-placeholder');
+      const placeholder = document.getElementById('terminal-placeholder');
       expect(placeholder).toBeTruthy();
       expect(placeholder?.style.display).toBe('flex');
 

@@ -287,7 +287,9 @@ export class TabEventCoordinator {
     }
 
     if ('deleteTerminalSafely' in coordinator) {
-      (coordinator as unknown as { deleteTerminalSafely: (id: string) => void }).deleteTerminalSafely(tabId);
+      (
+        coordinator as unknown as { deleteTerminalSafely: (id: string) => void }
+      ).deleteTerminalSafely(tabId);
     } else {
       coordinator.closeTerminal(tabId);
     }

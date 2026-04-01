@@ -183,7 +183,7 @@ export function showProgress<T>(
 /**
  * Enhanced error handling for terminal operations
  */
-// eslint-disable-next-line @typescript-eslint/no-extraneous-class
+
 export class TerminalErrorHandler {
   public static handleTerminalCreationError(error: unknown): void {
     const message = TerminalErrorHandler.getErrorMessage(error);

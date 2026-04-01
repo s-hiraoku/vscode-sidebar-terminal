@@ -99,8 +99,7 @@ export class InputManager extends BaseManager implements IInputManager {
         this.terminalClipboardHandler.handleTerminalFindPrevious(manager),
       handleTerminalHideFind: (manager) =>
         this.terminalClipboardHandler.handleTerminalHideFind(manager),
-      handleTerminalClear: (manager) =>
-        this.terminalClipboardHandler.handleTerminalClear(manager),
+      handleTerminalClear: (manager) => this.terminalClipboardHandler.handleTerminalClear(manager),
     });
 
     // Initialize InputFlushingService
@@ -174,11 +173,8 @@ export class InputManager extends BaseManager implements IInputManager {
         this.handleVSCodeCommand(command, manager),
       handlePanelNavigationKey: (event: KeyboardEvent) =>
         this.panelNavigationHandler.handlePanelNavigationKey(event),
-      handleSpecialKeys: (
-        event: KeyboardEvent,
-        terminalId: string,
-        manager: IManagerCoordinator
-      ) => this.handleSpecialKeys(event, terminalId, manager),
+      handleSpecialKeys: (event: KeyboardEvent, terminalId: string, manager: IManagerCoordinator) =>
+        this.handleSpecialKeys(event, terminalId, manager),
       getActiveTerminalId: () => this.coordinator.getActiveTerminalId?.() || null,
     });
 
@@ -200,7 +196,6 @@ export class InputManager extends BaseManager implements IInputManager {
 
   // Terminal-specific disposables for xterm.js events (memory leak prevention)
   private terminalDisposables = new Map<string, Array<{ dispose(): void }>>();
-
 
   /**
    * Set the notification manager for Alt+Click feedback
@@ -426,7 +421,10 @@ export class InputManager extends BaseManager implements IInputManager {
       }
 
       // Alt+Click handling - delegate to AltClickCoordinator
-      if (event.altKey && this.altClickCoordinator.handleAltClick(event.clientX, event.clientY, terminalId)) {
+      if (
+        event.altKey &&
+        this.altClickCoordinator.handleAltClick(event.clientX, event.clientY, terminalId)
+      ) {
         // Let xterm.js handle the actual cursor positioning
         // No need to prevent default - xterm.js will handle it
 
@@ -557,7 +555,6 @@ export class InputManager extends BaseManager implements IInputManager {
   public setPanelNavigationMode(enabled: boolean): void {
     this.panelNavigationHandler.setPanelNavigationMode(enabled);
   }
-
 
   /**
    * Emit terminal interaction event with debouncing for frequent events

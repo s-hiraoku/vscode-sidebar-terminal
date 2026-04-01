@@ -132,7 +132,7 @@ export class DIContainer implements vscode.Disposable {
     }
 
     // Try to resolve from current container
-    let registration = this._services.get(token.id) as ServiceRegistration<T> | undefined;
+    const registration = this._services.get(token.id) as ServiceRegistration<T> | undefined;
 
     // If not found in current container, check parent
     if (!registration && this._parentContainer) {

@@ -61,9 +61,7 @@ describe('KeyboardShortcutSetupHandler', () => {
       const mockManager = {} as any;
       handler.setupKeyboardShortcuts(mockManager);
 
-      expect(mockDeps.logger).toHaveBeenCalledWith(
-        expect.stringContaining('keyboard shortcuts')
-      );
+      expect(mockDeps.logger).toHaveBeenCalledWith(expect.stringContaining('keyboard shortcuts'));
     });
 
     it('should delegate to panel navigation handler first', () => {
@@ -176,9 +174,7 @@ describe('KeyboardShortcutSetupHandler', () => {
       shortcutHandler(event);
 
       // Legacy shortcuts should be processed (Escape clears notifications)
-      expect(mockDeps.logger).toHaveBeenCalledWith(
-        expect.stringContaining('Escape')
-      );
+      expect(mockDeps.logger).toHaveBeenCalledWith(expect.stringContaining('Escape'));
     });
   });
 
@@ -319,9 +315,9 @@ describe('KeyboardShortcutSetupHandler', () => {
       (mockDeps.handleSpecialKeys as ReturnType<typeof vi.fn>).mockReturnValue(true);
       handler.setupGlobalKeyboardListener();
 
-      const registerCall = (mockDeps.eventRegistry.register as ReturnType<typeof vi.fn>).mock.calls.find(
-        (call: any[]) => call[0] === 'global-keyboard'
-      );
+      const registerCall = (
+        mockDeps.eventRegistry.register as ReturnType<typeof vi.fn>
+      ).mock.calls.find((call: any[]) => call[0] === 'global-keyboard');
       const globalHandler = registerCall![3] as (event: KeyboardEvent) => void;
 
       // Use a key that does NOT trigger the Ctrl+Shift+D early return guard
@@ -344,9 +340,9 @@ describe('KeyboardShortcutSetupHandler', () => {
       (mockDeps.getActiveTerminalId as ReturnType<typeof vi.fn>).mockReturnValue(null);
       handler.setupGlobalKeyboardListener();
 
-      const registerCall = (mockDeps.eventRegistry.register as ReturnType<typeof vi.fn>).mock.calls.find(
-        (call: any[]) => call[0] === 'global-keyboard'
-      );
+      const registerCall = (
+        mockDeps.eventRegistry.register as ReturnType<typeof vi.fn>
+      ).mock.calls.find((call: any[]) => call[0] === 'global-keyboard');
       const globalHandler = registerCall![3] as (event: KeyboardEvent) => void;
 
       const event = new dom.window.KeyboardEvent('keydown', {
@@ -378,9 +374,9 @@ describe('KeyboardShortcutSetupHandler', () => {
       (mockDeps.isIMEComposing as ReturnType<typeof vi.fn>).mockReturnValue(true);
       handler.setupAgentArrowKeyHandler();
 
-      const registerCall = (mockDeps.eventRegistry.register as ReturnType<typeof vi.fn>).mock.calls.find(
-        (call: any[]) => call[0] === 'agent-arrow-keys'
-      );
+      const registerCall = (
+        mockDeps.eventRegistry.register as ReturnType<typeof vi.fn>
+      ).mock.calls.find((call: any[]) => call[0] === 'agent-arrow-keys');
       const arrowHandler = registerCall![3] as (event: KeyboardEvent) => void;
 
       const event = new dom.window.KeyboardEvent('keydown', {
@@ -390,17 +386,15 @@ describe('KeyboardShortcutSetupHandler', () => {
       });
       arrowHandler(event);
 
-      expect(mockDeps.logger).toHaveBeenCalledWith(
-        expect.stringContaining('IME composition')
-      );
+      expect(mockDeps.logger).toHaveBeenCalledWith(expect.stringContaining('IME composition'));
     });
 
     it('should not log arrow keys when agent mode is disabled', () => {
       handler.setupAgentArrowKeyHandler();
 
-      const registerCall = (mockDeps.eventRegistry.register as ReturnType<typeof vi.fn>).mock.calls.find(
-        (call: any[]) => call[0] === 'agent-arrow-keys'
-      );
+      const registerCall = (
+        mockDeps.eventRegistry.register as ReturnType<typeof vi.fn>
+      ).mock.calls.find((call: any[]) => call[0] === 'agent-arrow-keys');
       const arrowHandler = registerCall![3] as (event: KeyboardEvent) => void;
 
       const event = new dom.window.KeyboardEvent('keydown', {
@@ -411,9 +405,7 @@ describe('KeyboardShortcutSetupHandler', () => {
       arrowHandler(event);
 
       // Should not log about agent mode since it's disabled
-      expect(mockDeps.logger).not.toHaveBeenCalledWith(
-        expect.stringContaining('Arrow key')
-      );
+      expect(mockDeps.logger).not.toHaveBeenCalledWith(expect.stringContaining('Arrow key'));
     });
   });
 

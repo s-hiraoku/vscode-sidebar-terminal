@@ -131,7 +131,7 @@ Phase Distribution:
 /**
  * パフォーマンス測定ヘルパー
  */
-// eslint-disable-next-line @typescript-eslint/no-extraneous-class
+
 export class PerformanceTestHelper {
   /**
    * 関数の実行時間を測定
@@ -243,7 +243,7 @@ export class MockManager {
  * アサーションヘルパー
  * 復元機能テスト用の共通アサーション
  */
-// eslint-disable-next-line @typescript-eslint/no-extraneous-class
+
 export class RestoreAssertionHelper {
   /**
    * セッション復元の基本検証
@@ -262,7 +262,6 @@ export class RestoreAssertionHelper {
    * TerminalManager呼び出しの検証
    */
   public static validateTerminalManagerCalls(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mockTerminalManager: any,
     expectedCreateCalls: number,
     expectedSetActiveCalls: number,
@@ -279,7 +278,6 @@ export class RestoreAssertionHelper {
    * Scrollback復元の検証
    */
   public static async validateScrollbackRestore(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mockSidebarProvider: any,
     expectedTerminalId: string,
     expectedLines: number,
@@ -304,7 +302,7 @@ export class RestoreAssertionHelper {
  * テストデータファクトリー
  * 一貫性のあるテストデータの生成
  */
-// eslint-disable-next-line @typescript-eslint/no-extraneous-class
+
 export class TestDataFactory {
   /**
    * セッションデータを生成
@@ -318,7 +316,7 @@ export class TestDataFactory {
 
     for (let i = 1; i <= terminalCount; i++) {
       const terminalId = `term${i}`;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       const terminal: any = {
         id: terminalId,
         name: `Terminal ${i}`,
@@ -349,7 +347,6 @@ export class TestDataFactory {
    * 期限切れセッションデータを生成
    */
   public static createExpiredSessionData(daysAgo: number): unknown {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sessionData = this.createSessionData(1) as any;
     return {
       ...(sessionData as Record<string, unknown>),

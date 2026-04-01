@@ -58,8 +58,7 @@ export class ScrollbackMessageHandler {
    * Handle scrollbackDataCollected messages from WebView
    */
   public async handleScrollbackDataCollected(message: WebviewMessage): Promise<void> {
-    const scrollbackData =
-      (message as any)?.scrollbackData ?? (message as any)?.scrollbackContent;
+    const scrollbackData = (message as any)?.scrollbackData ?? (message as any)?.scrollbackContent;
     const requestId = (message as any)?.requestId;
     const terminalId = (message as any)?.terminalId;
 
@@ -92,9 +91,7 @@ export class ScrollbackMessageHandler {
   public async handleScrollbackRefreshRequest(message: WebviewMessage): Promise<void> {
     const persistenceService = this.deps.getExtensionPersistenceService();
     if (!persistenceService) {
-      log(
-        '⚠️ [PROVIDER] Received requestScrollbackRefresh but persistence service is unavailable'
-      );
+      log('⚠️ [PROVIDER] Received requestScrollbackRefresh but persistence service is unavailable');
       return;
     }
 

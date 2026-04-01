@@ -460,7 +460,7 @@ describe('EventBus', () => {
     it.skip('should handle unsubscribe during handler execution', () => {
       const TestEvent = createEventType<{ value: number }>('test');
       let handler2Called = false;
-      let subscription2: any;
+      let subscription2: any; // eslint-disable-line prefer-const
 
       eventBus.subscribe(TestEvent, () => {
         if (subscription2) {

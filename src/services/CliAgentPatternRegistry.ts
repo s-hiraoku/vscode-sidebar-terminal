@@ -187,11 +187,7 @@ export class CliAgentPatternRegistry {
       terminationRegexPatterns: [/\[process exited with code \d+\]/i],
       waitingPatterns: {
         inputPromptRegexPatterns: [/^codex\s*>\s*$/i],
-        toolApprovalRegexPatterns: [
-          /ask me to approve/i,
-          /\[y\/N\]/,
-          /\(Y\/n\)/,
-        ],
+        toolApprovalRegexPatterns: [/ask me to approve/i, /\[y\/N\]/, /\(Y\/n\)/],
       },
     });
 
@@ -722,21 +718,21 @@ export class CliAgentPatternRegistry {
     return (
       text
         // CSI sequences (colors, cursor, private modes)
-        // eslint-disable-next-line no-control-regex
+
         .replace(/\x1b\[[0-9;?]*[A-Za-z]/g, '')
         // OSC sequences terminated by BEL (multi-digit parameter support)
-        // eslint-disable-next-line no-control-regex
+
         .replace(/\x1b\][0-9;]*[^\x07]*\x07/g, '')
         // OSC sequences terminated by ST (ESC \)
-        // eslint-disable-next-line no-control-regex
+
         .replace(/\x1b\][0-9;]*[^\x1b]*\x1b\\/g, '')
         // Remaining lone ESC sequences (SS3, DCS, APC, keypad modes)
-        // eslint-disable-next-line no-control-regex
+
         .replace(/\x1b[^[\]]/g, '')
         // Remove carriage return
         .replace(/\r/g, '')
         // Remove control characters but preserve newlines for line-based matching
-        // eslint-disable-next-line no-control-regex
+
         .replace(/[\x00-\x09\x0B-\x1F\x7F]/g, '')
         .trim()
     );

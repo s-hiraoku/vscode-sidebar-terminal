@@ -301,7 +301,9 @@ export class TerminalCreationService implements Disposable {
         return null;
       } finally {
         ResizeManager.resumeObservers();
-        terminalLogger.info(`▶️ Resumed all ResizeObservers after terminal creation: ${terminalId}`);
+        terminalLogger.info(
+          `▶️ Resumed all ResizeObservers after terminal creation: ${terminalId}`
+        );
       }
     };
 

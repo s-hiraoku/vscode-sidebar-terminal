@@ -25,7 +25,7 @@ import { TerminalManager } from '../../terminals/TerminalManager';
 import { safeProcessCwd } from '../../utils/common';
 
 // Direct console.log for reliable debugging output
-// eslint-disable-next-line no-console
+
 const log = (message: string, ...args: unknown[]) =>
   console.log(`[EXT-PERSISTENCE] ${message}`, ...args);
 import {

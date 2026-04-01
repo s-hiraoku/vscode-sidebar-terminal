@@ -10,10 +10,7 @@
 import { Terminal } from '@xterm/xterm';
 import { IManagerCoordinator } from '../../../interfaces/ManagerInterfaces';
 import { TerminalInteractionEvent } from '../../../../types/common';
-import {
-  TerminalOperationsService,
-  ScrollDirection,
-} from '../services/TerminalOperationsService';
+import { TerminalOperationsService, ScrollDirection } from '../services/TerminalOperationsService';
 import { isMacPlatform } from '../../../utils/PlatformUtils';
 
 /**
@@ -191,9 +188,7 @@ export class VSCodeCommandDispatcher {
         this.deps.logger('Window reload not available in webview context');
         break;
       case 'workbench.action.reloadWindowWithExtensionsDisabled':
-        this.deps.logger(
-          'Window reload with disabled extensions not available in webview context'
-        );
+        this.deps.logger('Window reload with disabled extensions not available in webview context');
         break;
 
       // Zoom

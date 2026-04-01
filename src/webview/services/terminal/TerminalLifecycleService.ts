@@ -215,8 +215,7 @@ export class TerminalLifecycleService {
       terminalInstance.renderingOptimizer?.dispose();
       TerminalAutoSaveService.clearPeriodicSaveTimer(terminalId);
 
-      const disposeScrollIndicator =
-        this.dependencies.scrollIndicatorDisposables.get(terminalId);
+      const disposeScrollIndicator = this.dependencies.scrollIndicatorDisposables.get(terminalId);
       if (disposeScrollIndicator) {
         disposeScrollIndicator();
         this.dependencies.scrollIndicatorDisposables.delete(terminalId);
@@ -231,10 +230,7 @@ export class TerminalLifecycleService {
           this.dependencies.coordinator.inputManager.removeTerminalHandlers?.(terminalId);
           terminalLogger.info(`✅ Input handlers removed via InputManager for: ${terminalId}`);
         } catch (error) {
-          terminalLogger.warn(
-            `⚠️ Failed to remove InputManager handlers for ${terminalId}`,
-            error
-          );
+          terminalLogger.warn(`⚠️ Failed to remove InputManager handlers for ${terminalId}`, error);
         }
       }
 
@@ -278,9 +274,11 @@ export class TerminalLifecycleService {
           const activeId =
             this.dependencies.coordinator.getActiveTerminalId?.() ?? orderedIds[0] ?? null;
           const currentLocation =
-            (this.dependencies.splitManager as {
-              getCurrentPanelLocation?: () => 'sidebar' | 'panel';
-            }).getCurrentPanelLocation?.() || 'sidebar';
+            (
+              this.dependencies.splitManager as {
+                getCurrentPanelLocation?: () => 'sidebar' | 'panel';
+              }
+            ).getCurrentPanelLocation?.() || 'sidebar';
           const splitDirection =
             this.dependencies.splitManager.getOptimalSplitDirection(currentLocation);
           containerManager.applyDisplayState({

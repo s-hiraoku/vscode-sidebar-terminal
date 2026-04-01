@@ -82,7 +82,7 @@ export class ScrollbackService implements IScrollbackService {
     if (!session || session.entries.length === 0) return null;
 
     const limit = options?.scrollback ?? this._config.persistentSessionScrollback;
-    let entries = options?.range
+    const entries = options?.range
       ? session.entries.slice(options.range.start, options.range.end)
       : session.entries;
 

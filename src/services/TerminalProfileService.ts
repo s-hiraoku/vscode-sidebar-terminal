@@ -245,7 +245,7 @@ export class TerminalProfileService {
    */
   private createFallbackProfile(): ProfileSelectionResult {
     let shellPath: string;
-    let shellArgs: string[] = [];
+    const shellArgs: string[] = [];
 
     switch (this.platform) {
       case 'windows':

@@ -18,9 +18,9 @@ describe('Input Optimization Integration', () => {
   let inputManager: InputManager;
   let messageManager: ConsolidatedMessageManager;
   let performanceManager: PerformanceManager;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   let mockCoordinator: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   let mockTerminal: any;
   let jsdom: JSDOM;
 

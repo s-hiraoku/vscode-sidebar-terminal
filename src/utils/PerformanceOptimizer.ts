@@ -98,10 +98,7 @@ export class PerformanceMonitor {
   }
 
   public startTimer(name: string): void {
-    if (
-      !this.metrics.has(name) &&
-      this.metrics.size >= PerformanceMonitor.MAX_METRICS_SIZE
-    ) {
+    if (!this.metrics.has(name) && this.metrics.size >= PerformanceMonitor.MAX_METRICS_SIZE) {
       const firstKey = this.metrics.keys().next().value;
       if (firstKey !== undefined) {
         this.metrics.delete(firstKey);

@@ -38,30 +38,25 @@ describe('standard-version configuration (#273)', () => {
     });
 
     it('exports an object with tagPrefix "v"', () => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const config = require(path.join(repoRoot, '.versionrc.cjs'));
       expect(config.tagPrefix).toBe('v');
     });
 
     it('skips tag creation to support safe release procedure', () => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const config = require(path.join(repoRoot, '.versionrc.cjs'));
       expect(config.skip?.tag).toBe(true);
     });
 
     it('skips push to support safe release procedure', () => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const config = require(path.join(repoRoot, '.versionrc.cjs'));
       expect(config.skip?.push).toBe(true);
     });
   });
 
   describe('conventional commit type mappings', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let config: any;
 
     beforeEach(() => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
       config = require(path.join(repoRoot, '.versionrc.cjs'));
     });
 
@@ -94,7 +89,6 @@ describe('standard-version configuration (#273)', () => {
     });
 
     it('covers all commitlint type-enum values', () => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const commitlintConfig = require(path.join(repoRoot, 'commitlint.config.cjs'));
       const commitlintTypes: string[] = commitlintConfig.rules['type-enum'][2];
       const types = config.types as Array<{ type: string }>;

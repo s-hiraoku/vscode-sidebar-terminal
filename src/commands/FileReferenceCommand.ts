@@ -50,7 +50,10 @@ export class FileReferenceCommand {
         if (activeId) {
           this.terminalManager.sendInput(text, activeId);
           log(`📤 [DEBUG] Sent file reference to focused terminal: "${text}"`);
-          void vscode.window.setStatusBarMessage(`$(terminal) Sent file reference to terminal`, 3000);
+          void vscode.window.setStatusBarMessage(
+            `$(terminal) Sent file reference to terminal`,
+            3000
+          );
           return;
         }
       }
@@ -132,7 +135,10 @@ export class FileReferenceCommand {
         if (activeId) {
           this.terminalManager.sendInput(text, activeId);
           log(`📤 [DEBUG] Sent ${openFiles.length} file references to focused terminal`);
-          void vscode.window.setStatusBarMessage(`$(terminal) Sent ${openFiles.length} file references`, 3000);
+          void vscode.window.setStatusBarMessage(
+            `$(terminal) Sent ${openFiles.length} file references`,
+            3000
+          );
           return;
         }
       }
@@ -163,7 +169,8 @@ export class FileReferenceCommand {
       // 成功メッセージ（ステータスバーに表示）
       const agentTypes = connectedAgents.map((a) => a.agentType).join(', ');
       void vscode.window.setStatusBarMessage(
-        `$(terminal) Sent ${openFiles.length} file references to ${agentTypes}`, 3000
+        `$(terminal) Sent ${openFiles.length} file references to ${agentTypes}`,
+        3000
       );
       log(
         `✅ [DEBUG] ${openFiles.length} file references sent to ${connectedAgents.length} CLI agents`
