@@ -12,7 +12,7 @@ import { CliAgentWaitingDetector } from './CliAgentWaitingDetector';
 import { AudioNotificationService } from './AudioNotificationService';
 import { ToastNotificationService } from './ToastNotificationService';
 import { NativeNotificationService } from './NativeNotificationService';
-import { getAgentDisplayName, getWaitingTypeLabel, NOTIFICATION_TITLE } from './agentConstants';
+import { NotificationCoordinator } from './NotificationCoordinator';
 import type { AgentType } from '../types/shared';
 import { CliAgentInputAccumulator } from './CliAgentInputAccumulator';
 import { CliAgentIdleDetector } from './CliAgentIdleDetector';
@@ -21,9 +21,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
   private readonly detectionEngine: CliAgentDetectionEngine;
   private readonly stateStore: CliAgentStateStore;
   private readonly waitingDetector: CliAgentWaitingDetector;
-  private readonly audioService: AudioNotificationService;
-  private readonly toastService: ToastNotificationService;
-  private readonly nativeNotificationService: NativeNotificationService;
+  private readonly notificationCoordinator: NotificationCoordinator;
   private readonly inputAccumulator: CliAgentInputAccumulator;
   private readonly idleDetector: CliAgentIdleDetector;
   private waitingChangeSubscription: { dispose(): void } | undefined;
@@ -39,21 +37,17 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
       this.detectionEngine.getPatternRegistry(),
       this.stateStore
     );
-    this.audioService = new AudioNotificationService();
-    this.toastService = new ToastNotificationService();
-    this.nativeNotificationService = new NativeNotificationService();
+    this.notificationCoordinator = new NotificationCoordinator(
+      new AudioNotificationService(),
+      new ToastNotificationService(),
+      new NativeNotificationService()
+    );
     this.inputAccumulator = new CliAgentInputAccumulator();
     this.idleDetector = new CliAgentIdleDetector(this.stateStore);
 
     this.waitingChangeSubscription = this.stateStore.onAgentWaitingChange((event) => {
       if (event.isWaiting) {
-        this.audioService.playNotification(event.terminalId);
-        this.toastService.showWaitingNotification(event.terminalId, event.waitingType);
-        this.nativeNotificationService.notifyAndActivate(
-          event.terminalId,
-          NOTIFICATION_TITLE,
-          `CLI Agent is ${getWaitingTypeLabel(event.waitingType)} (${event.terminalId})`
-        );
+        this.notificationCoordinator.notifyWaiting(event.terminalId, event.waitingType);
       }
     });
 
@@ -66,12 +60,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
           this.removingTerminals.delete(event.terminalId);
           return;
         }
-        this.toastService.showCompletedNotification(event.terminalId, previous.agentType);
-        this.nativeNotificationService.notifyAndActivate(
-          event.terminalId,
-          NOTIFICATION_TITLE,
-          `${getAgentDisplayName(previous.agentType)} has completed (${event.terminalId})`
-        );
+        this.notificationCoordinator.notifyCompleted(event.terminalId, previous.agentType);
       }
     });
   }
@@ -277,8 +266,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     this.inputAccumulator.clear(terminalId);
     this.stateStore.removeTerminalCompletely(terminalId);
     this.previousAgentInfo.delete(terminalId);
-    this.toastService.clearTerminal(terminalId);
-    this.nativeNotificationService.clearTerminal(terminalId);
+    this.notificationCoordinator.clearTerminal(terminalId);
   }
 
   forceReconnectAgent(
@@ -316,9 +304,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     this.statusChangeSubscription?.dispose();
     this.idleDetector.dispose();
     this.waitingDetector.dispose();
-    this.audioService.dispose();
-    this.toastService.dispose();
-    this.nativeNotificationService.dispose();
+    this.notificationCoordinator.dispose();
     this.stateStore.dispose();
   }
 

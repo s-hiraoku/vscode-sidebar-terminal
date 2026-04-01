@@ -166,6 +166,10 @@ export class AudioNotificationService implements vscode.Disposable {
     }
   }
 
+  public clearTerminal(terminalId: string): void {
+    this.lastPlayedAt.delete(terminalId);
+  }
+
   public dispose(): void {
     this.isDisposed = true;
     for (const proc of this.activeProcesses) {
