@@ -190,7 +190,7 @@ const xtermMock = {
 
 // xterm.jsモジュールをモックするためにrequire.cacheを直接設定
 // (Module.prototype.requireをハイジャックするとnyc coverage instrumentationが壊れるため)
-const Module = require('module');
+const _Module = require('module');
 const path = require('path');
 
 // xtermモジュール名のリスト

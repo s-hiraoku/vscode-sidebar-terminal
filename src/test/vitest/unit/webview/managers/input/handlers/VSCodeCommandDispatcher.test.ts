@@ -109,10 +109,7 @@ describe('VSCodeCommandDispatcher', () => {
       });
 
       it('should emit switch-previous for focusPrevious', () => {
-        dispatcher.handleVSCodeCommand(
-          'workbench.action.terminal.focusPrevious',
-          mockManager
-        );
+        dispatcher.handleVSCodeCommand('workbench.action.terminal.focusPrevious', mockManager);
         expect(deps.emitTerminalInteractionEvent).toHaveBeenCalledWith(
           'switch-previous',
           'terminal-1',
@@ -122,10 +119,7 @@ describe('VSCodeCommandDispatcher', () => {
       });
 
       it('should emit toggle-terminal for toggleTerminal', () => {
-        dispatcher.handleVSCodeCommand(
-          'workbench.action.terminal.toggleTerminal',
-          mockManager
-        );
+        dispatcher.handleVSCodeCommand('workbench.action.terminal.toggleTerminal', mockManager);
         expect(deps.emitTerminalInteractionEvent).toHaveBeenCalledWith(
           'toggle-terminal',
           '',
@@ -144,10 +138,7 @@ describe('VSCodeCommandDispatcher', () => {
         ['scrollToPreviousCommand', 'previousCommand'],
         ['scrollToNextCommand', 'nextCommand'],
       ])('should scroll %s', (commandSuffix, direction) => {
-        dispatcher.handleVSCodeCommand(
-          `workbench.action.terminal.${commandSuffix}`,
-          mockManager
-        );
+        dispatcher.handleVSCodeCommand(`workbench.action.terminal.${commandSuffix}`, mockManager);
         expect(deps.terminalOperationsService.scrollTerminal).toHaveBeenCalledWith(
           direction,
           mockManager
@@ -157,10 +148,7 @@ describe('VSCodeCommandDispatcher', () => {
 
     describe('Clipboard commands', () => {
       it('should delegate copySelection to handleTerminalCopy', () => {
-        dispatcher.handleVSCodeCommand(
-          'workbench.action.terminal.copySelection',
-          mockManager
-        );
+        dispatcher.handleVSCodeCommand('workbench.action.terminal.copySelection', mockManager);
         expect(deps.handleTerminalCopy).toHaveBeenCalledWith(mockManager);
       });
 
@@ -187,10 +175,7 @@ describe('VSCodeCommandDispatcher', () => {
       });
 
       it('should delegate findPrevious to handleTerminalFindPrevious', () => {
-        dispatcher.handleVSCodeCommand(
-          'workbench.action.terminal.findPrevious',
-          mockManager
-        );
+        dispatcher.handleVSCodeCommand('workbench.action.terminal.findPrevious', mockManager);
         expect(deps.handleTerminalFindPrevious).toHaveBeenCalledWith(mockManager);
       });
 
@@ -202,55 +187,30 @@ describe('VSCodeCommandDispatcher', () => {
 
     describe('Word/Line operations', () => {
       it('should delegate deleteWordLeft', () => {
-        dispatcher.handleVSCodeCommand(
-          'workbench.action.terminal.deleteWordLeft',
-          mockManager
-        );
-        expect(deps.terminalOperationsService.deleteWordLeft).toHaveBeenCalledWith(
-          mockManager
-        );
+        dispatcher.handleVSCodeCommand('workbench.action.terminal.deleteWordLeft', mockManager);
+        expect(deps.terminalOperationsService.deleteWordLeft).toHaveBeenCalledWith(mockManager);
       });
 
       it('should delegate deleteWordRight', () => {
-        dispatcher.handleVSCodeCommand(
-          'workbench.action.terminal.deleteWordRight',
-          mockManager
-        );
-        expect(deps.terminalOperationsService.deleteWordRight).toHaveBeenCalledWith(
-          mockManager
-        );
+        dispatcher.handleVSCodeCommand('workbench.action.terminal.deleteWordRight', mockManager);
+        expect(deps.terminalOperationsService.deleteWordRight).toHaveBeenCalledWith(mockManager);
       });
 
       it('should delegate moveToLineStart', () => {
-        dispatcher.handleVSCodeCommand(
-          'workbench.action.terminal.moveToLineStart',
-          mockManager
-        );
-        expect(deps.terminalOperationsService.moveToLineStart).toHaveBeenCalledWith(
-          mockManager
-        );
+        dispatcher.handleVSCodeCommand('workbench.action.terminal.moveToLineStart', mockManager);
+        expect(deps.terminalOperationsService.moveToLineStart).toHaveBeenCalledWith(mockManager);
       });
 
       it('should delegate moveToLineEnd', () => {
-        dispatcher.handleVSCodeCommand(
-          'workbench.action.terminal.moveToLineEnd',
-          mockManager
-        );
-        expect(deps.terminalOperationsService.moveToLineEnd).toHaveBeenCalledWith(
-          mockManager
-        );
+        dispatcher.handleVSCodeCommand('workbench.action.terminal.moveToLineEnd', mockManager);
+        expect(deps.terminalOperationsService.moveToLineEnd).toHaveBeenCalledWith(mockManager);
       });
     });
 
     describe('Size and unavailable commands', () => {
       it('should delegate sizeToContentWidth', () => {
-        dispatcher.handleVSCodeCommand(
-          'workbench.action.terminal.sizeToContentWidth',
-          mockManager
-        );
-        expect(deps.terminalOperationsService.sizeToContent).toHaveBeenCalledWith(
-          mockManager
-        );
+        dispatcher.handleVSCodeCommand('workbench.action.terminal.sizeToContentWidth', mockManager);
+        expect(deps.terminalOperationsService.sizeToContent).toHaveBeenCalledWith(mockManager);
       });
 
       it('should log unavailable commands without errors', () => {
@@ -279,9 +239,7 @@ describe('VSCodeCommandDispatcher', () => {
 
       it('should log unhandled commands', () => {
         dispatcher.handleVSCodeCommand('some.unknown.command', mockManager);
-        expect(deps.logger).toHaveBeenCalledWith(
-          'Unhandled VS Code command: some.unknown.command'
-        );
+        expect(deps.logger).toHaveBeenCalledWith('Unhandled VS Code command: some.unknown.command');
       });
     });
 
@@ -321,11 +279,7 @@ describe('VSCodeCommandDispatcher', () => {
           ctrlKey: true,
           shiftKey: true,
         });
-        const result = dispatcher.shouldInterceptKeyForVSCode(
-          event,
-          mockTerminal,
-          mockManager
-        );
+        const result = dispatcher.shouldInterceptKeyForVSCode(event, mockTerminal, mockManager);
         expect(result).toBe(true);
         expect(deps.terminalOperationsService.scrollTerminal).toHaveBeenCalledWith(
           'up',
@@ -339,11 +293,7 @@ describe('VSCodeCommandDispatcher', () => {
           ctrlKey: true,
           shiftKey: true,
         });
-        const result = dispatcher.shouldInterceptKeyForVSCode(
-          event,
-          mockTerminal,
-          mockManager
-        );
+        const result = dispatcher.shouldInterceptKeyForVSCode(event, mockTerminal, mockManager);
         expect(result).toBe(true);
         expect(deps.terminalOperationsService.scrollTerminal).toHaveBeenCalledWith(
           'down',
@@ -365,9 +315,7 @@ describe('VSCodeCommandDispatcher', () => {
       it('should intercept Ctrl+C when selection exists (copy)', () => {
         mockTerminal.hasSelection.mockReturnValue(true);
         const event = createKeyEvent({ key: 'c', ctrlKey: true });
-        expect(dispatcher.shouldInterceptKeyForVSCode(event, mockTerminal, mockManager)).toBe(
-          true
-        );
+        expect(dispatcher.shouldInterceptKeyForVSCode(event, mockTerminal, mockManager)).toBe(true);
         expect(deps.handleTerminalCopy).toHaveBeenCalledWith(mockManager);
       });
 
@@ -381,18 +329,14 @@ describe('VSCodeCommandDispatcher', () => {
 
       it('should intercept Ctrl+V for paste', () => {
         const event = createKeyEvent({ key: 'v', ctrlKey: true });
-        expect(dispatcher.shouldInterceptKeyForVSCode(event, mockTerminal, mockManager)).toBe(
-          true
-        );
+        expect(dispatcher.shouldInterceptKeyForVSCode(event, mockTerminal, mockManager)).toBe(true);
         expect(deps.handleTerminalPaste).toHaveBeenCalledWith(mockManager);
       });
 
       it('should intercept Ctrl+Shift+C for copy when selection exists', () => {
         mockTerminal.hasSelection.mockReturnValue(true);
         const event = createKeyEvent({ key: 'c', ctrlKey: true, shiftKey: true });
-        expect(dispatcher.shouldInterceptKeyForVSCode(event, mockTerminal, mockManager)).toBe(
-          true
-        );
+        expect(dispatcher.shouldInterceptKeyForVSCode(event, mockTerminal, mockManager)).toBe(true);
         expect(deps.handleTerminalCopy).toHaveBeenCalledWith(mockManager);
       });
 
@@ -406,9 +350,7 @@ describe('VSCodeCommandDispatcher', () => {
 
       it('should intercept Ctrl+Shift+V for paste', () => {
         const event = createKeyEvent({ key: 'v', ctrlKey: true, shiftKey: true });
-        expect(dispatcher.shouldInterceptKeyForVSCode(event, mockTerminal, mockManager)).toBe(
-          true
-        );
+        expect(dispatcher.shouldInterceptKeyForVSCode(event, mockTerminal, mockManager)).toBe(true);
         expect(deps.handleTerminalPaste).toHaveBeenCalledWith(mockManager);
       });
     });
@@ -418,9 +360,9 @@ describe('VSCodeCommandDispatcher', () => {
         const keys = ['d', 'z', 'a', 'e', 'u', 'k', 'w', 'r', 'l'];
         for (const key of keys) {
           const event = createKeyEvent({ key, ctrlKey: true });
-          expect(
-            dispatcher.shouldInterceptKeyForVSCode(event, mockTerminal, mockManager)
-          ).toBe(false);
+          expect(dispatcher.shouldInterceptKeyForVSCode(event, mockTerminal, mockManager)).toBe(
+            false
+          );
         }
       });
     });
@@ -429,9 +371,7 @@ describe('VSCodeCommandDispatcher', () => {
       it('should intercept Cmd+K on macOS for clear', () => {
         (isMacPlatform as any).mockReturnValue(true);
         const event = createKeyEvent({ key: 'k', metaKey: true });
-        expect(dispatcher.shouldInterceptKeyForVSCode(event, mockTerminal, mockManager)).toBe(
-          true
-        );
+        expect(dispatcher.shouldInterceptKeyForVSCode(event, mockTerminal, mockManager)).toBe(true);
         expect(deps.handleTerminalClear).toHaveBeenCalledWith(mockManager);
       });
 
@@ -449,9 +389,7 @@ describe('VSCodeCommandDispatcher', () => {
       it('should intercept Ctrl+Insert for copy when selection exists', () => {
         mockTerminal.hasSelection.mockReturnValue(true);
         const event = createKeyEvent({ key: 'Insert', ctrlKey: true });
-        expect(dispatcher.shouldInterceptKeyForVSCode(event, mockTerminal, mockManager)).toBe(
-          true
-        );
+        expect(dispatcher.shouldInterceptKeyForVSCode(event, mockTerminal, mockManager)).toBe(true);
         expect(deps.handleTerminalCopy).toHaveBeenCalledWith(mockManager);
       });
 
@@ -465,9 +403,7 @@ describe('VSCodeCommandDispatcher', () => {
 
       it('should intercept Shift+Insert for paste', () => {
         const event = createKeyEvent({ key: 'Insert', shiftKey: true });
-        expect(dispatcher.shouldInterceptKeyForVSCode(event, mockTerminal, mockManager)).toBe(
-          true
-        );
+        expect(dispatcher.shouldInterceptKeyForVSCode(event, mockTerminal, mockManager)).toBe(true);
         expect(deps.handleTerminalPaste).toHaveBeenCalledWith(mockManager);
       });
     });
@@ -475,9 +411,7 @@ describe('VSCodeCommandDispatcher', () => {
     describe('F12 key', () => {
       it('should intercept F12 for dev tools', () => {
         const event = createKeyEvent({ key: 'F12' });
-        expect(dispatcher.shouldInterceptKeyForVSCode(event, mockTerminal, mockManager)).toBe(
-          true
-        );
+        expect(dispatcher.shouldInterceptKeyForVSCode(event, mockTerminal, mockManager)).toBe(true);
       });
     });
 
@@ -485,9 +419,9 @@ describe('VSCodeCommandDispatcher', () => {
       it('should pass regular keys to shell', () => {
         for (const key of ['a', 'b', '1', 'Enter', 'Backspace']) {
           const event = createKeyEvent({ key });
-          expect(
-            dispatcher.shouldInterceptKeyForVSCode(event, mockTerminal, mockManager)
-          ).toBe(false);
+          expect(dispatcher.shouldInterceptKeyForVSCode(event, mockTerminal, mockManager)).toBe(
+            false
+          );
         }
       });
     });

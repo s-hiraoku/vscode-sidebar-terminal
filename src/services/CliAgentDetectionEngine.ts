@@ -600,7 +600,7 @@ export class CliAgentDetectionEngine {
   ): TerminationResult | null {
     const commandFinishedPattern = /\x1b\]633;C(?:;(-?\d+))?\x07/g;
     const terminalSignals = this.getTerminalSignalState(terminalId);
-    let match: RegExpExecArray | null = commandFinishedPattern.exec(data);
+    const match: RegExpExecArray | null = commandFinishedPattern.exec(data);
     if (!match) {
       return null;
     }

@@ -38,7 +38,9 @@ import {
 } from '../../../../../providers/handlers/WebViewInitHandler';
 import { WebviewMessage } from '../../../../../types/common';
 
-function createMockDeps(overrides?: Partial<IWebViewInitHandlerDependencies>): IWebViewInitHandlerDependencies {
+function createMockDeps(
+  overrides?: Partial<IWebViewInitHandlerDependencies>
+): IWebViewInitHandlerDependencies {
   return {
     sendMessage: vi.fn().mockResolvedValue(undefined),
     sendVersionInfo: vi.fn(),
@@ -172,9 +174,7 @@ describe('WebViewInitHandler', () => {
       await handler.handleWebviewInitialized(message);
 
       // Should send init message for panel move reinit
-      expect(deps.sendMessage).toHaveBeenCalledWith(
-        expect.objectContaining({ command: 'init' })
-      );
+      expect(deps.sendMessage).toHaveBeenCalledWith(expect.objectContaining({ command: 'init' }));
       expect(deps.initializeTerminal).toHaveBeenCalled();
       expect(deps.sendFullCliAgentStateSync).toHaveBeenCalled();
     });

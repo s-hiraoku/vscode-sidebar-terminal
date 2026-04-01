@@ -86,7 +86,9 @@ vi.mock('../../../../providers/SecondaryTerminalProvider', () => ({
     static viewType = 'secondaryTerminal';
     constructor(..._args: unknown[]) {}
     setPhase8Services(..._args: unknown[]): void {}
-    dispose(): void { mocks.sidebarProviderDispose(); }
+    dispose(): void {
+      mocks.sidebarProviderDispose();
+    }
   },
 }));
 
@@ -110,7 +112,9 @@ vi.mock('../../../../terminals/TerminalManager', () => ({
       mocks.onTerminalFocusCallback = cb;
       return { dispose: vi.fn() };
     }
-    dispose(): void { mocks.terminalManagerDispose(); }
+    dispose(): void {
+      mocks.terminalManagerDispose();
+    }
   },
 }));
 
@@ -118,17 +122,25 @@ vi.mock('../../../../services/persistence/ExtensionPersistenceService', () => ({
   ExtensionPersistenceService: class {
     constructor(..._args: unknown[]) {}
     setSidebarProvider(..._args: unknown[]): void {}
-    dispose(): void { mocks.persistenceServiceDispose(); }
+    dispose(): void {
+      mocks.persistenceServiceDispose();
+    }
   },
 }));
 
 vi.mock('../../../../commands', () => ({
-  FileReferenceCommand: class { constructor(..._args: unknown[]) {} },
-  TerminalCommand: class { constructor(..._args: unknown[]) {} },
+  FileReferenceCommand: class {
+    constructor(..._args: unknown[]) {}
+  },
+  TerminalCommand: class {
+    constructor(..._args: unknown[]) {}
+  },
 }));
 
 vi.mock('../../../../commands/CopilotIntegrationCommand', () => ({
-  CopilotIntegrationCommand: class { constructor(..._args: unknown[]) {} },
+  CopilotIntegrationCommand: class {
+    constructor(..._args: unknown[]) {}
+  },
 }));
 
 vi.mock('../../../../services/EnhancedShellIntegrationService', () => ({
@@ -139,7 +151,9 @@ vi.mock('../../../../services/EnhancedShellIntegrationService', () => ({
       }
     }
     setWebviewProvider(..._args: unknown[]): void {}
-    dispose(): void { mocks.shellIntegrationDispose(); }
+    dispose(): void {
+      mocks.shellIntegrationDispose();
+    }
   },
 }));
 
@@ -147,7 +161,9 @@ vi.mock('../../../../services/KeyboardShortcutService', () => ({
   KeyboardShortcutService: class {
     constructor(..._args: unknown[]) {}
     setWebviewProvider(..._args: unknown[]): void {}
-    dispose(): void { mocks.keyboardShortcutDispose(); }
+    dispose(): void {
+      mocks.keyboardShortcutDispose();
+    }
   },
 }));
 
@@ -158,14 +174,18 @@ vi.mock('../../../../services/TerminalDecorationsService', () => ({
         throw new Error('Decorations init failed');
       }
     }
-    dispose(): void { mocks.decorationsServiceDispose(); }
+    dispose(): void {
+      mocks.decorationsServiceDispose();
+    }
   },
 }));
 
 vi.mock('../../../../services/TerminalLinksService', () => ({
   TerminalLinksService: class {
     constructor(..._args: unknown[]) {}
-    dispose(): void { mocks.linksServiceDispose(); }
+    dispose(): void {
+      mocks.linksServiceDispose();
+    }
   },
 }));
 
@@ -182,7 +202,9 @@ vi.mock('../../../../services/TelemetryService', () => ({
     trackTerminalCreated = mocks.telemetryTrackTerminalCreated;
     trackTerminalDeleted = mocks.telemetryTrackTerminalDeleted;
     trackTerminalFocused = mocks.telemetryTrackTerminalFocused;
-    dispose(): void { mocks.telemetryServiceDispose(); }
+    dispose(): void {
+      mocks.telemetryServiceDispose();
+    }
   },
 }));
 
@@ -419,10 +441,7 @@ describe('ExtensionLifecycle', () => {
       const ctx = createMockContext();
       await lifecycle.activate(ctx);
 
-      expect(mocks.telemetryTrackError).toHaveBeenCalledWith(
-        expect.any(Error),
-        'activation'
-      );
+      expect(mocks.telemetryTrackError).toHaveBeenCalledWith(expect.any(Error), 'activation');
     });
 
     it('should still resolve the promise on catastrophic failure (prevents spinner hang)', async () => {
@@ -510,12 +529,8 @@ describe('ExtensionLifecycle', () => {
 
       await lifecycle.deactivate();
 
-      expect(mocks.loggerLifecycle).toHaveBeenCalledWith(
-        'Sidebar Terminal deactivation started'
-      );
-      expect(mocks.loggerLifecycle).toHaveBeenCalledWith(
-        'Sidebar Terminal deactivation complete'
-      );
+      expect(mocks.loggerLifecycle).toHaveBeenCalledWith('Sidebar Terminal deactivation started');
+      expect(mocks.loggerLifecycle).toHaveBeenCalledWith('Sidebar Terminal deactivation complete');
     });
   });
 
@@ -569,19 +584,22 @@ describe('ExtensionLifecycle', () => {
     });
 
     it.each([
-      ['debug', 0],   // LogLevel.DEBUG
-      ['info', 1],    // LogLevel.INFO
-      ['warn', 2],    // LogLevel.WARN
+      ['debug', 0], // LogLevel.DEBUG
+      ['info', 1], // LogLevel.INFO
+      ['warn', 2], // LogLevel.WARN
       ['warning', 2], // LogLevel.WARN (alias)
-      ['error', 3],   // LogLevel.ERROR
-      ['none', 4],    // LogLevel.NONE
-    ])('should override log level to %s (=%d) via SECONDARY_TERMINAL_LOG_LEVEL env var', async (envValue, expectedLevel) => {
-      process.env.SECONDARY_TERMINAL_LOG_LEVEL = envValue;
-      const ctx = createMockContext((vscode.ExtensionMode as any).Production);
-      await lifecycle.activate(ctx);
+      ['error', 3], // LogLevel.ERROR
+      ['none', 4], // LogLevel.NONE
+    ])(
+      'should override log level to %s (=%d) via SECONDARY_TERMINAL_LOG_LEVEL env var',
+      async (envValue, expectedLevel) => {
+        process.env.SECONDARY_TERMINAL_LOG_LEVEL = envValue;
+        const ctx = createMockContext((vscode.ExtensionMode as any).Production);
+        await lifecycle.activate(ctx);
 
-      expect(mocks.loggerSetLevel).toHaveBeenCalledWith(expectedLevel);
-    });
+        expect(mocks.loggerSetLevel).toHaveBeenCalledWith(expectedLevel);
+      }
+    );
 
     it('should use env var override regardless of extension mode', async () => {
       process.env.SECONDARY_TERMINAL_LOG_LEVEL = 'debug';

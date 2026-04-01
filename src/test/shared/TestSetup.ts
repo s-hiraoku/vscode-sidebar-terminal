@@ -3,12 +3,6 @@
  * 全テストファイルで重複していた setupTestEnvironment 関数を統合
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-
 // Initialize browser globals immediately before any imports
 if (!(global as any).self) {
   (global as any).self = global;
@@ -307,7 +301,7 @@ export async function setupTestEnvironment(): Promise<void> {
 
   // CRITICAL: Register vscode mock in require.cache so that `import * as vscode from 'vscode'` returns the mock
   // This fixes ConfigurationService and other modules that import vscode directly
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+
   const Module = require('module');
   try {
     const vscodeModulePath = require.resolve('vscode', { paths: [process.cwd()] });
@@ -365,7 +359,7 @@ export async function setupTestEnvironment(): Promise<void> {
       return mockVscode;
     }
     // All other modules pass through to original require (preserves nyc instrumentation)
-    // eslint-disable-next-line prefer-rest-params, @typescript-eslint/no-unsafe-return
+
     return savedOriginalRequire.apply(this, arguments);
   };
 
@@ -1032,7 +1026,6 @@ export function teardownTestEnvironment(): void {
   // Restore Module.prototype.require
   if (originalModuleRequire && moduleRequireOverridden) {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const Module = require('module');
       Module.prototype.require = originalModuleRequire;
       moduleRequireOverridden = false;
@@ -1194,7 +1187,7 @@ export function setupTestEnvironmentSync(): void {
 
   // CRITICAL: Register vscode mock in require.cache so that `import * as vscode from 'vscode'` returns the mock
   // This fixes ConfigurationService and other modules that import vscode directly
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+
   const Module = require('module');
   try {
     const vscodeModulePath = require.resolve('vscode', { paths: [process.cwd()] });
@@ -1243,7 +1236,7 @@ export function setupTestEnvironmentSync(): void {
       return mockVscode;
     }
     // All other modules pass through to original require (preserves nyc instrumentation)
-    // eslint-disable-next-line prefer-rest-params, @typescript-eslint/no-unsafe-return
+
     return savedOriginalRequireSync.apply(this, arguments);
   };
 

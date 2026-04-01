@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import * as vscode from 'vscode';
 import { TerminalInstance, TerminalState, TerminalInfo } from '../types/shared';
 import { getTerminalConfig, ActiveTerminalManager, getFirstValue } from '../utils/common';

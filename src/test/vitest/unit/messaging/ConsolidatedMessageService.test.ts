@@ -13,7 +13,7 @@ import { WebviewMessage } from '../../../../types/common';
 
 describe('ConsolidatedMessageService', () => {
   let messageService: ConsolidatedMessageService;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   let mockCoordinator: any;
 
   beforeEach(async () => {

@@ -14,13 +14,13 @@ function createDeps(): ITerminalAccessorCoordinatorDependencies {
 
   return {
     getActiveTerminalId: vi.fn().mockReturnValue('terminal-1'),
-    getTerminalInstance: vi.fn().mockImplementation((id: string) =>
-      id === 'terminal-1' ? terminalInstance : undefined
-    ),
+    getTerminalInstance: vi
+      .fn()
+      .mockImplementation((id: string) => (id === 'terminal-1' ? terminalInstance : undefined)),
     getAllTerminalInstances: vi.fn().mockReturnValue(new Map([['terminal-1', terminalInstance]])),
-    getAllTerminalContainers: vi.fn().mockReturnValue(
-      new Map([['terminal-1', terminalInstance.container]])
-    ),
+    getAllTerminalContainers: vi
+      .fn()
+      .mockReturnValue(new Map([['terminal-1', terminalInstance.container]])),
     getTerminalElement: vi.fn().mockReturnValue(terminalInstance.container),
     managers: {
       performance: { id: 'performance' } as any,

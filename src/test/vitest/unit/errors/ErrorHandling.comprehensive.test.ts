@@ -368,10 +368,8 @@ describe('Comprehensive Error Handling Tests (TDD)', () => {
 
     describe('Error monitoring and reporting', () => {
       it('should log errors with context', () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const errorLog: any[] = [];
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const logError = (error: Error, context: Record<string, any>) => {
           errorLog.push({
             message: error.message,
@@ -502,7 +500,6 @@ describe('Comprehensive Error Handling Tests (TDD)', () => {
       });
 
       it('should handle message serialization error', () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const circular: any = { a: 1 };
         circular.self = circular;
 
@@ -519,7 +516,6 @@ describe('Comprehensive Error Handling Tests (TDD)', () => {
       it('should handle missing configuration', () => {
         const config = new Map();
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const getValue = (key: string, defaultValue: any) => {
           return config.get(key) ?? defaultValue;
         };
@@ -543,7 +539,6 @@ describe('Comprehensive Error Handling Tests (TDD)', () => {
       });
 
       it('should handle configuration update errors', () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const updateConfig = (key: string, value: any) => {
           if (typeof value !== 'number') {
             throw new Error('Invalid value type');
@@ -623,7 +618,6 @@ describe('Comprehensive Error Handling Tests (TDD)', () => {
         transaction: function () {
           const snapshot = new Map(this.items);
           return {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             set: (key: string, value: any) => this.items.set(key, value),
             rollback: () => (this.items = snapshot),
           };

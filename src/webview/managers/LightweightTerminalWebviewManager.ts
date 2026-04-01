@@ -201,8 +201,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
         this.messageManager?.getCurrentPanelLocation() ?? null,
       messageManagerGetCurrentFlexDirection: () =>
         this.messageManager?.getCurrentFlexDirection() ?? null,
-      splitManagerSetPanelLocation: (location) =>
-        this.splitManager.setPanelLocation(location),
+      splitManagerSetPanelLocation: (location) => this.splitManager.setPanelLocation(location),
       splitManagerUpdateSplitDirection: (direction, location) =>
         this.splitManager.updateSplitDirection(direction, location),
       splitManagerGetTerminalCount: () => this.splitManager.getTerminals().size,
@@ -321,7 +320,8 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       setAgentDisconnected: (id) => this.cliAgentStateManager.setAgentDisconnected(id),
       setAgentState: (id, state) => this.cliAgentStateManager.setAgentState(id, state),
       removeTerminalState: (id) => this.cliAgentStateManager.removeTerminalState(id),
-      detectAgentActivity: (output, id) => this.cliAgentStateManager.detectAgentActivity(output, id),
+      detectAgentActivity: (output, id) =>
+        this.cliAgentStateManager.detectAgentActivity(output, id),
       getActiveTerminalId: () => this.getActiveTerminalId(),
       getAllTerminalInstances: () => this.getAllTerminalInstances(),
       postMessageToExtension: (msg) => this.postMessageToExtension(msg),
@@ -350,7 +350,10 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       prepareDisplayForDeletion: (id, stats) =>
         this.lightweightTerminalLifecycleCoordinator.prepareDisplayForTerminalDeletion(id, stats),
       updateTerminalBorders: (id) =>
-        this.uiManager?.updateTerminalBorders(id, this.terminalLifecycleManager.getAllTerminalContainers()),
+        this.uiManager?.updateTerminalBorders(
+          id,
+          this.terminalLifecycleManager.getAllTerminalContainers()
+        ),
       focusTerminal: (id) => {
         const instance = this.getTerminalInstance(id);
         instance?.terminal?.focus();
@@ -394,8 +397,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
         this.uiManager.setTerminalHeaderEnhancementsEnabled(enabled),
       updateTerminalBorders: (activeId, containers) =>
         this.uiManager.updateTerminalBorders(activeId, containers),
-      updateSplitTerminalBorders: (activeId) =>
-        this.uiManager.updateSplitTerminalBorders(activeId),
+      updateSplitTerminalBorders: (activeId) => this.uiManager.updateSplitTerminalBorders(activeId),
       applyAllVisualSettings: (terminal, settings) =>
         this.uiManager.applyAllVisualSettings(terminal as any, settings),
       fontSettingsUpdateSettings: (fontSettings, terminals) =>
@@ -427,12 +429,12 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       terminalOperationsUpdateState: (state) => this.terminalOperations.updateState(state),
       hasPendingCreations: () => this.terminalOperations.hasPendingCreations(),
       getPendingCreationsCount: () => this.terminalOperations.getPendingCreationsCount(),
-      processPendingCreationRequests: () => this.terminalOperations.processPendingCreationRequests(),
+      processPendingCreationRequests: () =>
+        this.terminalOperations.processPendingCreationRequests(),
       hasPendingDeletions: () => this.terminalOperations.hasPendingDeletions(),
       getPendingDeletions: () => this.terminalOperations.getPendingDeletions(),
       updateFromState: (state) => this.terminalStateDisplayManager.updateFromState(state),
-      updateCreationState: (state) =>
-        this.terminalStateDisplayManager.updateCreationState(state),
+      updateCreationState: (state) => this.terminalStateDisplayManager.updateCreationState(state),
       debugUpdateDisplay: (state, source) =>
         this.debugCoordinator.updateDebugDisplay(state, source),
       debugShowTerminalLimitMessage: (current, max) =>
@@ -569,10 +571,9 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
    * リサイズ処理はResizeCoordinatorに委譲
    */
   private setupEventHandlers(): void {
-    const handlers =
-      this.lightweightTerminalInitializationCoordinator.setupEventHandlers(
-        this.messageManager
-      );
+    const handlers = this.lightweightTerminalInitializationCoordinator.setupEventHandlers(
+      this.messageManager
+    );
     this._onWindowFocus = handlers.onWindowFocus;
     this._onWindowBlur = handlers.onWindowBlur;
   }

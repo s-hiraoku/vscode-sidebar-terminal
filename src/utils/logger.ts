@@ -116,7 +116,7 @@ class Logger implements Disposable {
         this.addToBuffer('log', ['[DEBUG]', ...safeArgs]);
       } else {
         // Development mode only - will be stripped in production builds
-        // eslint-disable-next-line no-console
+
         console.log('[DEBUG]', ...safeArgs);
       }
     }
@@ -129,7 +129,7 @@ class Logger implements Disposable {
         this.addToBuffer('log', ['[INFO]', ...safeArgs]);
       } else {
         // Development mode only - will be stripped in production builds
-        // eslint-disable-next-line no-console
+
         console.log('[INFO]', ...safeArgs);
       }
     }
@@ -142,7 +142,7 @@ class Logger implements Disposable {
         this.addToBuffer('warn', ['[WARN]', ...safeArgs]);
       } else {
         // Development mode only - will be stripped in production builds
-        // eslint-disable-next-line no-console
+
         console.warn('[WARN]', ...safeArgs);
       }
     }
@@ -152,7 +152,7 @@ class Logger implements Disposable {
     if (this.level <= LogLevel.ERROR) {
       const safeArgs = args.map((arg) => (typeof arg === 'object' ? this.safeStringify(arg) : arg));
       // Errors are always logged immediately, even in production
-      // eslint-disable-next-line no-console
+
       console.error('[ERROR]', ...safeArgs);
     }
   }
@@ -160,7 +160,6 @@ class Logger implements Disposable {
   // Categorized logging - DEBUG level
   private logDebug(category: string, emoji: string, ...args: unknown[]): void {
     if (this.level <= LogLevel.DEBUG) {
-      // eslint-disable-next-line no-console
       console.log(...this.formatMessage('DEBUG', category, emoji, ...args));
     }
   }
@@ -168,7 +167,6 @@ class Logger implements Disposable {
   // Categorized logging - INFO level
   private logInfo(category: string, emoji: string, ...args: unknown[]): void {
     if (this.level <= LogLevel.INFO) {
-      // eslint-disable-next-line no-console
       console.log(...this.formatMessage('INFO', category, emoji, ...args));
     }
   }
@@ -237,14 +235,12 @@ class Logger implements Disposable {
 
   error_category(...args: unknown[]): void {
     if (this.level <= LogLevel.ERROR) {
-      // eslint-disable-next-line no-console
       console.error(...this.formatMessage('ERROR', 'ERROR', '🚨', ...args));
     }
   }
 
   warning_category(...args: unknown[]): void {
     if (this.level <= LogLevel.WARN) {
-      // eslint-disable-next-line no-console
       console.warn(...this.formatMessage('WARN', 'WARNING', '⚠️', ...args));
     }
   }

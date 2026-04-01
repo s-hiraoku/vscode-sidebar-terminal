@@ -18,9 +18,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { CliAgentDetectionService } from '../../../../services/CliAgentDetectionService';
 import { CliAgentStateStore } from '../../../../services/CliAgentStateStore';
-import {
-  ICliAgentStateManager,
-} from '../../../../interfaces/CliAgentService';
+import { ICliAgentStateManager } from '../../../../interfaces/CliAgentService';
 
 describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
   let detectionService: CliAgentDetectionService;
@@ -971,10 +969,7 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
         waitingEvents.push(event);
       });
 
-      const result = detectionService.handleOutputChunk(
-        'term1',
-        'Gemini CLI v0.1.0\r\ngemini > '
-      );
+      const result = detectionService.handleOutputChunk('term1', 'Gemini CLI v0.1.0\r\ngemini > ');
 
       expect(result?.detection).toMatchObject({
         type: 'gemini',

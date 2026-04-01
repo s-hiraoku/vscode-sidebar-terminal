@@ -78,9 +78,7 @@ export class SpecialKeysHandler {
     if ((event.ctrlKey || event.metaKey) && event.key === 'c') {
       const terminal = this.deps.getTerminalInstance(terminalId);
       if (terminal && terminal.terminal.hasSelection()) {
-        this.deps.logger(
-          `${event.metaKey ? 'Cmd' : 'Ctrl'}+C copy for terminal ${terminalId}`
-        );
+        this.deps.logger(`${event.metaKey ? 'Cmd' : 'Ctrl'}+C copy for terminal ${terminalId}`);
         event.preventDefault();
         event.stopPropagation();
         this.deps.handleTerminalCopy(manager);

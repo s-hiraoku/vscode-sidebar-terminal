@@ -3,7 +3,6 @@ import * as vscode from 'vscode';
 import { ConfigManager, getConfigManager } from '../../../../config/ConfigManager';
 
 describe('ConfigManager', () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockWorkspaceConfiguration: any;
   let configManager: ConfigManager;
 

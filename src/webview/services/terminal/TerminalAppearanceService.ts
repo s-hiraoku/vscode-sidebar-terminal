@@ -63,8 +63,7 @@ export class TerminalAppearanceService {
     const terminalConfig = TerminalConfigService.mergeConfig(configWithFonts);
 
     const multiCursorModifier = currentSettings?.multiCursorModifier ?? 'alt';
-    const linkModifier: 'alt' | 'ctrlCmd' =
-      multiCursorModifier === 'alt' ? 'alt' : 'ctrlCmd';
+    const linkModifier: 'alt' | 'ctrlCmd' = multiCursorModifier === 'alt' ? 'alt' : 'ctrlCmd';
 
     return { terminalConfig, currentSettings, currentFontSettings, linkModifier };
   }
@@ -77,10 +76,13 @@ export class TerminalAppearanceService {
     currentSettings: unknown;
     currentFontSettings: unknown;
     configManager: TerminalConfigManager | undefined;
-    uiManager: {
-      applyAllVisualSettings?: (terminal: Terminal, settings: unknown) => void;
-      applyFontSettings?: (terminal: Terminal, settings: unknown) => void;
-    } | null | undefined;
+    uiManager:
+      | {
+          applyAllVisualSettings?: (terminal: Terminal, settings: unknown) => void;
+          applyFontSettings?: (terminal: Terminal, settings: unknown) => void;
+        }
+      | null
+      | undefined;
   }): void {
     const {
       terminalId,
@@ -98,10 +100,8 @@ export class TerminalAppearanceService {
         return;
       }
 
-      const settingsForVisuals =
-        currentSettings ?? configManager?.getCurrentSettings?.();
-      const fontSettingsForApply =
-        currentFontSettings ?? configManager?.getCurrentFontSettings?.();
+      const settingsForVisuals = currentSettings ?? configManager?.getCurrentSettings?.();
+      const fontSettingsForApply = currentFontSettings ?? configManager?.getCurrentFontSettings?.();
 
       terminalLogger.info(
         `🎨 [DEBUG] Immediate settings check - theme: ${(settingsForVisuals as { theme?: string } | undefined)?.theme}`
@@ -139,9 +139,12 @@ export class TerminalAppearanceService {
     container: HTMLElement;
     terminalContent: HTMLElement;
     configManager: Pick<IConfigManager, 'getCurrentSettings'> | undefined;
-    uiManager: {
-      applyTerminalTheme?: (terminal: Terminal, settings: unknown) => void;
-    } | null | undefined;
+    uiManager:
+      | {
+          applyTerminalTheme?: (terminal: Terminal, settings: unknown) => void;
+        }
+      | null
+      | undefined;
   }): void {
     const { terminalId, terminal, container, terminalContent, configManager, uiManager } = params;
 
@@ -231,10 +234,7 @@ export class TerminalAppearanceService {
       ) {
         fontOverrides.fontFamily = currentFontSettings.fontFamily.trim();
       }
-      if (
-        typeof currentFontSettings.fontSize === 'number' &&
-        currentFontSettings.fontSize > 0
-      ) {
+      if (typeof currentFontSettings.fontSize === 'number' && currentFontSettings.fontSize > 0) {
         fontOverrides.fontSize = currentFontSettings.fontSize;
       }
       if (
@@ -270,8 +270,7 @@ export class TerminalAppearanceService {
         fontOverrides.cursorWidth = currentFontSettings.cursorWidth;
       }
       if (typeof currentFontSettings.drawBoldTextInBrightColors === 'boolean') {
-        fontOverrides.drawBoldTextInBrightColors =
-          currentFontSettings.drawBoldTextInBrightColors;
+        fontOverrides.drawBoldTextInBrightColors = currentFontSettings.drawBoldTextInBrightColors;
       }
       if (typeof currentFontSettings.minimumContrastRatio === 'number') {
         fontOverrides.minimumContrastRatio = currentFontSettings.minimumContrastRatio;

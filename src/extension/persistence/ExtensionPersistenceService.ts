@@ -174,7 +174,7 @@ export class ExtensionPersistenceService implements IExtensionPersistencePort {
   async getSessionData(_sessionId?: string): Promise<SessionDataDTO | null> {
     try {
       // Try workspace state first, then global state
-      let data =
+      const data =
         this.context.workspaceState.get<SessionDataDTO>(ExtensionPersistenceService.STORAGE_KEY) ||
         this.context.globalState.get<SessionDataDTO>(ExtensionPersistenceService.STORAGE_KEY);
 

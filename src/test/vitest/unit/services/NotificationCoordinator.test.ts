@@ -17,9 +17,22 @@ vi.mock('vscode', () => ({
 
 describe('NotificationCoordinator', () => {
   let coordinator: NotificationCoordinator;
-  let mockAudio: { playNotification: ReturnType<typeof vi.fn>; clearTerminal: ReturnType<typeof vi.fn>; dispose: ReturnType<typeof vi.fn> };
-  let mockToast: { showWaitingNotification: ReturnType<typeof vi.fn>; showCompletedNotification: ReturnType<typeof vi.fn>; clearTerminal: ReturnType<typeof vi.fn>; dispose: ReturnType<typeof vi.fn> };
-  let mockNative: { notifyAndActivate: ReturnType<typeof vi.fn>; clearTerminal: ReturnType<typeof vi.fn>; dispose: ReturnType<typeof vi.fn> };
+  let mockAudio: {
+    playNotification: ReturnType<typeof vi.fn>;
+    clearTerminal: ReturnType<typeof vi.fn>;
+    dispose: ReturnType<typeof vi.fn>;
+  };
+  let mockToast: {
+    showWaitingNotification: ReturnType<typeof vi.fn>;
+    showCompletedNotification: ReturnType<typeof vi.fn>;
+    clearTerminal: ReturnType<typeof vi.fn>;
+    dispose: ReturnType<typeof vi.fn>;
+  };
+  let mockNative: {
+    notifyAndActivate: ReturnType<typeof vi.fn>;
+    clearTerminal: ReturnType<typeof vi.fn>;
+    dispose: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
     mockAudio = {
@@ -41,7 +54,7 @@ describe('NotificationCoordinator', () => {
     coordinator = new NotificationCoordinator(
       mockAudio as any,
       mockToast as any,
-      mockNative as any,
+      mockNative as any
     );
   });
 

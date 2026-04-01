@@ -204,7 +204,11 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       {
         getTerminal: (id) => this._terminalManager.getTerminal(id),
         initializeShellForTerminal: (id, pty, safe) =>
-          this._terminalManager.initializeShellForTerminal(id, pty as import('node-pty').IPty, safe),
+          this._terminalManager.initializeShellForTerminal(
+            id,
+            pty as import('node-pty').IPty,
+            safe
+          ),
         telemetryService: this._telemetryService,
       },
       SecondaryTerminalProvider.ACK_WATCHDOG_OPTIONS,
@@ -246,14 +250,16 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       sendFullCliAgentStateSync: () => this.sendFullCliAgentStateSync(),
       initializeTerminal: () => this._initializeTerminal(),
       startPendingWatchdogs: (isInit) => this._watchdogCoordinator.startPendingWatchdogs(isInit),
-      panelLocationHandlerHandleWebviewVisible: () => this._panelLocationHandler.handleWebviewVisible(),
+      panelLocationHandlerHandleWebviewVisible: () =>
+        this._panelLocationHandler.handleWebviewVisible(),
     });
 
     this._messageHandlerRegistrar = new MessageHandlerRegistrar({
       handleWebviewReady: (msg) => this._handleWebviewReady(msg),
       handleWebviewInitialized: (msg) => this._handleWebviewInitialized(msg),
       handleReportPanelLocation: (msg) => this._handleReportPanelLocation(msg),
-      handleTerminalInitializationComplete: (msg) => this._handleTerminalInitializationComplete(msg),
+      handleTerminalInitializationComplete: (msg) =>
+        this._handleTerminalInitializationComplete(msg),
       handleTerminalReady: (msg) => this._handleTerminalReady(msg),
       handlePersistenceMessage: (msg) => this._handlePersistenceMessage(msg),
       handleLegacyPersistenceMessage: (msg) => this._handleLegacyPersistenceMessage(msg),
@@ -330,7 +336,9 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         });
         log(`🎨 [THEME] Sent themeChanged message to WebView: ${newTheme}`);
       } else {
-        log('⚠️ [THEME] WebView not available, theme change will be applied on next initialization');
+        log(
+          '⚠️ [THEME] WebView not available, theme change will be applied on next initialization'
+        );
       }
     });
 

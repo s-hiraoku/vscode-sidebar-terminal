@@ -9,7 +9,12 @@ vi.mock('../../../../../webview/components/SettingsPanel', () => ({
   SettingsPanel: class {
     public show = vi.fn();
     public setVersionInfo = vi.fn();
-    constructor(public readonly options: { onSettingsChange: (settings: unknown) => void; onClose: () => void }) {}
+    constructor(
+      public readonly options: {
+        onSettingsChange: (settings: unknown) => void;
+        onClose: () => void;
+      }
+    ) {}
   },
 }));
 
@@ -170,12 +175,8 @@ describe('LightweightTerminalInitializationCoordinator', () => {
     expect(initialized.configManager.setFontSettingsService).toHaveBeenCalledWith(
       deps.fontSettingsService
     );
-    expect(initialized.messageManager.setCoordinator).toHaveBeenCalledWith(
-      deps.managerCoordinator
-    );
-    expect(deps.findInTerminalManager.setCoordinator).toHaveBeenCalledWith(
-      deps.managerCoordinator
-    );
+    expect(initialized.messageManager.setCoordinator).toHaveBeenCalledWith(deps.managerCoordinator);
+    expect(deps.findInTerminalManager.setCoordinator).toHaveBeenCalledWith(deps.managerCoordinator);
     expect(deps.profileManager.setCoordinator).toHaveBeenCalledWith(deps.managerCoordinator);
     expect(deps.shellIntegrationManager.setCoordinator).toHaveBeenCalledWith(
       deps.managerCoordinator
@@ -224,7 +225,8 @@ describe('LightweightTerminalInitializationCoordinator', () => {
     expect(window.addEventListener).toHaveBeenCalledWith('blur', handlers.onWindowBlur);
     expect(deps.eventHandlerManager.onPageUnload).toHaveBeenCalledWith(expect.any(Function));
 
-    const messageHandler = vi.mocked(deps.eventHandlerManager.setMessageEventHandler).mock.calls[0][0];
+    const messageHandler = vi.mocked(deps.eventHandlerManager.setMessageEventHandler).mock
+      .calls[0][0];
     await messageHandler({
       type: 'message',
       data: { command: 'ping' },

@@ -35,9 +35,7 @@ function createMockSettingsService(): ISettingsService {
   };
 }
 
-function createMockDeps(
-  settingsService?: ISettingsService
-): ISettingsMessageHandlerDependencies {
+function createMockDeps(settingsService?: ISettingsService): ISettingsMessageHandlerDependencies {
   const service = settingsService ?? createMockSettingsService();
   return {
     getSettingsService: vi.fn().mockReturnValue(service),

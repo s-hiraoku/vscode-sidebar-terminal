@@ -214,11 +214,7 @@ export class KeyboardShortcutSetupHandler {
       // Handle special keys (Ctrl+C/V, etc.) for the active terminal
       const activeTerminalId = this.deps.getActiveTerminalId();
       if (activeTerminalId && this.coordinatorRef) {
-        const handled = this.deps.handleSpecialKeys(
-          event,
-          activeTerminalId,
-          this.coordinatorRef
-        );
+        const handled = this.deps.handleSpecialKeys(event, activeTerminalId, this.coordinatorRef);
         if (handled) {
           return;
         }
@@ -244,9 +240,7 @@ export class KeyboardShortcutSetupHandler {
     const arrowKeyHandler = (event: KeyboardEvent): void => {
       // VS Code standard: Always respect IME composition state
       if (this.deps.isIMEComposing()) {
-        this.deps.logger(
-          `Arrow key ${event.key} during IME composition - letting IME handle`
-        );
+        this.deps.logger(`Arrow key ${event.key} during IME composition - letting IME handle`);
         return;
       }
 

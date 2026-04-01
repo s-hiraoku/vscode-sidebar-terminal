@@ -96,11 +96,7 @@ export class PanelNavigationHandler {
 
     const normalizedKey = event.key.length === 1 ? event.key.toLowerCase() : event.key;
     const isToggleShortcut =
-      !event.shiftKey &&
-      !event.altKey &&
-      normalizedKey === 'p' &&
-      event.ctrlKey &&
-      !event.metaKey;
+      !event.shiftKey && !event.altKey && normalizedKey === 'p' && event.ctrlKey && !event.metaKey;
 
     if (isToggleShortcut) {
       this.setPanelNavigationMode(!this.panelNavigationMode);
@@ -138,11 +134,7 @@ export class PanelNavigationHandler {
         this.deps.emitTerminalInteractionEvent('create-terminal', '', undefined);
       } else if (normalizedKey === 'x') {
         const activeTerminalId = this.resolveNavigationTerminalId();
-        this.deps.emitTerminalInteractionEvent(
-          'kill-terminal',
-          activeTerminalId || '',
-          undefined
-        );
+        this.deps.emitTerminalInteractionEvent('kill-terminal', activeTerminalId || '', undefined);
       }
 
       return true;

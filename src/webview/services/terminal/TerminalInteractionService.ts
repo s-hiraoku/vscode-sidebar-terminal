@@ -94,7 +94,10 @@ export class TerminalInteractionService {
     terminal.attachCustomKeyEventHandler((event: KeyboardEvent) => {
       const mac = isMacPlatform();
 
-      if ((mac && event.metaKey && event.key === 'v') || (event.ctrlKey && event.key === 'v' && !event.shiftKey)) {
+      if (
+        (mac && event.metaKey && event.key === 'v') ||
+        (event.ctrlKey && event.key === 'v' && !event.shiftKey)
+      ) {
         terminalLogger.info('📋 Paste keydown - bypassing xterm.js key handler');
         return false;
       }

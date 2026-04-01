@@ -76,11 +76,11 @@ describe('ScrollbackMessageHandler', () => {
     });
 
     it('should catch and log errors from persistence service', async () => {
-      (persistenceService.handlePushedScrollbackData as ReturnType<typeof vi.fn>).mockImplementation(
-        () => {
-          throw new Error('persistence error');
-        }
-      );
+      (
+        persistenceService.handlePushedScrollbackData as ReturnType<typeof vi.fn>
+      ).mockImplementation(() => {
+        throw new Error('persistence error');
+      });
       const message = { command: 'pushScrollbackData' } as unknown as WebviewMessage;
 
       // Should not throw
@@ -195,9 +195,9 @@ describe('ScrollbackMessageHandler', () => {
     });
 
     it('should catch and log errors from persistence service', async () => {
-      (persistenceService.handleScrollbackRefreshRequest as ReturnType<typeof vi.fn>).mockRejectedValue(
-        new Error('refresh error')
-      );
+      (
+        persistenceService.handleScrollbackRefreshRequest as ReturnType<typeof vi.fn>
+      ).mockRejectedValue(new Error('refresh error'));
       const message = { command: 'requestScrollbackRefresh' } as unknown as WebviewMessage;
 
       // Should not throw

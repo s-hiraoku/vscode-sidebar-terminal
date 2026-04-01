@@ -101,7 +101,10 @@ export class TerminalDomService {
     };
 
     const headerConfig = this.buildHeaderConfig(terminalId, terminalName, config, currentSettings);
-    const containerElements = TerminalContainerFactory.createContainer(containerConfig, headerConfig);
+    const containerElements = TerminalContainerFactory.createContainer(
+      containerConfig,
+      headerConfig
+    );
     if (!containerElements?.container || !containerElements?.body) {
       throw new Error('Invalid container elements created');
     }
@@ -256,7 +259,9 @@ export class TerminalDomService {
       }
     }
 
-    terminalLogger.warn(`Could not extract terminal number from ID: ${terminalId}, defaulting to 1`);
+    terminalLogger.warn(
+      `Could not extract terminal number from ID: ${terminalId}, defaulting to 1`
+    );
     return 1;
   }
 }

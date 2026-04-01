@@ -78,7 +78,7 @@ describe('Pre-commit workflow configuration (#272)', () => {
 
   it('lint-staged uses function form for TypeScript to avoid file path appending', () => {
     // Given: lint-staged config
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+
     const config = require(path.join(repoRoot, 'lint-staged.config.cjs'));
 
     // When: checking TypeScript pattern config type

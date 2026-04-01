@@ -221,9 +221,7 @@ describe('MessageHandlerRegistrar', () => {
       registrar.registerAll(router as any);
 
       const handlers = router.registerHandlers.mock.calls[0][0];
-      const initHandler = handlers.find(
-        (h: any) => h.command === 'terminalInitializationComplete'
-      );
+      const initHandler = handlers.find((h: any) => h.command === 'terminalInitializationComplete');
       const msg = { command: 'terminalInitializationComplete', terminalId: '1' } as any;
       await initHandler.handler(msg);
 

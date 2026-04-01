@@ -12,10 +12,19 @@ vi.mock('vscode', () => ({
     const listeners: any[] = [];
     this.event = (listener: any) => {
       listeners.push(listener);
-      return { dispose: () => { const i = listeners.indexOf(listener); if (i >= 0) listeners.splice(i, 1); } };
+      return {
+        dispose: () => {
+          const i = listeners.indexOf(listener);
+          if (i >= 0) listeners.splice(i, 1);
+        },
+      };
     };
-    this.fire = (data: any) => { listeners.forEach((l) => l(data)); };
-    this.dispose = () => { listeners.length = 0; };
+    this.fire = (data: any) => {
+      listeners.forEach((l) => l(data));
+    };
+    this.dispose = () => {
+      listeners.length = 0;
+    };
   }),
 }));
 

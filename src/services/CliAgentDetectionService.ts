@@ -27,7 +27,10 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
   private waitingChangeSubscription: { dispose(): void } | undefined;
   private statusChangeSubscription: { dispose(): void } | undefined;
   private heartbeatInterval: ReturnType<typeof setInterval> | undefined;
-  private readonly previousAgentInfo = new Map<string, { status: AgentStatus; agentType: AgentType | null }>();
+  private readonly previousAgentInfo = new Map<
+    string,
+    { status: AgentStatus; agentType: AgentType | null }
+  >();
   private readonly removingTerminals = new Set<string>();
 
   constructor() {
@@ -55,7 +58,10 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
       const previous = this.previousAgentInfo.get(event.terminalId);
       this.previousAgentInfo.set(event.terminalId, { status: event.status, agentType: event.type });
 
-      if (event.status === 'none' && (previous?.status === 'connected' || previous?.status === 'disconnected')) {
+      if (
+        event.status === 'none' &&
+        (previous?.status === 'connected' || previous?.status === 'disconnected')
+      ) {
         if (this.removingTerminals.has(event.terminalId)) {
           this.removingTerminals.delete(event.terminalId);
           return;
@@ -354,4 +360,3 @@ export { CliAgentStateStore } from './CliAgentStateStore';
 export type { AgentType } from '../types/shared';
 export type { DetectionResult, TerminationResult } from './CliAgentDetectionEngine';
 export type { AgentState, AgentStatus, StateChangeEvent } from './CliAgentStateStore';
-

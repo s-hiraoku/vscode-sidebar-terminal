@@ -426,7 +426,7 @@ describe('Input Handling Performance TDD Test Suite', () => {
 
         // Arrange: Setup debouncing precision test
         const debounceDelay = 100;
-        let executionTimes: number[] = [];
+        const executionTimes: number[] = [];
 
         eventService.registerEventHandler(
           'debounce-precision',

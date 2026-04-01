@@ -105,10 +105,9 @@ describe.skip('CliAgentDetection in Terminal Manager', () => {
     vi.restoreAllMocks();
 
     // Setup mock modules
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
+
     require.cache[require.resolve('vscode')] = { exports: mockVscode } as any;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
     require.cache[require.resolve('node-pty')] = {
       exports: mockPty,
     } as any;
@@ -492,9 +491,9 @@ describe.skip('CliAgentDetection in Terminal Manager', () => {
       // Act & Assert - should not throw
       expect(() => {
         terminalManager.sendInput('', terminalId);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         terminalManager.sendInput(null as any, terminalId);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         terminalManager.sendInput(undefined as any, terminalId);
       }).not.toThrow();
     });

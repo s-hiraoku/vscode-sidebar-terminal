@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import * as vscode from 'vscode';
 import { TerminalInstance, DeleteResult, ProcessState } from '../types/shared';
 import { ERROR_MESSAGES } from '../constants';

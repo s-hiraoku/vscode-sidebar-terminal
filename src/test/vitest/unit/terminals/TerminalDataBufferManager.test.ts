@@ -147,10 +147,7 @@ describe('TerminalDataBufferManager', () => {
     bufferManager.bufferData('terminal-1', 'user@host:~$ ');
     bufferManager.flushBuffer('terminal-1');
 
-    expect(cliAgentService.handleOutputChunk).toHaveBeenCalledWith(
-      'terminal-1',
-      'user@host:~$ '
-    );
+    expect(cliAgentService.handleOutputChunk).toHaveBeenCalledWith('terminal-1', 'user@host:~$ ');
 
     bufferManager.dispose();
   });
