@@ -85,7 +85,13 @@ import sinonChai from 'sinon-chai';
 import { JSDOM } from 'jsdom';
 
 // Set up chai plugins
-chai.use(sinonChai);
+// sinon-chai may be incompatible with vitest's built-in chai (getter-only properties).
+// Wrap in try-catch so vitest tests that import TestSetup are not broken.
+try {
+  chai.use(sinonChai);
+} catch {
+  // Ignored: sinon-chai is only needed by legacy Mocha integration tests
+}
 
 // ============================================================================
 // TEST POLLUTION PREVENTION - Module-level state for cleanup
