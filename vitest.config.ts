@@ -20,6 +20,7 @@ export default defineConfig({
     // Timeout settings
     testTimeout: 30000,
     hookTimeout: 30000,
+    teardownTimeout: 10000,
 
     // Coverage configuration
     coverage: {
