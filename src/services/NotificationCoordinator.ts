@@ -8,6 +8,7 @@ import {
   NOTIFICATION_TITLE,
   type WaitingType,
 } from './agentConstants';
+import { terminal as log } from '../utils/logger';
 import type { AgentType } from '../types/shared';
 
 export class NotificationCoordinator implements vscode.Disposable {
@@ -24,12 +25,14 @@ export class NotificationCoordinator implements vscode.Disposable {
       return;
     }
 
-    this.audioService.playNotification(terminalId);
-    this.toastService.showWaitingNotification(terminalId, waitingType);
-    this.nativeService.notifyAndActivate(
-      terminalId,
-      NOTIFICATION_TITLE,
-      `CLI Agent is ${getWaitingTypeLabel(waitingType)} (${terminalId})`
+    this.safeCall(() => this.audioService.playNotification(terminalId));
+    this.safeCall(() => this.toastService.showWaitingNotification(terminalId, waitingType));
+    this.safeCall(() =>
+      this.nativeService.notifyAndActivate(
+        terminalId,
+        NOTIFICATION_TITLE,
+        `CLI Agent is ${getWaitingTypeLabel(waitingType)} (${terminalId})`
+      )
     );
   }
 
@@ -38,18 +41,24 @@ export class NotificationCoordinator implements vscode.Disposable {
       return;
     }
 
-    this.toastService.showCompletedNotification(terminalId, agentType);
-    this.nativeService.notifyAndActivate(
-      terminalId,
-      NOTIFICATION_TITLE,
-      `${getAgentDisplayName(agentType)} has completed (${terminalId})`
+    this.safeCall(() => this.toastService.showCompletedNotification(terminalId, agentType));
+    this.safeCall(() =>
+      this.nativeService.notifyAndActivate(
+        terminalId,
+        NOTIFICATION_TITLE,
+        `${getAgentDisplayName(agentType)} has completed (${terminalId})`
+      )
     );
   }
 
   public clearTerminal(terminalId: string): void {
-    this.audioService.clearTerminal(terminalId);
-    this.toastService.clearTerminal(terminalId);
-    this.nativeService.clearTerminal(terminalId);
+    if (this.isDisposed) {
+      return;
+    }
+
+    this.safeCall(() => this.audioService.clearTerminal(terminalId));
+    this.safeCall(() => this.toastService.clearTerminal(terminalId));
+    this.safeCall(() => this.nativeService.clearTerminal(terminalId));
   }
 
   public dispose(): void {
@@ -57,8 +66,16 @@ export class NotificationCoordinator implements vscode.Disposable {
       return;
     }
     this.isDisposed = true;
-    this.audioService.dispose();
-    this.toastService.dispose();
-    this.nativeService.dispose();
+    this.safeCall(() => this.audioService.dispose());
+    this.safeCall(() => this.toastService.dispose());
+    this.safeCall(() => this.nativeService.dispose());
+  }
+
+  private safeCall(fn: () => void): void {
+    try {
+      fn();
+    } catch (error) {
+      log('[NOTIFICATION] Error in notification service:', error);
+    }
   }
 }

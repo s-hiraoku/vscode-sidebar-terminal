@@ -137,6 +137,38 @@ describe('NotificationCoordinator', () => {
       expect(mockToast.clearTerminal).toHaveBeenCalledWith('terminal-1');
       expect(mockNative.clearTerminal).toHaveBeenCalledWith('terminal-1');
     });
+
+    it('should not call services after dispose', () => {
+      coordinator.dispose();
+      coordinator.clearTerminal('terminal-1');
+
+      expect(mockAudio.clearTerminal).not.toHaveBeenCalled();
+      expect(mockToast.clearTerminal).not.toHaveBeenCalled();
+      expect(mockNative.clearTerminal).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('error isolation', () => {
+    it('should continue notifying other services if one throws', () => {
+      mockAudio.playNotification.mockImplementation(() => {
+        throw new Error('audio failed');
+      });
+
+      coordinator.notifyWaiting('terminal-1', 'input');
+
+      expect(mockToast.showWaitingNotification).toHaveBeenCalled();
+      expect(mockNative.notifyAndActivate).toHaveBeenCalled();
+    });
+
+    it('should continue disposing other services if one throws', () => {
+      mockAudio.dispose.mockImplementation(() => {
+        throw new Error('dispose failed');
+      });
+
+      expect(() => coordinator.dispose()).not.toThrow();
+      expect(mockToast.dispose).toHaveBeenCalled();
+      expect(mockNative.dispose).toHaveBeenCalled();
+    });
   });
 
   describe('dispose', () => {
