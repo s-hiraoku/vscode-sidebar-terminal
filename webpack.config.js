@@ -18,21 +18,18 @@ const extensionConfig = {
     rules: [
       {
         test: /\.ts$/,
-        include: [
-          path.resolve(__dirname, 'src'),
-        ],
-        exclude: [
-          path.resolve(__dirname, 'src/test'),
-          /node_modules/,
-        ],
+        include: [path.resolve(__dirname, 'src')],
+        exclude: [path.resolve(__dirname, 'src/test'), /node_modules/],
         use: [
           {
             loader: 'ts-loader',
             options: {
               configFile: path.resolve(__dirname, 'tsconfig.production.json'),
               transpileOnly: true,
+              ignoreDiagnostics: [5011],
               compilerOptions: {
                 noEmitOnError: false,
+                rootDir: path.resolve(__dirname, 'src'),
               },
             },
           },
@@ -117,18 +114,17 @@ const webviewConfig = {
           path.resolve(__dirname, 'src/utils'),
           path.resolve(__dirname, 'src/constants'),
         ],
-        exclude: [
-          path.resolve(__dirname, 'src/test'),
-          /node_modules/,
-        ],
+        exclude: [path.resolve(__dirname, 'src/test'), /node_modules/],
         use: [
           {
             loader: 'ts-loader',
             options: {
               configFile: path.resolve(__dirname, 'tsconfig.production.json'),
               transpileOnly: true,
+              ignoreDiagnostics: [5011],
               compilerOptions: {
                 noEmitOnError: false,
+                rootDir: path.resolve(__dirname, 'src'),
               },
             },
           },
@@ -174,7 +170,9 @@ const webviewConfig = {
     new webpack.DefinePlugin({
       'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
       'process.env.CI': JSON.stringify(process.env.CI || ''),
-      'process.env.BUILD_ARTIFACTSTAGINGDIRECTORY': JSON.stringify(process.env.BUILD_ARTIFACTSTAGINGDIRECTORY || ''),
+      'process.env.BUILD_ARTIFACTSTAGINGDIRECTORY': JSON.stringify(
+        process.env.BUILD_ARTIFACTSTAGINGDIRECTORY || ''
+      ),
       'process.env.SNAP': JSON.stringify(''),
       'process.env.SNAP_REVISION': JSON.stringify(''),
       'process.env.VSCODE_NLS_CONFIG': JSON.stringify(''),
