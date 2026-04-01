@@ -11,7 +11,9 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "moduleResolution": "node",
+    "moduleResolution": "node10",
+    "ignoreDeprecations": "6.0",
+    "types": ["node"],
     "allowSyntheticDefaultImports": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
@@ -22,6 +24,11 @@
     "noPropertyAccessFromIndexSignature": false,
     "exactOptionalPropertyTypes": false
   },
-  "exclude": ["node_modules", ".vscode-test", "src/integration/IntegratedSecondaryTerminalProvider.ts", "**/__tests__/**"],
+  "exclude": [
+    "node_modules",
+    ".vscode-test",
+    "src/integration/IntegratedSecondaryTerminalProvider.ts",
+    "**/__tests__/**"
+  ],
   "include": ["src/**/*"]
 }
