@@ -5,94 +5,88 @@ All notable changes to the "Secondary Terminal" extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-### [0.3.5](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v0.3.4...v0.3.5) (2026-04-01)
+### [0.3.6](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v0.3.5...v0.3.6) (2026-04-01)
 
+### Fixed
+
+- increase vitest teardownTimeout to prevent EnvironmentTeardownError ([fbc5739](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/fbc5739a75bb8c375eb04563c59567b1ed4537e7))
+
+### [0.3.5](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v0.3.4...v0.3.5) (2026-04-01)
 
 ### Changed
 
-* add OS-native notification settings to guides ([f8e31df](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/f8e31df6be2195de253a787bf229e8a76e1f9eb8))
-* extract NotificationCoordinator from CliAgentDetectionService ([#560](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/560)) ([d1ac7a7](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/d1ac7a7405693c027ece703f1728facadbd8d141))
+- add OS-native notification settings to guides ([f8e31df](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/f8e31df6be2195de253a787bf229e8a76e1f9eb8))
+- extract NotificationCoordinator from CliAgentDetectionService ([#560](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/560)) ([d1ac7a7](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/d1ac7a7405693c027ece703f1728facadbd8d141))
 
 ### [0.3.4](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v0.3.1...v0.3.4) (2026-03-31)
 
-
 ### Fixed
 
-* **ci:** use npm install instead of npm ci for docs build ([1344072](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/13440727d71e37371fe1a3b7bfd465d82cd19d6c))
-* prevent toast notifications from stealing focus away from terminal ([#539](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/539)) ([eec5507](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/eec5507c0026bfb6125b7d5af8e572616f4026dd))
-* resolve 14 long-running session bugs causing selection failure and memory leaks ([#528](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/528)) ([f5a7346](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/f5a73466565f1ff58416dbbf0cb3fc85ac97cae7))
-* **webview:** clean up terminal restore teardown ([18ea9cd](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/18ea9cd7c77f3641b44c8aab696f62379fd67b9b))
-
+- **ci:** use npm install instead of npm ci for docs build ([1344072](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/13440727d71e37371fe1a3b7bfd465d82cd19d6c))
+- prevent toast notifications from stealing focus away from terminal ([#539](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/539)) ([eec5507](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/eec5507c0026bfb6125b7d5af8e572616f4026dd))
+- resolve 14 long-running session bugs causing selection failure and memory leaks ([#528](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/528)) ([f5a7346](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/f5a73466565f1ff58416dbbf0cb3fc85ac97cae7))
+- **webview:** clean up terminal restore teardown ([18ea9cd](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/18ea9cd7c77f3641b44c8aab696f62379fd67b9b))
 
 ### Changed
 
-* **marketplace:** point homepage to GitHub Pages ([#538](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/538)) ([3024283](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/302428315b38c1ef177a0801601afccd6f974025))
-* simplify README and direct users to documentation site ([#546](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/546)) ([0eb5229](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/0eb52297f1f189241e47cc83e680d4a6ad692df2))
-
+- **marketplace:** point homepage to GitHub Pages ([#538](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/538)) ([3024283](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/302428315b38c1ef177a0801601afccd6f974025))
+- simplify README and direct users to documentation site ([#546](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/546)) ([0eb5229](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/0eb52297f1f189241e47cc83e680d4a6ad692df2))
 
 ### Added
 
-* add OS-native notifications for CLI agent events ([a549521](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/a5495215ac5115f135923173b9e660c9e8b20ed8))
-* send file reference to focused terminal directly ([#545](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/545)) ([2b1a73b](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/2b1a73b0a88ca18b33707703ab3426c6a0ec1553))
+- add OS-native notifications for CLI agent events ([a549521](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/a5495215ac5115f135923173b9e660c9e8b20ed8))
+- send file reference to focused terminal directly ([#545](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/545)) ([2b1a73b](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/2b1a73b0a88ca18b33707703ab3426c6a0ec1553))
 
 ### [0.3.3](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v0.3.1...v0.3.3) (2026-03-24)
 
-
 ### Changed
 
-* **marketplace:** point homepage to GitHub Pages ([#538](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/538)) ([3024283](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/302428315b38c1ef177a0801601afccd6f974025))
-
+- **marketplace:** point homepage to GitHub Pages ([#538](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/538)) ([3024283](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/302428315b38c1ef177a0801601afccd6f974025))
 
 ### Fixed
 
-* **ci:** use npm install instead of npm ci for docs build ([1344072](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/13440727d71e37371fe1a3b7bfd465d82cd19d6c))
-* prevent toast notifications from stealing focus away from terminal ([#539](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/539)) ([eec5507](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/eec5507c0026bfb6125b7d5af8e572616f4026dd))
-* **webview:** clean up terminal restore teardown ([18ea9cd](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/18ea9cd7c77f3641b44c8aab696f62379fd67b9b))
+- **ci:** use npm install instead of npm ci for docs build ([1344072](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/13440727d71e37371fe1a3b7bfd465d82cd19d6c))
+- prevent toast notifications from stealing focus away from terminal ([#539](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/539)) ([eec5507](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/eec5507c0026bfb6125b7d5af8e572616f4026dd))
+- **webview:** clean up terminal restore teardown ([18ea9cd](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/18ea9cd7c77f3641b44c8aab696f62379fd67b9b))
 
 ### [0.3.2](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v0.3.1...v0.3.2) (2026-03-24)
 
 ### [0.3.1](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v0.3.0...v0.3.1) (2026-03-23)
 
-
 ### Added
 
-* add idle detection and enhanced approval patterns for CLI agents ([#521](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/521)) ([e0c20e7](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/e0c20e7f748117580096cf9e8905aaf6922ece32))
-
+- add idle detection and enhanced approval patterns for CLI agents ([#521](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/521)) ([e0c20e7](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/e0c20e7f748117580096cf9e8905aaf6922ece32))
 
 ### Fixed
 
-* guard document access in setTimeout callback for test stability ([c9bb1c4](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/c9bb1c47ae8ab0c93dc392c7860a2c4b55309a6b))
-
+- guard document access in setTimeout callback for test stability ([c9bb1c4](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/c9bb1c47ae8ab0c93dc392c7860a2c4b55309a6b))
 
 ### Changed
 
-* decompose God Objects and clean up detection pipeline ([#516](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/516)) ([d6e54ec](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/d6e54ec4988dd55bda12b438da124051e632769b)), closes [#518](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/518)
-* simplify terminal command handlers ([#505](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/505)) ([7c8c6df](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/7c8c6dfdbaaf66ef492316d75f17125bde11b46e))
+- decompose God Objects and clean up detection pipeline ([#516](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/516)) ([d6e54ec](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/d6e54ec4988dd55bda12b438da124051e632769b)), closes [#518](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/518)
+- simplify terminal command handlers ([#505](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/505)) ([7c8c6df](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/7c8c6dfdbaaf66ef492316d75f17125bde11b46e))
 
 ## [0.3.0](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v0.2.27...v0.3.0) (2026-03-15)
 
-
 ### Fixed
 
-* address CI review comments for pre-commit hooks ([5b60c34](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/5b60c34a15b3cc81e0e281aba99b944901f1478b))
-* guard against document undefined in HeaderFactory timer ([e40226a](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/e40226aca9d49ebe1d8ea33ca9bbdbdb82e6d179))
-
+- address CI review comments for pre-commit hooks ([5b60c34](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/5b60c34a15b3cc81e0e281aba99b944901f1478b))
+- guard against document undefined in HeaderFactory timer ([e40226a](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/e40226aca9d49ebe1d8ea33ca9bbdbdb82e6d179))
 
 ### Added
 
-* add agent waiting notification settings schema ([b084d9b](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/b084d9b919e85f402c58fa5d6f6f85861eefef58))
-* add AudioNotificationService and CliAgentWaitingDetector ([77c7c96](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/77c7c961c4a0dd283566d5ebdc9042103acf0003))
-* add waiting pattern detection and harden ANSI stripping ([b994888](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/b99488884705900528e5d3b5b5207b2e635b3473))
-* add waiting state support to CliAgentStateStore ([5950e15](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/5950e15286a5ccc7d3fcdfcfcbefbee99a2bebf4))
-* automate CHANGELOG generation with standard-version ([#273](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/273)) ([3fde685](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/3fde685e7523acb9e4d00ffbb95357644690f254))
-* extend ICliAgentDetectionService with waiting state detection ([9790e5d](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/9790e5dd79d8bd57ff324a12a7f08c1d5f4eb9b4))
-* integrate waiting detection and audio notification pipeline ([1d12767](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/1d12767378e2e6cc90d87b3aaded7288d7f7a246))
-
+- add agent waiting notification settings schema ([b084d9b](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/b084d9b919e85f402c58fa5d6f6f85861eefef58))
+- add AudioNotificationService and CliAgentWaitingDetector ([77c7c96](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/77c7c961c4a0dd283566d5ebdc9042103acf0003))
+- add waiting pattern detection and harden ANSI stripping ([b994888](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/b99488884705900528e5d3b5b5207b2e635b3473))
+- add waiting state support to CliAgentStateStore ([5950e15](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/5950e15286a5ccc7d3fcdfcfcbefbee99a2bebf4))
+- automate CHANGELOG generation with standard-version ([#273](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/273)) ([3fde685](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/3fde685e7523acb9e4d00ffbb95357644690f254))
+- extend ICliAgentDetectionService with waiting state detection ([9790e5d](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/9790e5dd79d8bd57ff324a12a7f08c1d5f4eb9b4))
+- integrate waiting detection and audio notification pipeline ([1d12767](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/1d12767378e2e6cc90d87b3aaded7288d7f7a246))
 
 ### Changed
 
-* extract lint-staged config to external file with function form ([315bdb9](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/315bdb9fd54ea7b81d1a7d38bc8ae83d6657fe1d))
-* remove unsafe type assertions in TerminalDataBufferManager ([1f5b33f](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/1f5b33f66b62a39b1cfec6e5db1417f759ae941d))
+- extract lint-staged config to external file with function form ([315bdb9](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/315bdb9fd54ea7b81d1a7d38bc8ae83d6657fe1d))
+- remove unsafe type assertions in TerminalDataBufferManager ([1f5b33f](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/1f5b33f66b62a39b1cfec6e5db1417f759ae941d))
 
 ## [0.2.28] - 2026-02-18
 
@@ -1127,7 +1121,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **ESLint Error Resolution**: Fixed 36 ESLint no-unused-vars errors across 22 test files
-  - Prefixed unused variables with underscore (_) to indicate intentional non-use
+  - Prefixed unused variables with underscore (\_) to indicate intentional non-use
   - Fixed import path in TerminalInitializationStateMachine.test.ts
   - Updated ExtensionPersistenceService.ts unused parameter
   - All lint errors resolved (0 errors, 307 warnings remaining)
