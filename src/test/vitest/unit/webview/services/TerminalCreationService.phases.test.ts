@@ -12,7 +12,7 @@
  * Phase 6: finalizeTerminalSetup() - Links, rendering, registration, resize, notifications
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import { JSDOM } from 'jsdom';
 import { TerminalCreationService } from '../../../../../webview/services/TerminalCreationService';
 import { SplitManager } from '../../../../../webview/managers/SplitManager';
@@ -106,6 +106,18 @@ describe('TerminalCreationService - Phase Decomposition', () => {
   let splitManager: SplitManager;
   let mockCoordinator: any;
   let eventRegistry: EventHandlerRegistry;
+
+  // Suppress console output to prevent EnvironmentTeardownError
+  // (pending onUserConsoleLog RPC during worker shutdown)
+  beforeAll(() => {
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.spyOn(console, 'debug').mockImplementation(() => {});
+  });
+
+  afterAll(() => {
+    vi.restoreAllMocks();
+  });
 
   beforeEach(() => {
     dom = new JSDOM(

@@ -5,7 +5,7 @@
  * Vitest Migration: Converted from Mocha/Chai/Sinon to Vitest
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import { JSDOM } from 'jsdom';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
@@ -91,6 +91,18 @@ describe('TerminalCreationService', () => {
   let splitManager: SplitManager;
   let mockCoordinator: any;
   let eventRegistry: EventHandlerRegistry;
+
+  // Suppress console output to prevent EnvironmentTeardownError
+  // (pending onUserConsoleLog RPC during worker shutdown)
+  beforeAll(() => {
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.spyOn(console, 'debug').mockImplementation(() => {});
+  });
+
+  afterAll(() => {
+    vi.restoreAllMocks();
+  });
 
   beforeEach(() => {
     // Set up DOM environment
