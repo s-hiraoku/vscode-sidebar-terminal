@@ -323,6 +323,20 @@ vi.mock('@xterm/addon-web-links', () => ({
 }));
 
 // ============================================================================
+// Console suppression to prevent EnvironmentTeardownError
+// ============================================================================
+// On CI (especially Windows), console output triggers onUserConsoleLog RPC calls
+// that can still be pending when the vitest worker shuts down, causing
+// "Closing rpc while onUserConsoleLog was pending" errors.
+// Replacing console methods at module level ensures they stay suppressed
+// even after vi.restoreAllMocks() in afterEach.
+const noop = () => {};
+console.log = noop;
+console.debug = noop;
+console.warn = noop;
+console.info = noop;
+
+// ============================================================================
 // Global Test Hooks
 // ============================================================================
 
