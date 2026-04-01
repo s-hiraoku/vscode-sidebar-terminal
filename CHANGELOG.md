@@ -5,6 +5,14 @@ All notable changes to the "Secondary Terminal" extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v0.3.5...v0.4.0) (2026-04-01)
+
+### Fixed
+
+- increase vitest teardownTimeout to prevent EnvironmentTeardownError ([fbc5739](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/fbc5739a75bb8c375eb04563c59567b1ed4537e7))
+- suppress console log forwarding to prevent EnvironmentTeardownError in CI ([0353075](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/0353075df478caac4d2c259645a64170ecf310bb))
+- wrap sinon-chai plugin registration in try-catch for vitest 4.1 compat ([8ec81c6](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/8ec81c66349d7df50c03f7e8a000eb83b919f19a))
+
 ### [0.3.6](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v0.3.5...v0.3.6) (2026-04-01)
 
 ### Fixed
