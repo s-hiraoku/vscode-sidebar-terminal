@@ -41,6 +41,15 @@ export default defineConfig({
     // Reporter
     reporters: ['default'],
 
+    // Suppress console log forwarding to prevent EnvironmentTeardownError.
+    // Tests that produce console output (e.g. TerminalCreationService) can trigger
+    // "Closing rpc while onUserConsoleLog was pending" when the worker shuts down
+    // before the log RPC completes. Returning false stops Vitest from forwarding
+    // the log, eliminating the race condition entirely.
+    onConsoleLog() {
+      return false;
+    },
+
     // Parallel execution (Vitest 4 - pool options are now top-level)
     pool: 'forks',
     forks: {
