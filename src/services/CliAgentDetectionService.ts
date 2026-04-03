@@ -114,6 +114,8 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
       return null;
     }
 
+    this.clearWaitingOnUserInput(terminalId);
+
     const { submittedCommands, sawInterrupt } = this.inputAccumulator.consume(terminalId, input);
 
     if (sawInterrupt) {
@@ -129,6 +131,13 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     }
 
     return lastDetection;
+  }
+
+  private clearWaitingOnUserInput(terminalId: string): void {
+    const state = this.stateStore.getAgentState(terminalId);
+    if (state?.isWaitingForInput && state.waitingType !== 'idle') {
+      this.stateStore.setAgentWaiting(terminalId, false);
+    }
   }
 
   detectFromOutput(terminalId: string, data: string): CliAgentDetectionResult | null {

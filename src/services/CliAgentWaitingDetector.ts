@@ -65,8 +65,6 @@ export class CliAgentWaitingDetector {
 
     if (match) {
       this.stateStore.setAgentWaiting(terminalId, true, match.waitingType);
-    } else if (state.isWaitingForInput) {
-      this.stateStore.setAgentWaiting(terminalId, false);
     }
   }
 

@@ -91,7 +91,7 @@ describe('CliAgentWaitingDetector', () => {
       expect(state?.isWaitingForInput).toBeFalsy();
     });
 
-    it('should reset waiting state when new non-prompt output arrives', () => {
+    it('should keep input waiting state when new non-prompt output arrives', () => {
       stateStore.setConnectedAgent('terminal-1', 'claude');
 
       // First: detect waiting
@@ -104,10 +104,11 @@ describe('CliAgentWaitingDetector', () => {
       detector.analyze('terminal-1', 'Reading file src/main.ts...\nProcessing content...');
       vi.advanceTimersByTime(350);
 
-      expect(stateStore.getAgentState('terminal-1')?.isWaitingForInput).toBe(false);
+      expect(stateStore.getAgentState('terminal-1')?.isWaitingForInput).toBe(true);
+      expect(stateStore.getAgentState('terminal-1')?.waitingType).toBe('input');
     });
 
-    it('should reset waiting state when work output includes a stale prompt line', () => {
+    it('should keep input waiting state when work output includes a stale prompt line', () => {
       stateStore.setConnectedAgent('terminal-1', 'claude');
 
       detector.analyze('terminal-1', '❯');
@@ -120,10 +121,11 @@ describe('CliAgentWaitingDetector', () => {
       );
       vi.advanceTimersByTime(350);
 
-      expect(stateStore.getAgentState('terminal-1')?.isWaitingForInput).toBe(false);
+      expect(stateStore.getAgentState('terminal-1')?.isWaitingForInput).toBe(true);
+      expect(stateStore.getAgentState('terminal-1')?.waitingType).toBe('input');
     });
 
-    it('should debounce rapid output', () => {
+    it('should avoid entering waiting state when prompt and work output are coalesced', () => {
       stateStore.setConnectedAgent('terminal-1', 'claude');
 
       // Rapid output that includes prompt mid-stream
@@ -134,7 +136,7 @@ describe('CliAgentWaitingDetector', () => {
       detector.analyze('terminal-1', 'Working on something...');
       vi.advanceTimersByTime(350);
 
-      // Should NOT be waiting because non-prompt output arrived
+      // Coalesced output should be treated as work, not a stable waiting prompt
       expect(stateStore.getAgentState('terminal-1')?.isWaitingForInput).toBe(false);
     });
 
