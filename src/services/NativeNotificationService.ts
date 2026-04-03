@@ -14,10 +14,15 @@ interface NativeNotificationConfig {
   cooldownMs: number;
 }
 
+interface NotifyOptions {
+  activateOnlyOnce?: boolean;
+}
+
 export class NativeNotificationService implements vscode.Disposable {
   private isDisposed = false;
   private readonly execFileFn: ExecFileFn;
   private readonly lastNotifiedAt = new Map<string, number>();
+  private readonly activationLockedTerminals = new Set<string>();
   private lastGlobalNotifiedAt = 0;
 
   constructor(execFileFn?: ExecFileFn) {
@@ -56,7 +61,33 @@ export class NativeNotificationService implements vscode.Disposable {
     return true;
   }
 
-  public notifyAndActivate(terminalId: string, title: string, message: string): void {
+  private shouldActivate(
+    terminalId: string,
+    config: NativeNotificationConfig,
+    options?: NotifyOptions
+  ) {
+    return (
+      config.activateWindow &&
+      (!options?.activateOnlyOnce || !this.activationLockedTerminals.has(terminalId))
+    );
+  }
+
+  private markActivationUsed(
+    terminalId: string,
+    shouldActivate: boolean,
+    options?: NotifyOptions
+  ): void {
+    if (options?.activateOnlyOnce && shouldActivate) {
+      this.activationLockedTerminals.add(terminalId);
+    }
+  }
+
+  public notifyAndActivate(
+    terminalId: string,
+    title: string,
+    message: string,
+    options?: NotifyOptions
+  ): void {
     if (this.isDisposed) {
       return;
     }
@@ -69,20 +100,24 @@ export class NativeNotificationService implements vscode.Disposable {
     const platform = process.platform;
 
     try {
+      const shouldActivate = this.shouldActivate(terminalId, config, options);
+
       switch (platform) {
         case 'darwin':
-          this.notifyAndActivateMac(title, message, config.activateWindow);
+          this.notifyAndActivateMac(title, message, shouldActivate);
           break;
         case 'win32':
-          this.notifyAndActivateWindows(title, message, config.activateWindow);
+          this.notifyAndActivateWindows(title, message, shouldActivate);
           break;
         case 'linux':
-          this.notifyAndActivateLinux(title, message, config.activateWindow);
+          this.notifyAndActivateLinux(title, message, shouldActivate);
           break;
         default:
           log('[NATIVE_NOTIFY] Unsupported platform:', platform);
           break;
       }
+
+      this.markActivationUsed(terminalId, shouldActivate, options);
     } catch (error) {
       log('[NATIVE_NOTIFY] Error:', error);
     }
@@ -159,13 +194,23 @@ export class NativeNotificationService implements vscode.Disposable {
     return str.replace(/[\\"]/g, '');
   }
 
+  private clearActivationLock(terminalId: string): void {
+    this.activationLockedTerminals.delete(terminalId);
+  }
+
   public clearTerminal(terminalId: string): void {
     this.lastNotifiedAt.delete(terminalId);
+    this.clearActivationLock(terminalId);
+  }
+
+  public clearWaitingState(terminalId: string): void {
+    this.clearActivationLock(terminalId);
   }
 
   public dispose(): void {
     this.isDisposed = true;
     this.lastNotifiedAt.clear();
+    this.activationLockedTerminals.clear();
     this.lastGlobalNotifiedAt = 0;
   }
 }

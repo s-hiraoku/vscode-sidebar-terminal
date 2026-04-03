@@ -100,6 +100,7 @@ describe('UIManager', () => {
     });
 
     it('should apply updated theme background to root terminal containers', () => {
+      // Given
       const theme: TerminalTheme = {
         background: '#003b49',
         foreground: '#ffffff',
@@ -107,8 +108,10 @@ describe('UIManager', () => {
         selectionBackground: '#333333',
       };
 
+      // When
       uiManager.updateTheme(theme);
 
+      // Then
       expect(document.documentElement.style.getPropertyValue('background-color')).toBe(
         'rgb(0, 59, 73)'
       );

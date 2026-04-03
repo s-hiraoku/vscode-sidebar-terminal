@@ -17,6 +17,65 @@ export class ThemeManager {
     border: '#454545',
   };
 
+  private static parseHexColor(color: string): { r: number; g: number; b: number } | null {
+    if (!color.startsWith('#')) {
+      return null;
+    }
+
+    const hex = color.slice(1);
+    if (hex.length === 3) {
+      return {
+        r: parseInt(hex[0] + hex[0], 16),
+        g: parseInt(hex[1] + hex[1], 16),
+        b: parseInt(hex[2] + hex[2], 16),
+      };
+    }
+
+    if (hex.length === 6) {
+      return {
+        r: parseInt(hex.slice(0, 2), 16),
+        g: parseInt(hex.slice(2, 4), 16),
+        b: parseInt(hex.slice(4, 6), 16),
+      };
+    }
+
+    return null;
+  }
+
+  private static parseRgbColor(color: string): { r: number; g: number; b: number } | null {
+    const match = color.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+    if (!match) {
+      return null;
+    }
+
+    return {
+      r: Number(match[1]),
+      g: Number(match[2]),
+      b: Number(match[3]),
+    };
+  }
+
+  private static resolveThemeType(): 'light' | 'dark' {
+    if (typeof document !== 'undefined' && typeof getComputedStyle !== 'undefined') {
+      const computedStyle = getComputedStyle(document.documentElement);
+      const background =
+        computedStyle.getPropertyValue('--vscode-terminal-background').trim() ||
+        computedStyle.getPropertyValue('--vscode-editor-background').trim();
+      const rgb = this.parseHexColor(background) ?? this.parseRgbColor(background);
+
+      if (rgb) {
+        const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+        return luminance >= 0.5 ? 'light' : 'dark';
+      }
+    }
+
+    if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+
+    return 'dark';
+  }
+
   /**
    * Initialize the theme manager
    */
@@ -172,7 +231,7 @@ export class ThemeManager {
    * Update theme colors from CSS custom properties
    */
   private static updateThemeColors(): void {
-    const resolvedTheme = getVSCodeThemeColors('dark');
+    const resolvedTheme = getVSCodeThemeColors(this.resolveThemeType());
 
     this.themeColors = {
       background: resolvedTheme.background,
