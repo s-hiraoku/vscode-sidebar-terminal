@@ -33,6 +33,74 @@ const detectPlatform = (): 'darwin' | 'linux' | 'win32' => {
   return 'win32';
 };
 
+const parseHexColor = (color: string): { r: number; g: number; b: number } | null => {
+  if (!color.startsWith('#')) {
+    return null;
+  }
+
+  const hex = color.slice(1);
+  if (hex.length === 3) {
+    return {
+      r: parseInt(hex[0] + hex[0], 16),
+      g: parseInt(hex[1] + hex[1], 16),
+      b: parseInt(hex[2] + hex[2], 16),
+    };
+  }
+
+  if (hex.length === 6) {
+    return {
+      r: parseInt(hex.slice(0, 2), 16),
+      g: parseInt(hex.slice(2, 4), 16),
+      b: parseInt(hex.slice(4, 6), 16),
+    };
+  }
+
+  return null;
+};
+
+const parseRgbColor = (color: string): { r: number; g: number; b: number } | null => {
+  const match = color.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+  if (!match) {
+    return null;
+  }
+
+  return {
+    r: Number(match[1]),
+    g: Number(match[2]),
+    b: Number(match[3]),
+  };
+};
+
+const isLightColor = (color: string): boolean | null => {
+  const rgb = parseHexColor(color) ?? parseRgbColor(color);
+  if (!rgb) {
+    return null;
+  }
+
+  const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+  return luminance >= 0.5;
+};
+
+const resolveThemeType = (): 'light' | 'dark' => {
+  if (typeof document !== 'undefined' && typeof getComputedStyle !== 'undefined') {
+    const computedStyle = getComputedStyle(document.documentElement);
+    const background =
+      computedStyle.getPropertyValue('--vscode-terminal-background').trim() ||
+      computedStyle.getPropertyValue('--vscode-editor-background').trim();
+    const isLight = background ? isLightColor(background) : null;
+
+    if (isLight !== null) {
+      return isLight ? 'light' : 'dark';
+    }
+  }
+
+  if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+
+  return 'dark';
+};
+
 /**
  * VS Code Standard Terminal Configuration with all default values
  * Platform-specific adjustments are applied based on OS detection.
@@ -42,7 +110,7 @@ const detectPlatform = (): 'darwin' | 'linux' | 'win32' => {
  */
 const createDefaultTerminalConfig = (): WebViewTerminalConfig => {
   const platform = detectPlatform();
-  const resolvedTheme = getVSCodeThemeColors('dark');
+  const resolvedTheme = getVSCodeThemeColors(resolveThemeType());
 
   return {
     // Basic appearance - VS Code standard values

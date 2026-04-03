@@ -29,21 +29,27 @@ describe('ThemeManager', () => {
     });
 
     it('should prioritize terminal background over editor background', () => {
+      // Given
       document.documentElement.style.setProperty('--vscode-terminal-background', '#003b49');
       document.documentElement.style.setProperty('--vscode-editor-background', '#1e1e1e');
 
+      // When
       ThemeManager.initialize();
       const colors = ThemeManager.getThemeColors();
 
+      // Then
       expect(colors.background).toBe('#003b49');
     });
 
     it('should update colors from CSS variables', () => {
+      // Given
       document.documentElement.style.setProperty('--vscode-editor-background', '#ff0000');
 
+      // When
       ThemeManager.initialize();
       const colors = ThemeManager.getThemeColors();
 
+      // Then
       expect(colors.background).toBe('#ff0000');
     });
   });

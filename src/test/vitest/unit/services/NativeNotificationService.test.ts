@@ -2,6 +2,9 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { NativeNotificationService } from '../../../../services/NativeNotificationService';
 
 const mockGetConfig = vi.fn();
+type ExecFileFn = NonNullable<ConstructorParameters<typeof NativeNotificationService>[0]>;
+type NotifyOptions = NonNullable<Parameters<NativeNotificationService['notifyAndActivate']>[3]>;
+
 vi.mock('vscode', () => ({
   workspace: {
     getConfiguration: (...args: any[]) => mockGetConfig(...args),
@@ -27,7 +30,7 @@ function setDefaultConfig(overrides: Record<string, any> = {}) {
 
 describe('NativeNotificationService', () => {
   let service: NativeNotificationService;
-  let mockExecFile: ReturnType<typeof vi.fn>;
+  let mockExecFile: ReturnType<typeof vi.fn<ExecFileFn>>;
   const originalPlatform = process.platform;
 
   function setPlatform(platform: string) {
@@ -37,8 +40,8 @@ describe('NativeNotificationService', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     setDefaultConfig();
-    mockExecFile = vi.fn();
-    service = new NativeNotificationService(mockExecFile as any);
+    mockExecFile = vi.fn<ExecFileFn>();
+    service = new NativeNotificationService(mockExecFile);
   });
 
   afterEach(() => {
@@ -106,18 +109,17 @@ describe('NativeNotificationService', () => {
 
       it('should activate approval waiting only once until waiting state is cleared', () => {
         setPlatform('darwin');
-        service.notifyAndActivate('terminal-1', 'Title', 'Waiting for approval', {
+        const options: NotifyOptions = {
           activateOnlyOnce: true,
-        } as any);
+        };
+        service.notifyAndActivate('terminal-1', 'Title', 'Waiting for approval', options);
         expect(mockExecFile).toHaveBeenCalledTimes(1);
         let args = mockExecFile.mock.calls[0][1] as string[];
         let script = args[args.indexOf('-e') + 1];
         expect(script).toContain('activate');
 
         vi.advanceTimersByTime(10000);
-        service.notifyAndActivate('terminal-1', 'Title', 'Waiting for approval again', {
-          activateOnlyOnce: true,
-        } as any);
+        service.notifyAndActivate('terminal-1', 'Title', 'Waiting for approval again', options);
         expect(mockExecFile).toHaveBeenCalledTimes(2);
         args = mockExecFile.mock.calls[1][1] as string[];
         script = args[args.indexOf('-e') + 1];
@@ -125,9 +127,12 @@ describe('NativeNotificationService', () => {
 
         service.clearWaitingState('terminal-1');
         vi.advanceTimersByTime(10000);
-        service.notifyAndActivate('terminal-1', 'Title', 'Waiting for approval after clear', {
-          activateOnlyOnce: true,
-        } as any);
+        service.notifyAndActivate(
+          'terminal-1',
+          'Title',
+          'Waiting for approval after clear',
+          options
+        );
         expect(mockExecFile).toHaveBeenCalledTimes(3);
         args = mockExecFile.mock.calls[2][1] as string[];
         script = args[args.indexOf('-e') + 1];

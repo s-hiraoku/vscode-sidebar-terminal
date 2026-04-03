@@ -22,6 +22,7 @@ describe('TerminalConfigService', () => {
     });
 
     it('should prioritize VS Code terminal background when available', async () => {
+      // Given
       vi.resetModules();
       vi.stubGlobal('navigator', { userAgent: 'Linux' });
       vi.stubGlobal('document', {
@@ -38,13 +39,16 @@ describe('TerminalConfigService', () => {
         })
       );
 
+      // When
       const mod = await import('../../../../../../webview/services/terminal/TerminalConfigService');
       const config = mod.TerminalConfigService.getDefaultConfig();
 
+      // Then
       expect(config.theme?.background).toBe('#003b49');
     });
 
     it('should fall back to editor background when terminal background is unavailable', async () => {
+      // Given
       vi.resetModules();
       vi.stubGlobal('navigator', { userAgent: 'Linux' });
       vi.stubGlobal('document', {
@@ -60,9 +64,11 @@ describe('TerminalConfigService', () => {
         })
       );
 
+      // When
       const mod = await import('../../../../../../webview/services/terminal/TerminalConfigService');
       const config = mod.TerminalConfigService.getDefaultConfig();
 
+      // Then
       expect(config.theme?.background).toBe('#223344');
     });
 
