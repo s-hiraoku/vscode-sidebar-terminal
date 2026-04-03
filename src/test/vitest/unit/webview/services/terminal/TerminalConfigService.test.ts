@@ -2,15 +2,68 @@
  * TerminalConfigService Unit Tests
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { TerminalConfigService } from '../../../../../../webview/services/terminal/TerminalConfigService';
 
 describe('TerminalConfigService', () => {
+  beforeEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   describe('getDefaultConfig', () => {
     it('should return default configuration', () => {
       const config = TerminalConfigService.getDefaultConfig();
       expect(config.cursorBlink).toBe(true);
       expect(config.scrollback).toBe(2000);
+    });
+
+    it('should prioritize VS Code terminal background when available', async () => {
+      vi.resetModules();
+      vi.stubGlobal('navigator', { userAgent: 'Linux' });
+      vi.stubGlobal('document', {
+        documentElement: {},
+      });
+      vi.stubGlobal(
+        'getComputedStyle',
+        vi.fn().mockReturnValue({
+          getPropertyValue: (property: string) => {
+            if (property === '--vscode-terminal-background') return '#003b49';
+            if (property === '--vscode-editor-background') return '#1e1e1e';
+            return '';
+          },
+        })
+      );
+
+      const mod = await import('../../../../../../webview/services/terminal/TerminalConfigService');
+      const config = mod.TerminalConfigService.getDefaultConfig();
+
+      expect(config.theme?.background).toBe('#003b49');
+    });
+
+    it('should fall back to editor background when terminal background is unavailable', async () => {
+      vi.resetModules();
+      vi.stubGlobal('navigator', { userAgent: 'Linux' });
+      vi.stubGlobal('document', {
+        documentElement: {},
+      });
+      vi.stubGlobal(
+        'getComputedStyle',
+        vi.fn().mockReturnValue({
+          getPropertyValue: (property: string) => {
+            if (property === '--vscode-editor-background') return '#223344';
+            return '';
+          },
+        })
+      );
+
+      const mod = await import('../../../../../../webview/services/terminal/TerminalConfigService');
+      const config = mod.TerminalConfigService.getDefaultConfig();
+
+      expect(config.theme?.background).toBe('#223344');
     });
 
     it('should handle platform specific font size', async () => {

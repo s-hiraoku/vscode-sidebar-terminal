@@ -99,6 +99,28 @@ describe('UIManager', () => {
       expect(uiManager.getCurrentTheme().applied).toBe(true);
     });
 
+    it('should apply updated theme background to root terminal containers', () => {
+      const theme: TerminalTheme = {
+        background: '#003b49',
+        foreground: '#ffffff',
+        cursor: '#ffffff',
+        selectionBackground: '#333333',
+      };
+
+      uiManager.updateTheme(theme);
+
+      expect(document.documentElement.style.getPropertyValue('background-color')).toBe(
+        'rgb(0, 59, 73)'
+      );
+      expect(document.body.style.getPropertyValue('background-color')).toBe('rgb(0, 59, 73)');
+      expect(
+        document.getElementById('terminal-body')?.style.getPropertyValue('background-color')
+      ).toBe('rgb(0, 59, 73)');
+      expect(
+        document.getElementById('terminal-container')?.style.getPropertyValue('background-color')
+      ).toBe('rgb(0, 59, 73)');
+    });
+
     it('should apply theme to terminal instance', () => {
       const mockTerminal = {
         options: {},
