@@ -187,7 +187,6 @@ export class UIManager extends BaseManager implements IUIManager {
 
     // Keep the root webview surfaces in sync with the active terminal theme.
     this.updateTerminalBodyBackground(theme.background);
-    this.updateContainerBackgrounds(theme.background);
 
     // Update tab list theme
     if (this.tabThemeUpdater) {
