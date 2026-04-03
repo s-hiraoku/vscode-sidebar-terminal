@@ -51,6 +51,8 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     this.waitingChangeSubscription = this.stateStore.onAgentWaitingChange((event) => {
       if (event.isWaiting) {
         this.notificationCoordinator.notifyWaiting(event.terminalId, event.waitingType);
+      } else {
+        this.notificationCoordinator.clearWaitingState(event.terminalId);
       }
     });
 

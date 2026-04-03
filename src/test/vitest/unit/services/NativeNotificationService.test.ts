@@ -103,6 +103,46 @@ describe('NativeNotificationService', () => {
         service.notifyAndActivate('terminal-1', 'Title', 'Message');
         expect(mockExecFile).toHaveBeenCalledTimes(2);
       });
+
+      it('should activate approval waiting only once until waiting state is cleared', () => {
+        setPlatform('darwin');
+        service.notifyAndActivate('terminal-1', 'Title', 'Waiting for approval', {
+          activateOnlyOnce: true,
+        } as any);
+        expect(mockExecFile).toHaveBeenCalledTimes(1);
+        let args = mockExecFile.mock.calls[0][1] as string[];
+        let script = args[args.indexOf('-e') + 1];
+        expect(script).toContain('activate');
+
+        vi.advanceTimersByTime(10000);
+        service.notifyAndActivate('terminal-1', 'Title', 'Waiting for approval again', {
+          activateOnlyOnce: true,
+        } as any);
+        expect(mockExecFile).toHaveBeenCalledTimes(2);
+        args = mockExecFile.mock.calls[1][1] as string[];
+        script = args[args.indexOf('-e') + 1];
+        expect(script).not.toContain('activate');
+
+        service.clearWaitingState('terminal-1');
+        vi.advanceTimersByTime(10000);
+        service.notifyAndActivate('terminal-1', 'Title', 'Waiting for approval after clear', {
+          activateOnlyOnce: true,
+        } as any);
+        expect(mockExecFile).toHaveBeenCalledTimes(3);
+        args = mockExecFile.mock.calls[2][1] as string[];
+        script = args[args.indexOf('-e') + 1];
+        expect(script).toContain('activate');
+      });
+
+      it('should continue allowing repeated activation when activateOnlyOnce is false', () => {
+        setPlatform('darwin');
+        service.notifyAndActivate('terminal-1', 'Title', 'Waiting for input');
+        expect(mockExecFile).toHaveBeenCalledTimes(1);
+
+        vi.advanceTimersByTime(10000);
+        service.notifyAndActivate('terminal-1', 'Title', 'Waiting for input again');
+        expect(mockExecFile).toHaveBeenCalledTimes(2);
+      });
     });
 
     describe('macOS', () => {

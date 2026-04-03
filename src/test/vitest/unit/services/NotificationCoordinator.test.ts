@@ -31,6 +31,7 @@ describe('NotificationCoordinator', () => {
   let mockNative: {
     notifyAndActivate: ReturnType<typeof vi.fn>;
     clearTerminal: ReturnType<typeof vi.fn>;
+    clearWaitingState: ReturnType<typeof vi.fn>;
     dispose: ReturnType<typeof vi.fn>;
   };
 
@@ -49,6 +50,7 @@ describe('NotificationCoordinator', () => {
     mockNative = {
       notifyAndActivate: vi.fn(),
       clearTerminal: vi.fn(),
+      clearWaitingState: vi.fn(),
       dispose: vi.fn(),
     };
     coordinator = new NotificationCoordinator(
@@ -71,7 +73,8 @@ describe('NotificationCoordinator', () => {
       expect(mockNative.notifyAndActivate).toHaveBeenCalledWith(
         'terminal-1',
         'Sidebar Terminal',
-        expect.stringContaining('waiting for input')
+        expect.stringContaining('waiting for input'),
+        undefined
       );
     });
 
@@ -81,7 +84,19 @@ describe('NotificationCoordinator', () => {
       expect(mockNative.notifyAndActivate).toHaveBeenCalledWith(
         'terminal-1',
         'Sidebar Terminal',
-        expect.stringContaining('waiting for approval')
+        expect.stringContaining('waiting for approval'),
+        expect.objectContaining({ activateOnlyOnce: true })
+      );
+    });
+
+    it('should not limit activation to once for input waiting type', () => {
+      coordinator.notifyWaiting('terminal-1', 'input');
+
+      expect(mockNative.notifyAndActivate).toHaveBeenCalledWith(
+        'terminal-1',
+        'Sidebar Terminal',
+        expect.stringContaining('waiting for input'),
+        expect.not.objectContaining({ activateOnlyOnce: true })
       );
     });
 
@@ -91,7 +106,8 @@ describe('NotificationCoordinator', () => {
       expect(mockNative.notifyAndActivate).toHaveBeenCalledWith(
         'terminal-1',
         'Sidebar Terminal',
-        expect.stringContaining('idle')
+        expect.stringContaining('idle'),
+        undefined
       );
     });
 
@@ -158,6 +174,16 @@ describe('NotificationCoordinator', () => {
       expect(mockAudio.clearTerminal).not.toHaveBeenCalled();
       expect(mockToast.clearTerminal).not.toHaveBeenCalled();
       expect(mockNative.clearTerminal).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('clearWaitingState', () => {
+    it('should clear waiting state only on native service', () => {
+      coordinator.clearWaitingState('terminal-1');
+
+      expect(mockNative.clearWaitingState).toHaveBeenCalledWith('terminal-1');
+      expect(mockAudio.clearTerminal).not.toHaveBeenCalled();
+      expect(mockToast.clearTerminal).not.toHaveBeenCalled();
     });
   });
 
