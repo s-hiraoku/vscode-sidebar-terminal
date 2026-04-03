@@ -5,6 +5,12 @@ All notable changes to the "Secondary Terminal" extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+### [0.4.4](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v0.4.3...v0.4.4) (2026-04-03)
+
+### Fixed
+
+- **notifications:** keep waiting active until user input ([55c2a42](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/55c2a426dfe2a0b19300b5f702295218d653ad6b))
+
 ### [0.4.3](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v0.4.2...v0.4.3) (2026-04-03)
 
 ### Changed
