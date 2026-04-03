@@ -3,7 +3,7 @@
  * Centralized theme and styling management with VS Code integration
  */
 
-import { ThemeColors, TerminalTheme, DARK_THEME } from '../types/theme.types';
+import { ThemeColors, TerminalTheme, DARK_THEME, getVSCodeThemeColors } from '../types/theme.types';
 
 /**
  * Centralized theme manager for VS Code integration
@@ -172,9 +172,11 @@ export class ThemeManager {
    * Update theme colors from CSS custom properties
    */
   private static updateThemeColors(): void {
+    const resolvedTheme = getVSCodeThemeColors('dark');
+
     this.themeColors = {
-      background: this.getVSCodeColor('--vscode-editor-background', '#1e1e1e'),
-      foreground: this.getVSCodeColor('--vscode-editor-foreground', '#d4d4d4'),
+      background: resolvedTheme.background,
+      foreground: resolvedTheme.foreground,
       border: this.getVSCodeColor('--vscode-widget-border', '#454545'),
     };
   }

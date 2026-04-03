@@ -28,6 +28,16 @@ describe('ThemeManager', () => {
       expect(colors.background).toBe('#1e1e1e');
     });
 
+    it('should prioritize terminal background over editor background', () => {
+      document.documentElement.style.setProperty('--vscode-terminal-background', '#003b49');
+      document.documentElement.style.setProperty('--vscode-editor-background', '#1e1e1e');
+
+      ThemeManager.initialize();
+      const colors = ThemeManager.getThemeColors();
+
+      expect(colors.background).toBe('#003b49');
+    });
+
     it('should update colors from CSS variables', () => {
       document.documentElement.style.setProperty('--vscode-editor-background', '#ff0000');
 
@@ -58,6 +68,25 @@ describe('ThemeManager', () => {
   });
 
   describe('createTerminalTheme', () => {
+    it('should use terminal background when available', () => {
+      document.documentElement.style.setProperty('--vscode-terminal-background', '#003b49');
+      document.documentElement.style.setProperty('--vscode-editor-background', '#1e1e1e');
+      ThemeManager.initialize();
+
+      const theme = ThemeManager.createTerminalTheme();
+
+      expect(theme.background).toBe('#003b49');
+    });
+
+    it('should fall back to editor background when terminal background is unavailable', () => {
+      document.documentElement.style.setProperty('--vscode-editor-background', '#ff0000');
+      ThemeManager.initialize();
+
+      const theme = ThemeManager.createTerminalTheme();
+
+      expect(theme.background).toBe('#ff0000');
+    });
+
     it('should create a terminal theme with VS Code colors', () => {
       document.documentElement.style.setProperty('--vscode-terminalCursor-foreground', '#ffff00');
       ThemeManager.initialize();

@@ -6,6 +6,7 @@
  */
 
 import { ITerminalOptions, ITheme } from '@xterm/xterm';
+import { getVSCodeThemeColors } from '../../types/theme.types';
 
 /**
  * Extended terminal configuration for WebView xterm.js instance
@@ -41,6 +42,7 @@ const detectPlatform = (): 'darwin' | 'linux' | 'win32' => {
  */
 const createDefaultTerminalConfig = (): WebViewTerminalConfig => {
   const platform = detectPlatform();
+  const resolvedTheme = getVSCodeThemeColors('dark');
 
   return {
     // Basic appearance - VS Code standard values
@@ -52,11 +54,11 @@ const createDefaultTerminalConfig = (): WebViewTerminalConfig => {
     lineHeight: platform === 'linux' ? 1.1 : 1.0, // VS Code: 1.1 on Linux for underline rendering
     letterSpacing: 0,
     theme: {
-      background: '#1e1e1e', // VS Code dark editor background
-      foreground: '#cccccc',
-      cursor: '#aeafad',
-      cursorAccent: '#000000',
-      selectionBackground: 'rgba(38, 79, 120, 0.5)',
+      background: resolvedTheme.background,
+      foreground: resolvedTheme.foreground,
+      cursor: resolvedTheme.cursor,
+      cursorAccent: resolvedTheme.cursorAccent,
+      selectionBackground: resolvedTheme.selectionBackground,
     } as ITheme,
 
     // VS Code Standard Options - Core Features
