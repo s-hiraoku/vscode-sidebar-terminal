@@ -173,21 +173,13 @@ export function getVSCodeThemeColors(themeType: 'light' | 'dark'): TerminalTheme
         '--vscode-terminal-ansiBrightYellow',
         baseTheme.brightYellow
       ),
-      brightBlue: getCssThemeValue(
-        style,
-        '--vscode-terminal-ansiBrightBlue',
-        baseTheme.brightBlue
-      ),
+      brightBlue: getCssThemeValue(style, '--vscode-terminal-ansiBrightBlue', baseTheme.brightBlue),
       brightMagenta: getCssThemeValue(
         style,
         '--vscode-terminal-ansiBrightMagenta',
         baseTheme.brightMagenta
       ),
-      brightCyan: getCssThemeValue(
-        style,
-        '--vscode-terminal-ansiBrightCyan',
-        baseTheme.brightCyan
-      ),
+      brightCyan: getCssThemeValue(style, '--vscode-terminal-ansiBrightCyan', baseTheme.brightCyan),
       brightWhite: getCssThemeValue(
         style,
         '--vscode-terminal-ansiBrightWhite',

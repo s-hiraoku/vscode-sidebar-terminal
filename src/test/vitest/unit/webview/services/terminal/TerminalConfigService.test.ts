@@ -38,8 +38,7 @@ describe('TerminalConfigService', () => {
         })
       );
 
-      const mod =
-        await import('../../../../../../webview/services/terminal/TerminalConfigService');
+      const mod = await import('../../../../../../webview/services/terminal/TerminalConfigService');
       const config = mod.TerminalConfigService.getDefaultConfig();
 
       expect(config.theme?.background).toBe('#003b49');
@@ -61,8 +60,7 @@ describe('TerminalConfigService', () => {
         })
       );
 
-      const mod =
-        await import('../../../../../../webview/services/terminal/TerminalConfigService');
+      const mod = await import('../../../../../../webview/services/terminal/TerminalConfigService');
       const config = mod.TerminalConfigService.getDefaultConfig();
 
       expect(config.theme?.background).toBe('#223344');
