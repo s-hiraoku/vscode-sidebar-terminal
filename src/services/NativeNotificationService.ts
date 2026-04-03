@@ -14,10 +14,6 @@ interface NativeNotificationConfig {
   cooldownMs: number;
 }
 
-interface NotifyOptions {
-  activateOnlyOnce?: boolean;
-}
-
 export class NativeNotificationService implements vscode.Disposable {
   private isDisposed = false;
   private readonly execFileFn: ExecFileFn;
@@ -64,29 +60,28 @@ export class NativeNotificationService implements vscode.Disposable {
   private shouldActivate(
     terminalId: string,
     config: NativeNotificationConfig,
-    options?: NotifyOptions
-  ) {
+    lockActivation: boolean
+  ): boolean {
     return (
-      config.activateWindow &&
-      (!options?.activateOnlyOnce || !this.activationLockedTerminals.has(terminalId))
+      config.activateWindow && (!lockActivation || !this.activationLockedTerminals.has(terminalId))
     );
   }
 
-  private markActivationUsed(
+  private markWaitingActivationUsed(
     terminalId: string,
     shouldActivate: boolean,
-    options?: NotifyOptions
+    lockActivation: boolean
   ): void {
-    if (options?.activateOnlyOnce && shouldActivate) {
+    if (lockActivation && shouldActivate) {
       this.activationLockedTerminals.add(terminalId);
     }
   }
 
-  public notifyAndActivate(
+  private notifyAndActivate(
     terminalId: string,
     title: string,
     message: string,
-    options?: NotifyOptions
+    lockActivation: boolean
   ): void {
     if (this.isDisposed) {
       return;
@@ -100,7 +95,7 @@ export class NativeNotificationService implements vscode.Disposable {
     const platform = process.platform;
 
     try {
-      const shouldActivate = this.shouldActivate(terminalId, config, options);
+      const shouldActivate = this.shouldActivate(terminalId, config, lockActivation);
 
       switch (platform) {
         case 'darwin':
@@ -117,10 +112,18 @@ export class NativeNotificationService implements vscode.Disposable {
           break;
       }
 
-      this.markActivationUsed(terminalId, shouldActivate, options);
+      this.markWaitingActivationUsed(terminalId, shouldActivate, lockActivation);
     } catch (error) {
       log('[NATIVE_NOTIFY] Error:', error);
     }
+  }
+
+  public notifyWaiting(terminalId: string, title: string, message: string): void {
+    this.notifyAndActivate(terminalId, title, message, true);
+  }
+
+  public notifyCompleted(terminalId: string, title: string, message: string): void {
+    this.notifyAndActivate(terminalId, title, message, false);
   }
 
   private getAppName(): string {

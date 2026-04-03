@@ -28,11 +28,10 @@ export class NotificationCoordinator implements vscode.Disposable {
     this.safeCall(() => this.audioService.playNotification(terminalId));
     this.safeCall(() => this.toastService.showWaitingNotification(terminalId, waitingType));
     this.safeCall(() =>
-      this.nativeService.notifyAndActivate(
+      this.nativeService.notifyWaiting(
         terminalId,
         NOTIFICATION_TITLE,
-        this.getWaitingMessage(terminalId, waitingType),
-        this.getWaitingNotifyOptions(waitingType)
+        this.getWaitingMessage(terminalId, waitingType)
       )
     );
   }
@@ -44,7 +43,7 @@ export class NotificationCoordinator implements vscode.Disposable {
 
     this.safeCall(() => this.toastService.showCompletedNotification(terminalId, agentType));
     this.safeCall(() =>
-      this.nativeService.notifyAndActivate(
+      this.nativeService.notifyCompleted(
         terminalId,
         NOTIFICATION_TITLE,
         `${getAgentDisplayName(agentType)} has completed (${terminalId})`
@@ -72,12 +71,6 @@ export class NotificationCoordinator implements vscode.Disposable {
 
   private getWaitingMessage(terminalId: string, waitingType?: WaitingType): string {
     return `CLI Agent is ${getWaitingTypeLabel(waitingType)} (${terminalId})`;
-  }
-
-  private getWaitingNotifyOptions(
-    waitingType?: WaitingType
-  ): { activateOnlyOnce: true } | undefined {
-    return waitingType === 'approval' ? { activateOnlyOnce: true } : undefined;
   }
 
   public dispose(): void {

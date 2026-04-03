@@ -29,7 +29,8 @@ describe('NotificationCoordinator', () => {
     dispose: ReturnType<typeof vi.fn>;
   };
   let mockNative: {
-    notifyAndActivate: ReturnType<typeof vi.fn>;
+    notifyWaiting: ReturnType<typeof vi.fn>;
+    notifyCompleted: ReturnType<typeof vi.fn>;
     clearTerminal: ReturnType<typeof vi.fn>;
     clearWaitingState: ReturnType<typeof vi.fn>;
     dispose: ReturnType<typeof vi.fn>;
@@ -48,7 +49,8 @@ describe('NotificationCoordinator', () => {
       dispose: vi.fn(),
     };
     mockNative = {
-      notifyAndActivate: vi.fn(),
+      notifyWaiting: vi.fn(),
+      notifyCompleted: vi.fn(),
       clearTerminal: vi.fn(),
       clearWaitingState: vi.fn(),
       dispose: vi.fn(),
@@ -70,44 +72,40 @@ describe('NotificationCoordinator', () => {
 
       expect(mockAudio.playNotification).toHaveBeenCalledWith('terminal-1');
       expect(mockToast.showWaitingNotification).toHaveBeenCalledWith('terminal-1', 'input');
-      expect(mockNative.notifyAndActivate).toHaveBeenCalledWith(
+      expect(mockNative.notifyWaiting).toHaveBeenCalledWith(
         'terminal-1',
         'Sidebar Terminal',
-        expect.stringContaining('waiting for input'),
-        undefined
+        expect.stringContaining('waiting for input')
       );
     });
 
     it('should use correct label for approval waiting type', () => {
       coordinator.notifyWaiting('terminal-1', 'approval');
 
-      expect(mockNative.notifyAndActivate).toHaveBeenCalledWith(
+      expect(mockNative.notifyWaiting).toHaveBeenCalledWith(
         'terminal-1',
         'Sidebar Terminal',
-        expect.stringContaining('waiting for approval'),
-        expect.objectContaining({ activateOnlyOnce: true })
+        expect.stringContaining('waiting for approval')
       );
     });
 
-    it('should not limit activation to once for input waiting type', () => {
+    it('should delegate input waiting notifications to native waiting API', () => {
       coordinator.notifyWaiting('terminal-1', 'input');
 
-      expect(mockNative.notifyAndActivate).toHaveBeenCalledWith(
+      expect(mockNative.notifyWaiting).toHaveBeenCalledWith(
         'terminal-1',
         'Sidebar Terminal',
-        expect.stringContaining('waiting for input'),
-        expect.not.objectContaining({ activateOnlyOnce: true })
+        expect.stringContaining('waiting for input')
       );
     });
 
     it('should use correct label for idle waiting type', () => {
       coordinator.notifyWaiting('terminal-1', 'idle');
 
-      expect(mockNative.notifyAndActivate).toHaveBeenCalledWith(
+      expect(mockNative.notifyWaiting).toHaveBeenCalledWith(
         'terminal-1',
         'Sidebar Terminal',
-        expect.stringContaining('idle'),
-        undefined
+        expect.stringContaining('idle')
       );
     });
 
@@ -117,7 +115,7 @@ describe('NotificationCoordinator', () => {
 
       expect(mockAudio.playNotification).not.toHaveBeenCalled();
       expect(mockToast.showWaitingNotification).not.toHaveBeenCalled();
-      expect(mockNative.notifyAndActivate).not.toHaveBeenCalled();
+      expect(mockNative.notifyWaiting).not.toHaveBeenCalled();
     });
   });
 
@@ -126,7 +124,7 @@ describe('NotificationCoordinator', () => {
       coordinator.notifyCompleted('terminal-1', 'claude');
 
       expect(mockToast.showCompletedNotification).toHaveBeenCalledWith('terminal-1', 'claude');
-      expect(mockNative.notifyAndActivate).toHaveBeenCalledWith(
+      expect(mockNative.notifyCompleted).toHaveBeenCalledWith(
         'terminal-1',
         'Sidebar Terminal',
         expect.stringContaining('Claude has completed')
@@ -142,7 +140,7 @@ describe('NotificationCoordinator', () => {
     it('should use "CLI Agent" when agentType is null', () => {
       coordinator.notifyCompleted('terminal-1', null);
 
-      expect(mockNative.notifyAndActivate).toHaveBeenCalledWith(
+      expect(mockNative.notifyCompleted).toHaveBeenCalledWith(
         'terminal-1',
         'Sidebar Terminal',
         expect.stringContaining('CLI Agent has completed')
@@ -154,7 +152,7 @@ describe('NotificationCoordinator', () => {
       coordinator.notifyCompleted('terminal-1', 'claude');
 
       expect(mockToast.showCompletedNotification).not.toHaveBeenCalled();
-      expect(mockNative.notifyAndActivate).not.toHaveBeenCalled();
+      expect(mockNative.notifyCompleted).not.toHaveBeenCalled();
     });
   });
 
@@ -196,7 +194,7 @@ describe('NotificationCoordinator', () => {
       coordinator.notifyWaiting('terminal-1', 'input');
 
       expect(mockToast.showWaitingNotification).toHaveBeenCalled();
-      expect(mockNative.notifyAndActivate).toHaveBeenCalled();
+      expect(mockNative.notifyWaiting).toHaveBeenCalled();
     });
 
     it('should continue disposing other services if one throws', () => {

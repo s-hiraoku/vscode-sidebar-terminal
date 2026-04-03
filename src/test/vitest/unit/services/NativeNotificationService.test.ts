@@ -3,7 +3,6 @@ import { NativeNotificationService } from '../../../../services/NativeNotificati
 
 const mockGetConfig = vi.fn();
 type ExecFileFn = NonNullable<ConstructorParameters<typeof NativeNotificationService>[0]>;
-type NotifyOptions = NonNullable<Parameters<NativeNotificationService['notifyAndActivate']>[3]>;
 
 vi.mock('vscode', () => ({
   workspace: {
@@ -50,76 +49,73 @@ describe('NativeNotificationService', () => {
     vi.useRealTimers();
   });
 
-  describe('notifyAndActivate', () => {
+  describe('notifyWaiting', () => {
     it('should send OS notification when enabled', () => {
       setPlatform('darwin');
-      service.notifyAndActivate('terminal-1', 'Test Title', 'Test message');
+      service.notifyWaiting('terminal-1', 'Test Title', 'Test message');
       expect(mockExecFile).toHaveBeenCalled();
     });
 
     it('should not send notification when disabled', () => {
       setDefaultConfig({ 'nativeNotification.enabled': false });
-      service.notifyAndActivate('terminal-1', 'Test Title', 'Test message');
+      service.notifyWaiting('terminal-1', 'Test Title', 'Test message');
       expect(mockExecFile).not.toHaveBeenCalled();
     });
 
     it('should not send notification after dispose', () => {
       service.dispose();
-      service.notifyAndActivate('terminal-1', 'Test Title', 'Test message');
+      service.notifyWaiting('terminal-1', 'Test Title', 'Test message');
       expect(mockExecFile).not.toHaveBeenCalled();
     });
 
     describe('cooldown', () => {
       it('should respect per-terminal cooldown', () => {
         setPlatform('darwin');
-        service.notifyAndActivate('terminal-1', 'Title', 'Message');
+        service.notifyWaiting('terminal-1', 'Title', 'Message');
         expect(mockExecFile).toHaveBeenCalledTimes(1);
 
-        service.notifyAndActivate('terminal-1', 'Title', 'Message 2');
+        service.notifyWaiting('terminal-1', 'Title', 'Message 2');
         expect(mockExecFile).toHaveBeenCalledTimes(1);
 
         vi.advanceTimersByTime(10000);
-        service.notifyAndActivate('terminal-1', 'Title', 'Message 3');
+        service.notifyWaiting('terminal-1', 'Title', 'Message 3');
         expect(mockExecFile).toHaveBeenCalledTimes(2);
       });
 
       it('should enforce global cooldown across terminals', () => {
         setPlatform('darwin');
-        service.notifyAndActivate('terminal-1', 'Title', 'Message');
+        service.notifyWaiting('terminal-1', 'Title', 'Message');
         expect(mockExecFile).toHaveBeenCalledTimes(1);
 
-        service.notifyAndActivate('terminal-2', 'Title', 'Message');
+        service.notifyWaiting('terminal-2', 'Title', 'Message');
         expect(mockExecFile).toHaveBeenCalledTimes(1);
 
         vi.advanceTimersByTime(10000);
-        service.notifyAndActivate('terminal-2', 'Title', 'Message');
+        service.notifyWaiting('terminal-2', 'Title', 'Message');
         expect(mockExecFile).toHaveBeenCalledTimes(2);
       });
 
       it('should allow notification after clearTerminal resets cooldown', () => {
         setPlatform('darwin');
-        service.notifyAndActivate('terminal-1', 'Title', 'Message');
+        service.notifyWaiting('terminal-1', 'Title', 'Message');
         expect(mockExecFile).toHaveBeenCalledTimes(1);
 
         service.clearTerminal('terminal-1');
         vi.advanceTimersByTime(10000);
-        service.notifyAndActivate('terminal-1', 'Title', 'Message');
+        service.notifyWaiting('terminal-1', 'Title', 'Message');
         expect(mockExecFile).toHaveBeenCalledTimes(2);
       });
 
       it('should activate approval waiting only once until waiting state is cleared', () => {
         setPlatform('darwin');
-        const options: NotifyOptions = {
-          activateOnlyOnce: true,
-        };
-        service.notifyAndActivate('terminal-1', 'Title', 'Waiting for approval', options);
+        service.notifyWaiting('terminal-1', 'Title', 'Waiting for approval');
         expect(mockExecFile).toHaveBeenCalledTimes(1);
         let args = mockExecFile.mock.calls[0][1] as string[];
         let script = args[args.indexOf('-e') + 1];
         expect(script).toContain('activate');
 
         vi.advanceTimersByTime(10000);
-        service.notifyAndActivate('terminal-1', 'Title', 'Waiting for approval again', options);
+        service.notifyWaiting('terminal-1', 'Title', 'Waiting for approval again');
         expect(mockExecFile).toHaveBeenCalledTimes(2);
         args = mockExecFile.mock.calls[1][1] as string[];
         script = args[args.indexOf('-e') + 1];
@@ -127,26 +123,48 @@ describe('NativeNotificationService', () => {
 
         service.clearWaitingState('terminal-1');
         vi.advanceTimersByTime(10000);
-        service.notifyAndActivate(
-          'terminal-1',
-          'Title',
-          'Waiting for approval after clear',
-          options
-        );
+        service.notifyWaiting('terminal-1', 'Title', 'Waiting for approval after clear');
         expect(mockExecFile).toHaveBeenCalledTimes(3);
         args = mockExecFile.mock.calls[2][1] as string[];
         script = args[args.indexOf('-e') + 1];
         expect(script).toContain('activate');
       });
 
-      it('should continue allowing repeated activation when activateOnlyOnce is false', () => {
+      it('should activate input waiting only once until waiting state is cleared', () => {
         setPlatform('darwin');
-        service.notifyAndActivate('terminal-1', 'Title', 'Waiting for input');
+        service.notifyWaiting('terminal-1', 'Title', 'Waiting for input');
+        expect(mockExecFile).toHaveBeenCalledTimes(1);
+        let args = mockExecFile.mock.calls[0][1] as string[];
+        let script = args[args.indexOf('-e') + 1];
+        expect(script).toContain('activate');
+
+        vi.advanceTimersByTime(10000);
+        service.notifyWaiting('terminal-1', 'Title', 'Waiting for input again');
+        expect(mockExecFile).toHaveBeenCalledTimes(2);
+        args = mockExecFile.mock.calls[1][1] as string[];
+        script = args[args.indexOf('-e') + 1];
+        expect(script).not.toContain('activate');
+
+        service.clearWaitingState('terminal-1');
+        vi.advanceTimersByTime(10000);
+        service.notifyWaiting('terminal-1', 'Title', 'Waiting for input after clear');
+        expect(mockExecFile).toHaveBeenCalledTimes(3);
+        args = mockExecFile.mock.calls[2][1] as string[];
+        script = args[args.indexOf('-e') + 1];
+        expect(script).toContain('activate');
+      });
+
+      it('should not let waiting activation lock suppress completion activation', () => {
+        setPlatform('darwin');
+        service.notifyWaiting('terminal-1', 'Title', 'Waiting for input');
         expect(mockExecFile).toHaveBeenCalledTimes(1);
 
         vi.advanceTimersByTime(10000);
-        service.notifyAndActivate('terminal-1', 'Title', 'Waiting for input again');
+        service.notifyCompleted('terminal-1', 'Title', 'Completed');
         expect(mockExecFile).toHaveBeenCalledTimes(2);
+        const args = mockExecFile.mock.calls[1][1] as string[];
+        const script = args[args.indexOf('-e') + 1];
+        expect(script).toContain('activate');
       });
     });
 
@@ -154,7 +172,7 @@ describe('NativeNotificationService', () => {
       beforeEach(() => setPlatform('darwin'));
 
       it('should use a single osascript call for notification + activation', () => {
-        service.notifyAndActivate('terminal-1', 'Agent Waiting', 'Claude is waiting');
+        service.notifyWaiting('terminal-1', 'Agent Waiting', 'Claude is waiting');
         expect(mockExecFile).toHaveBeenCalledTimes(1);
         expect(mockExecFile).toHaveBeenCalledWith(
           'osascript',
@@ -168,7 +186,7 @@ describe('NativeNotificationService', () => {
       });
 
       it('should include title and message in osascript command', () => {
-        service.notifyAndActivate('terminal-1', 'Agent Waiting', 'Claude is waiting for input');
+        service.notifyWaiting('terminal-1', 'Agent Waiting', 'Claude is waiting for input');
         const args = mockExecFile.mock.calls[0][1] as string[];
         const script = args[args.indexOf('-e') + 1];
         expect(script).toContain('Agent Waiting');
@@ -176,7 +194,7 @@ describe('NativeNotificationService', () => {
       });
 
       it('should sanitize special characters', () => {
-        service.notifyAndActivate('terminal-1', 'Test "Title"', 'Message with \\ backslash');
+        service.notifyWaiting('terminal-1', 'Test "Title"', 'Message with \\ backslash');
         const args = mockExecFile.mock.calls[0][1] as string[];
         const script = args[args.indexOf('-e') + 1];
         expect(script).not.toContain('"Title"');
@@ -184,7 +202,7 @@ describe('NativeNotificationService', () => {
 
       it('should skip activation when activateWindow is disabled', () => {
         setDefaultConfig({ 'nativeNotification.activateWindow': false });
-        service.notifyAndActivate('terminal-1', 'Title', 'Message');
+        service.notifyWaiting('terminal-1', 'Title', 'Message');
         const args = mockExecFile.mock.calls[0][1] as string[];
         const script = args[args.indexOf('-e') + 1];
         expect(script).toContain('display notification');
@@ -196,7 +214,7 @@ describe('NativeNotificationService', () => {
       beforeEach(() => setPlatform('win32'));
 
       it('should use a single powershell call', () => {
-        service.notifyAndActivate('terminal-1', 'Agent Waiting', 'Claude is waiting');
+        service.notifyWaiting('terminal-1', 'Agent Waiting', 'Claude is waiting');
         expect(mockExecFile).toHaveBeenCalledTimes(1);
         expect(mockExecFile).toHaveBeenCalledWith(
           'powershell',
@@ -206,7 +224,7 @@ describe('NativeNotificationService', () => {
       });
 
       it('should include activation when enabled', () => {
-        service.notifyAndActivate('terminal-1', 'Title', 'Message');
+        service.notifyWaiting('terminal-1', 'Title', 'Message');
         const args = mockExecFile.mock.calls[0][1] as string[];
         const script = args[args.indexOf('-Command') + 1];
         expect(script).toContain('SetForegroundWindow');
@@ -214,7 +232,7 @@ describe('NativeNotificationService', () => {
 
       it('should skip activation when disabled', () => {
         setDefaultConfig({ 'nativeNotification.activateWindow': false });
-        service.notifyAndActivate('terminal-1', 'Title', 'Message');
+        service.notifyWaiting('terminal-1', 'Title', 'Message');
         const args = mockExecFile.mock.calls[0][1] as string[];
         const script = args[args.indexOf('-Command') + 1];
         expect(script).not.toContain('SetForegroundWindow');
@@ -225,7 +243,7 @@ describe('NativeNotificationService', () => {
       beforeEach(() => setPlatform('linux'));
 
       it('should use notify-send for notification', () => {
-        service.notifyAndActivate('terminal-1', 'Agent Waiting', 'Claude is waiting');
+        service.notifyWaiting('terminal-1', 'Agent Waiting', 'Claude is waiting');
         expect(mockExecFile).toHaveBeenCalledWith(
           'notify-send',
           expect.arrayContaining(['Agent Waiting', 'Claude is waiting']),
@@ -234,7 +252,7 @@ describe('NativeNotificationService', () => {
       });
 
       it('should also call wmctrl for activation', () => {
-        service.notifyAndActivate('terminal-1', 'Title', 'Message');
+        service.notifyWaiting('terminal-1', 'Title', 'Message');
         expect(mockExecFile).toHaveBeenCalledTimes(2);
         expect(mockExecFile).toHaveBeenCalledWith(
           'wmctrl',
@@ -245,7 +263,7 @@ describe('NativeNotificationService', () => {
 
       it('should skip wmctrl when activation is disabled', () => {
         setDefaultConfig({ 'nativeNotification.activateWindow': false });
-        service.notifyAndActivate('terminal-1', 'Title', 'Message');
+        service.notifyWaiting('terminal-1', 'Title', 'Message');
         expect(mockExecFile).toHaveBeenCalledTimes(1);
         expect(mockExecFile).toHaveBeenCalledWith(
           'notify-send',
@@ -259,7 +277,7 @@ describe('NativeNotificationService', () => {
       beforeEach(() => setPlatform('freebsd'));
 
       it('should not attempt notification on unsupported platform', () => {
-        service.notifyAndActivate('terminal-1', 'Test', 'Test');
+        service.notifyWaiting('terminal-1', 'Test', 'Test');
         expect(mockExecFile).not.toHaveBeenCalled();
       });
     });
