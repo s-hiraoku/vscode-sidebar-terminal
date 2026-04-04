@@ -109,7 +109,7 @@ export class AudioNotificationService implements vscode.Disposable {
 
   private playPlatformSound(soundFile: string, volume: number): void {
     const exec = this.getExecFile();
-    const opts = { timeout: EXEC_TIMEOUT_MS };
+    const opts = { timeout: EXEC_TIMEOUT_MS, windowsHide: true };
     try {
       switch (process.platform) {
         case 'darwin': {

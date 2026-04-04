@@ -103,6 +103,13 @@ export class NativeNotificationService implements vscode.Disposable {
       return;
     }
 
+    // Skip native notifications entirely when VS Code is focused.
+    // The user is already in VS Code — toast status bar is sufficient.
+    // Spawning osascript/powershell can cause transient focus shifts.
+    if (vscode.window.state.focused) {
+      return;
+    }
+
     const config = this.getConfig();
     if (!config.enabled || !this.canNotify(terminalId, config.cooldownMs, cooldownScope)) {
       return;

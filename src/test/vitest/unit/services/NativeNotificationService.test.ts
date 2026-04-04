@@ -226,16 +226,12 @@ describe('NativeNotificationService', () => {
     });
 
     describe('window focus guard', () => {
-      it('should not activate window when VS Code already has focus', () => {
+      it('should skip native notification entirely when VS Code already has focus', () => {
         setPlatform('darwin');
         mockWindowState.focused = true;
 
         service.notifyWaiting('terminal-1', 'Title', 'Waiting');
-        expect(mockExecFile).toHaveBeenCalledTimes(1);
-        const args = mockExecFile!.mock.calls[0]![1] as string[];
-        const script = args[args.indexOf('-e') + 1];
-        expect(script).toContain('display notification');
-        expect(script).not.toContain('activate');
+        expect(mockExecFile).not.toHaveBeenCalled();
       });
 
       it('should activate window when VS Code does not have focus', () => {
