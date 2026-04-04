@@ -218,6 +218,7 @@ describe('ScrollbackMessageHandler', () => {
     });
 
     it('should handle terminal not found', async () => {
+      // @ts-expect-error - test mock type
       vi.mocked(mockCoordinator.getTerminalInstance).mockReturnValue(null);
 
       await handler.handleMessage(
@@ -426,6 +427,7 @@ describe('ScrollbackMessageHandler', () => {
     });
 
     it('should send empty response when terminal not found', async () => {
+      // @ts-expect-error - test mock type
       vi.mocked(mockCoordinator.getTerminalInstance).mockReturnValue(null);
 
       await handler.handleMessage(
@@ -591,6 +593,7 @@ describe('ScrollbackMessageHandler', () => {
     });
 
     it('should handle restoration errors and still mark as restored', async () => {
+      // @ts-expect-error - test mock type
       vi.mocked(mockCoordinator.getTerminalInstance).mockReturnValue(null);
 
       await handler.handleMessage(

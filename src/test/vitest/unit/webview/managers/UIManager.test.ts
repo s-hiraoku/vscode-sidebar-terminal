@@ -82,6 +82,7 @@ describe('UIManager', () => {
 
   describe('Theme Management', () => {
     it('should update theme and notify tab updater', () => {
+      // @ts-expect-error - test mock type
       const theme: TerminalTheme = {
         background: '#000000',
         foreground: '#ffffff',
@@ -101,6 +102,7 @@ describe('UIManager', () => {
 
     it('should apply updated theme background to root terminal containers', () => {
       // Given
+      // @ts-expect-error - test mock type
       const theme: TerminalTheme = {
         background: '#003b49',
         foreground: '#ffffff',
@@ -482,6 +484,7 @@ describe('UIManager', () => {
 
   describe('Notification', () => {
     it('should create notification element', () => {
+      // @ts-expect-error - test mock type
       const notification = uiManager.createNotificationElement({
         message: 'Test message',
         type: 'info',
@@ -508,8 +511,10 @@ describe('UIManager', () => {
       const headers = uiManager.findTerminalHeaders();
 
       expect(headers).toHaveLength(2);
-      expect(headers[0].textContent).toBe('Header 1');
-      expect(headers[1].textContent).toBe('Header 2');
+      // @ts-expect-error - test mock type
+      expect(headers![0].textContent).toBe('Header 1');
+      // @ts-expect-error - test mock type
+      expect(headers![1].textContent).toBe('Header 2');
     });
 
     it('should return empty array when no headers exist', () => {
@@ -535,6 +540,7 @@ describe('UIManager', () => {
       const tabUpdater = vi.fn();
       uiManager.setTabThemeUpdater(tabUpdater);
 
+      // @ts-expect-error - test mock type
       const theme: TerminalTheme = {
         background: '#1e1e1e',
         foreground: '#d4d4d4',
@@ -552,6 +558,7 @@ describe('UIManager', () => {
       uiManager.createTerminalHeader('term-1', 'Terminal 1');
       uiManager.createTerminalHeader('term-2', 'Terminal 2');
 
+      // @ts-expect-error - test mock type
       const theme: TerminalTheme = {
         background: '#ffffff',
         foreground: '#000000',

@@ -106,8 +106,8 @@ describe('AudioNotificationService', () => {
 
       if (process.platform === 'darwin') {
         const call = mockExecFile.mock.calls[0];
-        expect(call[0]).toBe('afplay');
-        expect(call[1]).toEqual(['-v', '0.5', '/test/sound.aiff']);
+        expect(call![0]).toBe('afplay');
+        expect(call![1]).toEqual(['-v', '0.5', '/test/sound.aiff']);
       }
     });
 
@@ -119,9 +119,9 @@ describe('AudioNotificationService', () => {
       service.playNotification('terminal-1');
 
       const call = mockExecFile.mock.calls[0];
-      expect(call[0]).toBe('powershell');
-      expect(call[1]).toContain('/test/sound.aiff');
-      expect(call[1].join(' ')).not.toContain("'/test/sound.aiff'");
+      expect(call![0]).toBe('powershell');
+      expect(call![1]).toContain('/test/sound.aiff');
+      expect(call![1].join(' ')).not.toContain("'/test/sound.aiff'");
 
       if (originalPlatform) {
         Object.defineProperty(process, 'platform', originalPlatform);
@@ -170,7 +170,7 @@ describe('AudioNotificationService', () => {
       service.playNotification('terminal-1');
 
       const call = mockExecFile.mock.calls[0];
-      expect(call[2]).toEqual({ timeout: 5000 });
+      expect(call![2]).toEqual({ timeout: 5000 });
     });
   });
 

@@ -158,11 +158,11 @@ describe('TerminalLinkManager', () => {
   describe('Link Detection', () => {
     it('should detect absolute file paths', () => {
       const mockTerminal = createMockTerminal(['/path/to/file.ts']);
-      const _capturedCallback: ((links: ILink[]) => void) | null = null;
+      let _capturedCallback: ((links: ILink[]) => void) | null = null;
 
       vi.mocked(mockTerminal.registerLinkProvider).mockImplementation((provider) => {
         provider.provideLinks(1, (links) => {
-          capturedCallback = () => links;
+          _capturedCallback = () => links!;
         });
         return { dispose: vi.fn() };
       });
@@ -180,7 +180,7 @@ describe('TerminalLinkManager', () => {
 
       vi.mocked(mockTerminal.registerLinkProvider).mockImplementation((provider) => {
         provider.provideLinks(1, (links) => {
-          detectedLinks = links;
+          detectedLinks = links!;
         });
         return { dispose: vi.fn() };
       });
@@ -188,7 +188,7 @@ describe('TerminalLinkManager', () => {
       manager.registerTerminalLinkHandlers(mockTerminal, 'terminal-1');
 
       expect(detectedLinks.length).toBe(1);
-      expect(detectedLinks[0].text).toBe('./src/file.ts');
+      expect(detectedLinks[0]!.text).toBe('./src/file.ts');
     });
 
     it('should detect relative file paths with ../', () => {
@@ -198,7 +198,7 @@ describe('TerminalLinkManager', () => {
 
       vi.mocked(mockTerminal.registerLinkProvider).mockImplementation((provider) => {
         provider.provideLinks(1, (links) => {
-          detectedLinks = links;
+          detectedLinks = links!;
         });
         return { dispose: vi.fn() };
       });
@@ -206,7 +206,7 @@ describe('TerminalLinkManager', () => {
       manager.registerTerminalLinkHandlers(mockTerminal, 'terminal-1');
 
       expect(detectedLinks.length).toBe(1);
-      expect(detectedLinks[0].text).toBe('../parent/file.ts');
+      expect(detectedLinks[0]!.text).toBe('../parent/file.ts');
     });
 
     it('should detect Windows file paths', () => {
@@ -216,7 +216,7 @@ describe('TerminalLinkManager', () => {
 
       vi.mocked(mockTerminal.registerLinkProvider).mockImplementation((provider) => {
         provider.provideLinks(1, (links) => {
-          detectedLinks = links;
+          detectedLinks = links!;
         });
         return { dispose: vi.fn() };
       });
@@ -224,7 +224,7 @@ describe('TerminalLinkManager', () => {
       manager.registerTerminalLinkHandlers(mockTerminal, 'terminal-1');
 
       expect(detectedLinks.length).toBe(1);
-      expect(detectedLinks[0].text).toBe('C:\\Users\\test\\file.ts');
+      expect(detectedLinks[0]!.text).toBe('C:\\Users\\test\\file.ts');
     });
 
     it('should detect file paths with line numbers', () => {
@@ -234,7 +234,7 @@ describe('TerminalLinkManager', () => {
 
       vi.mocked(mockTerminal.registerLinkProvider).mockImplementation((provider) => {
         provider.provideLinks(1, (links) => {
-          detectedLinks = links;
+          detectedLinks = links!;
         });
         return { dispose: vi.fn() };
       });
@@ -242,7 +242,7 @@ describe('TerminalLinkManager', () => {
       manager.registerTerminalLinkHandlers(mockTerminal, 'terminal-1');
 
       expect(detectedLinks.length).toBe(1);
-      expect(detectedLinks[0].text).toBe('/path/to/file.ts:10');
+      expect(detectedLinks[0]!.text).toBe('/path/to/file.ts:10');
     });
 
     it('should detect file paths with line and column numbers', () => {
@@ -252,7 +252,7 @@ describe('TerminalLinkManager', () => {
 
       vi.mocked(mockTerminal.registerLinkProvider).mockImplementation((provider) => {
         provider.provideLinks(1, (links) => {
-          detectedLinks = links;
+          detectedLinks = links!;
         });
         return { dispose: vi.fn() };
       });
@@ -260,7 +260,7 @@ describe('TerminalLinkManager', () => {
       manager.registerTerminalLinkHandlers(mockTerminal, 'terminal-1');
 
       expect(detectedLinks.length).toBe(1);
-      expect(detectedLinks[0].text).toBe('/path/to/file.ts:10:5');
+      expect(detectedLinks[0]!.text).toBe('/path/to/file.ts:10:5');
     });
 
     it('should detect URL path portion starting from first slash', () => {
@@ -273,7 +273,7 @@ describe('TerminalLinkManager', () => {
 
       vi.mocked(mockTerminal.registerLinkProvider).mockImplementation((provider) => {
         provider.provideLinks(1, (links) => {
-          detectedLinks = links;
+          detectedLinks = links!;
         });
         return { dispose: vi.fn() };
       });
@@ -283,7 +283,7 @@ describe('TerminalLinkManager', () => {
       // The regex matches //example.com/path (0 dots + / + rest)
       // This looks like a file path to the regex
       expect(detectedLinks.length).toBe(1);
-      expect(detectedLinks[0].text).toBe('//example.com/path');
+      expect(detectedLinks[0]!.text).toBe('//example.com/path');
     });
 
     it('should clean trailing punctuation from paths', () => {
@@ -293,7 +293,7 @@ describe('TerminalLinkManager', () => {
 
       vi.mocked(mockTerminal.registerLinkProvider).mockImplementation((provider) => {
         provider.provideLinks(1, (links) => {
-          detectedLinks = links;
+          detectedLinks = links!;
         });
         return { dispose: vi.fn() };
       });
@@ -301,7 +301,7 @@ describe('TerminalLinkManager', () => {
       manager.registerTerminalLinkHandlers(mockTerminal, 'terminal-1');
 
       expect(detectedLinks.length).toBe(1);
-      expect(detectedLinks[0].text).toBe('/path/to/file.ts');
+      expect(detectedLinks[0]!.text).toBe('/path/to/file.ts');
     });
 
     it('should handle empty lines', () => {
@@ -310,7 +310,7 @@ describe('TerminalLinkManager', () => {
 
       vi.mocked(mockTerminal.registerLinkProvider).mockImplementation((provider) => {
         provider.provideLinks(1, (links) => {
-          detectedLinks = links;
+          detectedLinks = links!;
         });
         return { dispose: vi.fn() };
       });
@@ -326,7 +326,7 @@ describe('TerminalLinkManager', () => {
 
       vi.mocked(mockTerminal.registerLinkProvider).mockImplementation((provider) => {
         provider.provideLinks(1, (links) => {
-          detectedLinks = links;
+          detectedLinks = links!;
         });
         return { dispose: vi.fn() };
       });
@@ -343,7 +343,7 @@ describe('TerminalLinkManager', () => {
 
       vi.mocked(mockTerminal.registerLinkProvider).mockImplementation((provider) => {
         provider.provideLinks(1, (links) => {
-          detectedLinks = links;
+          detectedLinks = links!;
         });
         return { dispose: vi.fn() };
       });
@@ -361,7 +361,7 @@ describe('TerminalLinkManager', () => {
 
       vi.mocked(mockTerminal.registerLinkProvider).mockImplementation((provider) => {
         provider.provideLinks(1, (links) => {
-          detectedLinks = links;
+          detectedLinks = links!;
         });
         return { dispose: vi.fn() };
       });
@@ -380,7 +380,7 @@ describe('TerminalLinkManager', () => {
 
       vi.mocked(mockTerminal.registerLinkProvider).mockImplementation((provider) => {
         provider.provideLinks(1, (links) => {
-          detectedLinks = links;
+          detectedLinks = links!;
         });
         return { dispose: vi.fn() };
       });
@@ -389,7 +389,7 @@ describe('TerminalLinkManager', () => {
       manager.registerTerminalLinkHandlers(mockTerminal, 'terminal-1');
 
       const event = createMockMouseEvent({ metaKey: true });
-      detectedLinks[0]?.activate(event, detectedLinks[0].text);
+      detectedLinks[0]?.activate(event, detectedLinks[0]!.text);
 
       expect(mockCoordinator.postMessageToExtension).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -407,7 +407,7 @@ describe('TerminalLinkManager', () => {
 
       vi.mocked(mockTerminal.registerLinkProvider).mockImplementation((provider) => {
         provider.provideLinks(1, (links) => {
-          detectedLinks = links;
+          detectedLinks = links!;
         });
         return { dispose: vi.fn() };
       });
@@ -416,7 +416,7 @@ describe('TerminalLinkManager', () => {
       manager.registerTerminalLinkHandlers(mockTerminal, 'terminal-1');
 
       const event = createMockMouseEvent({ ctrlKey: true });
-      detectedLinks[0]?.activate(event, detectedLinks[0].text);
+      detectedLinks[0]?.activate(event, detectedLinks[0]!.text);
 
       expect(mockCoordinator.postMessageToExtension).toHaveBeenCalled();
     });
@@ -428,7 +428,7 @@ describe('TerminalLinkManager', () => {
 
       vi.mocked(mockTerminal.registerLinkProvider).mockImplementation((provider) => {
         provider.provideLinks(1, (links) => {
-          detectedLinks = links;
+          detectedLinks = links!;
         });
         return { dispose: vi.fn() };
       });
@@ -437,7 +437,7 @@ describe('TerminalLinkManager', () => {
       manager.registerTerminalLinkHandlers(mockTerminal, 'terminal-1');
 
       const event = createMockMouseEvent({ altKey: true });
-      detectedLinks[0]?.activate(event, detectedLinks[0].text);
+      detectedLinks[0]?.activate(event, detectedLinks[0]!.text);
 
       expect(mockCoordinator.postMessageToExtension).toHaveBeenCalled();
     });
@@ -449,7 +449,7 @@ describe('TerminalLinkManager', () => {
 
       vi.mocked(mockTerminal.registerLinkProvider).mockImplementation((provider) => {
         provider.provideLinks(1, (links) => {
-          detectedLinks = links;
+          detectedLinks = links!;
         });
         return { dispose: vi.fn() };
       });
@@ -457,7 +457,7 @@ describe('TerminalLinkManager', () => {
       manager.registerTerminalLinkHandlers(mockTerminal, 'terminal-1');
 
       const event = createMockMouseEvent(); // No modifier keys
-      detectedLinks[0]?.activate(event, detectedLinks[0].text);
+      detectedLinks[0]?.activate(event, detectedLinks[0]!.text);
 
       expect(mockCoordinator.postMessageToExtension).not.toHaveBeenCalled();
     });
@@ -469,7 +469,7 @@ describe('TerminalLinkManager', () => {
 
       vi.mocked(mockTerminal.registerLinkProvider).mockImplementation((provider) => {
         provider.provideLinks(1, (links) => {
-          detectedLinks = links;
+          detectedLinks = links!;
         });
         return { dispose: vi.fn() };
       });
@@ -478,7 +478,7 @@ describe('TerminalLinkManager', () => {
       manager.registerTerminalLinkHandlers(mockTerminal, 'terminal-1');
 
       const event = createMockMouseEvent({ altKey: true }); // Alt pressed, but should be Cmd/Ctrl
-      detectedLinks[0]?.activate(event, detectedLinks[0].text);
+      detectedLinks[0]?.activate(event, detectedLinks[0]!.text);
 
       expect(mockCoordinator.postMessageToExtension).not.toHaveBeenCalled();
     });
@@ -490,7 +490,7 @@ describe('TerminalLinkManager', () => {
 
       vi.mocked(mockTerminal.registerLinkProvider).mockImplementation((provider) => {
         provider.provideLinks(1, (links) => {
-          detectedLinks = links;
+          detectedLinks = links!;
         });
         return { dispose: vi.fn() };
       });
@@ -498,7 +498,7 @@ describe('TerminalLinkManager', () => {
       manager.registerTerminalLinkHandlers(mockTerminal, 'terminal-1');
 
       const event = createMockMouseEvent({ metaKey: true });
-      detectedLinks[0]?.activate(event, detectedLinks[0].text);
+      detectedLinks[0]?.activate(event, detectedLinks[0]!.text);
 
       expect(mockCoordinator.postMessageToExtension).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -619,7 +619,7 @@ describe('TerminalLinkManager', () => {
 
       vi.mocked(mockTerminal.registerLinkProvider).mockImplementation((provider) => {
         provider.provideLinks(1, (links) => {
-          detectedLinks = links;
+          detectedLinks = links!;
         });
         return { dispose: vi.fn() };
       });
@@ -639,7 +639,7 @@ describe('TerminalLinkManager', () => {
 
       vi.mocked(mockTerminal.registerLinkProvider).mockImplementation((provider) => {
         provider.provideLinks(1, (links) => {
-          detectedLinks = links;
+          detectedLinks = links!;
         });
         return { dispose: vi.fn() };
       });
@@ -648,8 +648,8 @@ describe('TerminalLinkManager', () => {
 
       expect(detectedLinks.length).toBe(1);
       // Link starts after "prefix " (7 characters), so startX = 8 (1-indexed)
-      expect(detectedLinks[0].range.start.x).toBe(8);
-      expect(detectedLinks[0].range.start.y).toBe(1);
+      expect(detectedLinks[0]!.range.start.x).toBe(8);
+      expect(detectedLinks[0]!.range.start.y).toBe(1);
     });
   });
 
@@ -661,7 +661,7 @@ describe('TerminalLinkManager', () => {
 
       vi.mocked(mockTerminal.registerLinkProvider).mockImplementation((provider) => {
         provider.provideLinks(1, (links) => {
-          detectedLinks = links;
+          detectedLinks = links!;
         });
         return { dispose: vi.fn() };
       });
@@ -678,7 +678,7 @@ describe('TerminalLinkManager', () => {
 
       vi.mocked(mockTerminal.registerLinkProvider).mockImplementation((provider) => {
         provider.provideLinks(1, (links) => {
-          detectedLinks = links;
+          detectedLinks = links!;
         });
         return { dispose: vi.fn() };
       });
@@ -697,7 +697,7 @@ describe('TerminalLinkManager', () => {
 
       vi.mocked(mockTerminal.registerLinkProvider).mockImplementation((provider) => {
         provider.provideLinks(1, (links) => {
-          detectedLinks = links;
+          detectedLinks = links!;
         });
         return { dispose: vi.fn() };
       });
@@ -717,7 +717,7 @@ describe('TerminalLinkManager', () => {
 
       vi.mocked(mockTerminal.registerLinkProvider).mockImplementation((provider) => {
         provider.provideLinks(1, (links) => {
-          detectedLinks = links;
+          detectedLinks = links!;
         });
         return { dispose: vi.fn() };
       });
@@ -725,7 +725,7 @@ describe('TerminalLinkManager', () => {
       manager.registerTerminalLinkHandlers(mockTerminal, 'terminal-1');
 
       expect(detectedLinks.length).toBe(1);
-      expect(detectedLinks[0].text).toBe('/path/to/file');
+      expect(detectedLinks[0]!.text).toBe('/path/to/file');
     });
 
     it('should reject invalid paths without separators', () => {
@@ -736,7 +736,7 @@ describe('TerminalLinkManager', () => {
 
       vi.mocked(mockTerminal.registerLinkProvider).mockImplementation((provider) => {
         provider.provideLinks(1, (links) => {
-          detectedLinks = links;
+          detectedLinks = links!;
         });
         return { dispose: vi.fn() };
       });
@@ -754,7 +754,7 @@ describe('TerminalLinkManager', () => {
 
       vi.mocked(mockTerminal.registerLinkProvider).mockImplementation((provider) => {
         provider.provideLinks(1, (links) => {
-          detectedLinks = links;
+          detectedLinks = links!;
         });
         return { dispose: vi.fn() };
       });

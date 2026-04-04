@@ -239,6 +239,7 @@ describe('TerminalCommandHandlers', () => {
     });
 
     it('should handle reorder', async () => {
+      // @ts-expect-error - test mock type
       await handlers.handleReorderTerminals({ command: 'reorder', order: ['t2', 't1'] });
       expect(mockTerminalManager.reorderTerminals).toHaveBeenCalledWith(['t2', 't1']);
     });
@@ -342,6 +343,7 @@ describe('TerminalCommandHandlers', () => {
 
   describe('Clipboard Commands', () => {
     it('should handle clipboard request (paste)', async () => {
+      // @ts-expect-error - test mock type
       await handlers.handleClipboardRequest({ command: 'paste', terminalId: 't1' });
       expect(vscode.env.clipboard.readText).toHaveBeenCalled();
       // Text is wrapped with bracketed paste mode escape sequences
@@ -352,6 +354,7 @@ describe('TerminalCommandHandlers', () => {
     });
 
     it('should handle copy to clipboard', async () => {
+      // @ts-expect-error - test mock type
       await handlers.handleCopyToClipboard({ command: 'copy', text: 'selected text' });
       expect(vscode.env.clipboard.writeText).toHaveBeenCalledWith('selected text');
     });
@@ -365,6 +368,7 @@ describe('TerminalCommandHandlers', () => {
     });
 
     it('should handle AI agent switch', async () => {
+      // @ts-expect-error - test mock type
       await handlers.handleSwitchAiAgent({ command: 'switchAgent', terminalId: 't1' });
       expect(mockTerminalManager.switchAiAgentConnection).toHaveBeenCalledWith('t1');
       expect(mockCommService.sendMessage).toHaveBeenCalledWith(

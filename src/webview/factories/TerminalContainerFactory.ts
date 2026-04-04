@@ -7,6 +7,7 @@
 
 import { terminalLogger } from '../utils/ManagerLogger';
 import { HeaderFactory, TerminalHeaderElements } from './HeaderFactory';
+export { TerminalHeaderElements } from './HeaderFactory';
 
 export interface TerminalContainerConfig {
   id: string;

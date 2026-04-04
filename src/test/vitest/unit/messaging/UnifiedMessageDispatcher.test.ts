@@ -58,7 +58,7 @@ describe('UnifiedMessageDispatcher', () => {
 
       // Get the handler that was registered
       const registeredHandler = addEventListenerSpy.mock.calls.find(
-        (call) => call[0] === 'message'
+        (call: any) => call[0] === 'message'
       )?.[1];
 
       // Dispose should remove the event listener
@@ -87,7 +87,7 @@ describe('UnifiedMessageDispatcher', () => {
 
       // removeEventListener should not be called since no listener was registered
       const messageRemoveCalls = removeEventListenerSpy.mock.calls.filter(
-        (call) => call[0] === 'message'
+        (call: any) => call[0] === 'message'
       );
       expect(messageRemoveCalls.length).toBe(0);
     });
@@ -97,14 +97,14 @@ describe('UnifiedMessageDispatcher', () => {
       dispatcher.dispose();
 
       const removeCallCount = removeEventListenerSpy.mock.calls.filter(
-        (call) => call[0] === 'message'
+        (call: any) => call[0] === 'message'
       ).length;
 
       // Second dispose should not add more removeEventListener calls
       dispatcher.dispose();
 
       const newRemoveCallCount = removeEventListenerSpy.mock.calls.filter(
-        (call) => call[0] === 'message'
+        (call: any) => call[0] === 'message'
       ).length;
 
       expect(newRemoveCallCount).toBe(removeCallCount);

@@ -235,6 +235,7 @@ describe('SerializationMessageHandler', () => {
       vi.mocked(mockCoordinator.getTerminalInstance).mockReturnValue({
         terminal: mockTerminal,
       } as any);
+      // @ts-expect-error - test mock type
       vi.mocked(mockCoordinator.getSerializeAddon).mockReturnValue(null);
 
       const msg = {
@@ -257,6 +258,7 @@ describe('SerializationMessageHandler', () => {
     });
 
     it('should warn when terminal not found', async () => {
+      // @ts-expect-error - test mock type
       vi.mocked(mockCoordinator.getTerminalInstance).mockReturnValue(null);
 
       const msg = {
@@ -447,6 +449,7 @@ describe('SerializationMessageHandler', () => {
     });
 
     it('should handle missing terminal instances', async () => {
+      // @ts-expect-error - test mock type
       vi.mocked(mockCoordinator.getTerminalInstance).mockReturnValue(null);
 
       const msg = {

@@ -78,7 +78,8 @@ describe('ManagerLogger', () => {
 
       const all = ManagerLogger.getAllLogs();
       expect(all.length).toBe(2);
-      expect(all[0].message).toBe('msg1');
+      // @ts-expect-error - test mock type
+      expect(all![0].message).toBe('msg1');
     });
 
     it('should filter logs by manager', () => {
@@ -88,7 +89,8 @@ describe('ManagerLogger', () => {
 
       const filtered = logger.getRecentLogs(10);
       expect(filtered.length).toBe(1);
-      expect(filtered[0].message).toBe('msg1');
+      // @ts-expect-error - test mock type
+      expect(filtered![0].message).toBe('msg1');
     });
 
     it('should provide statistics', () => {

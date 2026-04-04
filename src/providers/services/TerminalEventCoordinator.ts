@@ -113,7 +113,9 @@ export class TerminalEventCoordinator implements vscode.Disposable {
         terminalName: terminal.name,
         terminalNumber: terminal.number,
         config: displayModeOverride
-          ? { ...getTerminalConfig(), displayModeOverride }
+          ? ({ ...getTerminalConfig(), displayModeOverride } as Partial<
+              import('../../types/shared').ExtensionTerminalConfig
+            >)
           : getTerminalConfig(),
       };
 

@@ -133,7 +133,8 @@ describe('ProviderSessionService', () => {
         .mocked(deps.sendMessage)
         .mock.calls.filter((call) => call[0]?.command === 'terminalCreated');
       expect(terminalCreatedCalls).toHaveLength(1);
-      expect((terminalCreatedCalls[0][0] as { config?: unknown }).config).toBeUndefined();
+      // @ts-expect-error - test mock type
+      expect((terminalCreatedCalls![0][0] as { config?: unknown }).config).toBeUndefined();
     });
 
     it('should wait using TIMING_CONSTANTS.WEBVIEW_INIT_DELAY_MS before restoring scrollback', async () => {

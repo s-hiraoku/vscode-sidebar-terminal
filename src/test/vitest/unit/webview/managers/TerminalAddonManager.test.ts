@@ -235,8 +235,8 @@ describe('TerminalAddonManager', () => {
       const dims = fitAddon.proposeDimensions();
 
       expect(dims).toBeDefined();
-      expect(dims.cols).toBeGreaterThan(0);
-      expect(dims.rows).toBeGreaterThan(0);
+      expect(dims!.cols).toBeGreaterThan(0);
+      expect(dims!.rows).toBeGreaterThan(0);
     });
 
     // Comprehensive tests for proposeDimensions with safety padding removal
@@ -339,8 +339,8 @@ describe('TerminalAddonManager', () => {
         const dims = addons.fitAddon.proposeDimensions();
 
         // Expected: (200 - 0) / 10 = 20 cols
-        expect(dims.cols).toBe(20);
-        expect(dims.rows).toBeGreaterThan(0);
+        expect(dims!.cols).toBe(20);
+        expect(dims!.rows).toBeGreaterThan(0);
       });
 
       it('should calculate cols correctly for narrow viewport (200px) with scrollbar (14px)', async () => {
@@ -350,8 +350,8 @@ describe('TerminalAddonManager', () => {
         const dims = addons.fitAddon.proposeDimensions();
 
         // Expected: (200 - 14) / 10 = 18.6 → 18 cols
-        expect(dims.cols).toBe(18);
-        expect(dims.cols).toBeGreaterThanOrEqual(2); // Minimum cols
+        expect(dims!.cols).toBe(18);
+        expect(dims!.cols).toBeGreaterThanOrEqual(2); // Minimum cols
       });
 
       it('should calculate cols correctly for standard viewport (800px) without scrollbar', async () => {
@@ -361,7 +361,7 @@ describe('TerminalAddonManager', () => {
         const dims = addons.fitAddon.proposeDimensions();
 
         // Expected: (800 - 0) / 10 = 80 cols
-        expect(dims.cols).toBe(80);
+        expect(dims!.cols).toBe(80);
       });
 
       it('should calculate cols correctly for standard viewport (800px) with scrollbar (14px)', async () => {
@@ -371,7 +371,7 @@ describe('TerminalAddonManager', () => {
         const dims = addons.fitAddon.proposeDimensions();
 
         // Expected: (800 - 14) / 10 = 78.6 → 78 cols
-        expect(dims.cols).toBe(78);
+        expect(dims!.cols).toBe(78);
       });
 
       it('should calculate cols correctly for wide viewport (1920px) without scrollbar', async () => {
@@ -381,7 +381,7 @@ describe('TerminalAddonManager', () => {
         const dims = addons.fitAddon.proposeDimensions();
 
         // Expected: (1920 - 0) / 10 = 192 cols
-        expect(dims.cols).toBe(192);
+        expect(dims!.cols).toBe(192);
       });
 
       it('should calculate cols correctly for wide viewport (1920px) with scrollbar (14px)', async () => {
@@ -391,7 +391,7 @@ describe('TerminalAddonManager', () => {
         const dims = addons.fitAddon.proposeDimensions();
 
         // Expected: (1920 - 14) / 10 = 190.6 → 190 cols
-        expect(dims.cols).toBe(190);
+        expect(dims!.cols).toBe(190);
       });
 
       it('should handle small cell width (7px - compact font)', async () => {
@@ -401,9 +401,9 @@ describe('TerminalAddonManager', () => {
         const dims = addons.fitAddon.proposeDimensions();
 
         // Expected: (800 - 0) / 7 = 114.28 → 114 cols
-        expect(dims.cols).toBe(114);
+        expect(dims!.cols).toBe(114);
         // Verify more columns are available with smaller font
-        expect(dims.cols).toBeGreaterThan(80);
+        expect(dims!.cols).toBeGreaterThan(80);
       });
 
       it('should handle medium cell width (10px - normal font)', async () => {
@@ -413,7 +413,7 @@ describe('TerminalAddonManager', () => {
         const dims = addons.fitAddon.proposeDimensions();
 
         // Expected: (800 - 0) / 10 = 80 cols
-        expect(dims.cols).toBe(80);
+        expect(dims!.cols).toBe(80);
       });
 
       it('should handle large cell width (12px - large font)', async () => {
@@ -423,9 +423,9 @@ describe('TerminalAddonManager', () => {
         const dims = addons.fitAddon.proposeDimensions();
 
         // Expected: (800 - 0) / 12 = 66.66 → 66 cols
-        expect(dims.cols).toBe(66);
+        expect(dims!.cols).toBe(66);
         // Verify fewer columns available with larger font
-        expect(dims.cols).toBeLessThan(80);
+        expect(dims!.cols).toBeLessThan(80);
       });
 
       it('should include padding in width calculation', async () => {
@@ -435,7 +435,7 @@ describe('TerminalAddonManager', () => {
         const dims = addons.fitAddon.proposeDimensions();
 
         // Expected: (800 - 4 - 4) / 10 = 79.2 → 79 cols
-        expect(dims.cols).toBe(79);
+        expect(dims!.cols).toBe(79);
       });
 
       it('should handle both padding and scrollbar', async () => {
@@ -445,7 +445,7 @@ describe('TerminalAddonManager', () => {
         const dims = addons.fitAddon.proposeDimensions();
 
         // Expected: (800 - 4 - 4 - 14) / 10 = 77.8 → 77 cols
-        expect(dims.cols).toBe(77);
+        expect(dims!.cols).toBe(77);
       });
 
       it('should include parent padding in width calculation', async () => {
@@ -469,7 +469,7 @@ describe('TerminalAddonManager', () => {
         const dims = addons.fitAddon.proposeDimensions();
 
         // Expected: (800 - 4 - 4) / 10 = 79.2 → 79 cols
-        expect(dims.cols).toBe(79);
+        expect(dims!.cols).toBe(79);
       });
 
       it('should enforce minimum cols of 2', async () => {
@@ -480,7 +480,7 @@ describe('TerminalAddonManager', () => {
         const dims = addons.fitAddon.proposeDimensions();
 
         // Expected: Math.max(2, Math.floor((10 - 0) / 10)) = Math.max(2, 1) = 2 cols
-        expect(dims.cols).toBe(2);
+        expect(dims!.cols).toBe(2);
       });
 
       it('should enforce minimum rows of 1', async () => {
@@ -491,7 +491,7 @@ describe('TerminalAddonManager', () => {
         const dims = addons.fitAddon.proposeDimensions();
 
         // Expected: Math.max(1, Math.floor((10 - 0) / 20)) = Math.max(1, 0) = 1 row
-        expect(dims.rows).toBe(1);
+        expect(dims!.rows).toBe(1);
       });
 
       it('should calculate rows correctly with padding', async () => {
@@ -501,7 +501,7 @@ describe('TerminalAddonManager', () => {
         const dims = addons.fitAddon.proposeDimensions();
 
         // Expected: (400 - 4 - 4) / 20 = 19.2 → 19 rows
-        expect(dims.rows).toBe(19);
+        expect(dims!.rows).toBe(19);
       });
 
       it('removal of 4px safety padding maximizes visible area', async () => {
@@ -513,11 +513,11 @@ describe('TerminalAddonManager', () => {
 
         // With safety padding = 0, we get full width utilization
         // Expected: 800 / 10 = 80 cols
-        expect(dims.cols).toBe(80);
+        expect(dims!.cols).toBe(80);
 
         // Verify that if safety padding were 4px, we'd get fewer columns
         // (800 - 4) / 10 = 79.6 → 79 cols
-        expect(dims.cols).toBeGreaterThan(79);
+        expect(dims!.cols).toBeGreaterThan(79);
       });
 
       it('should not have regression with safety padding removal and scrollbar', async () => {
@@ -528,8 +528,8 @@ describe('TerminalAddonManager', () => {
         const dims = addons.fitAddon.proposeDimensions();
 
         // Expected: (1024 - 14) / 10 = 101 cols
-        expect(dims.cols).toBe(101);
-        expect(dims.cols).toBeGreaterThan(0);
+        expect(dims!.cols).toBe(101);
+        expect(dims!.cols).toBeGreaterThan(0);
       });
     });
   });

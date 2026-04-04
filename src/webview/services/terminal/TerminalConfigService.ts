@@ -16,6 +16,7 @@ export interface WebViewTerminalConfig extends ITerminalOptions {
   enableGpuAcceleration?: boolean;
   enableSearchAddon?: boolean;
   enableUnicode11?: boolean;
+  fastScrollModifier?: 'none' | 'alt' | 'ctrl' | 'shift';
 }
 
 /**
@@ -41,9 +42,9 @@ const parseHexColor = (color: string): { r: number; g: number; b: number } | nul
   const hex = color.slice(1);
   if (hex.length === 3) {
     return {
-      r: parseInt(hex[0] + hex[0], 16),
-      g: parseInt(hex[1] + hex[1], 16),
-      b: parseInt(hex[2] + hex[2], 16),
+      r: parseInt(hex[0]! + hex[0]!, 16),
+      g: parseInt(hex[1]! + hex[1]!, 16),
+      b: parseInt(hex[2]! + hex[2]!, 16),
     };
   }
 

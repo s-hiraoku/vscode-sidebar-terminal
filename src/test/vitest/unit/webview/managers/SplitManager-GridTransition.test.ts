@@ -72,6 +72,7 @@ describe('SplitManager - Grid Transition', () => {
       // When: 5 terminals are added
       for (let i = 1; i <= 5; i++) {
         const { terminal, fitAddon } = createMockTerminal();
+        // @ts-expect-error - test mock type
         splitManager.setTerminal(`t${i}`, { terminal, fitAddon, id: `t${i}` });
       }
 
@@ -85,6 +86,7 @@ describe('SplitManager - Grid Transition', () => {
 
       for (let i = 1; i <= 6; i++) {
         const { terminal, fitAddon } = createMockTerminal();
+        // @ts-expect-error - test mock type
         splitManager.setTerminal(`t${i}`, { terminal, fitAddon, id: `t${i}` });
       }
 
@@ -97,6 +99,7 @@ describe('SplitManager - Grid Transition', () => {
 
       for (let i = 1; i <= 10; i++) {
         const { terminal, fitAddon } = createMockTerminal();
+        // @ts-expect-error - test mock type
         splitManager.setTerminal(`t${i}`, { terminal, fitAddon, id: `t${i}` });
       }
 
@@ -109,6 +112,7 @@ describe('SplitManager - Grid Transition', () => {
 
       for (let i = 1; i <= 6; i++) {
         const { terminal, fitAddon } = createMockTerminal();
+        // @ts-expect-error - test mock type
         splitManager.setTerminal(`t${i}`, { terminal, fitAddon, id: `t${i}` });
       }
 
@@ -121,6 +125,7 @@ describe('SplitManager - Grid Transition', () => {
 
       for (let i = 1; i <= 6; i++) {
         const { terminal, fitAddon } = createMockTerminal();
+        // @ts-expect-error - test mock type
         splitManager.setTerminal(`t${i}`, { terminal, fitAddon, id: `t${i}` });
       }
 
@@ -135,12 +140,14 @@ describe('SplitManager - Grid Transition', () => {
 
       for (let i = 1; i <= 5; i++) {
         const { terminal, fitAddon } = createMockTerminal();
+        // @ts-expect-error - test mock type
         splitManager.setTerminal(`t${i}`, { terminal, fitAddon, id: `t${i}` });
       }
       expect(splitManager.getLayoutMode()).toBe('single-row');
 
       // Add 6th terminal
       const { terminal, fitAddon } = createMockTerminal();
+      // @ts-expect-error - test mock type
       splitManager.setTerminal('t6', { terminal, fitAddon, id: 't6' });
       expect(splitManager.getLayoutMode()).toBe('grid-2-row');
     });
@@ -153,6 +160,7 @@ describe('SplitManager - Grid Transition', () => {
 
       for (let i = 1; i <= 6; i++) {
         const { terminal, fitAddon } = createMockTerminal();
+        // @ts-expect-error - test mock type
         splitManager.setTerminal(`t${i}`, { terminal, fitAddon, id: `t${i}` });
         splitManager.setTerminalContainer(`t${i}`, document.createElement('div'));
       }

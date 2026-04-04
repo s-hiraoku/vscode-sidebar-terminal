@@ -291,6 +291,7 @@ describe('TerminalCreationService - Phase Decomposition', () => {
         fontSize: 14,
       };
 
+      // @ts-expect-error - test mock type
       const result = await service.createTerminal('terminal-1', 'Test Terminal', config);
       expect(result).not.toBeNull();
     });
@@ -441,6 +442,7 @@ describe('TerminalCreationService - Phase Decomposition', () => {
     it('should bypass xterm key handling for r/d/x while panel navigation mode is active', async () => {
       const terminal = await service.createTerminal('terminal-1', 'Test Terminal');
 
+      // @ts-expect-error - test mock type
       const keyHandler = terminal!.attachCustomKeyEventHandler.mock.calls[0][0] as (
         event: KeyboardEvent
       ) => boolean;

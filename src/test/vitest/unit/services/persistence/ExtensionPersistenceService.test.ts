@@ -86,7 +86,7 @@ describe('ExtensionPersistenceService', () => {
     expect(requestStub).not.toHaveBeenCalled();
     expect(workspaceState.update).toHaveBeenCalledOnce();
 
-    const saved = workspaceState.update.mock.calls[0][1] as {
+    const saved = workspaceState.update.mock.calls[0]![1] as {
       scrollbackData?: Record<string, unknown>;
     };
     const scrollbackData = saved.scrollbackData as Record<string, string[]>;
@@ -149,7 +149,8 @@ describe('ExtensionPersistenceService', () => {
     expect(waitStub).toHaveBeenCalledOnce();
     expect(restoreStub).not.toHaveBeenCalled();
     expect(terminalManager.reorderTerminals).toHaveBeenCalledOnce();
-    expect(terminalManager.reorderTerminals.mock.calls[0][0]).toEqual(['new-1', 'new-2', 'new-3']);
+    // @ts-expect-error - test mock type
+    expect(terminalManager!.reorderTerminals.mock.calls[0][0]).toEqual(['new-1', 'new-2', 'new-3']);
     expect(terminalManager.setActiveTerminal).toHaveBeenCalledWith('new-2');
   });
 
@@ -180,12 +181,12 @@ describe('ExtensionPersistenceService', () => {
         (call: unknown[]) => call[0] === 'terminal-session-unified' && call[1] != null
       );
       expect(saveCalls.length).toBeGreaterThanOrEqual(1);
-      const saved = saveCalls[0][1] as {
+      const saved = saveCalls[0]![1] as {
         terminals: Array<{ id: string; indicatorColor?: string }>;
       };
 
-      expect(saved.terminals[0].indicatorColor).toBe('#FF0000');
-      expect(saved.terminals[1].indicatorColor).toBeUndefined();
+      expect(saved!.terminals[0]!.indicatorColor).toBe('#FF0000');
+      expect(saved!.terminals[1]!.indicatorColor).toBeUndefined();
     });
 
     it('saves transparent indicatorColor correctly', async () => {
@@ -211,11 +212,11 @@ describe('ExtensionPersistenceService', () => {
         (call: unknown[]) => call[0] === 'terminal-session-unified' && call[1] != null
       );
       expect(saveCalls.length).toBeGreaterThanOrEqual(1);
-      const saved = saveCalls[0][1] as {
+      const saved = saveCalls[0]![1] as {
         terminals: Array<{ id: string; indicatorColor?: string }>;
       };
 
-      expect(saved.terminals[0].indicatorColor).toBe('transparent');
+      expect(saved!.terminals[0]!.indicatorColor).toBe('transparent');
     });
   });
 
@@ -304,7 +305,7 @@ describe('ExtensionPersistenceService', () => {
       await (service as any).batchRestoreTerminals(sessionData);
 
       expect(restoreStub).toHaveBeenCalledOnce();
-      const restoreData = restoreStub.mock.calls[0][0];
+      const restoreData = restoreStub.mock.calls[0]![0] as any;
       expect(restoreData[0].indicatorColor).toBe('#00FF00');
     });
 

@@ -139,7 +139,8 @@ describe('FeatureFlagService', () => {
       // Then: Clamped to minimum and warning shown
       expect(limit).toBe(200);
       expect(showWarningStub).toHaveBeenCalledOnce();
-      expect(showWarningStub.mock.calls[0][0]).toContain('below minimum');
+      // @ts-expect-error - test mock type
+      expect(showWarningStub!.mock.calls[0][0]).toContain('below minimum');
     });
 
     it('should clamp scrollback limit to maximum (3000)', () => {
@@ -158,7 +159,8 @@ describe('FeatureFlagService', () => {
       // Then: Clamped to maximum and warning shown
       expect(limit).toBe(3000);
       expect(showWarningStub).toHaveBeenCalledOnce();
-      expect(showWarningStub.mock.calls[0][0]).toContain('exceeds maximum');
+      // @ts-expect-error - test mock type
+      expect(showWarningStub!.mock.calls[0][0]).toContain('exceeds maximum');
     });
 
     it('should accept scrollback limit within valid range', () => {

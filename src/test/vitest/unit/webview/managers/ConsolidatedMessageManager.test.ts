@@ -18,6 +18,7 @@ import { MessageCommand } from '../../../../../webview/managers/messageTypes';
  * Test-only interface extending IManagerCoordinator with split resizer support.
  * Used to provide type-safe mocking for tests that verify split resizer behavior.
  */
+// @ts-expect-error - test mock type
 interface SplitResizerCoordinator extends IManagerCoordinator {
   getDisplayModeManager: () => Pick<
     IDisplayModeManager,
@@ -507,6 +508,7 @@ describe('ConsolidatedMessageManager', () => {
         totalCount: 2,
       };
 
+      // @ts-expect-error - test mock type
       await messageManager.receiveMessage(message, coordinator);
 
       await new Promise((resolve) => setTimeout(resolve, 150));
@@ -550,6 +552,7 @@ describe('ConsolidatedMessageManager', () => {
         skippedCount: 0,
       };
 
+      // @ts-expect-error - test mock type
       await messageManager.receiveMessage(message, coordinator);
 
       await new Promise((resolve) => setTimeout(resolve, 150));
@@ -585,6 +588,7 @@ describe('ConsolidatedMessageManager', () => {
         skippedCount: 0,
       };
 
+      // @ts-expect-error - test mock type
       await messageManager.receiveMessage(message, coordinator);
 
       // Wait for the setTimeout (100ms) to complete
@@ -619,6 +623,7 @@ describe('ConsolidatedMessageManager', () => {
         skippedCount: 0,
       };
 
+      // @ts-expect-error - test mock type
       await messageManager.receiveMessage(message, coordinator);
 
       // Wait for the setTimeout (100ms) to complete
@@ -652,6 +657,7 @@ describe('ConsolidatedMessageManager', () => {
         skippedCount: 0,
       };
 
+      // @ts-expect-error - test mock type
       await messageManager.receiveMessage(message, coordinator);
 
       // Wait for the setTimeout (100ms) to complete
@@ -690,6 +696,7 @@ describe('ConsolidatedMessageManager', () => {
           totalCount: 2,
         };
 
+        // @ts-expect-error - test mock type
         await messageManager.receiveMessage(message, coordinator);
 
         // Simulate delayed DOM build after startup restore.

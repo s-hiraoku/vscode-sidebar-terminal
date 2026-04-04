@@ -126,7 +126,8 @@ describe('PerformanceManager', () => {
       expect(ResizeManager.debounceResize).toHaveBeenCalled();
 
       // Simulate the callback execution
-      const callback = vi.mocked(ResizeManager.debounceResize).mock.calls[0][1];
+      // @ts-expect-error - test mock type
+      const callback = vi!.mocked(ResizeManager.debounceResize).mock.calls[0][1];
       callback();
 
       expect(mockTerminal.resize).toHaveBeenCalledWith(100, 50);

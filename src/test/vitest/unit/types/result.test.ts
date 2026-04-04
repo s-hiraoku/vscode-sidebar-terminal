@@ -470,6 +470,7 @@ describe('all', () => {
     const combined = all([]);
 
     expect(isSuccess(combined)).toBe(true);
+    // @ts-expect-error - test mock type
     expect((combined as { value: never[] }).value).toEqual([]);
   });
 

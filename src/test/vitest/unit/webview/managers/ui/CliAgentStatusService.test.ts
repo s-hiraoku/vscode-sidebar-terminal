@@ -45,6 +45,7 @@ describe('CliAgentStatusService', () => {
       nameSpan.className = 'terminal-name';
       nameSpan.textContent = terminalName;
 
+      // @ts-expect-error - test mock type
       return {
         container,
         nameSpan,
@@ -133,7 +134,7 @@ describe('CliAgentStatusService', () => {
 
       // Should not insert for Terminal 2
       const callsForTerminal2 = insertCliAgentStatusSpy.mock.calls.filter(
-        (call) => call[0] === mockHeaderElements2
+        (call: any) => call[0] === mockHeaderElements2
       );
       expect(callsForTerminal2.length).toBe(0);
     });

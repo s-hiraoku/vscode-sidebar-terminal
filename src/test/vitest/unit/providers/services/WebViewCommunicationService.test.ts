@@ -60,6 +60,7 @@ describe('WebViewCommunicationService', () => {
       service.setView(mockWebviewView);
       const message = { command: 'test' };
 
+      // @ts-expect-error - test mock type
       await service.sendMessage(message);
 
       expect(mockWebviewView.webview.postMessage).toHaveBeenCalledWith(message);
@@ -67,6 +68,7 @@ describe('WebViewCommunicationService', () => {
 
     it('should queue messages if view is not available and flush when set', async () => {
       const message = { command: 'queued' };
+      // @ts-expect-error - test mock type
       await service.sendMessage(message);
 
       expect(mockWebviewView.webview.postMessage).not.toHaveBeenCalled();

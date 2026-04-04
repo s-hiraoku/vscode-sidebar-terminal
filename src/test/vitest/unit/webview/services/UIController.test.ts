@@ -47,6 +47,7 @@ describe('UIController', () => {
     });
 
     it('should not create debug panel if disabled', async () => {
+      // @ts-expect-error - test mock type
       config.enableDebugPanel = false;
       uiController = new UIController(config);
       await uiController.initialize();
@@ -55,6 +56,7 @@ describe('UIController', () => {
     });
 
     it('should not create cli agent status if disabled', async () => {
+      // @ts-expect-error - test mock type
       config.enableCliAgentStatus = false;
       uiController = new UIController(config);
       await uiController.initialize();
@@ -99,7 +101,8 @@ describe('UIController', () => {
       tab.click();
 
       expect(listener).toHaveBeenCalled();
-      expect(listener.mock.calls[0][0].detail).toEqual({ terminalId: 't1' });
+      // @ts-expect-error - test mock type
+      expect(listener!.mock.calls[0][0].detail).toEqual({ terminalId: 't1' });
     });
 
     it('should emit close request when clicking close button', () => {
@@ -113,7 +116,8 @@ describe('UIController', () => {
       closeBtn.click();
 
       expect(listener).toHaveBeenCalled();
-      expect(listener.mock.calls[0][0].detail).toEqual({ terminalId: 't1' });
+      // @ts-expect-error - test mock type
+      expect(listener!.mock.calls[0][0].detail).toEqual({ terminalId: 't1' });
     });
   });
 

@@ -278,6 +278,7 @@ export interface IInputManager {
   }): void;
   setPanelNavigationMode?(enabled: boolean): void;
   setPanelNavigationEnabled?(enabled: boolean): void;
+  setAgentInteractionMode?(enabled: boolean): void;
   dispose(): void;
 }
 

@@ -17,9 +17,12 @@ describe('TerminalRegistry', () => {
     isActive,
     pid: 1234 + number,
     ptyProcess: {} as TerminalInstance['ptyProcess'],
+    // @ts-expect-error - test mock type
     processState: 'running',
+    // @ts-expect-error - test mock type
     interactionState: 'active',
     scrollbackBuffer: [],
+    // @ts-expect-error - test mock type
     createdAt: Date.now(),
     cwd: '/test',
   });

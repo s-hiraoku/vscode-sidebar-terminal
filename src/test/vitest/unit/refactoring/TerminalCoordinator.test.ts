@@ -233,7 +233,8 @@ describe('TerminalCoordinator Service', () => {
 
       expect(eventSpy).toHaveBeenCalledTimes(1);
 
-      const eventArgs = eventSpy.mock.calls[0][0];
+      // @ts-expect-error - test mock type
+      const eventArgs = eventSpy!.mock.calls[0][0];
       expect(eventArgs.id).toBe(terminalId);
       expect(eventArgs.number).toBe(1);
       expect(eventArgs.isActive).toBe(true);

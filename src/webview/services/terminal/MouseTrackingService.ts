@@ -91,8 +91,17 @@ export class MouseTrackingService {
       { prefix: '?', final: 'h' },
       (params) => {
         for (let i = 0; i < params.length; i++) {
-          const mode = params.toArray ? params.toArray()[i] : params[i];
-          if (MOUSE_TRACKING_MODES.includes(mode as (typeof MOUSE_TRACKING_MODES)[number])) {
+          const rawParam = params[i];
+          const mode =
+            typeof rawParam === 'number'
+              ? rawParam
+              : Array.isArray(rawParam)
+                ? (rawParam[0] ?? 0)
+                : rawParam;
+          if (
+            mode !== undefined &&
+            MOUSE_TRACKING_MODES.includes(mode as (typeof MOUSE_TRACKING_MODES)[number])
+          ) {
             const wasEmpty = state.activeModes.size === 0;
             state.activeModes.add(mode);
 
@@ -126,7 +135,7 @@ export class MouseTrackingService {
       { prefix: '?', final: 'l' },
       (params) => {
         for (const param of params) {
-          const mode = typeof param === 'number' ? param : param[0];
+          const mode = typeof param === 'number' ? param : (param[0] ?? 0);
           if (MOUSE_TRACKING_MODES.includes(mode as (typeof MOUSE_TRACKING_MODES)[number])) {
             state.activeModes.delete(mode);
 

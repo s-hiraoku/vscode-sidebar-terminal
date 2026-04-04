@@ -436,6 +436,7 @@ describe('LifecycleController', () => {
 
       // Attach a new terminal
       const mockTerminal2 = { loadAddon: vi.fn(), dispose: vi.fn() };
+      // @ts-expect-error - test mock type
       lifecycleController.attachTerminal('test-2', mockTerminal2);
 
       // Load same addon for terminal-2 — should NOT get the disposed cached addon

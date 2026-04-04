@@ -127,6 +127,7 @@ describe('TerminalLifecycleService', () => {
       terminalName: 'Terminal 1',
       terminal,
       fitAddon,
+      // @ts-expect-error - test mock type
       serializeAddon: { serialize: vi.fn() },
       searchAddon: undefined,
       container,

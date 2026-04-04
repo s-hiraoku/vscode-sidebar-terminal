@@ -629,7 +629,8 @@ describe('UIController Service', () => {
       uiController.openSettings();
 
       expect(eventSpy).toHaveBeenCalled();
-      const event = eventSpy.mock.calls[0][0] as CustomEvent;
+      // @ts-expect-error - test mock type
+      const event = eventSpy!.mock.calls[0][0] as CustomEvent;
       expect(event.type).toBe('settings-open-requested');
     });
 

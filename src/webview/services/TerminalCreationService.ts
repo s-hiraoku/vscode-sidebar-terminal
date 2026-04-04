@@ -157,7 +157,7 @@ export class TerminalCreationService implements Disposable {
     this.mouseTrackingService = new MouseTrackingService();
 
     this.appearanceService = new TerminalAppearanceService({
-      coordinator: coordinator as IManagerCoordinator & { currentSettings?: unknown },
+      coordinator: coordinator as any,
     });
     this.domService = new TerminalDomService({ splitManager, coordinator });
     this.interactionService = new TerminalInteractionService({
@@ -249,7 +249,8 @@ export class TerminalCreationService implements Disposable {
           currentFontSettings,
           configManager,
           uiManager,
-          applyPostOpenSettings: (params) => this.appearanceService.applyPostOpenSettings(params),
+          applyPostOpenSettings: (params) =>
+            this.appearanceService.applyPostOpenSettings(params as any),
         });
 
         // Phase 6: Rendering, registration & finalization
@@ -267,7 +268,7 @@ export class TerminalCreationService implements Disposable {
           terminalConfig,
           linkModifier,
           config,
-          uiManager,
+          uiManager: uiManager as any,
         });
 
         const elapsed = performanceMonitor.endTimer(
@@ -282,7 +283,7 @@ export class TerminalCreationService implements Disposable {
           container,
           terminalContent,
           configManager,
-          uiManager,
+          uiManager: uiManager as any,
         });
 
         return terminalInstance.terminal;

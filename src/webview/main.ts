@@ -25,6 +25,7 @@ const vscodeApi = acquireVsCodeApi();
 // Store on window for WebViewApiManager to access
 window.vscodeApi = vscodeApi;
 
+// @ts-expect-error CSS import handled by bundler
 import '@xterm/xterm/css/xterm.css';
 import { LightweightTerminalWebviewManager } from './managers/LightweightTerminalWebviewManager';
 

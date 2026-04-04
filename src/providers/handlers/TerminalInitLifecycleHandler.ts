@@ -10,6 +10,7 @@ import { WebviewMessage } from '../../types/common';
 import { TERMINAL_CONSTANTS } from '../../constants';
 import { provider as log } from '../../utils/logger';
 import { TerminalInitializationState } from '../services/TerminalInitializationStateMachine';
+import type { WebViewFontSettings, TerminalState } from '../../types/shared';
 
 /**
  * Subset of WatchdogCoordinator methods used by this handler
@@ -70,14 +71,14 @@ export interface ITerminalInitLifecycleDependencies {
   setActiveTerminal(terminalId: string): void;
   initializeShellForTerminal(terminalId: string, ptyProcess: unknown, safeMode: boolean): void;
   startPtyOutput(terminalId: string): void;
-  consumeCreationDisplayModeOverride(terminalId: string): string | undefined;
-  getCurrentState(): unknown;
+  consumeCreationDisplayModeOverride(terminalId: string): string | null | undefined;
+  getCurrentState(): TerminalState;
   onTerminalCreated(callback: (terminal: { id: string }) => void): IDisposable;
   onTerminalRemoved(callback: (terminalId: string) => void): IDisposable;
 
   // Communication
   sendMessage(message: WebviewMessage): Promise<void>;
-  getCurrentFontSettings(): Record<string, unknown>;
+  getCurrentFontSettings(): WebViewFontSettings;
   sendFullCliAgentStateSync(): void;
 
   // Resource management

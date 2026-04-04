@@ -118,7 +118,8 @@ describe('MessageHandlerRegistrar', () => {
       registrar.registerAll(router as any);
 
       expect(router.registerHandlers).toHaveBeenCalledOnce();
-      const handlers = router.registerHandlers.mock.calls[0][0];
+      // @ts-expect-error - test mock type
+      const handlers = router!.registerHandlers.mock.calls[0][0];
       expect(handlers.length).toBeGreaterThan(30);
     });
 
@@ -126,7 +127,8 @@ describe('MessageHandlerRegistrar', () => {
       registrar.registerAll(router as any);
 
       expect(router.validateHandlers).toHaveBeenCalledOnce();
-      const criticalCommands = router.validateHandlers.mock.calls[0][0];
+      // @ts-expect-error - test mock type
+      const criticalCommands = router!.validateHandlers.mock.calls[0][0];
       expect(criticalCommands).toContain('terminalInitializationComplete');
       expect(criticalCommands).toContain('terminalReady');
     });
@@ -140,7 +142,8 @@ describe('MessageHandlerRegistrar', () => {
     it('should include UI handlers', () => {
       registrar.registerAll(router as any);
 
-      const handlers = router.registerHandlers.mock.calls[0][0];
+      // @ts-expect-error - test mock type
+      const handlers = router!.registerHandlers.mock.calls[0][0];
       const commands = handlers.map((h: any) => h.command);
       expect(commands).toContain('webviewReady');
       expect(commands).toContain('webviewInitialized');
@@ -150,7 +153,8 @@ describe('MessageHandlerRegistrar', () => {
     it('should include settings handlers', () => {
       registrar.registerAll(router as any);
 
-      const handlers = router.registerHandlers.mock.calls[0][0];
+      // @ts-expect-error - test mock type
+      const handlers = router!.registerHandlers.mock.calls[0][0];
       const commands = handlers.map((h: any) => h.command);
       expect(commands).toContain('getSettings');
       expect(commands).toContain('updateSettings');
@@ -159,7 +163,8 @@ describe('MessageHandlerRegistrar', () => {
     it('should include terminal handlers', () => {
       registrar.registerAll(router as any);
 
-      const handlers = router.registerHandlers.mock.calls[0][0];
+      // @ts-expect-error - test mock type
+      const handlers = router!.registerHandlers.mock.calls[0][0];
       const commands = handlers.map((h: any) => h.command);
       expect(commands).toContain('splitTerminal');
       expect(commands).toContain('createTerminal');
@@ -174,7 +179,8 @@ describe('MessageHandlerRegistrar', () => {
     it('should include persistence handlers', () => {
       registrar.registerAll(router as any);
 
-      const handlers = router.registerHandlers.mock.calls[0][0];
+      // @ts-expect-error - test mock type
+      const handlers = router!.registerHandlers.mock.calls[0][0];
       const commands = handlers.map((h: any) => h.command);
       expect(commands).toContain('persistenceSaveSession');
       expect(commands).toContain('persistenceRestoreSession');
@@ -185,7 +191,8 @@ describe('MessageHandlerRegistrar', () => {
     it('should include debug handlers', () => {
       registrar.registerAll(router as any);
 
-      const handlers = router.registerHandlers.mock.calls[0][0];
+      // @ts-expect-error - test mock type
+      const handlers = router!.registerHandlers.mock.calls[0][0];
       const commands = handlers.map((h: any) => h.command);
       expect(commands).toContain('htmlScriptTest');
       expect(commands).toContain('timeoutTest');
@@ -195,7 +202,8 @@ describe('MessageHandlerRegistrar', () => {
     it('should categorize handlers correctly', () => {
       registrar.registerAll(router as any);
 
-      const handlers = router.registerHandlers.mock.calls[0][0];
+      // @ts-expect-error - test mock type
+      const handlers = router!.registerHandlers.mock.calls[0][0];
       const categories = new Set(handlers.map((h: any) => h.category));
       expect(categories).toContain('ui');
       expect(categories).toContain('settings');
@@ -209,7 +217,8 @@ describe('MessageHandlerRegistrar', () => {
     it('should delegate webviewReady to deps', () => {
       registrar.registerAll(router as any);
 
-      const handlers = router.registerHandlers.mock.calls[0][0];
+      // @ts-expect-error - test mock type
+      const handlers = router!.registerHandlers.mock.calls[0][0];
       const webviewReadyHandler = handlers.find((h: any) => h.command === 'webviewReady');
       const msg = { command: 'webviewReady' } as any;
       webviewReadyHandler.handler(msg);
@@ -220,7 +229,8 @@ describe('MessageHandlerRegistrar', () => {
     it('should delegate terminalInitializationComplete to deps', async () => {
       registrar.registerAll(router as any);
 
-      const handlers = router.registerHandlers.mock.calls[0][0];
+      // @ts-expect-error - test mock type
+      const handlers = router!.registerHandlers.mock.calls[0][0];
       const initHandler = handlers.find((h: any) => h.command === 'terminalInitializationComplete');
       const msg = { command: 'terminalInitializationComplete', terminalId: '1' } as any;
       await initHandler.handler(msg);
@@ -231,7 +241,8 @@ describe('MessageHandlerRegistrar', () => {
     it('should delegate persistence messages to deps', async () => {
       registrar.registerAll(router as any);
 
-      const handlers = router.registerHandlers.mock.calls[0][0];
+      // @ts-expect-error - test mock type
+      const handlers = router!.registerHandlers.mock.calls[0][0];
       const saveHandler = handlers.find((h: any) => h.command === 'persistenceSaveSession');
       const msg = { command: 'persistenceSaveSession' } as any;
       await saveHandler.handler(msg);
@@ -243,7 +254,8 @@ describe('MessageHandlerRegistrar', () => {
       const vscode = await import('vscode');
       registrar.registerAll(router as any);
 
-      const handlers = router.registerHandlers.mock.calls[0][0];
+      // @ts-expect-error - test mock type
+      const handlers = router!.registerHandlers.mock.calls[0][0];
       const focusHandler = handlers.find((h: any) => h.command === 'terminalFocused');
       await focusHandler.handler({ command: 'terminalFocused', terminalId: '1' } as any);
 
@@ -258,7 +270,8 @@ describe('MessageHandlerRegistrar', () => {
       const vscode = await import('vscode');
       registrar.registerAll(router as any);
 
-      const handlers = router.registerHandlers.mock.calls[0][0];
+      // @ts-expect-error - test mock type
+      const handlers = router!.registerHandlers.mock.calls[0][0];
       const blurHandler = handlers.find((h: any) => h.command === 'terminalBlurred');
       await blurHandler.handler({ command: 'terminalBlurred', terminalId: '1' } as any);
 

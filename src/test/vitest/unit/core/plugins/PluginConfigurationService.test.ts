@@ -61,7 +61,7 @@ describe('PluginConfigurationService', () => {
 
   describe('applyConfiguration', () => {
     it('should deactivate plugins if system is disabled', () => {
-      mockConfig.get.mockImplementation((key) => {
+      mockConfig.get.mockImplementation((key: string) => {
         if (key.includes('enablePluginSystem')) return false;
         return true;
       });
@@ -88,7 +88,7 @@ describe('PluginConfigurationService', () => {
     });
 
     it('should deactivate disabled plugins', () => {
-      mockConfig.get.mockImplementation((key) => {
+      mockConfig.get.mockImplementation((key: string) => {
         if (key.includes('claude.enabled')) return false;
         return true;
       });

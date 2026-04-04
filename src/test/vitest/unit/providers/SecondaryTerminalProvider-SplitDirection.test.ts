@@ -44,6 +44,7 @@ describe('SecondaryTerminalProvider - Dynamic Split Direction (Issue #148)', fun
 
     // Setup executeCommand mock
     executeCommandMock = vi.fn().mockResolvedValue(undefined);
+    // @ts-expect-error - test mock type
     mockVscode.commands.executeCommand = executeCommandMock;
 
     // Create webview mocks
@@ -76,22 +77,27 @@ describe('SecondaryTerminalProvider - Dynamic Split Direction (Issue #148)', fun
       resolveWebviewView(webviewView: any) {
         this._view = webviewView;
         // Simulate setting initial context key
+        // @ts-expect-error - test mock type
         executeCommandMock('setContext', 'secondaryTerminal.panelLocation', 'sidebar');
       },
 
       async _handleWebviewMessage(message: any) {
         if (message.command === 'getSettings') {
+          // @ts-expect-error - test mock type
           await postMessageMock({
             command: 'panelLocationUpdate',
             location: this._currentPanelLocation,
           });
+          // @ts-expect-error - test mock type
           await postMessageMock({
             command: 'requestPanelLocationDetection',
           });
         }
         if (message.command === 'reportPanelLocation' && message.location) {
           this._currentPanelLocation = message.location;
+          // @ts-expect-error - test mock type
           executeCommandMock('setContext', 'secondaryTerminal.panelLocation', message.location);
+          // @ts-expect-error - test mock type
           await postMessageMock({
             command: 'panelLocationUpdate',
             location: message.location,
@@ -110,6 +116,7 @@ describe('SecondaryTerminalProvider - Dynamic Split Direction (Issue #148)', fun
         }
 
         mockTerminalManager.createTerminal();
+        // @ts-expect-error - test mock type
         postMessageMock({
           command: 'split',
           direction: splitDirection,
@@ -118,11 +125,13 @@ describe('SecondaryTerminalProvider - Dynamic Split Direction (Issue #148)', fun
 
       async _requestPanelLocationDetection() {
         try {
+          // @ts-expect-error - test mock type
           await postMessageMock({
             command: 'requestPanelLocationDetection',
           });
         } catch (error) {
           // Fallback to sidebar on error
+          // @ts-expect-error - test mock type
           executeCommandMock('setContext', 'secondaryTerminal.panelLocation', 'sidebar');
         }
       },

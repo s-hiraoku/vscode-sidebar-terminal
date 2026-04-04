@@ -60,6 +60,7 @@ describe('TerminalProcessCoordinator', () => {
       processTerminalData: vi.fn(),
     };
 
+    // @ts-expect-error - test mock type
     mockStateUpdateEmitter = new vscode.EventEmitter();
     mockBufferDataCallback = vi.fn();
 

@@ -99,9 +99,9 @@ describe('TerminalLifecycleService', () => {
       expect(failed).toHaveLength(1);
 
       // Verify the failure has correct error code
-      const failure = failed[0];
+      const failure = failed[0]!;
       if (!failure.success) {
-        expect(failure.error.code).toBe('TERMINAL_ALREADY_EXISTS');
+        expect((failure.error as any).code).toBe('TERMINAL_ALREADY_EXISTS');
       }
     });
   });

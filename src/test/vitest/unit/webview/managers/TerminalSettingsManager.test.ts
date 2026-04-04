@@ -68,6 +68,7 @@ describe('TerminalSettingsManager', () => {
       // Since we mocked FontSettingsService constructor via vi.mock return class
       // But we can't inspect the instance created inside manager easily without spyOn constructor
       // However, mockConfigManager.setFontSettingsService call is verifiable
+      // @ts-expect-error - test mock type
       expect(mockConfigManager.setFontSettingsService).toHaveBeenCalled();
     });
   });

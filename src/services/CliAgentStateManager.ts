@@ -14,7 +14,7 @@ export class CliAgentStateManager implements ICliAgentStateManager {
   private readonly _onStatusChange = new vscode.EventEmitter<{
     terminalId: string;
     status: 'connected' | 'disconnected' | 'none';
-    type: string | null;
+    type: AgentType | null;
     terminalName?: string;
   }>();
 
@@ -430,7 +430,7 @@ export class CliAgentStateManager implements ICliAgentStateManager {
   get onStatusChange(): vscode.Event<{
     terminalId: string;
     status: 'connected' | 'disconnected' | 'none';
-    type: string | null;
+    type: AgentType | null;
     terminalName?: string;
   }> {
     return this._onStatusChange.event;

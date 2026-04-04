@@ -4,20 +4,20 @@ import { describe, it, expect, vi } from 'vitest';
 vi.mock('../../../../../utils/common', () => ({
   getTerminalConfig: vi.fn(() => ({ maxTerminals: 5 })),
   ActiveTerminalManager: class {
-    _active = undefined;
-    getActive = vi.fn(function () {
+    _active: string | undefined = undefined;
+    getActive = vi.fn(function (this: any) {
       return this._active;
     });
-    setActive = vi.fn(function (id) {
+    setActive = vi.fn(function (this: any, id: string) {
       this._active = id;
     });
-    clearActive = vi.fn(function () {
+    clearActive = vi.fn(function (this: any) {
       this._active = undefined;
     });
-    hasActive = vi.fn(function () {
+    hasActive = vi.fn(function (this: any) {
       return !!this._active;
     });
-    isActive = vi.fn(function (id) {
+    isActive = vi.fn(function (this: any, id: string) {
       return this._active === id;
     });
   },
@@ -121,7 +121,7 @@ describe('TerminalStateManagementService', () => {
       const state = service.getCurrentState();
       expect(state.terminals.length).toBe(1);
       expect(state.activeTerminalId).toBe('term-1');
-      expect(state.terminals[0].id).toBe('term-1');
+      expect(state.terminals[0]!.id).toBe('term-1');
     });
   });
 

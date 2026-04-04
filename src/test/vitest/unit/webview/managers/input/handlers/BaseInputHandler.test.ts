@@ -437,9 +437,9 @@ describe('BaseInputHandler TDD Test Suite', () => {
         // Assert: Error should be logged
         expect(consoleLogSpy).toHaveBeenCalled();
         const logCalls = consoleLogSpy.mock.calls;
-        const errorLogs = logCalls.some((call) =>
+        const errorLogs = logCalls.some((call: any) =>
           call.some(
-            (arg) =>
+            (arg: any) =>
               typeof arg === 'string' &&
               arg.includes('Error in event handler TestHandler-error-test')
           )

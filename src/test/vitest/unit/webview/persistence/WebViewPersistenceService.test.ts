@@ -29,6 +29,7 @@ describe('WebViewPersistenceService', () => {
 
   describe('saveSession', () => {
     it('should save session data to localStorage', async () => {
+      // @ts-expect-error - test mock type
       const response = await service.saveSession({ requestId: 'req-1' });
 
       expect(response.success).toBe(true);
@@ -46,6 +47,7 @@ describe('WebViewPersistenceService', () => {
       // @ts-ignore - mocking private method
       vi.spyOn(service, 'collectLocalSessionData').mockResolvedValue(hugeData);
 
+      // @ts-expect-error - test mock type
       const response = await service.saveSession({ requestId: 'req-2' });
 
       expect(response.success).toBe(false);
@@ -62,6 +64,7 @@ describe('WebViewPersistenceService', () => {
       };
       localStorage.setItem('secondaryTerminal.webview.session', JSON.stringify(testData));
 
+      // @ts-expect-error - test mock type
       const response = await service.restoreSession({ requestId: 'req-3' });
 
       expect(response.success).toBe(true);
@@ -69,6 +72,7 @@ describe('WebViewPersistenceService', () => {
     });
 
     it('should return failure if no data found', async () => {
+      // @ts-expect-error - test mock type
       const response = await service.restoreSession({ requestId: 'req-4' });
 
       expect(response.success).toBe(false);
@@ -80,6 +84,7 @@ describe('WebViewPersistenceService', () => {
     it('should remove session data from localStorage', async () => {
       localStorage.setItem('secondaryTerminal.webview.session', 'some-data');
 
+      // @ts-expect-error - test mock type
       const response = await service.clearSession({ requestId: 'req-5' });
 
       expect(response.success).toBe(true);

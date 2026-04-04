@@ -713,6 +713,7 @@ describe('DebouncedEventBuffer', () => {
 
       it('should accept custom delay', () => {
         const callback = vi.fn();
+        // @ts-expect-error - test mock type
         const debouncer = createResizeDebouncer(callback, 200);
 
         debouncer.trigger();

@@ -115,7 +115,8 @@ describe('ShellIntegrationManager', () => {
       // Constructor calls setupStyles
       const styleTags = document.head.getElementsByTagName('style');
       expect(styleTags.length).toBeGreaterThan(0);
-      expect(styleTags[0].textContent).toContain('.shell-status-indicator');
+      // @ts-expect-error - test mock type
+      expect(styleTags![0].textContent).toContain('.shell-status-indicator');
     });
   });
 
@@ -138,6 +139,7 @@ describe('ShellIntegrationManager', () => {
       // Access the mock addon instance if possible or assume the fallback works (first terminal)
       // Since 't1' is the only terminal, it should be found as fallback or match.
 
+      // @ts-expect-error - test mock type
       manager.onCommandStart(command);
 
       // Verify status update via side effect (e.g. status indicator or logging)
@@ -161,6 +163,7 @@ describe('ShellIntegrationManager', () => {
       container.appendChild(header);
       document.body.appendChild(container);
 
+      // @ts-expect-error - test mock type
       manager.onCommandStart(command);
 
       const indicator = header.querySelector('.shell-status-indicator');
@@ -178,6 +181,7 @@ describe('ShellIntegrationManager', () => {
       container.appendChild(header);
       document.body.appendChild(container);
 
+      // @ts-expect-error - test mock type
       manager.onCommandEnd(command, 0); // Success
 
       const indicator = header.querySelector('.shell-status-indicator');
@@ -197,6 +201,7 @@ describe('ShellIntegrationManager', () => {
       container.appendChild(header);
       document.body.appendChild(container);
 
+      // @ts-expect-error - test mock type
       manager.onCommandEnd(command, 1); // Error
 
       const indicator = header.querySelector('.shell-status-indicator');
@@ -221,6 +226,7 @@ describe('ShellIntegrationManager', () => {
       container.appendChild(header);
       document.body.appendChild(container);
 
+      // @ts-expect-error - test mock type
       manager.onCommandEnd(command, 0);
       expect(header.querySelector('.shell-status-indicator')?.className).toContain('success');
 
