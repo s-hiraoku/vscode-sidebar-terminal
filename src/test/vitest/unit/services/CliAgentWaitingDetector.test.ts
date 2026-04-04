@@ -49,10 +49,10 @@ describe('CliAgentWaitingDetector', () => {
       expect(state?.waitingType).toBe('input');
     });
 
-    it('should detect Claude waiting prompt when prompt line contains trailing context', () => {
+    it('should detect Claude waiting prompt from shortcuts footer and bare prompt line', () => {
       stateStore.setConnectedAgent('terminal-1', 'claude');
 
-      detector.analyze('terminal-1', 'Esc to interrupt\n❯ Continue');
+      detector.analyze('terminal-1', '? for shortcuts\n>');
       vi.advanceTimersByTime(350);
 
       const state = stateStore.getAgentState('terminal-1');
@@ -80,6 +80,29 @@ describe('CliAgentWaitingDetector', () => {
       const state = stateStore.getAgentState('terminal-1');
       expect(state?.isWaitingForInput).toBe(true);
       expect(state?.waitingType).toBe('approval');
+    });
+
+    it('should not detect waiting while Claude is still processing', () => {
+      stateStore.setConnectedAgent('terminal-1', 'claude');
+
+      detector.analyze(
+        'terminal-1',
+        '? for shortcuts\n> Try "fix the failing test"\n✢ Thinking… (31s · esc to interrupt)'
+      );
+      vi.advanceTimersByTime(350);
+
+      const state = stateStore.getAgentState('terminal-1');
+      expect(state?.isWaitingForInput).toBeFalsy();
+    });
+
+    it('should not detect waiting for Claude work logs that begin with the prompt symbol', () => {
+      stateStore.setConnectedAgent('terminal-1', 'claude');
+
+      detector.analyze('terminal-1', '❯ Reading file src/main.ts...');
+      vi.advanceTimersByTime(350);
+
+      const state = stateStore.getAgentState('terminal-1');
+      expect(state?.isWaitingForInput).toBeFalsy();
     });
 
     it('should not detect waiting state when agent is not connected', () => {

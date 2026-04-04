@@ -14,6 +14,8 @@ interface NativeNotificationConfig {
   cooldownMs: number;
 }
 
+type ActivationPolicy = 'always' | 'never' | 'once-per-session';
+
 export class NativeNotificationService implements vscode.Disposable {
   private isDisposed = false;
   private readonly execFileFn: ExecFileFn;
@@ -60,20 +62,21 @@ export class NativeNotificationService implements vscode.Disposable {
   private shouldActivate(
     terminalId: string,
     config: NativeNotificationConfig,
-    activateOncePerSession: boolean
+    activationPolicy: ActivationPolicy
   ): boolean {
     return (
       config.activateWindow &&
-      (!activateOncePerSession || !this.activatedWaitingSessions.has(terminalId))
+      activationPolicy !== 'never' &&
+      (activationPolicy !== 'once-per-session' || !this.activatedWaitingSessions.has(terminalId))
     );
   }
 
   private markWaitingSessionActivated(
     terminalId: string,
     shouldActivate: boolean,
-    activateOncePerSession: boolean
+    activationPolicy: ActivationPolicy
   ): void {
-    if (activateOncePerSession && shouldActivate) {
+    if (activationPolicy === 'once-per-session' && shouldActivate) {
       this.activatedWaitingSessions.add(terminalId);
     }
   }
@@ -82,7 +85,7 @@ export class NativeNotificationService implements vscode.Disposable {
     terminalId: string,
     title: string,
     message: string,
-    activateOncePerSession: boolean
+    activationPolicy: ActivationPolicy
   ): void {
     if (this.isDisposed) {
       return;
@@ -96,7 +99,7 @@ export class NativeNotificationService implements vscode.Disposable {
     const platform = process.platform;
 
     try {
-      const shouldActivate = this.shouldActivate(terminalId, config, activateOncePerSession);
+      const shouldActivate = this.shouldActivate(terminalId, config, activationPolicy);
 
       switch (platform) {
         case 'darwin':
@@ -113,18 +116,22 @@ export class NativeNotificationService implements vscode.Disposable {
           break;
       }
 
-      this.markWaitingSessionActivated(terminalId, shouldActivate, activateOncePerSession);
+      this.markWaitingSessionActivated(terminalId, shouldActivate, activationPolicy);
     } catch (error) {
       log('[NATIVE_NOTIFY] Error:', error);
     }
   }
 
   public notifyWaiting(terminalId: string, title: string, message: string): void {
-    this.notifyAndActivate(terminalId, title, message, true);
+    this.notifyAndActivate(terminalId, title, message, 'once-per-session');
+  }
+
+  public notifyIdle(terminalId: string, title: string, message: string): void {
+    this.notifyAndActivate(terminalId, title, message, 'never');
   }
 
   public notifyCompleted(terminalId: string, title: string, message: string): void {
-    this.notifyAndActivate(terminalId, title, message, false);
+    this.notifyAndActivate(terminalId, title, message, 'always');
   }
 
   private getAppName(): string {

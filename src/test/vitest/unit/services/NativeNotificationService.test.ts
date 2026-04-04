@@ -180,6 +180,17 @@ describe('NativeNotificationService', () => {
         const script = args[args.indexOf('-e') + 1];
         expect(script).toContain('activate');
       });
+
+      it('should not activate the window for idle notifications', () => {
+        setPlatform('darwin');
+        service.notifyIdle('terminal-1', 'Title', 'CLI Agent is idle');
+
+        expect(mockExecFile).toHaveBeenCalledTimes(1);
+        const args = mockExecFile.mock.calls[0][1] as string[];
+        const script = args[args.indexOf('-e') + 1];
+        expect(script).toContain('display notification');
+        expect(script).not.toContain('activate');
+      });
     });
 
     describe('macOS', () => {

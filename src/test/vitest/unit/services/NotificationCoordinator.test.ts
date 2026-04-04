@@ -30,6 +30,7 @@ describe('NotificationCoordinator', () => {
   };
   let mockNative: {
     notifyWaiting: ReturnType<typeof vi.fn>;
+    notifyIdle: ReturnType<typeof vi.fn>;
     notifyCompleted: ReturnType<typeof vi.fn>;
     clearTerminal: ReturnType<typeof vi.fn>;
     dispose: ReturnType<typeof vi.fn>;
@@ -49,6 +50,7 @@ describe('NotificationCoordinator', () => {
     };
     mockNative = {
       notifyWaiting: vi.fn(),
+      notifyIdle: vi.fn(),
       notifyCompleted: vi.fn(),
       clearTerminal: vi.fn(),
       dispose: vi.fn(),
@@ -100,7 +102,7 @@ describe('NotificationCoordinator', () => {
     it('should use correct label for idle waiting type', () => {
       coordinator.notifyWaiting('terminal-1', 'idle');
 
-      expect(mockNative.notifyWaiting).toHaveBeenCalledWith(
+      expect(mockNative.notifyIdle).toHaveBeenCalledWith(
         'terminal-1',
         'Sidebar Terminal',
         expect.stringContaining('idle')
@@ -183,6 +185,7 @@ describe('NotificationCoordinator', () => {
 
       expect(mockToast.showWaitingNotification).toHaveBeenCalled();
       expect(mockNative.notifyWaiting).toHaveBeenCalled();
+      expect(mockNative.notifyIdle).not.toHaveBeenCalled();
     });
 
     it('should continue disposing other services if one throws', () => {
