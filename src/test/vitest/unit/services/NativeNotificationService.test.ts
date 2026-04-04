@@ -191,6 +191,18 @@ describe('NativeNotificationService', () => {
         expect(script).toContain('display notification');
         expect(script).not.toContain('activate');
       });
+
+      it('should not let idle notifications suppress subsequent waiting notifications', () => {
+        setPlatform('darwin');
+        service.notifyIdle('terminal-1', 'Title', 'CLI Agent is idle');
+        expect(mockExecFile).toHaveBeenCalledTimes(1);
+
+        service.notifyWaiting('terminal-1', 'Title', 'Waiting for input');
+        expect(mockExecFile).toHaveBeenCalledTimes(2);
+        const args = mockExecFile.mock.calls[1][1] as string[];
+        const script = args[args.indexOf('-e') + 1];
+        expect(script).toContain('activate');
+      });
     });
 
     describe('macOS', () => {

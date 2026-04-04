@@ -28,6 +28,15 @@ describe('CliAgentPatternRegistry - Waiting Patterns', () => {
         expect(result!.waitingType).toBe('approval');
       });
 
+      it('should detect Claude approval even when processing status is also visible', () => {
+        const result = registry.matchWaitingPattern(
+          'claude',
+          'Allow once?\n✢ Thinking… (31s · esc to interrupt)'
+        );
+        expect(result).not.toBeNull();
+        expect(result!.waitingType).toBe('approval');
+      });
+
       it('should detect Claude Code Y/n prompt', () => {
         const result = registry.matchWaitingPattern('claude', 'Do you want to proceed? (Y/n)');
         expect(result).not.toBeNull();

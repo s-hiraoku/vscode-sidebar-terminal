@@ -15,13 +15,16 @@ interface NativeNotificationConfig {
 }
 
 type ActivationPolicy = 'always' | 'never' | 'once-per-session';
+type CooldownScope = 'default' | 'idle';
 
 export class NativeNotificationService implements vscode.Disposable {
   private isDisposed = false;
   private readonly execFileFn: ExecFileFn;
   private readonly lastNotifiedAt = new Map<string, number>();
+  private readonly lastIdleNotifiedAt = new Map<string, number>();
   private readonly activatedWaitingSessions = new Set<string>();
   private lastGlobalNotifiedAt = 0;
+  private lastIdleGlobalNotifiedAt = 0;
 
   constructor(execFileFn?: ExecFileFn) {
     this.execFileFn =
@@ -42,20 +45,27 @@ export class NativeNotificationService implements vscode.Disposable {
     };
   }
 
-  private canNotify(terminalId: string, cooldownMs: number): boolean {
+  private canNotify(terminalId: string, cooldownMs: number, scope: CooldownScope): boolean {
     const now = Date.now();
+    const perTerminalTimestamps = scope === 'idle' ? this.lastIdleNotifiedAt : this.lastNotifiedAt;
+    const lastGlobalNotifiedAt =
+      scope === 'idle' ? this.lastIdleGlobalNotifiedAt : this.lastGlobalNotifiedAt;
 
-    if (now - this.lastGlobalNotifiedAt < cooldownMs) {
+    if (now - lastGlobalNotifiedAt < cooldownMs) {
       return false;
     }
 
-    const lastNotified = this.lastNotifiedAt.get(terminalId) ?? 0;
+    const lastNotified = perTerminalTimestamps.get(terminalId) ?? 0;
     if (now - lastNotified < cooldownMs) {
       return false;
     }
 
-    this.lastNotifiedAt.set(terminalId, now);
-    this.lastGlobalNotifiedAt = now;
+    perTerminalTimestamps.set(terminalId, now);
+    if (scope === 'idle') {
+      this.lastIdleGlobalNotifiedAt = now;
+    } else {
+      this.lastGlobalNotifiedAt = now;
+    }
     return true;
   }
 
@@ -85,14 +95,15 @@ export class NativeNotificationService implements vscode.Disposable {
     terminalId: string,
     title: string,
     message: string,
-    activationPolicy: ActivationPolicy
+    activationPolicy: ActivationPolicy,
+    cooldownScope: CooldownScope
   ): void {
     if (this.isDisposed) {
       return;
     }
 
     const config = this.getConfig();
-    if (!config.enabled || !this.canNotify(terminalId, config.cooldownMs)) {
+    if (!config.enabled || !this.canNotify(terminalId, config.cooldownMs, cooldownScope)) {
       return;
     }
 
@@ -123,15 +134,15 @@ export class NativeNotificationService implements vscode.Disposable {
   }
 
   public notifyWaiting(terminalId: string, title: string, message: string): void {
-    this.notifyAndActivate(terminalId, title, message, 'once-per-session');
+    this.notifyAndActivate(terminalId, title, message, 'once-per-session', 'default');
   }
 
   public notifyIdle(terminalId: string, title: string, message: string): void {
-    this.notifyAndActivate(terminalId, title, message, 'never');
+    this.notifyAndActivate(terminalId, title, message, 'never', 'idle');
   }
 
   public notifyCompleted(terminalId: string, title: string, message: string): void {
-    this.notifyAndActivate(terminalId, title, message, 'always');
+    this.notifyAndActivate(terminalId, title, message, 'always', 'default');
   }
 
   private getAppName(): string {
@@ -211,13 +222,16 @@ export class NativeNotificationService implements vscode.Disposable {
 
   public clearTerminal(terminalId: string): void {
     this.lastNotifiedAt.delete(terminalId);
+    this.lastIdleNotifiedAt.delete(terminalId);
     this.clearWaitingSession(terminalId);
   }
 
   public dispose(): void {
     this.isDisposed = true;
     this.lastNotifiedAt.clear();
+    this.lastIdleNotifiedAt.clear();
     this.activatedWaitingSessions.clear();
     this.lastGlobalNotifiedAt = 0;
+    this.lastIdleGlobalNotifiedAt = 0;
   }
 }

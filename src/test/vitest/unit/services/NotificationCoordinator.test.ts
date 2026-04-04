@@ -107,6 +107,7 @@ describe('NotificationCoordinator', () => {
         'Sidebar Terminal',
         expect.stringContaining('idle')
       );
+      expect(mockNative.notifyWaiting).not.toHaveBeenCalled();
     });
 
     it('should not call services after dispose', () => {

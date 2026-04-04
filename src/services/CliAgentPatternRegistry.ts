@@ -671,12 +671,12 @@ export class CliAgentPatternRegistry {
     const { waitingPatterns } = patterns;
     const lines = this.getWaitingLines(output);
 
-    if (this.hasWaitingBlocker(agentType, lines)) {
-      return null;
-    }
-
     if (this.matchesApprovalWaiting(lines, waitingPatterns)) {
       return { waitingType: 'approval' };
+    }
+
+    if (this.hasWaitingBlocker(agentType, lines)) {
+      return null;
     }
 
     if (this.matchesInputWaiting(lines, waitingPatterns)) {
