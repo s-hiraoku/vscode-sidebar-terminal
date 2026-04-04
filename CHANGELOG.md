@@ -5,6 +5,12 @@ All notable changes to the "Secondary Terminal" extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+### [0.4.9](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v0.4.8...v0.4.9) (2026-04-04)
+
+### Fixed
+
+- **notifications:** skip window activation when VS Code is focused ([41789dc](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/41789dc5bf2c677ea4de7934b414a9842bcb708d))
+
 ### [0.4.8](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v0.4.7...v0.4.8) (2026-04-04)
 
 ### Fixed
