@@ -5,6 +5,12 @@ All notable changes to the "Secondary Terminal" extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+### [0.4.6](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v0.4.5...v0.4.6) (2026-04-04)
+
+### Fixed
+
+- narrow Claude waiting detection ([#572](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/572)) ([9b5cacb](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/9b5cacb131c99b631f3866e2f0d3df57e2e9a96c))
+
 ### [0.4.5](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v0.4.4...v0.4.5) (2026-04-04)
 
 ### Fixed
