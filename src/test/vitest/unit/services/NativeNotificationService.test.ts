@@ -4,12 +4,20 @@ import { NativeNotificationService } from '../../../../services/NativeNotificati
 const mockGetConfig = vi.fn();
 type ExecFileFn = NonNullable<ConstructorParameters<typeof NativeNotificationService>[0]>;
 
+const { mockWindowState } = vi.hoisted(() => {
+  const mockWindowState = { focused: false };
+  return { mockWindowState };
+});
+
 vi.mock('vscode', () => ({
   workspace: {
     getConfiguration: (...args: any[]) => mockGetConfig(...args),
   },
   env: {
     appName: 'Visual Studio Code',
+  },
+  window: {
+    state: mockWindowState,
   },
 }));
 
@@ -39,6 +47,7 @@ describe('NativeNotificationService', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     setDefaultConfig();
+    mockWindowState.focused = false;
     mockExecFile = vi.fn<ExecFileFn>();
     service = new NativeNotificationService(mockExecFile);
   });
@@ -211,6 +220,31 @@ describe('NativeNotificationService', () => {
         expect(mockExecFile).toHaveBeenCalledTimes(2);
         // @ts-expect-error - test mock type
         const args = mockExecFile!.mock.calls[1][1] as string[];
+        const script = args[args.indexOf('-e') + 1];
+        expect(script).toContain('activate');
+      });
+    });
+
+    describe('window focus guard', () => {
+      it('should not activate window when VS Code already has focus', () => {
+        setPlatform('darwin');
+        mockWindowState.focused = true;
+
+        service.notifyWaiting('terminal-1', 'Title', 'Waiting');
+        expect(mockExecFile).toHaveBeenCalledTimes(1);
+        const args = mockExecFile!.mock.calls[0]![1] as string[];
+        const script = args[args.indexOf('-e') + 1];
+        expect(script).toContain('display notification');
+        expect(script).not.toContain('activate');
+      });
+
+      it('should activate window when VS Code does not have focus', () => {
+        setPlatform('darwin');
+        mockWindowState.focused = false;
+
+        service.notifyWaiting('terminal-1', 'Title', 'Waiting');
+        expect(mockExecFile).toHaveBeenCalledTimes(1);
+        const args = mockExecFile!.mock.calls[0]![1] as string[];
         const script = args[args.indexOf('-e') + 1];
         expect(script).toContain('activate');
       });
