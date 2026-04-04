@@ -125,6 +125,7 @@ describe('TerminalLifecycleCoordinator', () => {
         focus: vi.fn(),
       };
 
+      // @ts-expect-error - test mock type
       mockTerminals.set('terminal-1', {
         terminal: mockTerminal as any,
         fitAddon: {} as any,
@@ -149,6 +150,7 @@ describe('TerminalLifecycleCoordinator', () => {
         focus: vi.fn(),
       };
 
+      // @ts-expect-error - test mock type
       mockTerminals.set('terminal-1', {
         terminal: mockTerminal as any,
         fitAddon: {} as any,
@@ -170,6 +172,7 @@ describe('TerminalLifecycleCoordinator', () => {
     });
 
     it('should return terminal instance', () => {
+      // @ts-expect-error - test mock type
       const instance: TerminalInstance = {
         terminal: {} as any,
         fitAddon: {} as any,
@@ -210,6 +213,7 @@ describe('TerminalLifecycleCoordinator', () => {
 
     it('should return container element', () => {
       const container = document.createElement('div');
+      // @ts-expect-error - test mock type
       mockTerminals.set('terminal-1', {
         terminal: {} as any,
         fitAddon: {} as any,
@@ -270,6 +274,7 @@ describe('TerminalLifecycleCoordinator', () => {
         scrollToBottom: vi.fn(),
       };
 
+      // @ts-expect-error - test mock type
       mockTerminals.set('terminal-1', {
         terminal: mockTerminal as any,
         fitAddon: {} as any,
@@ -287,6 +292,7 @@ describe('TerminalLifecycleCoordinator', () => {
 
     it('should write to specific terminal by ID', () => {
       const mockWrite = vi.fn();
+      // @ts-expect-error - test mock type
       mockTerminals.set('terminal-2', {
         terminal: { write: mockWrite, buffer: { active: { baseY: 0, viewportY: 0 } } } as any,
         fitAddon: {} as any,
@@ -306,6 +312,7 @@ describe('TerminalLifecycleCoordinator', () => {
         callback();
       });
 
+      // @ts-expect-error - test mock type
       mockTerminals.set('terminal-1', {
         terminal: {
           write: mockWrite,
@@ -335,6 +342,7 @@ describe('TerminalLifecycleCoordinator', () => {
         callback();
       });
 
+      // @ts-expect-error - test mock type
       mockTerminals.set('terminal-1', {
         terminal: {
           write: mockWrite,
@@ -414,6 +422,7 @@ describe('TerminalLifecycleCoordinator', () => {
   describe('resizeAllTerminals', () => {
     it('should resize all terminals', async () => {
       const mockFit = vi.fn();
+      // @ts-expect-error - test mock type
       mockTerminals.set('terminal-1', {
         terminal: { cols: 80, rows: 24 } as any,
         fitAddon: { fit: mockFit } as any,

@@ -795,7 +795,7 @@ describe('UnifiedConfigurationService', () => {
 
       // Use the most recent call's handler (not getCall(0) which might be from a previous test)
       const lastCallIndex = onDidChangeStub.mock.calls.length - 1;
-      const onDidChangeHandler = onDidChangeStub.mock.calls[lastCallIndex][0];
+      const onDidChangeHandler = onDidChangeStub.mock.calls[lastCallIndex]![0];
       expect(onDidChangeHandler).toBeDefined();
       expect(typeof onDidChangeHandler).toBe('function');
 

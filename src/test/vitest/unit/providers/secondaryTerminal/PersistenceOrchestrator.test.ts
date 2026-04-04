@@ -81,11 +81,13 @@ describe('PersistenceOrchestrator', () => {
         data: [],
         messageId: 'msg-1',
       } as WebviewMessage,
+      // @ts-expect-error - test mock type
       sendMessage
     );
 
     expect(handler.handleMessage).toHaveBeenCalled();
-    const args = handler.handleMessage.mock.calls[0][0];
+    // @ts-expect-error - test mock type
+    const args = handler!.handleMessage.mock.calls[0][0];
     expect(args?.command).toBe('savesession');
     expect(sendMessage).toHaveBeenCalledWith(
       expect.objectContaining({ command: 'persistenceSaveSessionResponse', success: true })
@@ -99,10 +101,12 @@ describe('PersistenceOrchestrator', () => {
         command: 'terminalSerializationRequest',
         data: [],
       } as WebviewMessage,
+      // @ts-expect-error - test mock type
       sendMessage
     );
 
-    const args = handler.handleMessage.mock.calls[0][0];
+    // @ts-expect-error - test mock type
+    const args = handler!.handleMessage.mock.calls[0][0];
     expect(args?.command).toBe('savesession');
   });
 

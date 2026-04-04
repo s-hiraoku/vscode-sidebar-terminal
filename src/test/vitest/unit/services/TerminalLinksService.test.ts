@@ -109,24 +109,30 @@ describe('TerminalLinksService', () => {
       const links = await service.detectLinks('t1', 1, 'Check this https://example.com link');
 
       expect(links).toHaveLength(1);
-      expect(links[0].type).toBe('url');
-      expect(links[0].text).toBe('https://example.com');
+      // @ts-expect-error - test mock type
+      expect(links![0].type).toBe('url');
+      // @ts-expect-error - test mock type
+      expect(links![0].text).toBe('https://example.com');
     });
 
     it('should detect file links', async () => {
       const links = await service.detectLinks('t1', 1, 'File at /absolute/path/file');
 
       expect(links).toHaveLength(1);
-      expect(links[0].type).toBe('file');
-      expect(links[0].text).toBe('/absolute/path/file');
+      // @ts-expect-error - test mock type
+      expect(links![0].type).toBe('file');
+      // @ts-expect-error - test mock type
+      expect(links![0].text).toBe('/absolute/path/file');
     });
 
     it('should detect email links', async () => {
       const links = await service.detectLinks('t1', 1, 'Mail to user@example.com');
 
       expect(links).toHaveLength(1);
-      expect(links[0].type).toBe('email');
-      expect(links[0].text).toBe('user@example.com');
+      // @ts-expect-error - test mock type
+      expect(links![0].type).toBe('email');
+      // @ts-expect-error - test mock type
+      expect(links![0].text).toBe('user@example.com');
     });
 
     it('should fire event when links detected', async () => {
@@ -189,7 +195,8 @@ describe('TerminalLinksService', () => {
       const links = await service.detectLinks('t1', 1, '12345');
 
       expect(links).toHaveLength(1);
-      expect(links[0].type).toBe('custom');
+      // @ts-expect-error - test mock type
+      expect(links![0].type).toBe('custom');
       expect(provider.provideTerminalLinks).toHaveBeenCalled();
     });
   });

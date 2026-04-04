@@ -80,7 +80,7 @@ describe('TerminalSpawner', () => {
       spawner.spawnTerminal(defaultRequest);
 
       const spawnCall = vi.mocked(pty.spawn).mock.calls[0];
-      const env = spawnCall[2].env;
+      const env = spawnCall![2].env;
 
       expect(env).toMatchObject({
         TEST_VAR: 'value',
@@ -101,9 +101,12 @@ describe('TerminalSpawner', () => {
       const result = spawner.spawnTerminal(request);
 
       expect(pty.spawn).toHaveBeenCalledTimes(2);
-      expect(vi.mocked(pty.spawn).mock.calls[0][0]).toBe('/invalid/shell');
+      // @ts-expect-error - test mock type
+      expect(vi!.mocked(pty.spawn).mock.calls[0][0]).toBe('/invalid/shell');
       // Should fall back to one of the default shells (zsh, bash, sh)
-      expect(['/bin/zsh', '/bin/bash', '/bin/sh']).toContain(vi.mocked(pty.spawn).mock.calls[1][0]);
+      expect(['/bin/zsh', '/bin/bash', '/bin/sh']).toContain(
+        vi!.mocked(pty.spawn).mock.calls[1]![0]
+      );
       expect(result.ptyProcess).toBe(mockPtyProcess);
     });
 

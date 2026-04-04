@@ -192,7 +192,7 @@ export class InputManager extends BaseManager implements IInputManager {
   private imeHandler: IIMEHandler;
 
   // Debounce timers for events
-  private eventDebounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private eventDebounceTimers = new Map<string, number>();
 
   // Terminal-specific disposables for xterm.js events (memory leak prevention)
   private terminalDisposables = new Map<string, Array<{ dispose(): void }>>();
@@ -586,7 +586,7 @@ export class InputManager extends BaseManager implements IInputManager {
           this.eventDebounceTimers.delete(key);
         }, InputTimings.INPUT_DEBOUNCE_DELAY_MS); // Reduced from 200ms to 50ms for better responsiveness
 
-        this.eventDebounceTimers.set(key, timer);
+        this.eventDebounceTimers.set(key, timer as unknown as number);
       } else {
         // Emit other events immediately
         manager.postMessageToExtension({

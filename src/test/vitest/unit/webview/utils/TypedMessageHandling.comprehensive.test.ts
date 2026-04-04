@@ -45,6 +45,7 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
     describe('RED Phase - Validation Requirements', () => {
       it('should fail when validating null data', () => {
         // RED: Null data should be invalid
+        // @ts-expect-error - test mock type
         const validator = new MessageDataValidator<TerminalMessageData>(['terminalId'], mockLogger);
 
         const result = validator.validate(null);
@@ -55,6 +56,7 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
 
       it('should fail when validating undefined data', () => {
         // RED: Undefined data should be invalid
+        // @ts-expect-error - test mock type
         const validator = new MessageDataValidator<TerminalMessageData>(['terminalId'], mockLogger);
 
         const result = validator.validate(undefined);
@@ -65,6 +67,7 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
 
       it('should fail when validating non-object data', () => {
         // RED: Non-object data should be invalid
+        // @ts-expect-error - test mock type
         const validator = new MessageDataValidator<TerminalMessageData>(['terminalId'], mockLogger);
 
         const result = validator.validate('not an object');
@@ -77,6 +80,7 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
         // RED: Missing required fields should be invalid
         const validator = new MessageDataValidator<TerminalMessageData>(
           ['terminalId', 'action'],
+          // @ts-expect-error - test mock type
           mockLogger
         );
 
@@ -89,6 +93,7 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
 
       it('should pass when all required fields are present', () => {
         // RED: Valid data should pass validation
+        // @ts-expect-error - test mock type
         const validator = new MessageDataValidator<TerminalMessageData>(['terminalId'], mockLogger);
 
         const validData = { terminalId: 'term-1', action: 'create' };
@@ -103,6 +108,7 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
     describe('Factory Methods - Pre-configured Validators', () => {
       it('should create terminal validator with correct required fields', () => {
         // RED: Terminal validator should require terminalId
+        // @ts-expect-error - test mock type
         const validator = MessageDataValidator.createTerminalValidator(mockLogger);
 
         const validData = { terminalId: 'term-1', action: 'create' };
@@ -113,6 +119,7 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
 
       it('should create session validator with correct required fields', () => {
         // RED: Session validator should require sessionId and terminalStates
+        // @ts-expect-error - test mock type
         const validator = MessageDataValidator.createSessionValidator(mockLogger);
 
         const validData = {
@@ -128,6 +135,7 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
     describe('Edge Cases and Error Handling', () => {
       it('should handle empty object validation', () => {
         // RED: Empty object with required fields should fail
+        // @ts-expect-error - test mock type
         const validator = new MessageDataValidator<TerminalMessageData>(['terminalId'], mockLogger);
 
         const result = validator.validate({});
@@ -138,6 +146,7 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
 
       it('should handle validation with no required fields', () => {
         // RED: Validator with no required fields should pass any object
+        // @ts-expect-error - test mock type
         const validator = new MessageDataValidator<Record<string, unknown>>([], mockLogger);
 
         const result = validator.validate({ anything: 'goes' });
@@ -148,6 +157,7 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
 
       it('should log validation failures', () => {
         // RED: Validation failures should be logged
+        // @ts-expect-error - test mock type
         const validator = new MessageDataValidator<TerminalMessageData>(['terminalId'], mockLogger);
 
         validator.validate({});
@@ -161,6 +171,7 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
     let router: TypedMessageRouter;
 
     beforeEach(() => {
+      // @ts-expect-error - test mock type
       router = new TypedMessageRouter('TestComponent', mockLogger);
     });
 
@@ -215,6 +226,7 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
         const handler: TypedMessageHandler<TerminalMessageData> = vi
           .fn()
           .mockResolvedValue(undefined);
+        // @ts-expect-error - test mock type
         const validator = MessageDataValidator.createTerminalValidator(mockLogger);
         const registration: TypedMessageRegistration<TerminalMessageData> = {
           command: 'terminal:create',
@@ -235,6 +247,7 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
         const handler: TypedMessageHandler<TerminalMessageData> = vi
           .fn()
           .mockResolvedValue(undefined);
+        // @ts-expect-error - test mock type
         const validator = MessageDataValidator.createTerminalValidator(mockLogger);
         const registration: TypedMessageRegistration<TerminalMessageData> = {
           command: 'terminal:create',
@@ -316,6 +329,7 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
       mockVSCodeAPI = {
         postMessage: vi.fn(),
       };
+      // @ts-expect-error - test mock type
       sender = new TypedMessageSender(mockVSCodeAPI as any, 'TestComponent', mockLogger);
     });
 
@@ -427,6 +441,7 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
     let eventListener: (event: MessageEvent) => void;
 
     beforeEach(() => {
+      // @ts-expect-error - test mock type
       router = new TypedMessageRouter('TestComponent', mockLogger);
       eventListener = createTypedMessageEventListener(router);
     });
@@ -552,7 +567,9 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
   describe('Integration Tests - End-to-End Message Flow', () => {
     it('should handle complete message processing workflow', async () => {
       // RED: Complete workflow should work end-to-end
+      // @ts-expect-error - test mock type
       const router = new TypedMessageRouter('TestComponent', mockLogger);
+      // @ts-expect-error - test mock type
       const validator = MessageDataValidator.createTerminalValidator(mockLogger);
       const handler: TypedMessageHandler<TerminalMessageData> = vi
         .fn()
@@ -579,7 +596,9 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
     it('should handle message sending and event processing integration', () => {
       // RED: Sender and event processing should integrate
       const mockVSCodeAPI = { postMessage: vi.fn() };
+      // @ts-expect-error - test mock type
       const sender = new TypedMessageSender(mockVSCodeAPI as any, 'TestComponent', mockLogger);
+      // @ts-expect-error - test mock type
       const router = new TypedMessageRouter('TestComponent', mockLogger);
       const eventListener = createTypedMessageEventListener(router);
 
@@ -610,6 +629,7 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
   describe('Performance and Memory Management', () => {
     it('should handle high-frequency message processing without memory leaks', async () => {
       // RED: High frequency processing should be stable
+      // @ts-expect-error - test mock type
       const router = new TypedMessageRouter('TestComponent', mockLogger);
       const handler: TypedMessageHandler = vi.fn().mockResolvedValue(undefined);
 
@@ -630,6 +650,7 @@ describe('TypedMessageHandling - Comprehensive TDD Suite', () => {
 
     it('should handle concurrent message processing safely', async () => {
       // RED: Concurrent processing should be safe
+      // @ts-expect-error - test mock type
       const router = new TypedMessageRouter('TestComponent', mockLogger);
       const slowHandler: TypedMessageHandler = async (data: any) => {
         await new Promise((resolve) => setTimeout(resolve, 10));

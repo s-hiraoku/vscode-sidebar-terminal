@@ -93,7 +93,8 @@ describe('TerminalTabManager', () => {
     it('should add a tab', () => {
       manager.addTab('t1', 'Term 1');
       expect(manager.getTabCount()).toBe(1);
-      expect(manager.getAllTabs()[0].id).toBe('t1');
+      // @ts-expect-error - test mock type
+      expect(manager!.getAllTabs()[0].id).toBe('t1');
     });
 
     it('should update existing tab on add', () => {
@@ -101,7 +102,8 @@ describe('TerminalTabManager', () => {
       manager.addTab('t1', 'Updated Name');
 
       expect(manager.getTabCount()).toBe(1);
-      expect(manager.getAllTabs()[0].name).toBe('Updated Name');
+      // @ts-expect-error - test mock type
+      expect(manager!.getAllTabs()[0].name).toBe('Updated Name');
     });
 
     it('should remove a tab', () => {
@@ -144,7 +146,8 @@ describe('TerminalTabManager', () => {
       manager.addTab('t1', 'Old Name');
       manager.onTabRename('t1', 'New Name');
 
-      expect(manager.getAllTabs()[0].name).toBe('New Name');
+      // @ts-expect-error - test mock type
+      expect(manager!.getAllTabs()[0].name).toBe('New Name');
       expect(mockCoordinator.postMessageToExtension).toHaveBeenCalledWith(
         expect.objectContaining({
           command: 'renameTerminal',
@@ -159,7 +162,8 @@ describe('TerminalTabManager', () => {
 
       manager.onTabReorder(0, 1, ['t2', 't1']);
 
-      expect(manager.getAllTabs()[0].id).toBe('t2');
+      // @ts-expect-error - test mock type
+      expect(manager!.getAllTabs()[0].id).toBe('t2');
       expect(mockCoordinator.postMessageToExtension).toHaveBeenCalledWith(
         expect.objectContaining({
           command: 'reorderTerminals',
@@ -215,7 +219,8 @@ describe('TerminalTabManager', () => {
       manager.syncTabs(tabs);
 
       expect(manager.getTabCount()).toBe(1);
-      expect(manager.getAllTabs()[0].id).toBe('new');
+      // @ts-expect-error - test mock type
+      expect(manager!.getAllTabs()[0].id).toBe('new');
     });
   });
 });

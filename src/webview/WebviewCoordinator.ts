@@ -174,7 +174,7 @@ export class WebviewCoordinator implements vscode.Disposable {
         return await this.terminalCoordinator.createTerminal(options);
       },
 
-      deleteTerminal: async (terminalId: string) => {
+      deleteTerminal: async (terminalId: string, _force: boolean) => {
         return await this.terminalCoordinator.removeTerminal(terminalId);
       },
 
@@ -182,8 +182,10 @@ export class WebviewCoordinator implements vscode.Disposable {
         this.postMessageToExtension('terminalInput', { terminalId, input });
       },
 
-      resize: (terminalId: string, cols: number, rows: number) => {
-        this.terminalCoordinator.resizeTerminal(terminalId, cols, rows);
+      resize: (cols: number, rows: number, terminalId?: string) => {
+        if (terminalId) {
+          this.terminalCoordinator.resizeTerminal(terminalId, cols, rows);
+        }
       },
 
       focusTerminal: (terminalId: string) => {
@@ -194,7 +196,7 @@ export class WebviewCoordinator implements vscode.Disposable {
         return this.terminalCoordinator.getActiveTerminalId() ?? null;
       },
 
-      getWorkingDirectory: async () => {
+      getWorkingDirectory: async (_terminalId: string) => {
         // This would need to be implemented based on actual requirements
         return safeProcessCwd();
       },

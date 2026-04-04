@@ -396,6 +396,7 @@ describe('TerminalTabList', () => {
       tabList.addTab({ id: 't1', name: 'T1', isActive: true, isClosable: true });
       const theme = { background: '#123456', foreground: '#ffffff', cursor: '#ffffff' };
 
+      // @ts-expect-error - test mock type
       tabList.updateTheme(theme);
 
       const tabEl = container.querySelector('[data-tab-id="t1"]') as HTMLElement;

@@ -50,7 +50,7 @@ describe('ScrollbackManager', () => {
       manager.registerTerminal('t1', mockTerminal, mockSerializeAddon);
 
       // Update mock to match serialize output
-      mockTerminal.buffer.active.getLine.mockImplementation((i) => {
+      mockTerminal.buffer.active.getLine.mockImplementation((i: any) => {
         if (i === 0) return { translateToString: () => 'line1', isWrapped: false };
         if (i === 1) return { translateToString: () => 'line2', isWrapped: false };
         return null;

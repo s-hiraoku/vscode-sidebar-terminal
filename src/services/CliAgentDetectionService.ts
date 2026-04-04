@@ -243,7 +243,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     success: boolean;
     reason?: string;
     newStatus: AgentStatus;
-    agentType: string | null;
+    agentType: AgentType | null;
   } {
     try {
       const existingState = this.stateStore.getAgentState(terminalId);

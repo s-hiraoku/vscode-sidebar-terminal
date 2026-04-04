@@ -36,6 +36,7 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
     statusChangeEvents = [];
 
     // Create fresh instances for each test
+    // @ts-expect-error - test mock type
     stateManager = new CliAgentStateStore();
 
     detectionService = new CliAgentDetectionService();
@@ -966,6 +967,7 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
       }> = [];
 
       detectionService.onAgentWaitingChange((event) => {
+        // @ts-expect-error - test mock type
         waitingEvents.push(event);
       });
 

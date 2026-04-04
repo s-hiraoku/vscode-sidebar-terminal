@@ -94,8 +94,10 @@ describe('TerminalDecorationsService', () => {
       service.completeCommand('t1', 'cmd1', 0);
 
       const decorations = service.getDecorations('t1');
-      expect(decorations[0].status).toBe('success');
-      expect(decorations[0].exitCode).toBe(0);
+      // @ts-expect-error - test mock type
+      expect(decorations![0].status).toBe('success');
+      // @ts-expect-error - test mock type
+      expect(decorations![0].exitCode).toBe(0);
       expect(mockEventEmitter.fire).toHaveBeenCalledTimes(2); // add + complete
     });
 
@@ -110,8 +112,10 @@ describe('TerminalDecorationsService', () => {
       service.completeCommand('t1', 'cmd1', 1);
 
       const decorations = service.getDecorations('t1');
-      expect(decorations[0].status).toBe('error');
-      expect(decorations[0].exitCode).toBe(1);
+      // @ts-expect-error - test mock type
+      expect(decorations![0].status).toBe('error');
+      // @ts-expect-error - test mock type
+      expect(decorations![0].exitCode).toBe(1);
     });
   });
 
@@ -121,8 +125,10 @@ describe('TerminalDecorationsService', () => {
 
       const decorations = service.getDecorations('t1');
       expect(decorations).toHaveLength(1);
-      expect(decorations[0].status).toBe('running');
-      expect(decorations[0].command).toBe('ls');
+      // @ts-expect-error - test mock type
+      expect(decorations![0].status).toBe('running');
+      // @ts-expect-error - test mock type
+      expect(decorations![0].command).toBe('ls');
     });
 
     it('should detect command end and complete latest running command', () => {
@@ -133,7 +139,8 @@ describe('TerminalDecorationsService', () => {
       service.processShellIntegrationData('t1', '\x1b]633;D;0\x07');
 
       const decorations = service.getDecorations('t1');
-      expect(decorations[0].status).toBe('success');
+      // @ts-expect-error - test mock type
+      expect(decorations![0].status).toBe('success');
     });
   });
 

@@ -74,7 +74,8 @@ describe('InputStateManager', () => {
 
       const history = manager.getStateHistory();
       expect(history.length).toBeGreaterThanOrEqual(2);
-      expect(history[history.length - 1].stateKey).toBe('agent');
+      // @ts-expect-error - test mock type
+      expect(history![history.length - 1].stateKey).toBe('agent');
     });
 
     it('should detect critical state correctly', () => {

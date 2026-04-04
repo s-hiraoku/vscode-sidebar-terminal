@@ -20,6 +20,7 @@ describe('InputFlushingService', () => {
 
     mockLogger = vi.fn();
     mockSendInput = vi.fn();
+    // @ts-expect-error - test mock type
     deps = { logger: mockLogger, sendInput: mockSendInput };
     service = new InputFlushingService(deps);
   });

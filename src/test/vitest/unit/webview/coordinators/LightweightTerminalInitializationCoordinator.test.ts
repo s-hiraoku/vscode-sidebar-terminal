@@ -225,7 +225,8 @@ describe('LightweightTerminalInitializationCoordinator', () => {
     expect(window.addEventListener).toHaveBeenCalledWith('blur', handlers.onWindowBlur);
     expect(deps.eventHandlerManager.onPageUnload).toHaveBeenCalledWith(expect.any(Function));
 
-    const messageHandler = vi.mocked(deps.eventHandlerManager.setMessageEventHandler).mock
+    // @ts-expect-error - test mock type
+    const messageHandler = vi!.mocked(deps.eventHandlerManager.setMessageEventHandler).mock
       .calls[0][0];
     await messageHandler({
       type: 'message',

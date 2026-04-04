@@ -203,8 +203,10 @@ describe('RenderingOptimizer', () => {
       optimizer.setupSmoothScrolling(mockTerminal, mockContainer, 'test-terminal');
 
       expect(addEventListenerSpy).toHaveBeenCalled();
-      expect(addEventListenerSpy.mock.calls[0][0]).toBe('wheel');
-      expect(addEventListenerSpy.mock.calls[0][2]).toEqual({
+      // @ts-expect-error - test mock type
+      expect(addEventListenerSpy!.mock.calls[0][0]).toBe('wheel');
+      // @ts-expect-error - test mock type
+      expect(addEventListenerSpy!.mock.calls[0][2]).toEqual({
         passive: true,
       });
     });

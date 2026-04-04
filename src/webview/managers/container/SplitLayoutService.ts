@@ -121,7 +121,7 @@ export class SplitLayoutService {
 
       // Add resizer between terminals (not after the last one)
       if (index < containersToWrap.length - 1) {
-        const nextTerminalId = containersToWrap[index + 1].id;
+        const nextTerminalId = containersToWrap[index + 1]!.id;
         const resizer = this.createSplitResizer(splitDirection);
         resizer.setAttribute('data-resizer-before', terminalId);
         resizer.setAttribute('data-resizer-after', nextTerminalId);

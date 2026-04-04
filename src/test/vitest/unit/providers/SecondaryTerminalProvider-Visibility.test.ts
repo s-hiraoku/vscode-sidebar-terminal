@@ -71,6 +71,7 @@ describe('SecondaryTerminalProvider - Visibility Guard', () => {
         }, 200);
       },
 
+      // @ts-expect-error - test mock type
       _requestPanelLocationDetection: mockRequestPanelLocationDetection,
 
       dispose() {

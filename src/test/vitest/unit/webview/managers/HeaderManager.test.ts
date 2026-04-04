@@ -412,7 +412,7 @@ describe('HeaderManager', () => {
       // Check that no icon elements were created with sample-icon class
       const createElementCalls = vi.mocked(DOMUtils.createElement).mock.calls;
       const sampleIconCalls = createElementCalls.filter(
-        (call) => call[2]?.className === 'sample-icon'
+        (call: any) => call[2]?.className === 'sample-icon'
       );
       expect(sampleIconCalls.length).toBe(0);
     });

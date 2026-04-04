@@ -85,6 +85,7 @@ describe('TerminalStateDisplayManager', () => {
       activeTerminalId: 't1',
       maxTerminals: 5,
       availableSlots: [3, 4, 5],
+      // @ts-expect-error - test mock type
       config: {} as any,
     };
 
@@ -126,6 +127,7 @@ describe('TerminalStateDisplayManager', () => {
         activeTerminalId: null,
         maxTerminals: 5,
         availableSlots: [1],
+        // @ts-expect-error - test mock type
         config: {} as any,
       };
 
@@ -144,6 +146,7 @@ describe('TerminalStateDisplayManager', () => {
         activeTerminalId: null,
         maxTerminals: 1,
         availableSlots: [],
+        // @ts-expect-error - test mock type
         config: {} as any,
       };
 
@@ -171,6 +174,7 @@ describe('TerminalStateDisplayManager', () => {
         activeTerminalId: 't1',
         maxTerminals: 5,
         availableSlots: [],
+        // @ts-expect-error - test mock type
         config: {} as any,
       };
 
@@ -199,6 +203,7 @@ describe('TerminalStateDisplayManager', () => {
         activeTerminalId: 't1',
         maxTerminals: 5,
         availableSlots: [3, 4, 5],
+        // @ts-expect-error - test mock type
         config: {} as any,
       };
 
@@ -224,6 +229,7 @@ describe('TerminalStateDisplayManager', () => {
         activeTerminalId: 't1',
         maxTerminals: 5,
         availableSlots: [3, 4, 5],
+        // @ts-expect-error - test mock type
         config: {} as any,
       };
 
@@ -244,6 +250,7 @@ describe('TerminalStateDisplayManager', () => {
         activeTerminalId: 't1',
         maxTerminals: 5,
         availableSlots: [],
+        // @ts-expect-error - test mock type
         config: {} as any,
       };
 
@@ -271,6 +278,7 @@ describe('TerminalStateDisplayManager', () => {
         activeTerminalId: 't1',
         maxTerminals: 5,
         availableSlots: [],
+        // @ts-expect-error - test mock type
         config: {} as any,
       };
 

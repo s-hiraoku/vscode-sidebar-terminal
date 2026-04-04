@@ -81,6 +81,7 @@ describe('DisplayModeManager - Fullscreen Display (Issue #198)', () => {
       set isSplitMode(value: boolean) {
         isSplitMode = value;
       },
+      // @ts-expect-error - test mock type
       getIsSplitMode: vi.fn(() => isSplitMode),
       exitSplitMode: vi.fn(() => {
         isSplitMode = false;

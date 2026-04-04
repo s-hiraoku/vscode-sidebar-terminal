@@ -358,8 +358,10 @@ describe('ErrorHandling', () => {
         const log = manager.getErrorLog();
 
         expect(log).toHaveLength(2);
-        expect(log[0].message).toBe('Error 1');
-        expect(log[1].message).toBe('Error 2');
+        // @ts-expect-error - test mock type
+        expect(log![0].message).toBe('Error 1');
+        // @ts-expect-error - test mock type
+        expect(log![1].message).toBe('Error 2');
       });
 
       it('should filter by category', () => {
@@ -371,7 +373,8 @@ describe('ErrorHandling', () => {
         const terminalLog = manager.getErrorLog(ErrorCategory.TERMINAL);
 
         expect(terminalLog).toHaveLength(1);
-        expect(terminalLog[0].context.category).toBe(ErrorCategory.TERMINAL);
+        // @ts-expect-error - test mock type
+        expect(terminalLog![0].context.category).toBe(ErrorCategory.TERMINAL);
       });
 
       it('should respect limit', () => {
@@ -384,8 +387,10 @@ describe('ErrorHandling', () => {
         const log = manager.getErrorLog(undefined, 5);
 
         expect(log).toHaveLength(5);
-        expect(log[0].message).toBe('Error 5');
-        expect(log[4].message).toBe('Error 9');
+        // @ts-expect-error - test mock type
+        expect(log![0].message).toBe('Error 5');
+        // @ts-expect-error - test mock type
+        expect(log![4].message).toBe('Error 9');
       });
     });
 

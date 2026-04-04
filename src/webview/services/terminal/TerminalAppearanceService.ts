@@ -201,8 +201,12 @@ export class TerminalAppearanceService {
       const fallbackFontSettings = configManager?.getCurrentFontSettings?.();
       currentFontSettings = {
         fontFamily:
-          directFontFamily || configFontSettings?.fontFamily || fallbackFontSettings?.fontFamily,
-        fontSize: directFontSize || configFontSettings?.fontSize || fallbackFontSettings?.fontSize,
+          directFontFamily ||
+          configFontSettings?.fontFamily ||
+          fallbackFontSettings?.fontFamily ||
+          'monospace',
+        fontSize:
+          directFontSize || configFontSettings?.fontSize || fallbackFontSettings?.fontSize || 14,
         fontWeight:
           (config as { fontWeight?: string } | undefined)?.fontWeight ||
           configFontSettings?.fontWeight ||

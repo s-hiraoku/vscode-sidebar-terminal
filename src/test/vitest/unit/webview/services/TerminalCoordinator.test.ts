@@ -40,6 +40,7 @@ describe('TerminalCoordinator', () => {
   let coordinator: TerminalCoordinator;
 
   beforeEach(() => {
+    // @ts-expect-error - test mock type
     coordinator = new TerminalCoordinator({
       maxTerminals: 5,
       defaultShell: '/bin/bash',

@@ -27,6 +27,7 @@ const createMockCliAgentService = (): ICliAgentDetectionService => {
       newStatus: 'none',
       agentType: null,
     }),
+    // @ts-expect-error - test mock type
     onCliAgentStatusChange: statusEmitter.event,
     handleTerminalRemoved: vi.fn(),
     dispose: vi.fn(() => statusEmitter.dispose()),

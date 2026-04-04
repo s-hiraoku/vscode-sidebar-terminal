@@ -203,7 +203,10 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
         this.messageManager?.getCurrentFlexDirection() ?? null,
       splitManagerSetPanelLocation: (location) => this.splitManager.setPanelLocation(location),
       splitManagerUpdateSplitDirection: (direction, location) =>
-        this.splitManager.updateSplitDirection(direction, location),
+        this.splitManager.updateSplitDirection(
+          direction as 'horizontal' | 'vertical',
+          location as 'sidebar' | 'panel'
+        ),
       splitManagerGetTerminalCount: () => this.splitManager.getTerminals().size,
       displayModeManagerGetCurrentMode: () => this.displayModeManager?.getCurrentMode() ?? 'normal',
       displayModeManagerShowAllTerminalsSplit: () =>
@@ -318,7 +321,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       setAgentConnected: (id, agentType, terminalName) =>
         this.cliAgentStateManager.setAgentConnected(id, agentType, terminalName),
       setAgentDisconnected: (id) => this.cliAgentStateManager.setAgentDisconnected(id),
-      setAgentState: (id, state) => this.cliAgentStateManager.setAgentState(id, state),
+      setAgentState: (id, state) => this.cliAgentStateManager.setAgentState(id, state as any),
       removeTerminalState: (id) => this.cliAgentStateManager.removeTerminalState(id),
       detectAgentActivity: (output, id) =>
         this.cliAgentStateManager.detectAgentActivity(output, id),
@@ -392,7 +395,8 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       getAllTerminalInstances: () => this.terminalLifecycleManager.getAllTerminalInstances(),
       getAllTerminalContainers: () => this.terminalLifecycleManager.getAllTerminalContainers(),
       getSplitTerminals: () => this.splitManager.getTerminals(),
-      setActiveBorderMode: (mode) => this.uiManager.setActiveBorderMode(mode),
+      setActiveBorderMode: (mode) =>
+        this.uiManager.setActiveBorderMode(mode as import('../../types/shared').ActiveBorderMode),
       setTerminalHeaderEnhancementsEnabled: (enabled) =>
         this.uiManager.setTerminalHeaderEnhancementsEnabled(enabled),
       updateTerminalBorders: (activeId, containers) =>
@@ -891,8 +895,13 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
   // CLI Agent state management delegation (via CliAgentCoordinator)
 
-  public getCliAgentState(terminalId: string) {
-    return this.cliAgentCoordinator.getCliAgentState(terminalId);
+  public getCliAgentState(
+    terminalId: string
+  ): { status: 'connected' | 'disconnected' | 'none'; agentType: string | null } | null {
+    return this.cliAgentCoordinator.getCliAgentState(terminalId) as {
+      status: 'connected' | 'disconnected' | 'none';
+      agentType: string | null;
+    } | null;
   }
 
   public setCliAgentConnected(terminalId: string, agentType: string, terminalName?: string): void {

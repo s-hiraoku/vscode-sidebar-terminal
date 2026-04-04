@@ -31,9 +31,18 @@ import { TerminalInitializationStateMachine } from './services/TerminalInitializ
 import { WatchdogOptions } from './services/TerminalInitializationWatchdog';
 import { TerminalCommandHandlers } from './services/TerminalCommandHandlers';
 import { TerminalKillService } from './services/TerminalKillService';
-import { ProviderSessionService } from './services/ProviderSessionService';
-import { WatchdogCoordinator } from './services/WatchdogCoordinator';
-import { ScrollbackMessageHandler } from './handlers/ScrollbackMessageHandler';
+import {
+  ProviderSessionService,
+  IProviderSessionDependencies,
+} from './services/ProviderSessionService';
+import {
+  WatchdogCoordinator,
+  IWatchdogCoordinatorDependencies,
+} from './services/WatchdogCoordinator';
+import {
+  ScrollbackMessageHandler,
+  IScrollbackPersistenceService,
+} from './handlers/ScrollbackMessageHandler';
 import { DebugMessageHandler } from './handlers/DebugMessageHandler';
 import { SettingsMessageHandler } from './handlers/SettingsMessageHandler';
 import { PanelLocationHandler } from './handlers/PanelLocationHandler';
@@ -184,7 +193,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
     // Initialize extracted services (Phase 3 refactoring)
     this._killService = new TerminalKillService({
-      getActiveTerminalId: () => this._terminalManager.getActiveTerminalId(),
+      getActiveTerminalId: () => this._terminalManager.getActiveTerminalId() ?? null,
       getTerminal: (id) => this._terminalManager.getTerminal(id),
       killTerminal: (id) => this._terminalManager.killTerminal(id),
       getCurrentState: () => this._terminalManager.getCurrentState(),
@@ -192,9 +201,10 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     });
 
     this._sessionService = new ProviderSessionService({
-      extensionPersistenceService: this._extensionPersistenceService ?? null,
+      extensionPersistenceService: (this._extensionPersistenceService ??
+        null) as IProviderSessionDependencies['extensionPersistenceService'],
       getTerminals: () => this._terminalManager.getTerminals(),
-      getActiveTerminalId: () => this._terminalManager.getActiveTerminalId(),
+      getActiveTerminalId: () => this._terminalManager.getActiveTerminalId() ?? null,
       createTerminal: () => this._terminalManager.createTerminal(),
       sendMessage: (msg) => this._sendMessage(msg),
       getCurrentFontSettings: () => this._settingsService.getCurrentFontSettings(),
@@ -209,7 +219,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
             pty as import('node-pty').IPty,
             safe
           ),
-        telemetryService: this._telemetryService,
+        telemetryService: this
+          ._telemetryService as IWatchdogCoordinatorDependencies['telemetryService'],
       },
       SecondaryTerminalProvider.ACK_WATCHDOG_OPTIONS,
       SecondaryTerminalProvider.PROMPT_WATCHDOG_OPTIONS
@@ -217,7 +228,8 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
     // Initialize extracted message handlers (Phase 3A refactoring)
     this._scrollbackMessageHandler = new ScrollbackMessageHandler({
-      getExtensionPersistenceService: () => this._extensionPersistenceService ?? null,
+      getExtensionPersistenceService: () =>
+        (this._extensionPersistenceService ?? null) as IScrollbackPersistenceService | null,
     });
 
     this._debugMessageHandler = new DebugMessageHandler({

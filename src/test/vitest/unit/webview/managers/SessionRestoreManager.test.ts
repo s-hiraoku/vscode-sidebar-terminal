@@ -45,6 +45,7 @@ function createMockTerminal(): Terminal {
 
 // Helper to create mock terminal instance
 function createMockTerminalInstance(terminal?: Terminal): TerminalInstance {
+  // @ts-expect-error - test mock type
   return {
     terminal: terminal ?? createMockTerminal(),
     fitAddon: null,

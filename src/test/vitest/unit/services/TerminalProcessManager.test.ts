@@ -12,6 +12,7 @@ const createMockTerminal = (id: string, ptyMock?: any): TerminalInstance => ({
   createdAt: new Date(),
   cwd: '/tmp',
   isActive: true,
+  // @ts-expect-error - test mock type
   xtermReady: true,
   processState: 0,
 });
@@ -223,7 +224,9 @@ describe('TerminalProcessManager', () => {
       };
       const workingPty = { write: vi.fn(), pid: 123 };
 
+      // @ts-expect-error - test mock type
       terminal.ptyProcess = brokenPty;
+      // @ts-expect-error - test mock type
       terminal.pty = workingPty;
 
       const result = manager.attemptRecovery(terminal);
@@ -235,11 +238,13 @@ describe('TerminalProcessManager', () => {
     });
 
     it('should fail if all alternatives fail', () => {
+      // @ts-expect-error - test mock type
       terminal.ptyProcess = {
         write: () => {
           throw new Error('Fail 1');
         },
       };
+      // @ts-expect-error - test mock type
       terminal.pty = {
         write: () => {
           throw new Error('Fail 2');

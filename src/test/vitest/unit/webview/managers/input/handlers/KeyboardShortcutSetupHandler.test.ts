@@ -72,7 +72,7 @@ describe('KeyboardShortcutSetupHandler', () => {
       // Get the registered handler
       const registerCall = (mockDeps.eventRegistry.register as ReturnType<typeof vi.fn>).mock
         .calls[0];
-      const shortcutHandler = registerCall[3] as (event: KeyboardEvent) => void;
+      const shortcutHandler = registerCall![3] as (event: KeyboardEvent) => void;
 
       const event = new dom.window.KeyboardEvent('keydown', {
         key: 'p',
@@ -94,7 +94,7 @@ describe('KeyboardShortcutSetupHandler', () => {
 
       const registerCall = (mockDeps.eventRegistry.register as ReturnType<typeof vi.fn>).mock
         .calls[0];
-      const shortcutHandler = registerCall[3] as (event: KeyboardEvent) => void;
+      const shortcutHandler = registerCall![3] as (event: KeyboardEvent) => void;
 
       const event = new dom.window.KeyboardEvent('keydown', {
         key: 'a',
@@ -113,7 +113,7 @@ describe('KeyboardShortcutSetupHandler', () => {
 
       const registerCall = (mockDeps.eventRegistry.register as ReturnType<typeof vi.fn>).mock
         .calls[0];
-      const shortcutHandler = registerCall[3] as (event: KeyboardEvent) => void;
+      const shortcutHandler = registerCall![3] as (event: KeyboardEvent) => void;
 
       const event = new dom.window.KeyboardEvent('keydown', {
         keyCode: 229,
@@ -136,7 +136,7 @@ describe('KeyboardShortcutSetupHandler', () => {
 
       const registerCall = (mockDeps.eventRegistry.register as ReturnType<typeof vi.fn>).mock
         .calls[0];
-      const shortcutHandler = registerCall[3] as (event: KeyboardEvent) => void;
+      const shortcutHandler = registerCall![3] as (event: KeyboardEvent) => void;
 
       const event = new dom.window.KeyboardEvent('keydown', {
         key: 'n',
@@ -164,7 +164,7 @@ describe('KeyboardShortcutSetupHandler', () => {
 
       const registerCall = (mockDeps.eventRegistry.register as ReturnType<typeof vi.fn>).mock
         .calls[0];
-      const shortcutHandler = registerCall[3] as (event: KeyboardEvent) => void;
+      const shortcutHandler = registerCall![3] as (event: KeyboardEvent) => void;
 
       const event = new dom.window.KeyboardEvent('keydown', {
         key: 'Escape',

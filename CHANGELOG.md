@@ -5,6 +5,13 @@ All notable changes to the "Secondary Terminal" extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+### [0.4.7](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v0.4.6...v0.4.7) (2026-04-04)
+
+### Fixed
+
+- **notifications:** skip audio notification for idle waiting type ([72a948f](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/72a948fc068b588fcc617f52e315b5508bec830b))
+- **types:** resolve all TypeScript strict mode errors ([0364783](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/036478393b50d9d4b0f5ff7899f766dddce19f57))
+
 ### [0.4.6](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v0.4.5...v0.4.6) (2026-04-04)
 
 ### Fixed

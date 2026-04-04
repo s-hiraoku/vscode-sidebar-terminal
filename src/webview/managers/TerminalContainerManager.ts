@@ -87,7 +87,10 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
     const resizeCoordinator: IResizeCoordinator = {
       updateSplitResizers:
         'updateSplitResizers' in this.coordinator
-          ? () => (this.coordinator as { updateSplitResizers: () => void }).updateSplitResizers()
+          ? () =>
+              (
+                this.coordinator as unknown as { updateSplitResizers: () => void }
+              ).updateSplitResizers()
           : undefined,
     };
     this.splitLayoutService.setCoordinator(resizeCoordinator);

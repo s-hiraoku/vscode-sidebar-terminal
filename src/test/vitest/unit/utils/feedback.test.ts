@@ -7,6 +7,7 @@ import * as vscode from 'vscode';
 
 import {
   FeedbackManager,
+  // @ts-expect-error - test mock type
   _FeedbackType,
   showSuccess,
   showError,

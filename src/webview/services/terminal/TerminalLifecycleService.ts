@@ -142,7 +142,7 @@ export class TerminalLifecycleService {
       number: terminalNumberToUse,
       searchAddon,
       serializeAddon,
-      renderingOptimizer,
+      renderingOptimizer: renderingOptimizer ?? undefined,
     };
 
     this.dependencies.splitManager.getTerminals().set(terminalId, terminalInstance);

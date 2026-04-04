@@ -373,7 +373,7 @@ export class CliAgentPatternRegistry {
       index++;
       while (
         index < tokens.length &&
-        (this.isEnvironmentAssignment(tokens[index]) || tokens[index].startsWith('-'))
+        (this.isEnvironmentAssignment(tokens[index]) || tokens[index]?.startsWith('-'))
       ) {
         index++;
       }
@@ -483,7 +483,7 @@ export class CliAgentPatternRegistry {
       return secondAt > 0 ? token.slice(0, secondAt) : token;
     }
 
-    return token.split('@')[0];
+    return token.split('@')[0] ?? token;
   }
 
   private matchAgentAlias(token: string): AgentType | null {

@@ -155,6 +155,7 @@ describe('ResizeCoordinator', () => {
       // Trigger resize observer
       if (resizeObserverCallback) {
         resizeObserverCallback(
+          // @ts-expect-error - test mock type
           [
             { contentRect: { width: 800, height: 600 }, target: document.body },
           ] as ResizeObserverEntry[],

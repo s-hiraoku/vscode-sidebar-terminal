@@ -154,7 +154,7 @@ export class LightweightTerminalInitializationCoordinator {
     inputManager.initialize();
 
     const configManager = new ConfigManager();
-    configManager.setFontSettingsService(this.dependencies.fontSettingsService);
+    configManager.setFontSettingsService(this.dependencies.fontSettingsService as any);
 
     const webViewPersistenceService = new WebViewPersistenceService();
     const messageManager = new ConsolidatedMessageManager();
@@ -192,7 +192,10 @@ export class LightweightTerminalInitializationCoordinator {
 
     const sessionRestoreManager = new SessionRestoreManager({
       getTerminalInstance: (id) => this.dependencies.getTerminalInstance(id),
-      createTerminal: (id, name) => this.dependencies.createTerminal(id, name),
+      createTerminal: (id, name) =>
+        this.dependencies.createTerminal(id, name) as Promise<
+          import('@xterm/xterm').Terminal | null
+        >,
       getActiveTerminalId: () => this.dependencies.getActiveTerminalId(),
     });
 
@@ -225,7 +228,7 @@ export class LightweightTerminalInitializationCoordinator {
       inputManager.setupAltKeyVisualFeedback();
       inputManager.setupIMEHandling();
       inputManager.setupKeyboardShortcuts(this.dependencies.managerCoordinator);
-      inputManager.setAgentInteractionMode(false);
+      inputManager.setAgentInteractionMode?.(false);
 
       log('✅ Input manager fully configured');
     } catch (error) {

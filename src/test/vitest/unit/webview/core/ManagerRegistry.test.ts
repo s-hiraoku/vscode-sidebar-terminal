@@ -14,6 +14,7 @@ import { describe, it, expect } from 'vitest';
 import {
   ManagerRegistry,
   IManagerLifecycle,
+  // @ts-expect-error - test mock type
   _ManagerRegistrationOptions,
 } from '../../../../../webview/core/ManagerRegistry';
 
@@ -400,6 +401,7 @@ describe('ManagerRegistry', () => {
         'level3',
         () =>
           createMockManager({
+            // @ts-expect-error - test mock type
             initializeImpl: () => order.push('level3'),
           }),
         { dependsOn: ['level2'] }
@@ -409,6 +411,7 @@ describe('ManagerRegistry', () => {
         'level2',
         () =>
           createMockManager({
+            // @ts-expect-error - test mock type
             initializeImpl: () => order.push('level2'),
           }),
         { dependsOn: ['level1'] }
@@ -416,6 +419,7 @@ describe('ManagerRegistry', () => {
 
       registry.register('level1', () =>
         createMockManager({
+          // @ts-expect-error - test mock type
           initializeImpl: () => order.push('level1'),
         })
       );
@@ -432,6 +436,7 @@ describe('ManagerRegistry', () => {
         'final',
         () =>
           createMockManager({
+            // @ts-expect-error - test mock type
             initializeImpl: () => order.push('final'),
           }),
         { dependsOn: ['dep1', 'dep2'] }
@@ -439,12 +444,14 @@ describe('ManagerRegistry', () => {
 
       registry.register('dep1', () =>
         createMockManager({
+          // @ts-expect-error - test mock type
           initializeImpl: () => order.push('dep1'),
         })
       );
 
       registry.register('dep2', () =>
         createMockManager({
+          // @ts-expect-error - test mock type
           initializeImpl: () => order.push('dep2'),
         })
       );
@@ -461,6 +468,7 @@ describe('ManagerRegistry', () => {
 
       registry.register('base', () =>
         createMockManager({
+          // @ts-expect-error - test mock type
           initializeImpl: () => order.push('base'),
         })
       );
@@ -469,6 +477,7 @@ describe('ManagerRegistry', () => {
         'left',
         () =>
           createMockManager({
+            // @ts-expect-error - test mock type
             initializeImpl: () => order.push('left'),
           }),
         { dependsOn: ['base'] }
@@ -478,6 +487,7 @@ describe('ManagerRegistry', () => {
         'right',
         () =>
           createMockManager({
+            // @ts-expect-error - test mock type
             initializeImpl: () => order.push('right'),
           }),
         { dependsOn: ['base'] }
@@ -487,6 +497,7 @@ describe('ManagerRegistry', () => {
         'top',
         () =>
           createMockManager({
+            // @ts-expect-error - test mock type
             initializeImpl: () => order.push('top'),
           }),
         { dependsOn: ['left', 'right'] }

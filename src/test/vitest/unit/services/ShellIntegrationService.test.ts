@@ -73,7 +73,7 @@ describe('ShellIntegrationService', () => {
       // currentCommand is private, but we can verify it by finishing the command
       service.processTerminalData(termId, '\x1b]633;C;0\x07');
       const history = service.getCommandHistory(termId);
-      expect(history[0].command).toBe('ls -la');
+      expect(history[0]!.command).toBe('ls -la');
     });
 
     it('should detect command completion with exit code', () => {
@@ -86,8 +86,8 @@ describe('ShellIntegrationService', () => {
 
       const history = service.getCommandHistory(termId);
       expect(history).toHaveLength(1);
-      expect(history[0].command).toBe('ls');
-      expect(history[0].exitCode).toBe(0);
+      expect(history[0]!.command).toBe('ls');
+      expect(history[0]!.exitCode).toBe(0);
 
       expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
         'secondaryTerminal.updateShellStatus',

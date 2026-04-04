@@ -22,7 +22,11 @@ describe('MessageProcessor', () => {
   });
 
   it('should not process messages before initialization', async () => {
-    const result = await processor.processMessage({ command: 'test', id: '1', timestamp: 123 });
+    const result = await processor.processMessage({
+      command: 'test',
+      id: '1',
+      timestamp: 123,
+    } as any);
     expect(result.success).toBe(false);
     expect(result.error).toBe('Processor not initialized');
   });
@@ -37,19 +41,19 @@ describe('MessageProcessor', () => {
         command: 'unknown',
         id: '1',
         timestamp: 123,
-      });
+      } as any);
       expect(result.success).toBe(false);
       expect(result.error).toContain('No handler found');
     });
 
     it('should register and execute a handler', async () => {
-      const handler: IMessageHandler = {
+      const handler = {
         getName: () => 'TestHandler',
         getPriority: () => 100,
         getSupportedCommands: () => ['testCommand'],
         canHandle: () => true,
         handle: vi.fn().mockResolvedValue(undefined),
-      };
+      } as unknown as IMessageHandler;
 
       processor.registerHandler(handler);
       expect(processor.hasHandler('testCommand')).toBe(true);
@@ -58,7 +62,7 @@ describe('MessageProcessor', () => {
         command: 'testCommand',
         id: '1',
         timestamp: 123,
-      });
+      } as any);
 
       expect(result.success).toBe(true);
       expect(result.handledBy).toBe('TestHandler');
@@ -67,7 +71,7 @@ describe('MessageProcessor', () => {
 
     it('should respect handler priority', async () => {
       const log: string[] = [];
-      const lowPriorityHandler: IMessageHandler = {
+      const lowPriorityHandler = {
         getName: () => 'Low',
         getPriority: () => 1,
         getSupportedCommands: () => ['cmd'],
@@ -75,8 +79,8 @@ describe('MessageProcessor', () => {
         handle: async () => {
           log.push('low');
         },
-      };
-      const highPriorityHandler: IMessageHandler = {
+      } as unknown as IMessageHandler;
+      const highPriorityHandler = {
         getName: () => 'High',
         getPriority: () => 10,
         getSupportedCommands: () => ['cmd'],
@@ -84,18 +88,18 @@ describe('MessageProcessor', () => {
         handle: async () => {
           log.push('high');
         },
-      };
+      } as unknown as IMessageHandler;
 
       processor.registerHandler(lowPriorityHandler);
       processor.registerHandler(highPriorityHandler);
 
-      await processor.processMessage({ command: 'cmd', id: '1', timestamp: 123 });
+      await processor.processMessage({ command: 'cmd', id: '1', timestamp: 123 } as any);
 
       expect(log).toEqual(['high']); // Highest priority handles first and stops chain if successful
     });
 
     it('should fall back to next handler if first one fails', async () => {
-      const failingHandler: IMessageHandler = {
+      const failingHandler = {
         getName: () => 'Failing',
         getPriority: () => 10,
         getSupportedCommands: () => ['cmd'],
@@ -103,19 +107,23 @@ describe('MessageProcessor', () => {
         handle: async () => {
           throw new Error('First failed');
         },
-      };
-      const fallbackHandler: IMessageHandler = {
+      } as unknown as IMessageHandler;
+      const fallbackHandler = {
         getName: () => 'Fallback',
         getPriority: () => 1,
         getSupportedCommands: () => ['cmd'],
         canHandle: () => true,
         handle: vi.fn().mockResolvedValue(undefined),
-      };
+      } as unknown as IMessageHandler;
 
       processor.registerHandler(failingHandler);
       processor.registerHandler(fallbackHandler);
 
-      const result = await processor.processMessage({ command: 'cmd', id: '1', timestamp: 123 });
+      const result = await processor.processMessage({
+        command: 'cmd',
+        id: '1',
+        timestamp: 123,
+      } as any);
 
       expect(result.success).toBe(true);
       expect(result.handledBy).toBe('Fallback');
@@ -133,7 +141,7 @@ describe('MessageProcessor', () => {
       });
       await timeoutProcessor.initialize(mockCoordinator);
 
-      const slowHandler: IMessageHandler = {
+      const slowHandler = {
         getName: () => 'Slow',
         getPriority: () => 1,
         getSupportedCommands: () => ['slowCmd'],
@@ -143,7 +151,7 @@ describe('MessageProcessor', () => {
         handle: () => {
           return new Promise((resolve) => setTimeout(resolve, 1000));
         },
-      };
+      } as unknown as IMessageHandler;
 
       timeoutProcessor.registerHandler(slowHandler);
 
@@ -151,7 +159,7 @@ describe('MessageProcessor', () => {
         command: 'slowCmd',
         id: '1',
         timestamp: 123,
-      });
+      } as any);
 
       await vi.advanceTimersByTimeAsync(200);
 
@@ -181,7 +189,7 @@ describe('MessageProcessor', () => {
         command: 'any',
         id: '1',
         timestamp: 123,
-      });
+      } as any);
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('Validation failed: Invalid');
@@ -197,7 +205,7 @@ describe('MessageProcessor', () => {
       getSupportedCommands: () => ['c1', 'c2'],
       canHandle: () => true,
       handle: async () => {},
-    });
+    } as unknown as IMessageHandler);
 
     const stats = processor.getStats();
     expect(stats.totalHandlers).toBe(1);

@@ -9,6 +9,7 @@
 import * as vscode from 'vscode';
 import { WebviewMessage } from '../../types/common';
 import { provider as log } from '../../utils/logger';
+import type { WebViewFontSettings, PartialTerminalSettings } from '../../types/shared';
 
 /**
  * Dependencies required by WebViewInitHandler
@@ -16,9 +17,9 @@ import { provider as log } from '../../utils/logger';
 export interface IWebViewInitHandlerDependencies {
   sendMessage(message: WebviewMessage): Promise<void>;
   sendVersionInfo(): void;
-  getCurrentSettings(): Record<string, unknown>;
-  getCurrentFontSettings(): Record<string, unknown>;
-  orchestratorInitialize(): Promise<void>;
+  getCurrentSettings(): PartialTerminalSettings;
+  getCurrentFontSettings(): WebViewFontSettings;
+  orchestratorInitialize(): Promise<unknown>;
   sendFullCliAgentStateSync(): void;
   initializeTerminal(): Promise<void>;
   startPendingWatchdogs(isInitialized: boolean): void;

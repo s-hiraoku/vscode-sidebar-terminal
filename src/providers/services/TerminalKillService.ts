@@ -8,6 +8,7 @@
 import * as vscode from 'vscode';
 import { provider as log } from '../../utils/logger';
 import { WebviewMessage } from '../../types/common';
+import type { TerminalState } from '../../types/shared';
 
 /**
  * Dependencies required by TerminalKillService
@@ -16,7 +17,7 @@ export interface ITerminalKillDependencies {
   getActiveTerminalId(): string | null;
   getTerminal(terminalId: string): { name?: string } | undefined;
   killTerminal(terminalId: string): Promise<void>;
-  getCurrentState(): unknown;
+  getCurrentState(): TerminalState;
   sendMessage(message: WebviewMessage): Promise<void>;
 }
 

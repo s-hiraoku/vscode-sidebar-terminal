@@ -175,6 +175,7 @@ class MockJapaneseIME {
 
     // Simulate incremental composition updates
     for (let i = 1; i < sequence.length; i++) {
+      // @ts-expect-error - test mock type
       this.dispatchCompositionEvent('compositionupdate', sequence[i]);
     }
 
@@ -470,6 +471,7 @@ describe('Japanese IME Input Handling TDD Test Suite', () => {
           '今日は',
         ];
 
+        // @ts-expect-error - test mock type
         japaneseIME.dispatchCompositionEvent('compositionstart', stages[0]);
 
         stages.slice(1).forEach((stage) => {

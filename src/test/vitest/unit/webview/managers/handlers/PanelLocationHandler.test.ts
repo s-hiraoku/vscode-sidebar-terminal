@@ -80,6 +80,7 @@ describe('PanelLocationHandler', () => {
       }),
     };
 
+    // @ts-expect-error - test mock type
     handler = new PanelLocationHandler(mockMessageQueue, mockLogger);
   });
 

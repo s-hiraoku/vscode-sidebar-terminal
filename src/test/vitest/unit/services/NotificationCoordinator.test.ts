@@ -110,6 +110,24 @@ describe('NotificationCoordinator', () => {
       expect(mockNative.notifyWaiting).not.toHaveBeenCalled();
     });
 
+    it('should NOT play audio notification for idle waiting type', () => {
+      coordinator.notifyWaiting('terminal-1', 'idle');
+
+      expect(mockAudio.playNotification).not.toHaveBeenCalled();
+    });
+
+    it('should play audio notification for input waiting type', () => {
+      coordinator.notifyWaiting('terminal-1', 'input');
+
+      expect(mockAudio.playNotification).toHaveBeenCalledWith('terminal-1');
+    });
+
+    it('should play audio notification for approval waiting type', () => {
+      coordinator.notifyWaiting('terminal-1', 'approval');
+
+      expect(mockAudio.playNotification).toHaveBeenCalledWith('terminal-1');
+    });
+
     it('should not call services after dispose', () => {
       coordinator.dispose();
       coordinator.notifyWaiting('terminal-1', 'input');

@@ -265,6 +265,20 @@ export class TerminalAutoSaveService {
   }
 
   /**
+   * Clear restoration state for a terminal immediately.
+   */
+  public static clearTerminalRestorationState(terminalId: string): void {
+    TerminalAutoSaveService.restoringTerminals.delete(terminalId);
+  }
+
+  /**
+   * Clear all restoration state.
+   */
+  public static clearAllRestorationState(): void {
+    TerminalAutoSaveService.restoringTerminals.clear();
+  }
+
+  /**
    * Setup automatic scrollback save on terminal output (VS Code standard approach)
    */
   public setupScrollbackAutoSave(

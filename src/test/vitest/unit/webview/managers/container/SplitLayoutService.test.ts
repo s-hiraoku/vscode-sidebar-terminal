@@ -81,8 +81,10 @@ describe('SplitLayoutService', () => {
 
       const wrappers = wrapper.querySelectorAll('.terminal-split-wrapper');
       expect(wrappers.length).toBe(2);
-      expect(wrappers[0].contains(t1)).toBe(true);
-      expect(wrappers[1].contains(t2)).toBe(true);
+      // @ts-expect-error - test mock type
+      expect(wrappers![0].contains(t1)).toBe(true);
+      // @ts-expect-error - test mock type
+      expect(wrappers![1].contains(t2)).toBe(true);
 
       expect(t1.classList.contains('terminal-container--split')).toBe(true);
     });
@@ -105,10 +107,14 @@ describe('SplitLayoutService', () => {
       let wrapper = document.getElementById('terminals-wrapper')!;
       let resizers = wrapper.querySelectorAll('.split-resizer');
       expect(resizers.length).toBe(2);
-      expect(resizers[0].getAttribute('data-resizer-before')).toBe('term-1');
-      expect(resizers[0].getAttribute('data-resizer-after')).toBe('term-2');
-      expect(resizers[1].getAttribute('data-resizer-before')).toBe('term-2');
-      expect(resizers[1].getAttribute('data-resizer-after')).toBe('term-3');
+      // @ts-expect-error - test mock type
+      expect(resizers![0].getAttribute('data-resizer-before')).toBe('term-1');
+      // @ts-expect-error - test mock type
+      expect(resizers![0].getAttribute('data-resizer-after')).toBe('term-2');
+      // @ts-expect-error - test mock type
+      expect(resizers![1].getAttribute('data-resizer-before')).toBe('term-2');
+      // @ts-expect-error - test mock type
+      expect(resizers![1].getAttribute('data-resizer-after')).toBe('term-3');
 
       service.activateSplitLayout(terminalBody, ['term-3', 'term-1', 'term-2'], 'vertical', (id) =>
         containers.get(id)
@@ -117,10 +123,14 @@ describe('SplitLayoutService', () => {
       wrapper = document.getElementById('terminals-wrapper')!;
       resizers = wrapper.querySelectorAll('.split-resizer');
       expect(resizers.length).toBe(2);
-      expect(resizers[0].getAttribute('data-resizer-before')).toBe('term-3');
-      expect(resizers[0].getAttribute('data-resizer-after')).toBe('term-1');
-      expect(resizers[1].getAttribute('data-resizer-before')).toBe('term-1');
-      expect(resizers[1].getAttribute('data-resizer-after')).toBe('term-2');
+      // @ts-expect-error - test mock type
+      expect(resizers![0].getAttribute('data-resizer-before')).toBe('term-3');
+      // @ts-expect-error - test mock type
+      expect(resizers![0].getAttribute('data-resizer-after')).toBe('term-1');
+      // @ts-expect-error - test mock type
+      expect(resizers![1].getAttribute('data-resizer-before')).toBe('term-1');
+      // @ts-expect-error - test mock type
+      expect(resizers![1].getAttribute('data-resizer-after')).toBe('term-2');
     });
 
     it('should insert resizers between terminals with correct attributes', () => {
@@ -140,8 +150,10 @@ describe('SplitLayoutService', () => {
       const resizers = wrapper.querySelectorAll('.split-resizer');
 
       expect(resizers.length).toBe(1);
-      expect(resizers[0].getAttribute('data-resizer-before')).toBe('term-1');
-      expect(resizers[0].getAttribute('data-resizer-after')).toBe('term-2');
+      // @ts-expect-error - test mock type
+      expect(resizers![0].getAttribute('data-resizer-before')).toBe('term-1');
+      // @ts-expect-error - test mock type
+      expect(resizers![0].getAttribute('data-resizer-after')).toBe('term-2');
     });
 
     it('should sync terminals-wrapper class with split direction', () => {

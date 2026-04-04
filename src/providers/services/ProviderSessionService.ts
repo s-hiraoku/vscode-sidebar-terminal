@@ -9,6 +9,7 @@ import { provider as log } from '../../utils/logger';
 import { safeProcessCwd } from '../../utils/common';
 import { WebviewMessage } from '../../types/common';
 import { TIMING_CONSTANTS } from '../../constants/TimingConstants';
+import type { WebViewFontSettings } from '../../types/shared';
 
 /**
  * Dependencies required by ProviderSessionService
@@ -37,7 +38,7 @@ export interface IProviderSessionDependencies {
   sendMessage(message: WebviewMessage): Promise<void>;
 
   // Settings
-  getCurrentFontSettings(): Record<string, unknown>;
+  getCurrentFontSettings(): WebViewFontSettings;
 }
 
 export class ProviderSessionService {

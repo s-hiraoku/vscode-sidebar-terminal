@@ -46,6 +46,7 @@ describe('CliAgentMessageController', () => {
     it('should update status using provided terminalId', () => {
       const msg: MessageCommand = {
         command: 'statusUpdate',
+        // @ts-expect-error - test mock type
         cliAgentStatus: {
           terminalId: 'term-1',
           status: 'connected',
@@ -68,6 +69,7 @@ describe('CliAgentMessageController', () => {
     it('should extract terminalId from activeTerminalName if terminalId missing', () => {
       const msg: MessageCommand = {
         command: 'statusUpdate',
+        // @ts-expect-error - test mock type
         cliAgentStatus: {
           status: 'connected',
           activeTerminalName: 'Terminal 2',
@@ -83,6 +85,7 @@ describe('CliAgentMessageController', () => {
       // simulate extracted ID being empty or relying on fallback logic
       const msg: MessageCommand = {
         command: 'statusUpdate',
+        // @ts-expect-error - test mock type
         cliAgentStatus: {
           status: 'connected',
           activeTerminalName: '', // Empty name
@@ -115,6 +118,7 @@ describe('CliAgentMessageController', () => {
           command: 'statusUpdate',
           cliAgentStatus: {
             terminalId: 'term-1',
+            // @ts-expect-error - test mock type
             status: input,
           },
         };
@@ -126,6 +130,7 @@ describe('CliAgentMessageController', () => {
     it('should handle errors gracefully', () => {
       const msg: MessageCommand = {
         command: 'statusUpdate',
+        // @ts-expect-error - test mock type
         cliAgentStatus: { terminalId: 'term-1', status: 'connected' },
       };
       const error = new Error('Update failed');

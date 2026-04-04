@@ -360,6 +360,7 @@ describe('DebugPanelManager', () => {
         'debug-uptime': { textContent: '' },
       };
 
+      // @ts-expect-error - test mock type
       mockDocument.getElementById.mockImplementation((id: string) => mockElements[id] || null);
 
       manager.incrementStateUpdates();
@@ -442,10 +443,15 @@ describe('DebugPanelManager', () => {
       manager.toggle();
       const state = createMockTerminalState({
         terminals: [
+          // @ts-expect-error - test mock type
           { id: 'terminal-1', isActive: true, number: 1 },
+          // @ts-expect-error - test mock type
           { id: 'terminal-2', isActive: false, number: 2 },
+          // @ts-expect-error - test mock type
           { id: 'terminal-3', isActive: false, number: 3 },
+          // @ts-expect-error - test mock type
           { id: 'terminal-4', isActive: false, number: 4 },
+          // @ts-expect-error - test mock type
           { id: 'terminal-5', isActive: false, number: 5 },
         ],
         availableSlots: [],

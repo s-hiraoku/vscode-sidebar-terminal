@@ -110,21 +110,24 @@ describe('NativeNotificationService', () => {
         setPlatform('darwin');
         service.notifyWaiting('terminal-1', 'Title', 'Waiting for approval');
         expect(mockExecFile).toHaveBeenCalledTimes(1);
-        let args = mockExecFile.mock.calls[0][1] as string[];
+        // @ts-expect-error - test mock type
+        let args = mockExecFile!.mock.calls[0][1] as string[];
         let script = args[args.indexOf('-e') + 1];
         expect(script).toContain('activate');
 
         vi.advanceTimersByTime(10000);
         service.notifyWaiting('terminal-1', 'Title', 'Waiting for approval again');
         expect(mockExecFile).toHaveBeenCalledTimes(2);
-        args = mockExecFile.mock.calls[1][1] as string[];
+        // @ts-expect-error - test mock type
+        args = mockExecFile!.mock.calls[1][1] as string[];
         script = args[args.indexOf('-e') + 1];
         expect(script).not.toContain('activate');
 
         vi.advanceTimersByTime(10000);
         service.notifyWaiting('terminal-1', 'Title', 'Waiting for approval after clear');
         expect(mockExecFile).toHaveBeenCalledTimes(3);
-        args = mockExecFile.mock.calls[2][1] as string[];
+        // @ts-expect-error - test mock type
+        args = mockExecFile!.mock.calls[2][1] as string[];
         script = args[args.indexOf('-e') + 1];
         expect(script).not.toContain('activate');
 
@@ -132,7 +135,8 @@ describe('NativeNotificationService', () => {
         vi.advanceTimersByTime(10000);
         service.notifyWaiting('terminal-1', 'Title', 'Waiting for approval after terminal clear');
         expect(mockExecFile).toHaveBeenCalledTimes(4);
-        args = mockExecFile.mock.calls[3][1] as string[];
+        // @ts-expect-error - test mock type
+        args = mockExecFile!.mock.calls[3][1] as string[];
         script = args[args.indexOf('-e') + 1];
         expect(script).toContain('activate');
       });
@@ -141,21 +145,24 @@ describe('NativeNotificationService', () => {
         setPlatform('darwin');
         service.notifyWaiting('terminal-1', 'Title', 'Waiting for input');
         expect(mockExecFile).toHaveBeenCalledTimes(1);
-        let args = mockExecFile.mock.calls[0][1] as string[];
+        // @ts-expect-error - test mock type
+        let args = mockExecFile!.mock.calls[0][1] as string[];
         let script = args[args.indexOf('-e') + 1];
         expect(script).toContain('activate');
 
         vi.advanceTimersByTime(10000);
         service.notifyWaiting('terminal-1', 'Title', 'Waiting for input again');
         expect(mockExecFile).toHaveBeenCalledTimes(2);
-        args = mockExecFile.mock.calls[1][1] as string[];
+        // @ts-expect-error - test mock type
+        args = mockExecFile!.mock.calls[1][1] as string[];
         script = args[args.indexOf('-e') + 1];
         expect(script).not.toContain('activate');
 
         vi.advanceTimersByTime(10000);
         service.notifyWaiting('terminal-1', 'Title', 'Waiting for input after clear');
         expect(mockExecFile).toHaveBeenCalledTimes(3);
-        args = mockExecFile.mock.calls[2][1] as string[];
+        // @ts-expect-error - test mock type
+        args = mockExecFile!.mock.calls[2][1] as string[];
         script = args[args.indexOf('-e') + 1];
         expect(script).not.toContain('activate');
 
@@ -163,7 +170,8 @@ describe('NativeNotificationService', () => {
         vi.advanceTimersByTime(10000);
         service.notifyWaiting('terminal-1', 'Title', 'Waiting for input after terminal clear');
         expect(mockExecFile).toHaveBeenCalledTimes(4);
-        args = mockExecFile.mock.calls[3][1] as string[];
+        // @ts-expect-error - test mock type
+        args = mockExecFile!.mock.calls[3][1] as string[];
         script = args[args.indexOf('-e') + 1];
         expect(script).toContain('activate');
       });
@@ -176,7 +184,8 @@ describe('NativeNotificationService', () => {
         vi.advanceTimersByTime(10000);
         service.notifyCompleted('terminal-1', 'Title', 'Completed');
         expect(mockExecFile).toHaveBeenCalledTimes(2);
-        const args = mockExecFile.mock.calls[1][1] as string[];
+        // @ts-expect-error - test mock type
+        const args = mockExecFile!.mock.calls[1][1] as string[];
         const script = args[args.indexOf('-e') + 1];
         expect(script).toContain('activate');
       });
@@ -186,7 +195,8 @@ describe('NativeNotificationService', () => {
         service.notifyIdle('terminal-1', 'Title', 'CLI Agent is idle');
 
         expect(mockExecFile).toHaveBeenCalledTimes(1);
-        const args = mockExecFile.mock.calls[0][1] as string[];
+        // @ts-expect-error - test mock type
+        const args = mockExecFile!.mock.calls[0][1] as string[];
         const script = args[args.indexOf('-e') + 1];
         expect(script).toContain('display notification');
         expect(script).not.toContain('activate');
@@ -199,7 +209,8 @@ describe('NativeNotificationService', () => {
 
         service.notifyWaiting('terminal-1', 'Title', 'Waiting for input');
         expect(mockExecFile).toHaveBeenCalledTimes(2);
-        const args = mockExecFile.mock.calls[1][1] as string[];
+        // @ts-expect-error - test mock type
+        const args = mockExecFile!.mock.calls[1][1] as string[];
         const script = args[args.indexOf('-e') + 1];
         expect(script).toContain('activate');
       });
@@ -216,7 +227,8 @@ describe('NativeNotificationService', () => {
           expect.arrayContaining(['-e']),
           expect.any(Function)
         );
-        const args = mockExecFile.mock.calls[0][1] as string[];
+        // @ts-expect-error - test mock type
+        const args = mockExecFile!.mock.calls[0][1] as string[];
         const script = args[args.indexOf('-e') + 1];
         expect(script).toContain('display notification');
         expect(script).toContain('activate');
@@ -224,7 +236,8 @@ describe('NativeNotificationService', () => {
 
       it('should include title and message in osascript command', () => {
         service.notifyWaiting('terminal-1', 'Agent Waiting', 'Claude is waiting for input');
-        const args = mockExecFile.mock.calls[0][1] as string[];
+        // @ts-expect-error - test mock type
+        const args = mockExecFile!.mock.calls[0][1] as string[];
         const script = args[args.indexOf('-e') + 1];
         expect(script).toContain('Agent Waiting');
         expect(script).toContain('Claude is waiting for input');
@@ -232,7 +245,8 @@ describe('NativeNotificationService', () => {
 
       it('should sanitize special characters', () => {
         service.notifyWaiting('terminal-1', 'Test "Title"', 'Message with \\ backslash');
-        const args = mockExecFile.mock.calls[0][1] as string[];
+        // @ts-expect-error - test mock type
+        const args = mockExecFile!.mock.calls[0][1] as string[];
         const script = args[args.indexOf('-e') + 1];
         expect(script).not.toContain('"Title"');
       });
@@ -240,7 +254,8 @@ describe('NativeNotificationService', () => {
       it('should skip activation when activateWindow is disabled', () => {
         setDefaultConfig({ 'nativeNotification.activateWindow': false });
         service.notifyWaiting('terminal-1', 'Title', 'Message');
-        const args = mockExecFile.mock.calls[0][1] as string[];
+        // @ts-expect-error - test mock type
+        const args = mockExecFile!.mock.calls[0][1] as string[];
         const script = args[args.indexOf('-e') + 1];
         expect(script).toContain('display notification');
         expect(script).not.toContain('activate');
@@ -262,7 +277,8 @@ describe('NativeNotificationService', () => {
 
       it('should include activation when enabled', () => {
         service.notifyWaiting('terminal-1', 'Title', 'Message');
-        const args = mockExecFile.mock.calls[0][1] as string[];
+        // @ts-expect-error - test mock type
+        const args = mockExecFile!.mock.calls[0][1] as string[];
         const script = args[args.indexOf('-Command') + 1];
         expect(script).toContain('SetForegroundWindow');
       });
@@ -270,7 +286,8 @@ describe('NativeNotificationService', () => {
       it('should skip activation when disabled', () => {
         setDefaultConfig({ 'nativeNotification.activateWindow': false });
         service.notifyWaiting('terminal-1', 'Title', 'Message');
-        const args = mockExecFile.mock.calls[0][1] as string[];
+        // @ts-expect-error - test mock type
+        const args = mockExecFile!.mock.calls[0][1] as string[];
         const script = args[args.indexOf('-Command') + 1];
         expect(script).not.toContain('SetForegroundWindow');
       });

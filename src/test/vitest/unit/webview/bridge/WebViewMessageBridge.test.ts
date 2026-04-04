@@ -28,6 +28,7 @@ describe('WebViewMessageBridge', () => {
   describe('Message Sending', () => {
     it('should send message to extension', () => {
       const msg = { command: 'test' };
+      // @ts-expect-error - test mock type
       bridge.sendMessage(msg);
       expect(mockVscodeApi.postMessage).toHaveBeenCalledWith(msg);
     });
@@ -52,6 +53,7 @@ describe('WebViewMessageBridge', () => {
       bridge.registerHandler('cmd', handler);
 
       const msg = { command: 'cmd' };
+      // @ts-expect-error - test mock type
       const result = await bridge.processMessage(msg);
 
       expect(result.success).toBe(true);
@@ -59,6 +61,7 @@ describe('WebViewMessageBridge', () => {
     });
 
     it('should return failure if no handler registered', async () => {
+      // @ts-expect-error - test mock type
       const result = await bridge.processMessage({ command: 'unknown' });
       expect(result.success).toBe(false);
       expect(result.error).toContain('No handler registered');
@@ -68,6 +71,7 @@ describe('WebViewMessageBridge', () => {
       const handler = vi.fn().mockRejectedValue(new Error('Fail'));
       bridge.registerHandler('fail', handler);
 
+      // @ts-expect-error - test mock type
       const result = await bridge.processMessage({ command: 'fail' });
       expect(result.success).toBe(false);
       expect(result.error).toBe('Fail');

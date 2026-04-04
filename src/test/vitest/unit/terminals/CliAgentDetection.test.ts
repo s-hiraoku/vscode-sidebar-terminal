@@ -130,6 +130,7 @@ describe.skip('CliAgentDetection in Terminal Manager', () => {
 
     // Setup CLI Agent status change spy
     cliAgentStatusSpy = vi.fn();
+    // @ts-expect-error - test mock type
     terminalManager.onCliAgentStatusChange(cliAgentStatusSpy);
 
     // Clear all spies
@@ -155,7 +156,7 @@ describe.skip('CliAgentDetection in Terminal Manager', () => {
       // Assert
       expect(cliAgentStatusSpy).toHaveBeenCalledTimes(1);
       const call = cliAgentStatusSpy.mock.calls[0];
-      expect(call[0]).toMatchObject({
+      expect(call![0]).toMatchObject({
         terminalId,
         isActive: true,
       });
@@ -310,7 +311,7 @@ describe.skip('CliAgentDetection in Terminal Manager', () => {
       expect(terminalManager.isCliAgentConnected(terminalId)).toBe(false);
       expect(cliAgentStatusSpy).toHaveBeenCalledTimes(1);
       const call = cliAgentStatusSpy.mock.calls[0];
-      expect(call[0]).toMatchObject({
+      expect(call![0]).toMatchObject({
         terminalId,
         isActive: false,
       });

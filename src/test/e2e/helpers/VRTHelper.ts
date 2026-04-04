@@ -250,7 +250,7 @@ export class VRTHelper {
             }
 
             // Parse the escape codes
-            const codes = match[1].split(';');
+            const codes = match[1]!.split(';');
             for (const code of codes) {
               if (code === '0') {
                 currentStyle = [];

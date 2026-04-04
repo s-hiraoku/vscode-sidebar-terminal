@@ -320,6 +320,7 @@ describe('LightweightTerminalWebviewManager', () => {
         focus: vi.fn(),
       });
       displayMode.getCurrentMode.mockReturnValue('split');
+      // @ts-expect-error - test mock type
       splitManager.getIsSplitMode.mockReturnValue(true);
 
       (manager as any).setForceNormalModeForNextCreate(true);
@@ -511,6 +512,7 @@ describe('LightweightTerminalWebviewManager', () => {
       const theme = { background: '#000000', foreground: '#ffffff' };
       manager.updateAllTerminalThemes(theme as any);
 
+      // @ts-expect-error - test mock type
       expect(mockTerminal.options.theme).toEqual(theme);
     });
 

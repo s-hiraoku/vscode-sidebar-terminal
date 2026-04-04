@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { VSCodeCommandHandler } from '../../../../../../../webview/managers/input/handlers/VSCodeCommandHandler';
 import { TerminalOperationsService } from '../../../../../../../webview/managers/input/services/TerminalOperationsService';
+// @ts-expect-error - test mock type
 import { IManagerCoordinator } from '../../../../../../../interfaces/ManagerInterfaces';
 
 describe('VSCodeCommandHandler', () => {

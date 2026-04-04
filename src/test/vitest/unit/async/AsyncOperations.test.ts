@@ -197,7 +197,7 @@ describe('Async Operations', () => {
       const messagePromise = communicator.sendMessageWithTimeout({ command: 'getSettings' }, 1000);
 
       // Simulate response immediately
-      const sentMessage = mockWebview.postMessage.mock.calls[0][0];
+      const sentMessage = mockWebview.postMessage.mock.calls[0]![0];
       setTimeout(() => {
         communicator.handleResponse({
           requestId: sentMessage.requestId,

@@ -82,6 +82,7 @@ describe('WebviewCoordinator', () => {
         sessionController: sessionController as any,
         cliAgentController: cliAgentController as any,
       },
+      // @ts-expect-error - test mock type
       logger
     );
   });

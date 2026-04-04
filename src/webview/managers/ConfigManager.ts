@@ -472,17 +472,15 @@ export class ConfigManager implements IConfigManager {
     style: 'block' | 'underline' | 'bar';
     blink: boolean;
   } {
+    const defaultStyle = this.DEFAULTS.cursor?.style ?? 'block';
+    const defaultBlink = this.DEFAULTS.cursor?.blink ?? true;
     if (cursor && typeof cursor === 'object') {
       return {
-        style: Validators.stringInList(
-          cursor.style,
-          AllowedValues.CURSOR_STYLE,
-          this.DEFAULTS.cursor.style
-        ),
-        blink: Validators.boolean(cursor.blink, this.DEFAULTS.cursor.blink),
+        style: Validators.stringInList(cursor.style, AllowedValues.CURSOR_STYLE, defaultStyle),
+        blink: Validators.boolean(cursor.blink, defaultBlink),
       };
     }
-    return this.DEFAULTS.cursor;
+    return { style: defaultStyle, blink: defaultBlink };
   }
 
   /**

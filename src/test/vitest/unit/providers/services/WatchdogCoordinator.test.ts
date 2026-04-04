@@ -46,6 +46,7 @@ describe('WatchdogCoordinator', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     deps = createMockDeps();
+    // @ts-expect-error - test mock type
     coordinator = new WatchdogCoordinator(deps, ackOptions, promptOptions);
   });
 

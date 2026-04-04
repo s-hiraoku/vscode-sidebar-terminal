@@ -202,8 +202,9 @@ export class IntegratedSecondaryTerminalProvider
 
     try {
       // Set up persistence service with webview communication
-      (this.persistenceService as UnifiedTerminalPersistenceService).setSidebarProvider({
-        sendMessageToWebview: (message) => this.sendMessageToWebview(message),
+      this.persistenceService.setSidebarProvider({
+        sendMessageToWebview: (message: unknown) =>
+          this.sendMessageToWebview(message as WebviewMessage),
       });
 
       // Set up terminal event listeners
@@ -305,7 +306,7 @@ export class IntegratedSecondaryTerminalProvider
       // Send session info through the message handler instead
       await this.sendMessageToWebview({
         command: 'sessionRestored',
-        data: sessionInfo as unknown,
+        data: sessionInfo as any,
       });
 
       // Attempt to restore session
@@ -314,7 +315,9 @@ export class IntegratedSecondaryTerminalProvider
       if (restoreResult.success) {
         log(`✅ [PROVIDER] Session restored: ${restoreResult.restoredCount} terminals`);
       } else {
-        log(`⚠️ [PROVIDER] Session restore failed: ${restoreResult.error?.message}`);
+        log(
+          `⚠️ [PROVIDER] Session restore failed: ${restoreResult.error instanceof Error ? restoreResult.error.message : restoreResult.error}`
+        );
       }
     } else {
       log('📑 [PROVIDER] No previous session found');

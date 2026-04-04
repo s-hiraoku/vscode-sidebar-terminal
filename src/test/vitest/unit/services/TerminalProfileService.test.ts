@@ -85,6 +85,7 @@ describe('TerminalProfileService', () => {
       };
 
       // Mock getConfiguration to return different configs based on section
+      // @ts-expect-error - test mock type
       mocks.getConfigurationMock.mockImplementation((section: string) => {
         return {
           get: (key: string, defaultValue: any) => {
@@ -134,6 +135,7 @@ describe('TerminalProfileService', () => {
       const profiles = { Custom: { path: '/bin/custom' } };
 
       mocks.getConfigurationMock.mockReturnValue({
+        // @ts-expect-error - test mock type
         get: (key: string) => (key === 'profiles.linux' ? profiles : undefined),
         update: vi.fn(),
       });
@@ -149,6 +151,7 @@ describe('TerminalProfileService', () => {
       service = new TerminalProfileService();
       const profiles = { Default: { path: '/bin/default' } };
 
+      // @ts-expect-error - test mock type
       mocks.getConfigurationMock.mockImplementation((_section: string) => ({
         get: (key: string) => {
           if (key === 'profiles.linux') return profiles;
@@ -168,6 +171,7 @@ describe('TerminalProfileService', () => {
       service = new TerminalProfileService();
       const profiles = { First: { path: '/bin/first' } };
 
+      // @ts-expect-error - test mock type
       mocks.getConfigurationMock.mockImplementation((_section: string) => ({
         get: (key: string) => {
           if (key === 'profiles.linux') return profiles;
@@ -185,6 +189,7 @@ describe('TerminalProfileService', () => {
     it('should create fallback profile if nothing configured', async () => {
       service = new TerminalProfileService();
       mocks.getConfigurationMock.mockReturnValue({
+        // @ts-expect-error - test mock type
         get: (_key: string, defaultValue: any) => defaultValue,
         update: vi.fn(),
       });

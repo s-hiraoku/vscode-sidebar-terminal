@@ -220,6 +220,7 @@ describe('SettingsSyncService', () => {
         panelLocation: 'sidebar',
       };
 
+      // @ts-expect-error - test mock type
       await service.updateSettings(settingsToUpdate);
 
       expect(mockUnifiedConfig.update).toHaveBeenCalledWith(

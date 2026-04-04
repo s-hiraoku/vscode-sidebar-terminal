@@ -320,6 +320,7 @@ describe('TerminalLifecycleMessageHandler', () => {
 
       handler.handleMessage(message, mockCoordinator);
 
+      // @ts-expect-error - test mock type
       expect(mockCoordinator.setForceNormalModeForNextCreate).toHaveBeenCalledWith(true);
       const displayModeManager = (mockCoordinator as any).getDisplayModeManager();
       expect(displayModeManager.setDisplayMode).toHaveBeenCalledWith('normal');

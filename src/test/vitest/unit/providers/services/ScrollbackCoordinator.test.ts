@@ -87,8 +87,10 @@ describe('ScrollbackCoordinator', () => {
       const promise = coordinator.requestMultipleScrollbackData(['t1', 't2']);
 
       // Simulate responses
-      const req1 = mockSendMessage.mock.calls.find((c) => c[0].terminalId === 't1')[0].requestId;
-      const req2 = mockSendMessage.mock.calls.find((c) => c[0].terminalId === 't2')[0].requestId;
+      const req1 = mockSendMessage.mock.calls.find((c: any) => c[0].terminalId === 't1')[0]
+        .requestId;
+      const req2 = mockSendMessage.mock.calls.find((c: any) => c[0].terminalId === 't2')[0]
+        .requestId;
 
       coordinator.handleScrollbackDataResponse({
         requestId: req1,
