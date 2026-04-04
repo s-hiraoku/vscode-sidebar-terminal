@@ -99,14 +99,12 @@ describe('NotificationCoordinator', () => {
       );
     });
 
-    it('should use correct label for idle waiting type', () => {
+    it('should only send toast for idle waiting type (no audio, no native)', () => {
       coordinator.notifyWaiting('terminal-1', 'idle');
 
-      expect(mockNative.notifyIdle).toHaveBeenCalledWith(
-        'terminal-1',
-        'Sidebar Terminal',
-        expect.stringContaining('idle')
-      );
+      expect(mockToast.showWaitingNotification).toHaveBeenCalledWith('terminal-1', 'idle');
+      expect(mockAudio.playNotification).not.toHaveBeenCalled();
+      expect(mockNative.notifyIdle).not.toHaveBeenCalled();
       expect(mockNative.notifyWaiting).not.toHaveBeenCalled();
     });
 
@@ -114,6 +112,13 @@ describe('NotificationCoordinator', () => {
       coordinator.notifyWaiting('terminal-1', 'idle');
 
       expect(mockAudio.playNotification).not.toHaveBeenCalled();
+    });
+
+    it('should NOT send native notification for idle waiting type', () => {
+      coordinator.notifyWaiting('terminal-1', 'idle');
+
+      expect(mockNative.notifyIdle).not.toHaveBeenCalled();
+      expect(mockNative.notifyWaiting).not.toHaveBeenCalled();
     });
 
     it('should play audio notification for input waiting type', () => {
