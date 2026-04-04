@@ -158,18 +158,9 @@ describe('TerminalLinkManager', () => {
   describe('Link Detection', () => {
     it('should detect absolute file paths', () => {
       const mockTerminal = createMockTerminal(['/path/to/file.ts']);
-      let _capturedCallback: ((links: ILink[]) => void) | null = null;
-
-      vi.mocked(mockTerminal.registerLinkProvider).mockImplementation((provider) => {
-        provider.provideLinks(1, (links) => {
-          _capturedCallback = () => links!;
-        });
-        return { dispose: vi.fn() };
-      });
 
       manager.registerTerminalLinkHandlers(mockTerminal, 'terminal-1');
 
-      // The provideLinks callback should be called during registration
       expect(mockTerminal.registerLinkProvider).toHaveBeenCalled();
     });
 

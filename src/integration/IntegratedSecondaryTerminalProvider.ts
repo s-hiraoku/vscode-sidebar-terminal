@@ -306,7 +306,7 @@ export class IntegratedSecondaryTerminalProvider
       // Send session info through the message handler instead
       await this.sendMessageToWebview({
         command: 'sessionRestored',
-        data: sessionInfo as unknown as string,
+        data: sessionInfo as any,
       });
 
       // Attempt to restore session
