@@ -14,7 +14,7 @@ export class CliAgentIdleDetector implements vscode.Disposable {
 
   private getTimeoutMs(): number {
     const config = vscode.workspace.getConfiguration(SETTING_PREFIX);
-    const value = config.get<number>('agentIdleDetection.timeoutMs', 3000);
+    const value = config.get<number>('agentIdleDetection.timeoutMs', 10000);
     return Math.max(1000, Math.min(30000, value));
   }
 

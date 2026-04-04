@@ -30,7 +30,7 @@ vi.mock('vscode', () => ({
 
 function setDefaultConfig(overrides: Record<string, any> = {}) {
   const settings: Record<string, any> = {
-    'agentIdleDetection.timeoutMs': 3000,
+    'agentIdleDetection.timeoutMs': 10000,
     ...overrides,
   };
   mockGetConfig.mockReturnValue({
@@ -65,7 +65,7 @@ describe('CliAgentIdleDetector', () => {
       stateStore.onAgentWaitingChange(spy);
 
       detector.resetTimer('terminal-1');
-      vi.advanceTimersByTime(3000);
+      vi.advanceTimersByTime(10000);
 
       expect(spy).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -82,17 +82,17 @@ describe('CliAgentIdleDetector', () => {
       stateStore.onAgentWaitingChange(spy);
 
       detector.resetTimer('terminal-1');
-      vi.advanceTimersByTime(2000);
+      vi.advanceTimersByTime(7000);
 
       // More output arrives, resets timer
       detector.resetTimer('terminal-1');
-      vi.advanceTimersByTime(2000);
+      vi.advanceTimersByTime(7000);
 
-      // Only 2s since last reset, not yet 3s
+      // Only 7s since last reset, not yet 10s
       expect(spy).not.toHaveBeenCalled();
 
       // Now complete the timeout
-      vi.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(3000);
       expect(spy).toHaveBeenCalledTimes(1);
     });
 
@@ -101,7 +101,7 @@ describe('CliAgentIdleDetector', () => {
       stateStore.onAgentWaitingChange(spy);
 
       detector.resetTimer('terminal-1');
-      vi.advanceTimersByTime(3000);
+      vi.advanceTimersByTime(10000);
 
       expect(spy).not.toHaveBeenCalled();
     });
@@ -112,12 +112,12 @@ describe('CliAgentIdleDetector', () => {
       stateStore.onAgentWaitingChange(spy);
 
       detector.resetTimer('terminal-1');
-      vi.advanceTimersByTime(3000);
+      vi.advanceTimersByTime(10000);
       expect(spy).toHaveBeenCalledTimes(1);
 
       // Timer fires again — should not duplicate due to redundancy prevention
       detector.resetTimer('terminal-1');
-      vi.advanceTimersByTime(3000);
+      vi.advanceTimersByTime(10000);
       expect(spy).toHaveBeenCalledTimes(1);
     });
 
@@ -143,7 +143,7 @@ describe('CliAgentIdleDetector', () => {
       stateStore.onAgentWaitingChange((e) => events.push(e));
 
       detector.resetTimer('terminal-1');
-      vi.advanceTimersByTime(3000);
+      vi.advanceTimersByTime(10000);
 
       // Agent becomes idle
       expect(events).toHaveLength(1);
