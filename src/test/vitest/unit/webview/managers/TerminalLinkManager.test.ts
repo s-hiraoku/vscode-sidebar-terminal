@@ -380,7 +380,8 @@ describe('TerminalLinkManager', () => {
       manager.registerTerminalLinkHandlers(mockTerminal, 'terminal-1');
 
       const event = createMockMouseEvent({ metaKey: true });
-      detectedLinks[0]?.activate(event, detectedLinks[0]!.text);
+      const link = detectedLinks[0]!;
+      link.activate(event, link.text);
 
       expect(mockCoordinator.postMessageToExtension).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -407,7 +408,8 @@ describe('TerminalLinkManager', () => {
       manager.registerTerminalLinkHandlers(mockTerminal, 'terminal-1');
 
       const event = createMockMouseEvent({ ctrlKey: true });
-      detectedLinks[0]?.activate(event, detectedLinks[0]!.text);
+      const link = detectedLinks[0]!;
+      link.activate(event, link.text);
 
       expect(mockCoordinator.postMessageToExtension).toHaveBeenCalled();
     });
@@ -428,7 +430,8 @@ describe('TerminalLinkManager', () => {
       manager.registerTerminalLinkHandlers(mockTerminal, 'terminal-1');
 
       const event = createMockMouseEvent({ altKey: true });
-      detectedLinks[0]?.activate(event, detectedLinks[0]!.text);
+      const link = detectedLinks[0]!;
+      link.activate(event, link.text);
 
       expect(mockCoordinator.postMessageToExtension).toHaveBeenCalled();
     });
@@ -448,7 +451,8 @@ describe('TerminalLinkManager', () => {
       manager.registerTerminalLinkHandlers(mockTerminal, 'terminal-1');
 
       const event = createMockMouseEvent(); // No modifier keys
-      detectedLinks[0]?.activate(event, detectedLinks[0]!.text);
+      const link = detectedLinks[0]!;
+      link.activate(event, link.text);
 
       expect(mockCoordinator.postMessageToExtension).not.toHaveBeenCalled();
     });
@@ -469,7 +473,8 @@ describe('TerminalLinkManager', () => {
       manager.registerTerminalLinkHandlers(mockTerminal, 'terminal-1');
 
       const event = createMockMouseEvent({ altKey: true }); // Alt pressed, but should be Cmd/Ctrl
-      detectedLinks[0]?.activate(event, detectedLinks[0]!.text);
+      const link = detectedLinks[0]!;
+      link.activate(event, link.text);
 
       expect(mockCoordinator.postMessageToExtension).not.toHaveBeenCalled();
     });
@@ -489,7 +494,8 @@ describe('TerminalLinkManager', () => {
       manager.registerTerminalLinkHandlers(mockTerminal, 'terminal-1');
 
       const event = createMockMouseEvent({ metaKey: true });
-      detectedLinks[0]?.activate(event, detectedLinks[0]!.text);
+      const link = detectedLinks[0]!;
+      link.activate(event, link.text);
 
       expect(mockCoordinator.postMessageToExtension).toHaveBeenCalledWith(
         expect.objectContaining({
