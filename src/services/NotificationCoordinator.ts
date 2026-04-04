@@ -25,7 +25,9 @@ export class NotificationCoordinator implements vscode.Disposable {
       return;
     }
 
-    this.safeCall(() => this.audioService.playNotification(terminalId));
+    if (waitingType !== 'idle') {
+      this.safeCall(() => this.audioService.playNotification(terminalId));
+    }
     this.safeCall(() => this.toastService.showWaitingNotification(terminalId, waitingType));
     this.safeCall(() => {
       const title = NOTIFICATION_TITLE;
