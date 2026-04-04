@@ -27,13 +27,17 @@ export class NotificationCoordinator implements vscode.Disposable {
 
     this.safeCall(() => this.audioService.playNotification(terminalId));
     this.safeCall(() => this.toastService.showWaitingNotification(terminalId, waitingType));
-    this.safeCall(() =>
-      this.nativeService.notifyWaiting(
-        terminalId,
-        NOTIFICATION_TITLE,
-        this.getWaitingMessage(terminalId, waitingType)
-      )
-    );
+    this.safeCall(() => {
+      const title = NOTIFICATION_TITLE;
+      const message = this.getWaitingMessage(terminalId, waitingType);
+
+      if (waitingType === 'idle') {
+        this.nativeService.notifyIdle(terminalId, title, message);
+        return;
+      }
+
+      this.nativeService.notifyWaiting(terminalId, title, message);
+    });
   }
 
   public notifyCompleted(terminalId: string, agentType?: AgentType | null): void {

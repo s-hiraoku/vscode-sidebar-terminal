@@ -60,6 +60,8 @@ export interface WaitingPatternMatch {
   waitingType: 'input' | 'approval';
 }
 
+type WaitingStatusSignal = 'processing' | 'shortcuts';
+
 /**
  * Shell prompt patterns used for termination detection
  */
@@ -108,10 +110,7 @@ export class CliAgentPatternRegistry {
       terminationPatterns: ['[Process completed]'],
       terminationRegexPatterns: [/\[Process completed\]/i, /\[process exited with code \d+\]/i],
       waitingPatterns: {
-        inputPromptRegexPatterns: [
-          // Claude's waiting prompt can include inline hint text or terminal-mode residue.
-          /^❯(?:\s+.*)?$/,
-        ],
+        inputPromptRegexPatterns: [/^❯(?:\s*\[\?2004h)?$/, /^>\s*$/],
         toolApprovalRegexPatterns: [
           /Allow\s+(once|always)\?/i,
           /needs your permission/i,
@@ -670,31 +669,71 @@ export class CliAgentPatternRegistry {
     }
 
     const { waitingPatterns } = patterns;
-    const lines = output
-      .split('\n')
-      .map((l) => l.trim())
-      .filter(Boolean);
+    const lines = this.getWaitingLines(output);
 
-    // Check each line against approval patterns first (more specific)
-    for (const line of lines) {
-      if (waitingPatterns.toolApprovalRegexPatterns) {
-        for (const regex of waitingPatterns.toolApprovalRegexPatterns) {
-          if (regex.test(line)) {
-            return { waitingType: 'approval' };
-          }
-        }
-      }
+    if (this.matchesApprovalWaiting(lines, waitingPatterns)) {
+      return { waitingType: 'approval' };
     }
 
-    // Input waiting should be determined by the latest rendered line only.
-    // Older prompt lines can remain in a buffered redraw while the agent is actively working.
+    if (this.hasWaitingBlocker(agentType, lines)) {
+      return null;
+    }
+
+    if (this.matchesInputWaiting(lines, waitingPatterns)) {
+      return { waitingType: 'input' };
+    }
+
+    return null;
+  }
+
+  private getWaitingLines(output: string): string[] {
+    return output
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
+  }
+
+  private matchesApprovalWaiting(
+    lines: string[],
+    waitingPatterns: WaitingPatternDefinition
+  ): boolean {
+    if (!waitingPatterns.toolApprovalRegexPatterns) {
+      return false;
+    }
+
+    return lines.some((line) =>
+      waitingPatterns.toolApprovalRegexPatterns!.some((regex) => regex.test(line))
+    );
+  }
+
+  private matchesInputWaiting(lines: string[], waitingPatterns: WaitingPatternDefinition): boolean {
     const lastLine = lines.at(-1);
-    if (lastLine && waitingPatterns.inputPromptRegexPatterns) {
-      for (const regex of waitingPatterns.inputPromptRegexPatterns) {
-        if (regex.test(lastLine)) {
-          return { waitingType: 'input' };
-        }
-      }
+    if (!lastLine || !waitingPatterns.inputPromptRegexPatterns) {
+      return false;
+    }
+
+    return waitingPatterns.inputPromptRegexPatterns.some((regex) => regex.test(lastLine));
+  }
+
+  private hasWaitingBlocker(agentType: AgentType, lines: string[]): boolean {
+    if (agentType !== 'claude') {
+      return false;
+    }
+
+    return lines.some((line) => this.getClaudeWaitingStatusSignal(line) === 'processing');
+  }
+
+  private getClaudeWaitingStatusSignal(line: string): WaitingStatusSignal | null {
+    const normalizedLine = line.toLowerCase();
+    if (normalizedLine.includes('? for shortcuts') || normalizedLine.includes('for shortcuts')) {
+      return 'shortcuts';
+    }
+
+    if (
+      normalizedLine.includes('esc to interrupt') ||
+      /\b(thinking|marinating|implementing)\b/.test(normalizedLine)
+    ) {
+      return 'processing';
     }
 
     return null;

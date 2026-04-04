@@ -16,8 +16,23 @@ describe('CliAgentPatternRegistry - Waiting Patterns', () => {
         expect(result!.waitingType).toBe('input');
       });
 
+      it('should detect Claude Code idle prompt from shortcuts footer and prompt line', () => {
+        const result = registry.matchWaitingPattern('claude', '? for shortcuts\n>');
+        expect(result).not.toBeNull();
+        expect(result!.waitingType).toBe('input');
+      });
+
       it('should detect Claude Code tool approval prompt (Allow once/always)', () => {
         const result = registry.matchWaitingPattern('claude', 'Allow once?');
+        expect(result).not.toBeNull();
+        expect(result!.waitingType).toBe('approval');
+      });
+
+      it('should detect Claude approval even when processing status is also visible', () => {
+        const result = registry.matchWaitingPattern(
+          'claude',
+          'Allow once?\n✢ Thinking… (31s · esc to interrupt)'
+        );
         expect(result).not.toBeNull();
         expect(result!.waitingType).toBe('approval');
       });
@@ -36,6 +51,19 @@ describe('CliAgentPatternRegistry - Waiting Patterns', () => {
 
       it('should not match normal Claude Code output', () => {
         const result = registry.matchWaitingPattern('claude', 'Reading file src/index.ts...');
+        expect(result).toBeNull();
+      });
+
+      it('should not match Claude work log that starts with prompt symbol', () => {
+        const result = registry.matchWaitingPattern('claude', '❯ Reading file src/index.ts...');
+        expect(result).toBeNull();
+      });
+
+      it('should not match prompt UI while Claude is still processing', () => {
+        const result = registry.matchWaitingPattern(
+          'claude',
+          '? for shortcuts\n> Try "fix the bug"\n✢ Marinating… (2m 14s · esc to interrupt)'
+        );
         expect(result).toBeNull();
       });
     });
