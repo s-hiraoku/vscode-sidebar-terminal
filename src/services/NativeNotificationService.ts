@@ -77,7 +77,6 @@ export class NativeNotificationService implements vscode.Disposable {
     return (
       config.activateWindow &&
       activationPolicy !== 'never' &&
-      !vscode.window.state.focused &&
       (activationPolicy !== 'once-per-session' || !this.activatedWaitingSessions.has(terminalId))
     );
   }
