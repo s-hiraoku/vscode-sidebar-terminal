@@ -18,7 +18,7 @@ export class NativeNotificationService implements vscode.Disposable {
   private isDisposed = false;
   private readonly execFileFn: ExecFileFn;
   private readonly lastNotifiedAt = new Map<string, number>();
-  private readonly activationLockedTerminals = new Set<string>();
+  private readonly activatedWaitingSessions = new Set<string>();
   private lastGlobalNotifiedAt = 0;
 
   constructor(execFileFn?: ExecFileFn) {
@@ -60,20 +60,21 @@ export class NativeNotificationService implements vscode.Disposable {
   private shouldActivate(
     terminalId: string,
     config: NativeNotificationConfig,
-    lockActivation: boolean
+    activateOncePerSession: boolean
   ): boolean {
     return (
-      config.activateWindow && (!lockActivation || !this.activationLockedTerminals.has(terminalId))
+      config.activateWindow &&
+      (!activateOncePerSession || !this.activatedWaitingSessions.has(terminalId))
     );
   }
 
-  private markWaitingActivationUsed(
+  private markWaitingSessionActivated(
     terminalId: string,
     shouldActivate: boolean,
-    lockActivation: boolean
+    activateOncePerSession: boolean
   ): void {
-    if (lockActivation && shouldActivate) {
-      this.activationLockedTerminals.add(terminalId);
+    if (activateOncePerSession && shouldActivate) {
+      this.activatedWaitingSessions.add(terminalId);
     }
   }
 
@@ -81,7 +82,7 @@ export class NativeNotificationService implements vscode.Disposable {
     terminalId: string,
     title: string,
     message: string,
-    lockActivation: boolean
+    activateOncePerSession: boolean
   ): void {
     if (this.isDisposed) {
       return;
@@ -95,7 +96,7 @@ export class NativeNotificationService implements vscode.Disposable {
     const platform = process.platform;
 
     try {
-      const shouldActivate = this.shouldActivate(terminalId, config, lockActivation);
+      const shouldActivate = this.shouldActivate(terminalId, config, activateOncePerSession);
 
       switch (platform) {
         case 'darwin':
@@ -112,7 +113,7 @@ export class NativeNotificationService implements vscode.Disposable {
           break;
       }
 
-      this.markWaitingActivationUsed(terminalId, shouldActivate, lockActivation);
+      this.markWaitingSessionActivated(terminalId, shouldActivate, activateOncePerSession);
     } catch (error) {
       log('[NATIVE_NOTIFY] Error:', error);
     }
@@ -197,23 +198,19 @@ export class NativeNotificationService implements vscode.Disposable {
     return str.replace(/[\\"]/g, '');
   }
 
-  private clearActivationLock(terminalId: string): void {
-    this.activationLockedTerminals.delete(terminalId);
+  private clearWaitingSession(terminalId: string): void {
+    this.activatedWaitingSessions.delete(terminalId);
   }
 
   public clearTerminal(terminalId: string): void {
     this.lastNotifiedAt.delete(terminalId);
-    this.clearActivationLock(terminalId);
-  }
-
-  public clearWaitingState(terminalId: string): void {
-    this.clearActivationLock(terminalId);
+    this.clearWaitingSession(terminalId);
   }
 
   public dispose(): void {
     this.isDisposed = true;
     this.lastNotifiedAt.clear();
-    this.activationLockedTerminals.clear();
+    this.activatedWaitingSessions.clear();
     this.lastGlobalNotifiedAt = 0;
   }
 }

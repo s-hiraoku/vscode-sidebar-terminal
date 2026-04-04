@@ -106,7 +106,7 @@ describe('NativeNotificationService', () => {
         expect(mockExecFile).toHaveBeenCalledTimes(2);
       });
 
-      it('should activate approval waiting only once until waiting state is cleared', () => {
+      it('should keep approval activation locked until the terminal session is cleared', () => {
         setPlatform('darwin');
         service.notifyWaiting('terminal-1', 'Title', 'Waiting for approval');
         expect(mockExecFile).toHaveBeenCalledTimes(1);
@@ -121,16 +121,23 @@ describe('NativeNotificationService', () => {
         script = args[args.indexOf('-e') + 1];
         expect(script).not.toContain('activate');
 
-        service.clearWaitingState('terminal-1');
         vi.advanceTimersByTime(10000);
         service.notifyWaiting('terminal-1', 'Title', 'Waiting for approval after clear');
         expect(mockExecFile).toHaveBeenCalledTimes(3);
         args = mockExecFile.mock.calls[2][1] as string[];
         script = args[args.indexOf('-e') + 1];
+        expect(script).not.toContain('activate');
+
+        service.clearTerminal('terminal-1');
+        vi.advanceTimersByTime(10000);
+        service.notifyWaiting('terminal-1', 'Title', 'Waiting for approval after terminal clear');
+        expect(mockExecFile).toHaveBeenCalledTimes(4);
+        args = mockExecFile.mock.calls[3][1] as string[];
+        script = args[args.indexOf('-e') + 1];
         expect(script).toContain('activate');
       });
 
-      it('should activate input waiting only once until waiting state is cleared', () => {
+      it('should keep input activation locked until the terminal session is cleared', () => {
         setPlatform('darwin');
         service.notifyWaiting('terminal-1', 'Title', 'Waiting for input');
         expect(mockExecFile).toHaveBeenCalledTimes(1);
@@ -145,11 +152,18 @@ describe('NativeNotificationService', () => {
         script = args[args.indexOf('-e') + 1];
         expect(script).not.toContain('activate');
 
-        service.clearWaitingState('terminal-1');
         vi.advanceTimersByTime(10000);
         service.notifyWaiting('terminal-1', 'Title', 'Waiting for input after clear');
         expect(mockExecFile).toHaveBeenCalledTimes(3);
         args = mockExecFile.mock.calls[2][1] as string[];
+        script = args[args.indexOf('-e') + 1];
+        expect(script).not.toContain('activate');
+
+        service.clearTerminal('terminal-1');
+        vi.advanceTimersByTime(10000);
+        service.notifyWaiting('terminal-1', 'Title', 'Waiting for input after terminal clear');
+        expect(mockExecFile).toHaveBeenCalledTimes(4);
+        args = mockExecFile.mock.calls[3][1] as string[];
         script = args[args.indexOf('-e') + 1];
         expect(script).toContain('activate');
       });

@@ -893,14 +893,14 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
 
   describe('💓 Heartbeat and Monitoring Tests', () => {
     it('should keep heartbeat startup idempotent', () => {
-      const setIntervalSpy = vi.spyOn(global, 'setInterval');
-      const clearIntervalSpy = vi.spyOn(global, 'clearInterval');
+      const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout');
+      const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout');
 
       detectionService.startHeartbeat();
       detectionService.startHeartbeat();
 
-      expect(setIntervalSpy).toHaveBeenCalledTimes(2);
-      expect(clearIntervalSpy).toHaveBeenCalledTimes(1);
+      expect(setTimeoutSpy).toHaveBeenCalledTimes(2);
+      expect(clearTimeoutSpy).toHaveBeenCalledTimes(1);
     });
 
     it('should provide agent state refresh functionality', () => {

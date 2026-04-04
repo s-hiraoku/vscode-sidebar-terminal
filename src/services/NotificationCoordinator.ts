@@ -61,14 +61,6 @@ export class NotificationCoordinator implements vscode.Disposable {
     this.safeCall(() => this.nativeService.clearTerminal(terminalId));
   }
 
-  public clearWaitingState(terminalId: string): void {
-    if (this.isDisposed) {
-      return;
-    }
-
-    this.safeCall(() => this.nativeService.clearWaitingState(terminalId));
-  }
-
   private getWaitingMessage(terminalId: string, waitingType?: WaitingType): string {
     return `CLI Agent is ${getWaitingTypeLabel(waitingType)} (${terminalId})`;
   }

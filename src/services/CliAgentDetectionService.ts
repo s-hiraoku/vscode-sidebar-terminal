@@ -18,6 +18,7 @@ import { CliAgentInputAccumulator } from './CliAgentInputAccumulator';
 import { CliAgentIdleDetector } from './CliAgentIdleDetector';
 
 export class CliAgentDetectionService implements ICliAgentDetectionService {
+  private static readonly HEARTBEAT_INTERVAL_MS = 30000;
   private readonly detectionEngine: CliAgentDetectionEngine;
   private readonly stateStore: CliAgentStateStore;
   private readonly waitingDetector: CliAgentWaitingDetector;
@@ -26,7 +27,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
   private readonly idleDetector: CliAgentIdleDetector;
   private waitingChangeSubscription: { dispose(): void } | undefined;
   private statusChangeSubscription: { dispose(): void } | undefined;
-  private heartbeatInterval: ReturnType<typeof setInterval> | undefined;
+  private heartbeatTimer: ReturnType<typeof setTimeout> | undefined;
   private readonly previousAgentInfo = new Map<
     string,
     { status: AgentStatus; agentType: AgentType | null }
@@ -51,8 +52,6 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     this.waitingChangeSubscription = this.stateStore.onAgentWaitingChange((event) => {
       if (event.isWaiting) {
         this.notificationCoordinator.notifyWaiting(event.terminalId, event.waitingType);
-      } else {
-        this.notificationCoordinator.clearWaitingState(event.terminalId);
       }
     });
 
@@ -68,6 +67,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
           this.removingTerminals.delete(event.terminalId);
           return;
         }
+        this.notificationCoordinator.clearTerminal(event.terminalId);
         this.notificationCoordinator.notifyCompleted(event.terminalId, previous.agentType);
       }
     });
@@ -304,19 +304,16 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     this.waitingDetector.analyze(terminalId, data);
   }
 
-  get onAgentWaitingChange() {
+  get onAgentWaitingChange(): typeof this.stateStore.onAgentWaitingChange {
     return this.stateStore.onAgentWaitingChange;
   }
 
-  get onCliAgentStatusChange() {
+  get onCliAgentStatusChange(): typeof this.stateStore.onStatusChange {
     return this.stateStore.onStatusChange;
   }
 
   dispose(): void {
-    if (this.heartbeatInterval) {
-      clearInterval(this.heartbeatInterval);
-      this.heartbeatInterval = undefined;
-    }
+    this.clearHeartbeatTimer();
     this.waitingChangeSubscription?.dispose();
     this.statusChangeSubscription?.dispose();
     this.idleDetector.dispose();
@@ -326,13 +323,8 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
   }
 
   public startHeartbeat(): void {
-    if (this.heartbeatInterval) {
-      clearInterval(this.heartbeatInterval);
-    }
-
-    this.heartbeatInterval = setInterval(() => {
-      this.stateStore.getStateStats();
-    }, 30000);
+    this.clearHeartbeatTimer();
+    this.scheduleHeartbeat();
   }
 
   refreshAgentState(): boolean {
@@ -343,15 +335,25 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     this.stateStore.setConnectedAgent(terminalId, type, terminalName);
   }
 
-  public get patternDetector() {
+  public get patternDetector(): CliAgentDetectionEngine['getPatternRegistry'] extends () => infer T
+    ? T
+    : never {
     return this.detectionEngine.getPatternRegistry();
   }
 
-  public get stateManager() {
+  public get stateManager(): CliAgentStateStore {
     return this.stateStore;
   }
 
-  public get configManager() {
+  public get configManager(): {
+    getConfig: () => {
+      debounceMs: number;
+      cacheTtlMs: number;
+      maxBufferSize: number;
+      skipMinimalData: boolean;
+    };
+    updateConfig: () => void;
+  } {
     return {
       getConfig: () => ({
         debounceMs: 25,
@@ -361,6 +363,20 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
       }),
       updateConfig: () => {},
     };
+  }
+
+  private scheduleHeartbeat(): void {
+    this.heartbeatTimer = globalThis.setTimeout(() => {
+      this.stateStore.getStateStats();
+      this.scheduleHeartbeat();
+    }, CliAgentDetectionService.HEARTBEAT_INTERVAL_MS);
+  }
+
+  private clearHeartbeatTimer(): void {
+    if (this.heartbeatTimer) {
+      globalThis.clearTimeout(this.heartbeatTimer);
+      this.heartbeatTimer = undefined;
+    }
   }
 }
 

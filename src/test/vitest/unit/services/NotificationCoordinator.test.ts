@@ -32,7 +32,6 @@ describe('NotificationCoordinator', () => {
     notifyWaiting: ReturnType<typeof vi.fn>;
     notifyCompleted: ReturnType<typeof vi.fn>;
     clearTerminal: ReturnType<typeof vi.fn>;
-    clearWaitingState: ReturnType<typeof vi.fn>;
     dispose: ReturnType<typeof vi.fn>;
   };
 
@@ -52,7 +51,6 @@ describe('NotificationCoordinator', () => {
       notifyWaiting: vi.fn(),
       notifyCompleted: vi.fn(),
       clearTerminal: vi.fn(),
-      clearWaitingState: vi.fn(),
       dispose: vi.fn(),
     };
     coordinator = new NotificationCoordinator(
@@ -172,16 +170,6 @@ describe('NotificationCoordinator', () => {
       expect(mockAudio.clearTerminal).not.toHaveBeenCalled();
       expect(mockToast.clearTerminal).not.toHaveBeenCalled();
       expect(mockNative.clearTerminal).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('clearWaitingState', () => {
-    it('should clear waiting state only on native service', () => {
-      coordinator.clearWaitingState('terminal-1');
-
-      expect(mockNative.clearWaitingState).toHaveBeenCalledWith('terminal-1');
-      expect(mockAudio.clearTerminal).not.toHaveBeenCalled();
-      expect(mockToast.clearTerminal).not.toHaveBeenCalled();
     });
   });
 
