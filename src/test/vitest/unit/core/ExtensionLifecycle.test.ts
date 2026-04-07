@@ -208,6 +208,13 @@ vi.mock('../../../../services/TelemetryService', () => ({
   },
 }));
 
+vi.mock('../../../../services/FocusProtectionService', () => ({
+  FocusProtectionService: class {
+    constructor(..._args: unknown[]) {}
+    dispose(): void {}
+  },
+}));
+
 vi.mock('../../../../core/CommandRegistrar', () => ({
   CommandRegistrar: class {
     constructor(..._args: unknown[]) {}

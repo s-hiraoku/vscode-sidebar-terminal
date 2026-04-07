@@ -12,6 +12,7 @@ import { TerminalLinksService } from '../services/TerminalLinksService';
 import { TelemetryService } from '../services/TelemetryService';
 import { CommandRegistrar } from './CommandRegistrar';
 import { SessionLifecycleManager } from './SessionLifecycleManager';
+import { FocusProtectionService } from '../services/FocusProtectionService';
 
 /** Manages extension activation, service initialization, and cleanup. */
 export class ExtensionLifecycle {
@@ -30,6 +31,7 @@ export class ExtensionLifecycle {
 
   private commandRegistrar: CommandRegistrar | undefined;
   private sessionLifecycleManager: SessionLifecycleManager | undefined;
+  private focusProtectionService: FocusProtectionService | undefined;
 
   /** Activates the extension and initializes all components. */
   activate(context: vscode.ExtensionContext): Promise<void> {
@@ -110,6 +112,11 @@ export class ExtensionLifecycle {
       if (this.shellIntegrationService) {
         this.shellIntegrationService.setWebviewProvider(this.sidebarProvider);
       }
+
+      // Initialize focus protection service
+      this.focusProtectionService = new FocusProtectionService({
+        isTerminalFocused: () => this.terminalManager?.isTerminalFocused() ?? false,
+      });
 
       // Initialize Phase 8: Terminal Decorations & Links Services
       try {
@@ -276,6 +283,12 @@ export class ExtensionLifecycle {
       log('🔧 [EXTENSION] Disposing standard session manager...');
       this.extensionPersistenceService.dispose(); // Cleanup auto-save timers
       this.extensionPersistenceService = undefined;
+    }
+
+    // Dispose focus protection service
+    if (this.focusProtectionService) {
+      this.focusProtectionService.dispose();
+      this.focusProtectionService = undefined;
     }
 
     // Dispose keyboard shortcut service

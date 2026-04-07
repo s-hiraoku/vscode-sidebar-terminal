@@ -5,6 +5,22 @@ All notable changes to the "Secondary Terminal" extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+### [0.4.11](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v0.4.10...v0.4.11) (2026-04-07)
+
+### Added
+
+- add focus protection to prevent other extensions from stealing sidebar terminal focus ([ed573af](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/ed573af93cfe0581b186938ead30685fd2eed038)), closes [#576](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/576)
+
+### [0.4.10](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v0.4.9...v0.4.10) (2026-04-04)
+
+### Fixed
+
+- **notifications:** skip native notifications when VS Code is focused ([a5d22c2](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/a5d22c2fe45b98aaa637878c05019c10b111576c))
+
+### Changed
+
+- **notifications:** remove redundant focused check in shouldActivate ([66a60d0](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/66a60d0524c9abaafa71eb6fae70215b01cc3dfe))
+
 ### [0.4.9](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v0.4.8...v0.4.9) (2026-04-04)
 
 ### Fixed
