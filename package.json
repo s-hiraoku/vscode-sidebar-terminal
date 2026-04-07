@@ -474,6 +474,11 @@
           "default": true,
           "description": "Enable file reference shortcuts: Use Cmd+Option+L (Mac) or Alt+Ctrl+L (Linux/Windows) to insert file references"
         },
+        "secondaryTerminal.focusProtection": {
+          "type": "boolean",
+          "default": true,
+          "description": "Prevent other extensions (e.g. Claude Code) from stealing focus away from the sidebar terminal. When enabled, focus is automatically restored if it is taken while the sidebar terminal is active."
+        },
         "secondaryTerminal.agentWaitingNotification.enabled": {
           "type": "boolean",
           "default": true,
