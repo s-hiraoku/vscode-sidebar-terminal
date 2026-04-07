@@ -11,12 +11,21 @@ export interface FocusProtectionDependencies {
  * When enabled, monitors VS Code's active terminal changes. If the sidebar
  * terminal had focus and a standard terminal becomes active (e.g. via
  * another extension calling terminal.show()), this service automatically
- * restores focus to the sidebar terminal.
+ * restores focus to the sidebar terminal after a short delay.
+ *
+ * The delay (100ms) ensures the focus command runs after VS Code's
+ * showPanel() completes, preventing the panel from re-stealing focus.
+ * A cooldown (500ms) prevents rapid oscillation.
  */
 export class FocusProtectionService implements vscode.Disposable {
+  private static readonly RESTORE_DELAY_MS = 100;
+  private static readonly COOLDOWN_MS = 500;
+
   private readonly _disposables = new DisposableStore();
   private readonly _deps: FocusProtectionDependencies;
   private _enabled: boolean;
+  private _pendingTimer: ReturnType<typeof setTimeout> | undefined;
+  private _lastRestoreTime = 0;
 
   constructor(deps: FocusProtectionDependencies) {
     this._deps = deps;
@@ -46,10 +55,29 @@ export class FocusProtectionService implements vscode.Disposable {
     if (!terminal) return;
     if (!this._deps.isTerminalFocused()) return;
 
-    void vscode.commands.executeCommand('secondaryTerminalContainer.secondaryTerminal.focus');
+    // Cancel any pending restore to debounce rapid events
+    if (this._pendingTimer !== undefined) {
+      clearTimeout(this._pendingTimer);
+      this._pendingTimer = undefined;
+    }
+
+    // Skip if within cooldown period
+    const now = Date.now();
+    if (now - this._lastRestoreTime < FocusProtectionService.COOLDOWN_MS) return;
+
+    // Delay restoration so it runs after VS Code's showPanel() completes
+    this._pendingTimer = setTimeout(() => {
+      this._pendingTimer = undefined;
+      this._lastRestoreTime = Date.now();
+      void vscode.commands.executeCommand('secondaryTerminalContainer.secondaryTerminal.focus');
+    }, FocusProtectionService.RESTORE_DELAY_MS);
   }
 
   public dispose(): void {
+    if (this._pendingTimer !== undefined) {
+      clearTimeout(this._pendingTimer);
+      this._pendingTimer = undefined;
+    }
     this._disposables.dispose();
   }
 }

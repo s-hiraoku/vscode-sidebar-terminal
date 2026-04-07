@@ -16,7 +16,6 @@ vi.mock('vscode', () => {
           }),
         };
       }),
-      // Expose listeners for test triggering
       _onDidChangeActiveTerminalListeners: onDidChangeActiveTerminalListeners,
     },
     workspace: {
@@ -43,9 +42,6 @@ vi.mock('vscode', () => {
 import * as vscode from 'vscode';
 import { FocusProtectionService } from '../../../../services/FocusProtectionService';
 
-/**
- * Helper to simulate onDidChangeActiveTerminal event
- */
 function fireActiveTerminalChanged(terminal: unknown): void {
   const listeners = (vscode.window as any)._onDidChangeActiveTerminalListeners;
   for (const listener of listeners) {
@@ -53,9 +49,6 @@ function fireActiveTerminalChanged(terminal: unknown): void {
   }
 }
 
-/**
- * Helper to simulate configuration change
- */
 function fireConfigurationChanged(affectsConfiguration: (section: string) => boolean): void {
   const listeners = (vscode.workspace as any)._onDidChangeConfigurationListeners;
   for (const listener of listeners) {
@@ -68,13 +61,12 @@ describe('FocusProtectionService', () => {
   let mockIsTerminalFocused: ReturnType<typeof vi.fn<() => boolean>>;
 
   beforeEach(() => {
+    vi.useFakeTimers();
     vi.clearAllMocks();
 
-    // Reset listeners
     (vscode.window as any)._onDidChangeActiveTerminalListeners.length = 0;
     (vscode.workspace as any)._onDidChangeConfigurationListeners.length = 0;
 
-    // Default: focusProtection enabled
     vi.mocked(vscode.workspace.getConfiguration).mockReturnValue({
       get: vi.fn((key: string) => {
         if (key === 'focusProtection') return true;
@@ -91,6 +83,7 @@ describe('FocusProtectionService', () => {
 
   afterEach(() => {
     service.dispose();
+    vi.useRealTimers();
   });
 
   describe('initialization', () => {
@@ -107,47 +100,97 @@ describe('FocusProtectionService', () => {
     });
   });
 
-  describe('focus protection behavior', () => {
-    it('should restore focus when sidebar terminal was focused and standard terminal steals focus', () => {
-      // サイドバーターミナルにフォーカスがある状態
+  describe('delayed focus restoration', () => {
+    it('should NOT restore focus immediately (uses delay)', () => {
       mockIsTerminalFocused.mockReturnValue(true);
 
-      // 標準ターミナルにフォーカスが移動（terminal !== undefined = 標準ターミナル）
-      const mockTerminal = { name: 'bash' };
-      fireActiveTerminalChanged(mockTerminal);
+      fireActiveTerminalChanged({ name: 'bash' });
 
-      // フォーカスを戻すコマンドが実行される
+      // まだ実行されない（遅延中）
+      expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
+    });
+
+    it('should restore focus after delay when sidebar terminal was focused', () => {
+      mockIsTerminalFocused.mockReturnValue(true);
+
+      fireActiveTerminalChanged({ name: 'bash' });
+
+      // 遅延後に実行される
+      vi.advanceTimersByTime(150);
+
       expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
         'secondaryTerminalContainer.secondaryTerminal.focus'
       );
     });
 
     it('should NOT restore focus when sidebar terminal was NOT focused', () => {
-      // サイドバーターミナルにフォーカスがない状態
       mockIsTerminalFocused.mockReturnValue(false);
 
-      // 標準ターミナルにフォーカスが移動
-      const mockTerminal = { name: 'bash' };
-      fireActiveTerminalChanged(mockTerminal);
+      fireActiveTerminalChanged({ name: 'bash' });
+      vi.advanceTimersByTime(150);
 
-      // フォーカスを戻すコマンドは実行されない
       expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
     });
 
-    it('should NOT restore focus when active terminal becomes undefined (no terminal focused)', () => {
+    it('should NOT restore focus when active terminal becomes undefined', () => {
       mockIsTerminalFocused.mockReturnValue(true);
 
-      // ターミナルのフォーカスが外れた（エディタ等に移動）
       fireActiveTerminalChanged(undefined);
+      vi.advanceTimersByTime(150);
 
-      // フォーカスを戻さない
       expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
+    });
+
+    it('should debounce rapid terminal changes (only restore once)', () => {
+      mockIsTerminalFocused.mockReturnValue(true);
+
+      // 連続で発火
+      fireActiveTerminalChanged({ name: 'bash' });
+      fireActiveTerminalChanged({ name: 'zsh' });
+      fireActiveTerminalChanged({ name: 'fish' });
+
+      vi.advanceTimersByTime(150);
+
+      // 1回だけ実行
+      expect(vscode.commands.executeCommand).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('cooldown', () => {
+    it('should skip restoration during cooldown period', () => {
+      mockIsTerminalFocused.mockReturnValue(true);
+
+      // 1回目: 復帰
+      fireActiveTerminalChanged({ name: 'bash' });
+      vi.advanceTimersByTime(150);
+      expect(vscode.commands.executeCommand).toHaveBeenCalledTimes(1);
+
+      // 2回目: クールダウン中なのでスキップ
+      fireActiveTerminalChanged({ name: 'bash' });
+      vi.advanceTimersByTime(150);
+      expect(vscode.commands.executeCommand).toHaveBeenCalledTimes(1);
+    });
+
+    it('should allow restoration after cooldown expires', () => {
+      mockIsTerminalFocused.mockReturnValue(true);
+
+      // 1回目
+      fireActiveTerminalChanged({ name: 'bash' });
+      vi.advanceTimersByTime(150);
+      expect(vscode.commands.executeCommand).toHaveBeenCalledTimes(1);
+
+      // クールダウン経過（500ms）
+      vi.advanceTimersByTime(500);
+
+      // 2回目: クールダウン終了後なので復帰する
+      fireActiveTerminalChanged({ name: 'bash' });
+      vi.advanceTimersByTime(150);
+      expect(vscode.commands.executeCommand).toHaveBeenCalledTimes(2);
     });
   });
 
   describe('setting: focusProtection disabled', () => {
     it('should NOT restore focus when focusProtection is disabled', () => {
-      // focusProtection を無効化
       vi.mocked(vscode.workspace.getConfiguration).mockReturnValue({
         get: vi.fn((key: string) => {
           if (key === 'focusProtection') return false;
@@ -155,7 +198,6 @@ describe('FocusProtectionService', () => {
         }),
       } as any);
 
-      // 新しいインスタンスを作成（設定が無効）
       service.dispose();
       (vscode.window as any)._onDidChangeActiveTerminalListeners.length = 0;
       service = new FocusProtectionService({
@@ -163,18 +205,15 @@ describe('FocusProtectionService', () => {
       });
 
       mockIsTerminalFocused.mockReturnValue(true);
-      const mockTerminal = { name: 'bash' };
-      fireActiveTerminalChanged(mockTerminal);
+      fireActiveTerminalChanged({ name: 'bash' });
+      vi.advanceTimersByTime(150);
 
-      // 無効なのでフォーカスを戻さない
       expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
     });
 
     it('should respond to runtime configuration changes', () => {
-      // 初期状態: 有効
       mockIsTerminalFocused.mockReturnValue(true);
 
-      // 設定変更: 無効化
       vi.mocked(vscode.workspace.getConfiguration).mockReturnValue({
         get: vi.fn((key: string) => {
           if (key === 'focusProtection') return false;
@@ -186,14 +225,12 @@ describe('FocusProtectionService', () => {
         (section: string) => section === 'secondaryTerminal.focusProtection'
       );
 
-      // フォーカスが移動しても戻さない
-      const mockTerminal = { name: 'bash' };
-      fireActiveTerminalChanged(mockTerminal);
+      fireActiveTerminalChanged({ name: 'bash' });
+      vi.advanceTimersByTime(150);
       expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
     });
 
     it('should resume protection when setting is re-enabled', () => {
-      // まず無効化
       vi.mocked(vscode.workspace.getConfiguration).mockReturnValue({
         get: vi.fn((key: string) => {
           if (key === 'focusProtection') return false;
@@ -204,7 +241,6 @@ describe('FocusProtectionService', () => {
         (section: string) => section === 'secondaryTerminal.focusProtection'
       );
 
-      // 再有効化
       vi.mocked(vscode.workspace.getConfiguration).mockReturnValue({
         get: vi.fn((key: string) => {
           if (key === 'focusProtection') return true;
@@ -216,10 +252,9 @@ describe('FocusProtectionService', () => {
       );
 
       mockIsTerminalFocused.mockReturnValue(true);
-      const mockTerminal = { name: 'bash' };
-      fireActiveTerminalChanged(mockTerminal);
+      fireActiveTerminalChanged({ name: 'bash' });
+      vi.advanceTimersByTime(150);
 
-      // 有効化されたのでフォーカスを戻す
       expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
         'secondaryTerminalContainer.secondaryTerminal.focus'
       );
@@ -229,18 +264,26 @@ describe('FocusProtectionService', () => {
   describe('dispose', () => {
     it('should clean up all listeners on dispose', () => {
       service.dispose();
-
-      // リスナーが削除されている
       expect((vscode.window as any)._onDidChangeActiveTerminalListeners).toHaveLength(0);
+    });
+
+    it('should cancel pending timer on dispose', () => {
+      mockIsTerminalFocused.mockReturnValue(true);
+      fireActiveTerminalChanged({ name: 'bash' });
+
+      // タイマー発火前にdispose
+      service.dispose();
+      vi.advanceTimersByTime(150);
+
+      expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
     });
 
     it('should not restore focus after dispose', () => {
       mockIsTerminalFocused.mockReturnValue(true);
       service.dispose();
 
-      // dispose後にイベントが発火しても何も起きない（リスナーが削除済み）
-      // 手動で発火しても問題ない
       fireActiveTerminalChanged({ name: 'bash' });
+      vi.advanceTimersByTime(150);
       expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
     });
   });
