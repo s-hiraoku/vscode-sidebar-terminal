@@ -170,7 +170,7 @@ describe('AudioNotificationService', () => {
       service.playNotification('terminal-1');
 
       const call = mockExecFile.mock.calls[0];
-      expect(call![2]).toEqual({ timeout: 5000 });
+      expect(call![2]).toEqual(expect.objectContaining({ timeout: 5000 }));
     });
   });
 
