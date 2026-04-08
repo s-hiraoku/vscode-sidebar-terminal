@@ -14,9 +14,6 @@ interface NativeNotificationConfig {
   cooldownMs: number;
 }
 
-type ActivationPolicy = 'always';
-type CooldownScope = 'default';
-
 export class NativeNotificationService implements vscode.Disposable {
   private isDisposed = false;
   private readonly execFileFn: ExecFileFn;
@@ -42,39 +39,24 @@ export class NativeNotificationService implements vscode.Disposable {
     };
   }
 
-  private canNotify(terminalId: string, cooldownMs: number, _scope: CooldownScope): boolean {
+  private canNotify(terminalId: string, cooldownMs: number): boolean {
     const now = Date.now();
-    const perTerminalTimestamps = this.lastNotifiedAt;
-    const lastGlobalNotifiedAt = this.lastGlobalNotifiedAt;
 
-    if (now - lastGlobalNotifiedAt < cooldownMs) {
+    if (now - this.lastGlobalNotifiedAt < cooldownMs) {
       return false;
     }
 
-    const lastNotified = perTerminalTimestamps.get(terminalId) ?? 0;
+    const lastNotified = this.lastNotifiedAt.get(terminalId) ?? 0;
     if (now - lastNotified < cooldownMs) {
       return false;
     }
 
-    perTerminalTimestamps.set(terminalId, now);
+    this.lastNotifiedAt.set(terminalId, now);
     this.lastGlobalNotifiedAt = now;
     return true;
   }
 
-  private shouldActivate(
-    config: NativeNotificationConfig,
-    activationPolicy: ActivationPolicy
-  ): boolean {
-    return config.activateWindow && activationPolicy === 'always';
-  }
-
-  private notifyAndActivate(
-    terminalId: string,
-    title: string,
-    message: string,
-    activationPolicy: ActivationPolicy,
-    cooldownScope: CooldownScope
-  ): void {
+  private notifyAndActivate(terminalId: string, title: string, message: string): void {
     if (this.isDisposed) {
       return;
     }
@@ -87,14 +69,14 @@ export class NativeNotificationService implements vscode.Disposable {
     }
 
     const config = this.getConfig();
-    if (!config.enabled || !this.canNotify(terminalId, config.cooldownMs, cooldownScope)) {
+    if (!config.enabled || !this.canNotify(terminalId, config.cooldownMs)) {
       return;
     }
 
     const platform = process.platform;
 
     try {
-      const shouldActivate = this.shouldActivate(config, activationPolicy);
+      const shouldActivate = config.activateWindow;
 
       switch (platform) {
         case 'darwin':
@@ -116,7 +98,7 @@ export class NativeNotificationService implements vscode.Disposable {
   }
 
   public notifyCompleted(terminalId: string, title: string, message: string): void {
-    this.notifyAndActivate(terminalId, title, message, 'always', 'default');
+    this.notifyAndActivate(terminalId, title, message);
   }
 
   private getAppName(): string {
