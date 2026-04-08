@@ -5,6 +5,13 @@ All notable changes to the "Secondary Terminal" extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v0.5.3...v0.6.0) (2026-04-08)
+
+### Changed
+
+- remove CLI agent waiting notifications ([#582](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/582)) ([2b57aba](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/2b57aba159a9228b7fd03ecffe5507a3d2482db3))
+- simplify NativeNotificationService after waiting removal ([e5bbead](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/e5bbead99f817b1d6857565916d8511d0d3ad463))
+
 ### [0.5.3](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v0.5.2...v0.5.3) (2026-04-08)
 
 ### Fixed
