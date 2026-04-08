@@ -66,17 +66,30 @@ export class FileReferenceCommand {
         return;
       }
 
+      const sentAgents: typeof connectedAgents = [];
       connectedAgents.forEach((agent) => {
+        if (!this.terminalManager.getTerminal(agent.terminalId)) {
+          log(`⚠️ [WARN] Stale terminalId ${agent.terminalId} for ${agent.agentType}, skipping`);
+          return;
+        }
         this.terminalManager.sendInput(text, agent.terminalId);
         log(`📤 [DEBUG] Sent file reference to ${agent.agentType}: "${text}"`);
+        sentAgents.push(agent);
       });
 
+      if (sentAgents.length === 0) {
+        void vscode.window.showWarningMessage(
+          'CLI Agent terminals are no longer available. Please check agent status.'
+        );
+        return;
+      }
+
       // 成功メッセージ（ステータスバーに表示、フォーカスを奪わない）
-      const agentTypes = connectedAgents.map((a) => a.agentType).join(', ');
+      const agentTypes = sentAgents.map((a) => a.agentType).join(', ');
       const message =
-        connectedAgents.length === 1
+        sentAgents.length === 1
           ? `Sent file reference to ${agentTypes}`
-          : `Sent file reference to ${connectedAgents.length} CLI Agents (${agentTypes})`;
+          : `Sent file reference to ${sentAgents.length} CLI Agents (${agentTypes})`;
 
       void vscode.window.setStatusBarMessage(`$(terminal) ${message}`, 3000);
       log(`✅ [DEBUG] File reference sent to ${connectedAgents.length} CLI agents`);
@@ -142,13 +155,26 @@ export class FileReferenceCommand {
         return;
       }
 
+      const sentAgents: typeof connectedAgents = [];
       connectedAgents.forEach((agent) => {
+        if (!this.terminalManager.getTerminal(agent.terminalId)) {
+          log(`⚠️ [WARN] Stale terminalId ${agent.terminalId} for ${agent.agentType}, skipping`);
+          return;
+        }
         this.terminalManager.sendInput(text, agent.terminalId);
         log(`📤 [DEBUG] Sent ${openFiles.length} file references to ${agent.agentType}`);
+        sentAgents.push(agent);
       });
 
+      if (sentAgents.length === 0) {
+        void vscode.window.showWarningMessage(
+          'CLI Agent terminals are no longer available. Please check agent status.'
+        );
+        return;
+      }
+
       // 成功メッセージ（ステータスバーに表示）
-      const agentTypes = connectedAgents.map((a) => a.agentType).join(', ');
+      const agentTypes = sentAgents.map((a) => a.agentType).join(', ');
       void vscode.window.setStatusBarMessage(
         `$(terminal) Sent ${openFiles.length} file references to ${agentTypes}`,
         3000

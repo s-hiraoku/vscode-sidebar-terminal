@@ -22,7 +22,7 @@ export interface FocusProtectionDependencies {
 export class FocusProtectionService implements vscode.Disposable {
   private static readonly RESTORE_DELAY_MS = 150;
   private static readonly COOLDOWN_MS = 500;
-  private static readonly RECENT_FOCUS_WINDOW_MS = 800;
+  private static readonly RECENT_FOCUS_WINDOW_MS = 300;
 
   private readonly _disposables = new DisposableStore();
   private readonly _deps: FocusProtectionDependencies;

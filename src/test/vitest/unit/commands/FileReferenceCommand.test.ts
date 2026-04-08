@@ -34,6 +34,7 @@ describe('FileReferenceCommand', () => {
       getCurrentGloballyActiveAgent: vi.fn(),
       focusTerminal: vi.fn().mockResolvedValue(undefined),
       sendInput: vi.fn(),
+      getTerminal: vi.fn().mockReturnValue({}),
       refreshCliAgentState: vi.fn().mockReturnValue(false),
     };
 
@@ -291,6 +292,21 @@ describe('FileReferenceCommand', () => {
         expect(mockTerminalManager.sendInput).toHaveBeenCalledWith('@src/test.ts ', 'terminal-1');
       });
 
+      it('should skip agents with stale terminalIds instead of falling back', () => {
+        mockTerminalManager.isTerminalFocused = vi.fn().mockReturnValue(false);
+        mockTerminalManager.getConnectedAgents.mockReturnValue([
+          { terminalId: 'stale-terminal', agentInfo: { type: 'claude' } },
+        ]);
+        mockTerminalManager.getTerminal = vi.fn().mockReturnValue(undefined);
+
+        fileReferenceCommand.handleSendAtMention();
+
+        expect(mockTerminalManager.sendInput).not.toHaveBeenCalled();
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
+          'CLI Agent terminals are no longer available. Please check agent status.'
+        );
+      });
+
       it('should not focus the sidebar view before sending when editor has focus', async () => {
         mockTerminalManager.isTerminalFocused = vi.fn().mockReturnValue(false);
         mockTerminalManager.getConnectedAgents.mockReturnValue([
@@ -328,6 +344,21 @@ describe('FileReferenceCommand', () => {
           },
         ],
       };
+    });
+
+    it('should skip agents with stale terminalIds for sendAllOpenFiles', () => {
+      mockTerminalManager.isTerminalFocused = vi.fn().mockReturnValue(false);
+      mockTerminalManager.getConnectedAgents.mockReturnValue([
+        { terminalId: 'stale-terminal', agentInfo: { type: 'claude' } },
+      ]);
+      mockTerminalManager.getTerminal = vi.fn().mockReturnValue(undefined);
+
+      fileReferenceCommand.handleSendAllOpenFiles();
+
+      expect(mockTerminalManager.sendInput).not.toHaveBeenCalled();
+      expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
+        'CLI Agent terminals are no longer available. Please check agent status.'
+      );
     });
 
     it('should not focus the sidebar view before sending all open files when editor has focus', async () => {
