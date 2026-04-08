@@ -959,18 +959,7 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
       });
     });
 
-    it('does not emit waiting events when waiting-like output is received', () => {
-      const waitingEvents: Array<{
-        terminalId: string;
-        isWaiting: boolean;
-        waitingType?: 'input' | 'approval';
-      }> = [];
-
-      detectionService.onAgentWaitingChange((event) => {
-        // @ts-expect-error - test mock type
-        waitingEvents.push(event);
-      });
-
+    it('keeps agent state connected when waiting-like output is received', () => {
       const result = detectionService.handleOutputChunk('term1', 'Gemini CLI v0.1.0\r\ngemini > ');
 
       expect(result?.detection).toMatchObject({
@@ -978,26 +967,20 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
         source: 'output',
       });
       expect(result?.state.status).toBe('connected');
-      expect(waitingEvents).toHaveLength(0);
+      expect(statusChangeEvents).toHaveLength(1);
     });
 
-    it('does not emit waiting state transitions when the user submits input after waiting-like output', () => {
-      const waitingEvents: Array<{
-        terminalId: string;
-        isWaiting: boolean;
-        waitingType?: 'input' | 'approval' | 'idle';
-      }> = [];
-
-      detectionService.onAgentWaitingChange((event) => {
-        waitingEvents.push(event);
-      });
-
+    it('keeps agent state stable when the user submits input after waiting-like output', () => {
       detectionService.handleOutputChunk('term1', 'Welcome to Claude Code!');
       detectionService.handleOutputChunk('term1', '❯');
 
       detectionService.handleInputChunk('term1', 'h');
 
-      expect(waitingEvents).toHaveLength(0);
+      expect(detectionService.getAgentState('term1')).toEqual({
+        status: 'connected',
+        agentType: 'claude',
+      });
+      expect(statusChangeEvents).toHaveLength(1);
     });
   });
 });

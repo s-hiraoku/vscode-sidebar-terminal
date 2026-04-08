@@ -44,69 +44,6 @@ describe('ToastNotificationService', () => {
     vi.useRealTimers();
   });
 
-  describe('showWaitingNotification', () => {
-    it('should show notification when enabled', () => {
-      service.showWaitingNotification('terminal-1');
-      expect(mockSetStatusBarMessage).toHaveBeenCalledTimes(1);
-      expect(mockSetStatusBarMessage).toHaveBeenCalledWith(
-        expect.stringContaining('waiting for input'),
-        expect.any(Number)
-      );
-    });
-
-    it('should not show notification when disabled', () => {
-      setDefaultConfig({ 'agentToastNotification.enabled': false });
-      service.showWaitingNotification('terminal-1');
-      expect(mockSetStatusBarMessage).not.toHaveBeenCalled();
-    });
-
-    it('should respect per-terminal cooldown', () => {
-      service.showWaitingNotification('terminal-1');
-      expect(mockSetStatusBarMessage).toHaveBeenCalledTimes(1);
-
-      service.showWaitingNotification('terminal-1');
-      expect(mockSetStatusBarMessage).toHaveBeenCalledTimes(1);
-
-      vi.advanceTimersByTime(10000);
-      service.showWaitingNotification('terminal-1');
-      expect(mockSetStatusBarMessage).toHaveBeenCalledTimes(2);
-    });
-
-    it('should enforce global cooldown across terminals', () => {
-      service.showWaitingNotification('terminal-1');
-      expect(mockSetStatusBarMessage).toHaveBeenCalledTimes(1);
-
-      service.showWaitingNotification('terminal-2');
-      expect(mockSetStatusBarMessage).toHaveBeenCalledTimes(1);
-
-      vi.advanceTimersByTime(10000);
-      service.showWaitingNotification('terminal-2');
-      expect(mockSetStatusBarMessage).toHaveBeenCalledTimes(2);
-    });
-
-    it('should show input-specific message for waitingType=input', () => {
-      service.showWaitingNotification('terminal-1', 'input');
-      expect(mockSetStatusBarMessage).toHaveBeenCalledWith(
-        expect.stringContaining('waiting for input'),
-        expect.any(Number)
-      );
-    });
-
-    it('should show approval-specific message for waitingType=approval', () => {
-      service.showWaitingNotification('terminal-1', 'approval');
-      expect(mockSetStatusBarMessage).toHaveBeenCalledWith(
-        expect.stringContaining('waiting for approval'),
-        expect.any(Number)
-      );
-    });
-
-    it('should not show notification after dispose', () => {
-      service.dispose();
-      service.showWaitingNotification('terminal-1');
-      expect(mockSetStatusBarMessage).not.toHaveBeenCalled();
-    });
-  });
-
   describe('showCompletedNotification', () => {
     it('should show completion notification', () => {
       service.showCompletedNotification('terminal-1');
@@ -150,23 +87,21 @@ describe('ToastNotificationService', () => {
 
   describe('clearTerminal', () => {
     it('should allow notification after clearTerminal resets cooldown', () => {
-      service.showWaitingNotification('terminal-1');
+      service.showCompletedNotification('terminal-1', 'claude');
       expect(mockSetStatusBarMessage).toHaveBeenCalledTimes(1);
 
       service.clearTerminal('terminal-1');
 
       // Global cooldown still applies, advance past it
       vi.advanceTimersByTime(10000);
-      service.showWaitingNotification('terminal-1');
+      service.showCompletedNotification('terminal-1', 'claude');
       expect(mockSetStatusBarMessage).toHaveBeenCalledTimes(2);
     });
   });
 
   describe('focus safety', () => {
     it('should never call showInformationMessage to avoid stealing focus', () => {
-      service.showWaitingNotification('terminal-1');
-      vi.advanceTimersByTime(10000);
-      service.showCompletedNotification('terminal-2', 'claude');
+      service.showCompletedNotification('terminal-1', 'claude');
       expect(mockShowInformationMessage).not.toHaveBeenCalled();
     });
 

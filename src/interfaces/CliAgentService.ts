@@ -94,7 +94,7 @@ export interface ICliAgentDetectionService {
   detectFromOutput(terminalId: string, data: string): CliAgentDetectionResult | null;
 
   /**
-   * Handle a terminal output flush and run detection/termination/waiting in a fixed order.
+   * Handle a terminal output flush and run detection/termination in a fixed order.
    * @param terminalId Terminal ID where the output occurred
    * @param data Output chunk to analyze
    * @returns Processing summary for the chunk
@@ -153,24 +153,6 @@ export interface ICliAgentDetectionService {
     status: 'connected' | 'disconnected' | 'none';
     type: AgentType | null;
     terminalName?: string;
-  }>;
-
-  // =================== Waiting State Detection ===================
-
-  /**
-   * Detect if agent is in a waiting state from terminal output
-   * @param terminalId Terminal ID
-   * @param data Terminal output data
-   */
-  detectWaitingState(terminalId: string, data: string): void;
-
-  /**
-   * Agent waiting state change event
-   */
-  readonly onAgentWaitingChange: vscode.Event<{
-    terminalId: string;
-    isWaiting: boolean;
-    waitingType?: 'input' | 'approval' | 'idle';
   }>;
 
   // =================== Lifecycle Management ===================

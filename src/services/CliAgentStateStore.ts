@@ -13,8 +13,6 @@ export interface AgentState {
   isDisplayingChoices: boolean;
   lastChoiceDetected?: number;
   startTime?: Date;
-  isWaitingForInput: boolean;
-  waitingType?: 'input' | 'approval' | 'idle';
 }
 
 export interface DisconnectedAgentInfo {
@@ -30,12 +28,6 @@ export interface StateChangeEvent {
   terminalName?: string;
 }
 
-export interface WaitingChangeEvent {
-  terminalId: string;
-  isWaiting: boolean;
-  waitingType?: 'input' | 'approval' | 'idle';
-}
-
 export type StateChangeObserver = (event: StateChangeEvent) => void;
 
 export class CliAgentStateStore {
@@ -46,10 +38,6 @@ export class CliAgentStateStore {
 
   private readonly statusChangeEmitter = new vscode.EventEmitter<StateChangeEvent>();
   public readonly onStatusChange: vscode.Event<StateChangeEvent> = this.statusChangeEmitter.event;
-
-  private readonly waitingChangeEmitter = new vscode.EventEmitter<WaitingChangeEvent>();
-  public readonly onAgentWaitingChange: vscode.Event<WaitingChangeEvent> =
-    this.waitingChangeEmitter.event;
 
   private readonly observers = new Set<StateChangeObserver>();
   private readonly DISCONNECT_GRACE_PERIOD_MS = 2000;
@@ -107,8 +95,6 @@ export class CliAgentStateStore {
       terminalName,
       preserveScrollPosition: true,
       isDisplayingChoices: false,
-      isWaitingForInput: false,
-      waitingType: undefined,
     });
 
     // Remove from disconnected list
@@ -138,8 +124,6 @@ export class CliAgentStateStore {
         agentType: previousType,
         preserveScrollPosition: false,
         isDisplayingChoices: false,
-        isWaitingForInput: false,
-        waitingType: undefined,
       });
 
       this.notifyObservers({
@@ -176,8 +160,6 @@ export class CliAgentStateStore {
         agentType: null,
         preserveScrollPosition: false,
         isDisplayingChoices: false,
-        isWaitingForInput: false,
-        waitingType: undefined,
       });
 
       this.notifyObservers({
@@ -191,33 +173,6 @@ export class CliAgentStateStore {
         this.promoteLatestDisconnectedAgent();
       }
     }
-  }
-
-  public setAgentWaiting(
-    terminalId: string,
-    isWaiting: boolean,
-    waitingType?: 'input' | 'approval' | 'idle'
-  ): void {
-    const state = this.agentStates.get(terminalId);
-    if (!state || state.status !== 'connected') {
-      return;
-    }
-
-    // Prevent redundant updates
-    if (state.isWaitingForInput === isWaiting && state.waitingType === waitingType) {
-      return;
-    }
-
-    state.isWaitingForInput = isWaiting;
-    state.waitingType = isWaiting ? waitingType : undefined;
-
-    const event: WaitingChangeEvent = {
-      terminalId,
-      isWaiting,
-      waitingType,
-    };
-
-    this.waitingChangeEmitter.fire(event);
   }
 
   public removeTerminalCompletely(terminalId: string): void {
@@ -303,7 +258,6 @@ export class CliAgentStateStore {
       agentType: null,
       preserveScrollPosition: false,
       isDisplayingChoices: false,
-      isWaitingForInput: false,
       ...currentState,
       ...updates,
     };
@@ -466,6 +420,5 @@ export class CliAgentStateStore {
     this.clearAllState();
     this.observers.clear();
     this.statusChangeEmitter.dispose();
-    this.waitingChangeEmitter.dispose();
   }
 }
