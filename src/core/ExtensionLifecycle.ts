@@ -116,7 +116,20 @@ export class ExtensionLifecycle {
       // Initialize focus protection service
       this.focusProtectionService = new FocusProtectionService({
         isTerminalFocused: () => this.terminalManager?.isTerminalFocused() ?? false,
+        isWebViewVisible: () => this.sidebarProvider?.isWebViewVisible() ?? false,
       });
+
+      // Wire terminal focus changes to focus protection service
+      if (this.terminalManager && this.focusProtectionService) {
+        const focusProtection = this.focusProtectionService;
+        const originalSetFocused = this.terminalManager.setTerminalFocused.bind(
+          this.terminalManager
+        );
+        this.terminalManager.setTerminalFocused = (focused: boolean) => {
+          originalSetFocused(focused);
+          focusProtection.notifyFocusChanged(focused);
+        };
+      }
 
       // Initialize Phase 8: Terminal Decorations & Links Services
       try {

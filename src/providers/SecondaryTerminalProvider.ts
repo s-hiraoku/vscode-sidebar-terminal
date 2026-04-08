@@ -358,6 +358,10 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     log('🎨 [PROVIDER] Theme change listener registered');
   }
 
+  public isWebViewVisible(): boolean {
+    return this._lifecycleManager.getView()?.visible ?? false;
+  }
+
   public resolveWebviewView(
     webviewView: vscode.WebviewView,
     _context: vscode.WebviewViewResolveContext,

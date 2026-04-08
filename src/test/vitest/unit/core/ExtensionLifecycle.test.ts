@@ -86,6 +86,9 @@ vi.mock('../../../../providers/SecondaryTerminalProvider', () => ({
     static viewType = 'secondaryTerminal';
     constructor(..._args: unknown[]) {}
     setPhase8Services(..._args: unknown[]): void {}
+    isWebViewVisible(): boolean {
+      return false;
+    }
     dispose(): void {
       mocks.sidebarProviderDispose();
     }
@@ -100,6 +103,10 @@ vi.mock('../../../../terminals/TerminalManager', () => ({
       }
     }
     setShellIntegrationService(..._args: unknown[]): void {}
+    setTerminalFocused(_focused: boolean): void {}
+    isTerminalFocused(): boolean {
+      return false;
+    }
     onTerminalCreated(cb: (t: any) => void): { dispose: () => void } {
       mocks.onTerminalCreatedCallback = cb;
       return { dispose: vi.fn() };
