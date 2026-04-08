@@ -5,6 +5,12 @@ All notable changes to the "Secondary Terminal" extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+### [0.5.3](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v0.5.2...v0.5.3) (2026-04-08)
+
+### Fixed
+
+- remove focus-stealing from file reference commands ([#579](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/579)) ([32b553d](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/32b553dce1e7eafda1c20ba09b687e8c9198c170))
+
 ### [0.5.2](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v0.5.1...v0.5.2) (2026-04-08)
 
 ### Fixed
