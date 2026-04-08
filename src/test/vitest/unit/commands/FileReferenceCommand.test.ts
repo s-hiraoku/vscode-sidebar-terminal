@@ -15,6 +15,10 @@ describe('FileReferenceCommand', () => {
 
   let mockSelection: any;
 
+  class MockTabInputText {
+    constructor(public uri: any) {}
+  }
+
   beforeEach(() => {
     // Mock TerminalManager
     mockTerminalManager = {
@@ -30,6 +34,7 @@ describe('FileReferenceCommand', () => {
       getCurrentGloballyActiveAgent: vi.fn(),
       focusTerminal: vi.fn().mockResolvedValue(undefined),
       sendInput: vi.fn(),
+      getTerminal: vi.fn().mockReturnValue({}),
       refreshCliAgentState: vi.fn().mockReturnValue(false),
     };
 
@@ -77,6 +82,7 @@ describe('FileReferenceCommand', () => {
     (vscode.commands.executeCommand as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
       undefined
     );
+    (vscode as any).TabInputText = MockTabInputText;
 
     // Mock notifications
     (vscode.window.showInformationMessage as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
@@ -285,6 +291,92 @@ describe('FileReferenceCommand', () => {
         // Should use connected agent behavior
         expect(mockTerminalManager.sendInput).toHaveBeenCalledWith('@src/test.ts ', 'terminal-1');
       });
+
+      it('should skip agents with stale terminalIds instead of falling back', () => {
+        mockTerminalManager.isTerminalFocused = vi.fn().mockReturnValue(false);
+        mockTerminalManager.getConnectedAgents.mockReturnValue([
+          { terminalId: 'stale-terminal', agentInfo: { type: 'claude' } },
+        ]);
+        mockTerminalManager.getTerminal = vi.fn().mockReturnValue(undefined);
+
+        fileReferenceCommand.handleSendAtMention();
+
+        expect(mockTerminalManager.sendInput).not.toHaveBeenCalled();
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
+          'CLI Agent terminals are no longer available. Please check agent status.'
+        );
+      });
+
+      it('should not focus the sidebar view before sending when editor has focus', async () => {
+        mockTerminalManager.isTerminalFocused = vi.fn().mockReturnValue(false);
+        mockTerminalManager.getConnectedAgents.mockReturnValue([
+          { terminalId: 'terminal-1', agentInfo: { type: 'claude' } },
+        ]);
+
+        fileReferenceCommand.handleSendAtMention();
+
+        await new Promise((resolve) => setTimeout(resolve, 200));
+
+        expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith('secondaryTerminal.focus');
+        expect(mockTerminalManager.focusTerminal).not.toHaveBeenCalled();
+        expect(mockTerminalManager.sendInput).toHaveBeenCalledWith('@src/test.ts ', 'terminal-1');
+      });
+    });
+  });
+
+  describe('handleSendAllOpenFiles', () => {
+    beforeEach(() => {
+      (vscode.window as any).tabGroups = {
+        all: [
+          {
+            tabs: [
+              {
+                input: new (vscode.TabInputText as any)(
+                  vscode.Uri.file('/workspace/project/src/a.ts')
+                ),
+              },
+              {
+                input: new (vscode.TabInputText as any)(
+                  vscode.Uri.file('/workspace/project/src/b.ts')
+                ),
+              },
+            ],
+          },
+        ],
+      };
+    });
+
+    it('should skip agents with stale terminalIds for sendAllOpenFiles', () => {
+      mockTerminalManager.isTerminalFocused = vi.fn().mockReturnValue(false);
+      mockTerminalManager.getConnectedAgents.mockReturnValue([
+        { terminalId: 'stale-terminal', agentInfo: { type: 'claude' } },
+      ]);
+      mockTerminalManager.getTerminal = vi.fn().mockReturnValue(undefined);
+
+      fileReferenceCommand.handleSendAllOpenFiles();
+
+      expect(mockTerminalManager.sendInput).not.toHaveBeenCalled();
+      expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
+        'CLI Agent terminals are no longer available. Please check agent status.'
+      );
+    });
+
+    it('should not focus the sidebar view before sending all open files when editor has focus', async () => {
+      mockTerminalManager.isTerminalFocused = vi.fn().mockReturnValue(false);
+      mockTerminalManager.getConnectedAgents.mockReturnValue([
+        { terminalId: 'terminal-1', agentInfo: { type: 'claude' } },
+      ]);
+
+      fileReferenceCommand.handleSendAllOpenFiles();
+
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith('secondaryTerminal.focus');
+      expect(mockTerminalManager.focusTerminal).not.toHaveBeenCalled();
+      expect(mockTerminalManager.sendInput).toHaveBeenCalledWith(
+        '@src/a.ts\n@src/b.ts ',
+        'terminal-1'
+      );
     });
   });
 });

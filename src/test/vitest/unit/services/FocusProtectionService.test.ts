@@ -149,8 +149,8 @@ describe('FocusProtectionService', () => {
       mockIsWebViewVisible.mockReturnValue(true);
 
       service.notifyFocusChanged(true);
-      // Wait longer than RECENT_FOCUS_WINDOW_MS (300ms)
-      vi.advanceTimersByTime(400);
+      // Wait longer than RECENT_FOCUS_WINDOW_MS (800ms)
+      vi.advanceTimersByTime(900);
 
       fireActiveTerminalChanged({ name: 'bash' });
       vi.advanceTimersByTime(200);
