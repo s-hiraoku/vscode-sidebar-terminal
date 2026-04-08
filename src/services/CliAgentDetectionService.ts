@@ -8,24 +8,18 @@ import {
 } from '../interfaces/CliAgentService';
 import { CliAgentDetectionEngine } from './CliAgentDetectionEngine';
 import { CliAgentStateStore, AgentStatus } from './CliAgentStateStore';
-import { CliAgentWaitingDetector } from './CliAgentWaitingDetector';
-import { AudioNotificationService } from './AudioNotificationService';
 import { ToastNotificationService } from './ToastNotificationService';
 import { NativeNotificationService } from './NativeNotificationService';
 import { NotificationCoordinator } from './NotificationCoordinator';
 import type { AgentType } from '../types/shared';
 import { CliAgentInputAccumulator } from './CliAgentInputAccumulator';
-import { CliAgentIdleDetector } from './CliAgentIdleDetector';
 
 export class CliAgentDetectionService implements ICliAgentDetectionService {
   private static readonly HEARTBEAT_INTERVAL_MS = 30000;
   private readonly detectionEngine: CliAgentDetectionEngine;
   private readonly stateStore: CliAgentStateStore;
-  private readonly waitingDetector: CliAgentWaitingDetector;
   private readonly notificationCoordinator: NotificationCoordinator;
   private readonly inputAccumulator: CliAgentInputAccumulator;
-  private readonly idleDetector: CliAgentIdleDetector;
-  private waitingChangeSubscription: { dispose(): void } | undefined;
   private statusChangeSubscription: { dispose(): void } | undefined;
   private heartbeatTimer: ReturnType<typeof setTimeout> | undefined;
   private readonly previousAgentInfo = new Map<
@@ -37,23 +31,11 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
   constructor() {
     this.detectionEngine = new CliAgentDetectionEngine();
     this.stateStore = new CliAgentStateStore();
-    this.waitingDetector = new CliAgentWaitingDetector(
-      this.detectionEngine.getPatternRegistry(),
-      this.stateStore
-    );
     this.notificationCoordinator = new NotificationCoordinator(
-      new AudioNotificationService(),
       new ToastNotificationService(),
       new NativeNotificationService()
     );
     this.inputAccumulator = new CliAgentInputAccumulator();
-    this.idleDetector = new CliAgentIdleDetector(this.stateStore);
-
-    this.waitingChangeSubscription = this.stateStore.onAgentWaitingChange((event) => {
-      if (event.isWaiting) {
-        this.notificationCoordinator.notifyWaiting(event.terminalId, event.waitingType);
-      }
-    });
 
     this.statusChangeSubscription = this.stateStore.onStatusChange((event) => {
       const previous = this.previousAgentInfo.get(event.terminalId);
@@ -114,8 +96,6 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
       return null;
     }
 
-    this.clearWaitingOnUserInput(terminalId);
-
     const { submittedCommands, sawInterrupt } = this.inputAccumulator.consume(terminalId, input);
 
     if (sawInterrupt) {
@@ -131,13 +111,6 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     }
 
     return lastDetection;
-  }
-
-  private clearWaitingOnUserInput(terminalId: string): void {
-    const state = this.stateStore.getAgentState(terminalId);
-    if (state?.isWaitingForInput && state.waitingType !== 'idle') {
-      this.stateStore.setAgentWaiting(terminalId, false);
-    }
   }
 
   detectFromOutput(terminalId: string, data: string): CliAgentDetectionResult | null {
@@ -178,16 +151,6 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
       if (terminationResult.isTerminated) {
         termination = terminationResult;
       }
-      state = this.getAgentState(terminalId);
-    }
-
-    if (state.status === 'connected') {
-      // Clear idle waiting when new output arrives
-      this.idleDetector.clearIdleWaiting(terminalId);
-      // Reset idle timer (output received = agent is active)
-      this.idleDetector.resetTimer(terminalId);
-
-      this.waitingDetector.analyzeImmediately(terminalId, data);
       state = this.getAgentState(terminalId);
     }
 
@@ -277,9 +240,7 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
 
   handleTerminalRemoved(terminalId: string): void {
     this.removingTerminals.add(terminalId);
-    this.idleDetector.cancelTimer(terminalId);
     this.detectionEngine.clearTerminalCache(terminalId);
-    this.waitingDetector.clearTerminalData(terminalId);
     this.inputAccumulator.clear(terminalId);
     this.stateStore.removeTerminalCompletely(terminalId);
     this.previousAgentInfo.delete(terminalId);
@@ -300,24 +261,13 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     return this.stateStore.clearDetectionError(terminalId);
   }
 
-  detectWaitingState(terminalId: string, data: string): void {
-    this.waitingDetector.analyze(terminalId, data);
-  }
-
-  get onAgentWaitingChange(): typeof this.stateStore.onAgentWaitingChange {
-    return this.stateStore.onAgentWaitingChange;
-  }
-
   get onCliAgentStatusChange(): typeof this.stateStore.onStatusChange {
     return this.stateStore.onStatusChange;
   }
 
   dispose(): void {
     this.clearHeartbeatTimer();
-    this.waitingChangeSubscription?.dispose();
     this.statusChangeSubscription?.dispose();
-    this.idleDetector.dispose();
-    this.waitingDetector.dispose();
     this.notificationCoordinator.dispose();
     this.stateStore.dispose();
   }

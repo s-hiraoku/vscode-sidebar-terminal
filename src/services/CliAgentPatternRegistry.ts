@@ -37,30 +37,7 @@ export interface AgentPatternDefinition {
 
   /** Regex patterns for termination detection */
   terminationRegexPatterns: RegExp[];
-
-  /** Patterns that indicate agent is waiting for user input or approval */
-  waitingPatterns?: WaitingPatternDefinition;
 }
-
-/**
- * Waiting pattern definitions for detecting when an agent is idle
- */
-export interface WaitingPatternDefinition {
-  /** Regex patterns for input prompt detection */
-  inputPromptRegexPatterns?: RegExp[];
-  /** Regex patterns for tool approval prompt detection */
-  toolApprovalRegexPatterns?: RegExp[];
-}
-
-/**
- * Result of a waiting pattern match
- */
-export interface WaitingPatternMatch {
-  /** Type of waiting detected */
-  waitingType: 'input' | 'approval';
-}
-
-type WaitingStatusSignal = 'processing' | 'shortcuts';
 
 /**
  * Shell prompt patterns used for termination detection
@@ -109,16 +86,6 @@ export class CliAgentPatternRegistry {
       activityKeywords: ['claude', 'anthropic'],
       terminationPatterns: ['[Process completed]'],
       terminationRegexPatterns: [/\[Process completed\]/i, /\[process exited with code \d+\]/i],
-      waitingPatterns: {
-        inputPromptRegexPatterns: [/^❯(?:\s*\[\?2004h)?$/, /^>\s*$/],
-        toolApprovalRegexPatterns: [
-          /Allow\s+(once|always)\?/i,
-          /needs your permission/i,
-          /\(Y\/n\)/,
-          /\(y\/N\)/,
-          /\(y\/n\/always\)/i,
-        ],
-      },
     });
 
     // Gemini CLI patterns
@@ -162,17 +129,6 @@ export class CliAgentPatternRegistry {
       activityKeywords: ['gemini', 'google', 'google ai'],
       terminationPatterns: ['Agent powering down. Goodbye!'],
       terminationRegexPatterns: [/Agent powering down\.\s*Goodbye!/i],
-      waitingPatterns: {
-        inputPromptRegexPatterns: [/^gemini\s*>\s*$/i],
-        toolApprovalRegexPatterns: [
-          /Do you approve/i,
-          /Allow\s+command/i,
-          /Approve\?\s*\(/i,
-          /Proceed\s+(Once|Always)/i,
-          /\[y\/N\]/,
-          /\(y\/n\/always\)/i,
-        ],
-      },
     });
 
     // OpenAI Codex patterns
@@ -184,10 +140,6 @@ export class CliAgentPatternRegistry {
       activityKeywords: ['codex', 'openai'],
       terminationPatterns: [],
       terminationRegexPatterns: [/\[process exited with code \d+\]/i],
-      waitingPatterns: {
-        inputPromptRegexPatterns: [/^codex\s*>\s*$/i],
-        toolApprovalRegexPatterns: [/ask me to approve/i, /\[y\/N\]/, /\(Y\/n\)/],
-      },
     });
 
     // GitHub Copilot CLI patterns
@@ -199,15 +151,6 @@ export class CliAgentPatternRegistry {
       activityKeywords: ['copilot', 'github'],
       terminationPatterns: [],
       terminationRegexPatterns: [/\[process exited with code \d+\]/i],
-      waitingPatterns: {
-        inputPromptRegexPatterns: [/^copilot\s*>\s*$/i],
-        toolApprovalRegexPatterns: [
-          /Yes,\s+proceed/i,
-          /Yes,\s+and\s+(remember|approve)/i,
-          /\[y\/N\]/,
-          /\(Y\/n\)/,
-        ],
-      },
     });
 
     // OpenCode patterns
@@ -219,10 +162,6 @@ export class CliAgentPatternRegistry {
       activityKeywords: ['opencode', 'open code'],
       terminationPatterns: [],
       terminationRegexPatterns: [/\[process exited with code \d+\]/i],
-      waitingPatterns: {
-        inputPromptRegexPatterns: [/^opencode\s*>\s*$/i],
-        toolApprovalRegexPatterns: [],
-      },
     });
 
     return patterns;
@@ -650,102 +589,6 @@ export class CliAgentPatternRegistry {
     }
 
     return false;
-  }
-
-  /**
-   * Match output against waiting patterns for a specific agent type
-   * @param agentType Agent type to check
-   * @param output Cleaned terminal output
-   * @returns Waiting pattern match or null
-   */
-  public matchWaitingPattern(agentType: AgentType, output: string): WaitingPatternMatch | null {
-    if (!output || !output.trim()) {
-      return null;
-    }
-
-    const patterns = this.agentPatterns.get(agentType);
-    if (!patterns?.waitingPatterns) {
-      return null;
-    }
-
-    const { waitingPatterns } = patterns;
-    const lines = this.getWaitingLines(output);
-
-    if (this.matchesApprovalWaiting(lines, waitingPatterns)) {
-      return { waitingType: 'approval' };
-    }
-
-    if (this.hasWaitingBlocker(agentType, lines)) {
-      return null;
-    }
-
-    if (this.matchesInputWaiting(lines, waitingPatterns)) {
-      return { waitingType: 'input' };
-    }
-
-    return null;
-  }
-
-  private getWaitingLines(output: string): string[] {
-    return output
-      .split('\n')
-      .map((line) => line.trim())
-      .filter(Boolean);
-  }
-
-  private matchesApprovalWaiting(
-    lines: string[],
-    waitingPatterns: WaitingPatternDefinition
-  ): boolean {
-    if (!waitingPatterns.toolApprovalRegexPatterns) {
-      return false;
-    }
-
-    return lines.some((line) =>
-      waitingPatterns.toolApprovalRegexPatterns!.some((regex) => regex.test(line))
-    );
-  }
-
-  private matchesInputWaiting(lines: string[], waitingPatterns: WaitingPatternDefinition): boolean {
-    const lastLine = lines.at(-1);
-    if (!lastLine || !waitingPatterns.inputPromptRegexPatterns) {
-      return false;
-    }
-
-    return waitingPatterns.inputPromptRegexPatterns.some((regex) => regex.test(lastLine));
-  }
-
-  private hasWaitingBlocker(agentType: AgentType, lines: string[]): boolean {
-    if (agentType !== 'claude') {
-      return false;
-    }
-
-    return lines.some((line) => this.getClaudeWaitingStatusSignal(line) === 'processing');
-  }
-
-  private getClaudeWaitingStatusSignal(line: string): WaitingStatusSignal | null {
-    const normalizedLine = line.toLowerCase();
-    if (normalizedLine.includes('? for shortcuts') || normalizedLine.includes('for shortcuts')) {
-      return 'shortcuts';
-    }
-
-    if (
-      normalizedLine.includes('esc to interrupt') ||
-      /\b(thinking|marinating|implementing)\b/.test(normalizedLine)
-    ) {
-      return 'processing';
-    }
-
-    return null;
-  }
-
-  /**
-   * Get waiting patterns for a specific agent type
-   * @param agentType Agent type
-   * @returns Waiting pattern definition or undefined
-   */
-  public getWaitingPatterns(agentType: AgentType): WaitingPatternDefinition | undefined {
-    return this.agentPatterns.get(agentType)?.waitingPatterns;
   }
 
   /**

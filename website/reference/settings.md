@@ -4,7 +4,7 @@ title: Settings Reference
 
 # Settings Reference
 
-Secondary Terminal provides **98** configurable settings.
+Secondary Terminal provides **97** configurable settings.
 
 ::: tip
 All settings use the `secondaryTerminal.` prefix. For example, `fontSize` is set as `secondaryTerminal.fontSize` in your VS Code settings.
@@ -12,169 +12,153 @@ All settings use the `secondaryTerminal.` prefix. For example, `fontSize` is set
 
 ## Accessibility
 
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `accessibility.screenReaderSupport` | boolean | `true` | Enable enhanced screen reader support for terminal content (Phase 8: Advanced Terminal Features). |
+| Setting                             | Type    | Default | Description                                                                                       |
+| ----------------------------------- | ------- | ------- | ------------------------------------------------------------------------------------------------- |
+| `accessibility.screenReaderSupport` | boolean | `true`  | Enable enhanced screen reader support for terminal content (Phase 8: Advanced Terminal Features). |
 
 ## General
 
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `activeBorderMode` | string | `"multipleOnly"` | When to show the blue border around the active terminal |
-| `allowChords` | boolean | `true` | Allow multi-key chord sequences in terminal keybindings (e.g., Ctrl+K Ctrl+C). |
-| `allowMnemonics` | boolean | `true` | Allow Alt key menu mnemonics on Windows and Linux platforms. |
-| `altClickMovesCursor` | boolean | `true` | Controls whether Alt/Option + click will reposition the prompt cursor to underneath the mouse. This feature may not work reliably for some shells or programs. |
-| `autoHideStatus` | boolean | `true` | Automatically hide status messages after specified duration |
-| `commandsToSkipShell` | array | `[]` | Array of command IDs that should always be handled by VS Code and not sent to the shell. Prefix with '-' to remove from default skip list (e.g., '-workbench.action.quickOpen'). |
-| `confirmBeforeKill` | boolean | `false` | Show confirmation dialog before closing terminals |
-| `cursorBlink` | boolean | `true` | Enable cursor blinking in terminal. |
-| `cursorStyle` | string | `"block"` | Controls the style of terminal cursor. |
-| `cursorWidth` | number | `1` | Controls the width of the cursor when cursorStyle is set to 'bar'. |
-| `defaultDirectory` | string | `""` | Default directory for new terminals. Leave empty to use workspace root. |
-| `drawBoldTextInBrightColors` | boolean | `true` | Controls whether bold text in the terminal will always use the "bright" ANSI color variant. |
-| `dynamicSplitDirection` | boolean | `true` | Automatically adjust split direction based on panel location: horizontal splits in bottom panel, vertical splits in sidebar |
-| `enableAtMentionSync` | boolean | `false` | Enable automatic @filename mention when CLI Agent sends to standard terminal |
-| `enableCliAgentIntegration` | boolean | `true` | Enable file reference shortcuts: Use Cmd+Option+L (Mac) or Alt+Ctrl+L (Linux/Windows) to insert file references |
-| `enableGitHubCopilotIntegration` | boolean | `true` | Enable GitHub Copilot Chat integration: Use Cmd+K Cmd+C (Mac) or Ctrl+K Ctrl+C (Linux/Windows) to activate Copilot Chat |
-| `enablePersistentSessions` | boolean | `true` | Enable terminal session persistence: Restore terminal contents and state after VS Code restart |
-| `enableShellIntegration` | boolean | `true` | Enable shell integration for command tracking, history, and working directory detection. Requires terminal restart to take effect. |
-| `enableSplitResize` | boolean | `true` | Allow resizing split terminals by dragging splitters |
-| `enableTerminalHeaderEnhancements` | boolean | `true` | Enable enhanced terminal header UI (processing indicator and color palette editor). |
-| `focusAfterAtMention` | boolean | `true` | Focus secondary terminal after sending @filename with CMD+OPT+L |
-| `fontFamily` | string | `"monospace"` | Controls the font family of the terminal. This defaults to VS Code's editor.fontFamily value. |
-| `fontSize` | number | `12` | Controls the font size in pixels of the terminal. |
-| `fontWeight` | string | `"normal"` | The font weight to use within the terminal for non-bold text. Accepts normal and bold keywords or numbers between 1 and 1000. |
-| `fontWeightBold` | string | `"bold"` | The font weight to use within the terminal for bold text. Accepts normal and bold keywords or numbers between 1 and 1000. |
-| `headerFontSize` | number | `14` | Font size for webview header title |
-| `headerIconSize` | number | `20` | Size of terminal icon in webview header |
-| `letterSpacing` | number | `0` | Controls the letter spacing of the terminal, this is an integer value which represents the amount of additional pixels to add between characters. |
-| `lineHeight` | number | `1` | Controls the line height of the terminal, this number is multiplied by the terminal font size to get the actual line-height in pixels. |
-| `maxSplitTerminals` | number | `10` | Maximum number of terminals to display in split view |
-| `maxTerminals` | number | `10` | Maximum number of terminals allowed. |
-| `minimumContrastRatio` | number | `1` | When set, the foreground color of each cell will change to try meet the contrast ratio specified. Example values: - 1: Do nothing and use the standard theme colors. - 4.5: WCAG AA compliance (minimum). - 7: WCAG AAA compliance (enhanced). - 21: White on black or black on white. |
-| `minTerminalCount` | number | `1` | Minimum number of terminals to keep open |
-| `minTerminalHeight` | number | `100` | Minimum height for each terminal in split view (pixels) |
-| `panelLocation` | string | `"auto"` | Panel location preference for dynamic split direction |
-| `persistentSessionRetentionDays` | number | `7` | Number of days to retain session data before automatic cleanup |
-| `persistentSessionReviveProcess` | string | `"onExitAndWindowClose"` | When to save terminal sessions for restoration |
-| `persistentSessionScrollback` | number | `1000` | Number of lines to restore from terminal history (0 to disable scrollback restore) |
-| `persistentSessionStorageLimit` | number | `20` | Maximum storage size for session data in MB (session will be optimized or cleared if exceeded) |
-| `persistentSessionStorageWarningThreshold` | number | `80` | Storage usage percentage threshold for optimization warning (default: 80%) |
-| `protectLastTerminal` | boolean | `true` | Prevent closing the last terminal |
-| `restoreScrollback` | boolean | `true` | Enable restoration of terminal command history and output (scrollback buffer) |
-| `sampleIconOpacity` | number | `0.4` | Opacity of sample icons (0.1 to 1.0) |
-| `sampleIconSize` | number | `16` | Size of sample icons in webview header |
-| `scrollback` | number | `2000` | Controls the maximum number of lines the terminal keeps in its buffer. |
-| `scrollbackCompression` | boolean | `true` | Compress scrollback data to reduce storage size |
-| `scrollbackLines` | number | `2000` | Maximum number of lines to restore from terminal history (0 to disable) |
-| `scrollbackMaxStorageSize` | number | `20971520` | Maximum storage size for scrollback data in bytes (1MB - 100MB) |
-| `scrollbackProgressiveLoad` | boolean | `false` | Load scrollback data progressively for better performance with large histories |
-| `sendKeybindingsToShell` | boolean | `false` | Controls whether keybindings are automatically sent to the shell instead of being handled by VS Code workbench. |
-| `shell` | string | `""` | Path to shell executable. Leave empty to use system default. |
-| `shellArgs` | array | `[]` | Arguments to pass to the shell. |
-| `showSampleIcons` | boolean | `true` | Show sample command icons in webview header (display only) |
-| `showWebViewHeader` | boolean | `true` | Show title and command icons in the webview header |
-| `statusDisplayDuration` | number | `3000` | Duration to display status messages (milliseconds) |
-| `theme` | string | `"auto"` | Terminal theme. Auto follows VS Code theme. |
-| `webViewTitle` | string | `"Terminal"` | Title to display in the webview header |
-
-## Agent Idle Detection
-
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `agentIdleDetection.timeoutMs` | number | `3000` | Time in ms without output to consider agent idle/waiting |
+| Setting                                    | Type    | Default                  | Description                                                                                                                                                                                                                                                                            |
+| ------------------------------------------ | ------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `activeBorderMode`                         | string  | `"multipleOnly"`         | When to show the blue border around the active terminal                                                                                                                                                                                                                                |
+| `allowChords`                              | boolean | `true`                   | Allow multi-key chord sequences in terminal keybindings (e.g., Ctrl+K Ctrl+C).                                                                                                                                                                                                         |
+| `allowMnemonics`                           | boolean | `true`                   | Allow Alt key menu mnemonics on Windows and Linux platforms.                                                                                                                                                                                                                           |
+| `altClickMovesCursor`                      | boolean | `true`                   | Controls whether Alt/Option + click will reposition the prompt cursor to underneath the mouse. This feature may not work reliably for some shells or programs.                                                                                                                         |
+| `autoHideStatus`                           | boolean | `true`                   | Automatically hide status messages after specified duration                                                                                                                                                                                                                            |
+| `commandsToSkipShell`                      | array   | `[]`                     | Array of command IDs that should always be handled by VS Code and not sent to the shell. Prefix with '-' to remove from default skip list (e.g., '-workbench.action.quickOpen').                                                                                                       |
+| `confirmBeforeKill`                        | boolean | `false`                  | Show confirmation dialog before closing terminals                                                                                                                                                                                                                                      |
+| `cursorBlink`                              | boolean | `true`                   | Enable cursor blinking in terminal.                                                                                                                                                                                                                                                    |
+| `cursorStyle`                              | string  | `"block"`                | Controls the style of terminal cursor.                                                                                                                                                                                                                                                 |
+| `cursorWidth`                              | number  | `1`                      | Controls the width of the cursor when cursorStyle is set to 'bar'.                                                                                                                                                                                                                     |
+| `defaultDirectory`                         | string  | `""`                     | Default directory for new terminals. Leave empty to use workspace root.                                                                                                                                                                                                                |
+| `drawBoldTextInBrightColors`               | boolean | `true`                   | Controls whether bold text in the terminal will always use the "bright" ANSI color variant.                                                                                                                                                                                            |
+| `dynamicSplitDirection`                    | boolean | `true`                   | Automatically adjust split direction based on panel location: horizontal splits in bottom panel, vertical splits in sidebar                                                                                                                                                            |
+| `enableAtMentionSync`                      | boolean | `false`                  | Enable automatic @filename mention when CLI Agent sends to standard terminal                                                                                                                                                                                                           |
+| `enableCliAgentIntegration`                | boolean | `true`                   | Enable file reference shortcuts: Use Cmd+Option+L (Mac) or Alt+Ctrl+L (Linux/Windows) to insert file references                                                                                                                                                                        |
+| `enableGitHubCopilotIntegration`           | boolean | `true`                   | Enable GitHub Copilot Chat integration: Use Cmd+K Cmd+C (Mac) or Ctrl+K Ctrl+C (Linux/Windows) to activate Copilot Chat                                                                                                                                                                |
+| `enablePersistentSessions`                 | boolean | `true`                   | Enable terminal session persistence: Restore terminal contents and state after VS Code restart                                                                                                                                                                                         |
+| `enableShellIntegration`                   | boolean | `true`                   | Enable shell integration for command tracking, history, and working directory detection. Requires terminal restart to take effect.                                                                                                                                                     |
+| `enableSplitResize`                        | boolean | `true`                   | Allow resizing split terminals by dragging splitters                                                                                                                                                                                                                                   |
+| `enableTerminalHeaderEnhancements`         | boolean | `true`                   | Enable enhanced terminal header UI (processing indicator and color palette editor).                                                                                                                                                                                                    |
+| `focusAfterAtMention`                      | boolean | `true`                   | Focus secondary terminal after sending @filename with CMD+OPT+L                                                                                                                                                                                                                        |
+| `fontFamily`                               | string  | `"monospace"`            | Controls the font family of the terminal. This defaults to VS Code's editor.fontFamily value.                                                                                                                                                                                          |
+| `fontSize`                                 | number  | `12`                     | Controls the font size in pixels of the terminal.                                                                                                                                                                                                                                      |
+| `fontWeight`                               | string  | `"normal"`               | The font weight to use within the terminal for non-bold text. Accepts normal and bold keywords or numbers between 1 and 1000.                                                                                                                                                          |
+| `fontWeightBold`                           | string  | `"bold"`                 | The font weight to use within the terminal for bold text. Accepts normal and bold keywords or numbers between 1 and 1000.                                                                                                                                                              |
+| `headerFontSize`                           | number  | `14`                     | Font size for webview header title                                                                                                                                                                                                                                                     |
+| `headerIconSize`                           | number  | `20`                     | Size of terminal icon in webview header                                                                                                                                                                                                                                                |
+| `letterSpacing`                            | number  | `0`                      | Controls the letter spacing of the terminal, this is an integer value which represents the amount of additional pixels to add between characters.                                                                                                                                      |
+| `lineHeight`                               | number  | `1`                      | Controls the line height of the terminal, this number is multiplied by the terminal font size to get the actual line-height in pixels.                                                                                                                                                 |
+| `maxSplitTerminals`                        | number  | `10`                     | Maximum number of terminals to display in split view                                                                                                                                                                                                                                   |
+| `maxTerminals`                             | number  | `10`                     | Maximum number of terminals allowed.                                                                                                                                                                                                                                                   |
+| `minimumContrastRatio`                     | number  | `1`                      | When set, the foreground color of each cell will change to try meet the contrast ratio specified. Example values: - 1: Do nothing and use the standard theme colors. - 4.5: WCAG AA compliance (minimum). - 7: WCAG AAA compliance (enhanced). - 21: White on black or black on white. |
+| `minTerminalCount`                         | number  | `1`                      | Minimum number of terminals to keep open                                                                                                                                                                                                                                               |
+| `minTerminalHeight`                        | number  | `100`                    | Minimum height for each terminal in split view (pixels)                                                                                                                                                                                                                                |
+| `panelLocation`                            | string  | `"auto"`                 | Panel location preference for dynamic split direction                                                                                                                                                                                                                                  |
+| `persistentSessionRetentionDays`           | number  | `7`                      | Number of days to retain session data before automatic cleanup                                                                                                                                                                                                                         |
+| `persistentSessionReviveProcess`           | string  | `"onExitAndWindowClose"` | When to save terminal sessions for restoration                                                                                                                                                                                                                                         |
+| `persistentSessionScrollback`              | number  | `1000`                   | Number of lines to restore from terminal history (0 to disable scrollback restore)                                                                                                                                                                                                     |
+| `persistentSessionStorageLimit`            | number  | `20`                     | Maximum storage size for session data in MB (session will be optimized or cleared if exceeded)                                                                                                                                                                                         |
+| `persistentSessionStorageWarningThreshold` | number  | `80`                     | Storage usage percentage threshold for optimization warning (default: 80%)                                                                                                                                                                                                             |
+| `protectLastTerminal`                      | boolean | `true`                   | Prevent closing the last terminal                                                                                                                                                                                                                                                      |
+| `restoreScrollback`                        | boolean | `true`                   | Enable restoration of terminal command history and output (scrollback buffer)                                                                                                                                                                                                          |
+| `sampleIconOpacity`                        | number  | `0.4`                    | Opacity of sample icons (0.1 to 1.0)                                                                                                                                                                                                                                                   |
+| `sampleIconSize`                           | number  | `16`                     | Size of sample icons in webview header                                                                                                                                                                                                                                                 |
+| `scrollback`                               | number  | `2000`                   | Controls the maximum number of lines the terminal keeps in its buffer.                                                                                                                                                                                                                 |
+| `scrollbackCompression`                    | boolean | `true`                   | Compress scrollback data to reduce storage size                                                                                                                                                                                                                                        |
+| `scrollbackLines`                          | number  | `2000`                   | Maximum number of lines to restore from terminal history (0 to disable)                                                                                                                                                                                                                |
+| `scrollbackMaxStorageSize`                 | number  | `20971520`               | Maximum storage size for scrollback data in bytes (1MB - 100MB)                                                                                                                                                                                                                        |
+| `scrollbackProgressiveLoad`                | boolean | `false`                  | Load scrollback data progressively for better performance with large histories                                                                                                                                                                                                         |
+| `sendKeybindingsToShell`                   | boolean | `false`                  | Controls whether keybindings are automatically sent to the shell instead of being handled by VS Code workbench.                                                                                                                                                                        |
+| `shell`                                    | string  | `""`                     | Path to shell executable. Leave empty to use system default.                                                                                                                                                                                                                           |
+| `shellArgs`                                | array   | `[]`                     | Arguments to pass to the shell.                                                                                                                                                                                                                                                        |
+| `showSampleIcons`                          | boolean | `true`                   | Show sample command icons in webview header (display only)                                                                                                                                                                                                                             |
+| `showWebViewHeader`                        | boolean | `true`                   | Show title and command icons in the webview header                                                                                                                                                                                                                                     |
+| `statusDisplayDuration`                    | number  | `3000`                   | Duration to display status messages (milliseconds)                                                                                                                                                                                                                                     |
+| `theme`                                    | string  | `"auto"`                 | Terminal theme. Auto follows VS Code theme.                                                                                                                                                                                                                                            |
+| `webViewTitle`                             | string  | `"Terminal"`             | Title to display in the webview header                                                                                                                                                                                                                                                 |
 
 ## Agent Toast Notification
 
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `agentToastNotification.cooldownMs` | number | `10000` | Minimum interval between toast notifications per terminal (ms) |
-| `agentToastNotification.enabled` | boolean | `true` | Show toast notifications when a CLI agent is waiting for input or completes processing |
-
-## Agent Waiting Notification
-
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `agentWaitingNotification.cooldownMs` | number | `5000` | Minimum interval between notifications per terminal (ms) |
-| `agentWaitingNotification.enabled` | boolean | `true` | Play a sound when a CLI agent is waiting for input or approval |
-| `agentWaitingNotification.soundFile` | string | `""` | Path to custom sound file (empty = system default) |
-| `agentWaitingNotification.volume` | number | `50` | Notification sound volume (0-100) |
+| Setting                             | Type    | Default | Description                                                    |
+| ----------------------------------- | ------- | ------- | -------------------------------------------------------------- |
+| `agentToastNotification.cooldownMs` | number  | `10000` | Minimum interval between toast notifications per terminal (ms) |
+| `agentToastNotification.enabled`    | boolean | `true`  | Show toast notifications when a CLI agent completes processing |
 
 ## Decorations
 
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `decorations.enabled` | boolean | `true` | Enable visual decorations for command success/error indicators (Phase 8: Advanced Terminal Features). |
-| `decorations.errorColor` | string | `"#ff0000"` | Color for failed command decorations. |
-| `decorations.runningColor` | string | `"#ffff00"` | Color for running command decorations. |
-| `decorations.showInGutter` | boolean | `true` | Show command decorations in the terminal gutter area. |
-| `decorations.showInOverviewRuler` | boolean | `true` | Show command decorations in the overview ruler. |
-| `decorations.successColor` | string | `"#00ff00"` | Color for successful command decorations. |
+| Setting                           | Type    | Default     | Description                                                                                           |
+| --------------------------------- | ------- | ----------- | ----------------------------------------------------------------------------------------------------- |
+| `decorations.enabled`             | boolean | `true`      | Enable visual decorations for command success/error indicators (Phase 8: Advanced Terminal Features). |
+| `decorations.errorColor`          | string  | `"#ff0000"` | Color for failed command decorations.                                                                 |
+| `decorations.runningColor`        | string  | `"#ffff00"` | Color for running command decorations.                                                                |
+| `decorations.showInGutter`        | boolean | `true`      | Show command decorations in the terminal gutter area.                                                 |
+| `decorations.showInOverviewRuler` | boolean | `true`      | Show command decorations in the overview ruler.                                                       |
+| `decorations.successColor`        | string  | `"#00ff00"` | Color for successful command decorations.                                                             |
 
 ## Default Profile
 
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `defaultProfile.linux` | string,null | `null` | The default terminal profile name on Linux. Enter a **profile name** (not a path). Examples: `bash`, `zsh`, `fish`. To see available profiles, run `Terminal: Select Default Profile` from the Command Palette. |
-| `defaultProfile.osx` | string,null | `null` | The default terminal profile name on macOS. Enter a **profile name** (not a path). Examples: `zsh`, `bash`, `fish`. To see available profiles, run `Terminal: Select Default Profile` from the Command Palette. |
-| `defaultProfile.windows` | string,null | `null` | The default terminal profile name on Windows. Enter a **profile name** (not a path). Examples: `PowerShell`, `PowerShell 7`, `Command Prompt`, `Git Bash`. To see available profiles, run `Terminal: Select Default Profile` from the Command Palette. |
+| Setting                  | Type        | Default | Description                                                                                                                                                                                                                                            |
+| ------------------------ | ----------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `defaultProfile.linux`   | string,null | `null`  | The default terminal profile name on Linux. Enter a **profile name** (not a path). Examples: `bash`, `zsh`, `fish`. To see available profiles, run `Terminal: Select Default Profile` from the Command Palette.                                        |
+| `defaultProfile.osx`     | string,null | `null`  | The default terminal profile name on macOS. Enter a **profile name** (not a path). Examples: `zsh`, `bash`, `fish`. To see available profiles, run `Terminal: Select Default Profile` from the Command Palette.                                        |
+| `defaultProfile.windows` | string,null | `null`  | The default terminal profile name on Windows. Enter a **profile name** (not a path). Examples: `PowerShell`, `PowerShell 7`, `Command Prompt`, `Git Bash`. To see available profiles, run `Terminal: Select Default Profile` from the Command Palette. |
 
 ## Features
 
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `features.enhancedScrollbackPersistence` | boolean | `true` | Enable VS Code-compatible enhanced scrollback persistence with full state restoration. Enabled by default to mirror VS Code. |
-| `features.fullANSISupport` | boolean | `true` | Enable full ANSI escape sequence support (256-color, true color, text formatting). |
-| `features.scrollbackLineLimit` | number | `1000` | Maximum number of scrollback lines to persist (200-3000). Higher values use more storage. Default: 1000 (matching VS Code). |
-| `features.vscodeKeyboardShortcuts` | boolean | `true` | Enable VS Code standard keyboard shortcuts (Ctrl+C copy/SIGINT, Ctrl+V paste, etc.). |
-| `features.vscodeStandardCursor` | boolean | `true` | Enable VS Code standard cursor rendering with configurable styles and blinking. Enabled by default to match VS Code. |
-| `features.vscodeStandardIME` | boolean | `true` | Enable VS Code standard IME composition handling patterns. Enabled by default to mirror VS Code. |
+| Setting                                  | Type    | Default | Description                                                                                                                  |
+| ---------------------------------------- | ------- | ------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `features.enhancedScrollbackPersistence` | boolean | `true`  | Enable VS Code-compatible enhanced scrollback persistence with full state restoration. Enabled by default to mirror VS Code. |
+| `features.fullANSISupport`               | boolean | `true`  | Enable full ANSI escape sequence support (256-color, true color, text formatting).                                           |
+| `features.scrollbackLineLimit`           | number  | `1000`  | Maximum number of scrollback lines to persist (200-3000). Higher values use more storage. Default: 1000 (matching VS Code).  |
+| `features.vscodeKeyboardShortcuts`       | boolean | `true`  | Enable VS Code standard keyboard shortcuts (Ctrl+C copy/SIGINT, Ctrl+V paste, etc.).                                         |
+| `features.vscodeStandardCursor`          | boolean | `true`  | Enable VS Code standard cursor rendering with configurable styles and blinking. Enabled by default to match VS Code.         |
+| `features.vscodeStandardIME`             | boolean | `true`  | Enable VS Code standard IME composition handling patterns. Enabled by default to mirror VS Code.                             |
 
 ## Links
 
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `links.detectEmailLinks` | boolean | `true` | Detect and highlight email addresses as clickable links. |
-| `links.detectFileLinks` | boolean | `true` | Detect and highlight file paths as clickable links. |
-| `links.detectWebLinks` | boolean | `true` | Detect and highlight web URLs as clickable links. |
-| `links.enabled` | boolean | `true` | Enable automatic link detection in terminal output (Phase 8: Advanced Terminal Features). |
-| `links.maxLinksPerLine` | number | `10` | Maximum number of links to detect per line for performance. |
+| Setting                  | Type    | Default | Description                                                                               |
+| ------------------------ | ------- | ------- | ----------------------------------------------------------------------------------------- |
+| `links.detectEmailLinks` | boolean | `true`  | Detect and highlight email addresses as clickable links.                                  |
+| `links.detectFileLinks`  | boolean | `true`  | Detect and highlight file paths as clickable links.                                       |
+| `links.detectWebLinks`   | boolean | `true`  | Detect and highlight web URLs as clickable links.                                         |
+| `links.enabled`          | boolean | `true`  | Enable automatic link detection in terminal output (Phase 8: Advanced Terminal Features). |
+| `links.maxLinksPerLine`  | number  | `10`    | Maximum number of links to detect per line for performance.                               |
 
 ## Logging
 
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `logging.enableContext` | boolean | `true` | Include context information (source location) in log messages. |
-| `logging.enableTimestamp` | boolean | `true` | Include timestamps in log messages. |
-| `logging.level` | string | `"warn"` | Set the logging level for the extension. View logs in Output > Secondary Terminal. |
+| Setting                   | Type    | Default  | Description                                                                        |
+| ------------------------- | ------- | -------- | ---------------------------------------------------------------------------------- |
+| `logging.enableContext`   | boolean | `true`   | Include context information (source location) in log messages.                     |
+| `logging.enableTimestamp` | boolean | `true`   | Include timestamps in log messages.                                                |
+| `logging.level`           | string  | `"warn"` | Set the logging level for the extension. View logs in Output > Secondary Terminal. |
 
 ## Navigation
 
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `navigation.enabled` | boolean | `true` | Enable advanced terminal navigation features (Phase 8: Advanced Terminal Features). |
-| `navigation.showCommandMarks` | boolean | `true` | Show visual marks at command boundaries for easy navigation. |
+| Setting                       | Type    | Default | Description                                                                         |
+| ----------------------------- | ------- | ------- | ----------------------------------------------------------------------------------- |
+| `navigation.enabled`          | boolean | `true`  | Enable advanced terminal navigation features (Phase 8: Advanced Terminal Features). |
+| `navigation.showCommandMarks` | boolean | `true`  | Show visual marks at command boundaries for easy navigation.                        |
 
 ## Panel Navigation
 
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
+| Setting                   | Type    | Default | Description                                                                                                                                          |
+| ------------------------- | ------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `panelNavigation.enabled` | boolean | `false` | Enable panel navigation mode (Ctrl+P). When enabled, pressing Ctrl+P toggles a navigation mode where h/j/k/l or arrow keys switch between terminals. |
 
 ## Profiles
 
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `profiles.linux` | object | `{}` | The Linux terminal profiles to present when creating a new terminal via the terminal dropdown. Set to null to exclude a profile from the list, for example: "secondaryTerminal.profiles.linux": { "bash": null }. |
-| `profiles.osx` | object | `{}` | The macOS terminal profiles to present when creating a new terminal via the terminal dropdown. Set to null to exclude a profile from the list, for example: "secondaryTerminal.profiles.osx": { "bash": null }. |
-| `profiles.windows` | object | `{}` | The Windows terminal profiles to present when creating a new terminal via the terminal dropdown. Set to null to exclude a profile from the list, for example: "secondaryTerminal.profiles.windows": { "Command Prompt": null }. |
+| Setting            | Type   | Default | Description                                                                                                                                                                                                                     |
+| ------------------ | ------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `profiles.linux`   | object | `{}`    | The Linux terminal profiles to present when creating a new terminal via the terminal dropdown. Set to null to exclude a profile from the list, for example: "secondaryTerminal.profiles.linux": { "bash": null }.               |
+| `profiles.osx`     | object | `{}`    | The macOS terminal profiles to present when creating a new terminal via the terminal dropdown. Set to null to exclude a profile from the list, for example: "secondaryTerminal.profiles.osx": { "bash": null }.                 |
+| `profiles.windows` | object | `{}`    | The Windows terminal profiles to present when creating a new terminal via the terminal dropdown. Set to null to exclude a profile from the list, for example: "secondaryTerminal.profiles.windows": { "Command Prompt": null }. |
 
 ## Shell Integration
 
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `shellIntegration.commandHistory` | boolean | `true` | Enable command history tracking and quick access. |
-| `shellIntegration.enabled` | boolean | `true` | Enable VS Code shell integration features (command tracking, working directory detection, status indicators). |
-| `shellIntegration.showCommandStatus` | boolean | `true` | Show command status indicators in terminal headers (success/error/running). |
-| `shellIntegration.showWorkingDirectory` | boolean | `true` | Show current working directory in terminal headers. |
-
+| Setting                                 | Type    | Default | Description                                                                                                   |
+| --------------------------------------- | ------- | ------- | ------------------------------------------------------------------------------------------------------------- |
+| `shellIntegration.commandHistory`       | boolean | `true`  | Enable command history tracking and quick access.                                                             |
+| `shellIntegration.enabled`              | boolean | `true`  | Enable VS Code shell integration features (command tracking, working directory detection, status indicators). |
+| `shellIntegration.showCommandStatus`    | boolean | `true`  | Show command status indicators in terminal headers (success/error/running).                                   |
+| `shellIntegration.showWorkingDirectory` | boolean | `true`  | Show current working directory in terminal headers.                                                           |

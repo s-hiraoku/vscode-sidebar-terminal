@@ -4,7 +4,7 @@ title: AI Integration
 
 # AI Integration
 
-Secondary Terminal is built for CLI-based AI workflows, not just general shell usage. It can detect supported agents automatically, show live status in each terminal header, render streaming output at high speed, and notify you when an agent is waiting for your response.
+Secondary Terminal is built for CLI-based AI workflows, not just general shell usage. It can detect supported agents automatically, show live status in each terminal header, render streaming output at high speed, and notify you when an agent completes processing.
 
 ## Supported CLI Agents
 
@@ -13,18 +13,17 @@ Secondary Terminal is built for CLI-based AI workflows, not just general shell u
 | Claude Code        | Run `claude`      | Works with file reference shortcuts and image paste on macOS. |
 | Codex CLI          | Run `codex`       | Status appears in the terminal header automatically.          |
 | Gemini CLI         | Run `gemini`      | Requires Gemini CLI `v0.28.2+` for supported detection.       |
-| GitHub Copilot CLI | Run `copilot`  | Separate from Copilot Chat activation.                        |
+| GitHub Copilot CLI | Run `copilot`     | Separate from Copilot Chat activation.                        |
 
 ## What Detection Changes
 
 Once a supported CLI agent is detected, Secondary Terminal treats that terminal as an AI-aware workspace.
 
-| Behavior                   | Why it matters                                                               |
-| -------------------------- | ---------------------------------------------------------------------------- |
-| Real-time status indicator | See whether the agent is connected, disconnected, or idle.                   |
-| Fast rendering path        | Streaming responses render with adaptive buffering up to `250fps`.           |
-| Waiting detection          | The extension can alert you when the agent is waiting for approval or input. |
-| Message routing support    | The active agent terminal can be targeted reliably by related workflows.     |
+| Behavior                   | Why it matters                                                           |
+| -------------------------- | ------------------------------------------------------------------------ |
+| Real-time status indicator | See whether the agent is connected, disconnected, or idle.               |
+| Fast rendering path        | Streaming responses render with adaptive buffering up to `250fps`.       |
+| Message routing support    | The active agent terminal can be targeted reliably by related workflows. |
 
 ## Agent Status Model
 
@@ -50,28 +49,24 @@ Secondary Terminal switches to a more aggressive render path for AI output:
 
 That reduces lag when an agent prints text continuously for several seconds.
 
-## Waiting Notifications
+## Completion Notifications
 
-When an agent stops to ask for confirmation or more input, Secondary Terminal can notify you with sound and toast messages.
+When an agent completes processing, Secondary Terminal can notify you with toast messages inside VS Code and OS-native desktop notifications.
 
-| Setting                                                 | Default | Description                                                |
-| ------------------------------------------------------- | ------- | ---------------------------------------------------------- |
-| `secondaryTerminal.agentWaitingNotification.enabled`    | `true`  | Plays a sound when a CLI agent is waiting.                 |
-| `secondaryTerminal.agentWaitingNotification.soundFile`  | `""`    | Uses a custom sound file when provided.                    |
-| `secondaryTerminal.agentWaitingNotification.volume`     | `50`    | Controls notification volume from `0` to `100`.            |
-| `secondaryTerminal.agentWaitingNotification.cooldownMs` | `5000`  | Prevents repeated sound spam.                              |
-| `secondaryTerminal.agentToastNotification.enabled`      | `true`  | Shows toast notifications for waiting or completion.       |
-| `secondaryTerminal.agentToastNotification.cooldownMs`   | `10000` | Throttles repeated toasts.                                 |
-| `secondaryTerminal.agentIdleDetection.timeoutMs`        | `3000`  | Idle time before the extension considers an agent waiting. |
+| Setting                                               | Default | Description                                                |
+| ----------------------------------------------------- | ------- | ---------------------------------------------------------- |
+| `secondaryTerminal.agentToastNotification.enabled`    | `true`  | Shows toast notifications for completion.                  |
+| `secondaryTerminal.agentToastNotification.cooldownMs` | `10000` | Throttles repeated toasts.                                 |
+| `secondaryTerminal.nativeNotification.enabled`        | `true`  | Shows OS-native notifications for completion.              |
+| `secondaryTerminal.nativeNotification.activateWindow` | `true`  | Optionally brings VS Code to the foreground on completion. |
+| `secondaryTerminal.nativeNotification.cooldownMs`     | `10000` | Throttles repeated native notifications.                   |
 
 Example configuration:
 
 ```json
 {
-  "secondaryTerminal.agentWaitingNotification.enabled": true,
-  "secondaryTerminal.agentWaitingNotification.volume": 60,
   "secondaryTerminal.agentToastNotification.enabled": true,
-  "secondaryTerminal.agentIdleDetection.timeoutMs": 3000
+  "secondaryTerminal.nativeNotification.enabled": true
 }
 ```
 

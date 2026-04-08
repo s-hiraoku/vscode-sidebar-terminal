@@ -959,18 +959,7 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
       });
     });
 
-    it('detects waiting in the same output flush that fallback-connects an agent', () => {
-      const waitingEvents: Array<{
-        terminalId: string;
-        isWaiting: boolean;
-        waitingType?: 'input' | 'approval';
-      }> = [];
-
-      detectionService.onAgentWaitingChange((event) => {
-        // @ts-expect-error - test mock type
-        waitingEvents.push(event);
-      });
-
+    it('keeps agent state connected when waiting-like output is received', () => {
       const result = detectionService.handleOutputChunk('term1', 'Gemini CLI v0.1.0\r\ngemini > ');
 
       expect(result?.detection).toMatchObject({
@@ -978,40 +967,20 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
         source: 'output',
       });
       expect(result?.state.status).toBe('connected');
-      expect(waitingEvents).toContainEqual({
-        terminalId: 'term1',
-        isWaiting: true,
-        waitingType: 'input',
-      });
+      expect(statusChangeEvents).toHaveLength(1);
     });
 
-    it('clears waiting state when the user submits new input', () => {
-      const waitingEvents: Array<{
-        terminalId: string;
-        isWaiting: boolean;
-        waitingType?: 'input' | 'approval' | 'idle';
-      }> = [];
-
-      detectionService.onAgentWaitingChange((event) => {
-        waitingEvents.push(event);
-      });
-
+    it('keeps agent state stable when the user submits input after waiting-like output', () => {
       detectionService.handleOutputChunk('term1', 'Welcome to Claude Code!');
       detectionService.handleOutputChunk('term1', '❯');
 
-      expect(waitingEvents).toContainEqual({
-        terminalId: 'term1',
-        isWaiting: true,
-        waitingType: 'input',
-      });
-
       detectionService.handleInputChunk('term1', 'h');
 
-      expect(waitingEvents).toContainEqual({
-        terminalId: 'term1',
-        isWaiting: false,
-        waitingType: undefined,
+      expect(detectionService.getAgentState('term1')).toEqual({
+        status: 'connected',
+        agentType: 'claude',
       });
+      expect(statusChangeEvents).toHaveLength(1);
     });
   });
 });

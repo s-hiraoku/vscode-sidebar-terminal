@@ -2,6 +2,23 @@ import { describe, it, expect } from 'vitest';
 import { CliAgentStateStore } from '../../../../services/CliAgentStateStore';
 
 describe('CliAgentStateStore', () => {
+  describe('agent state shape', () => {
+    it('does not expose waiting fields in stored agent state', () => {
+      const store = new CliAgentStateStore();
+
+      store.setConnectedAgent('t1', 'claude', 'Terminal 1');
+
+      expect(store.getAgentState('t1')).toEqual({
+        terminalId: 't1',
+        status: 'connected',
+        agentType: 'claude',
+        terminalName: 'Terminal 1',
+        preserveScrollPosition: true,
+        isDisplayingChoices: false,
+      });
+    });
+  });
+
   describe('forceReconnectAgent', () => {
     it('should move the previous CONNECTED agent to DISCONNECTED when forcing reconnect in another terminal', () => {
       const store = new CliAgentStateStore();

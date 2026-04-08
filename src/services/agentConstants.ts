@@ -16,16 +16,3 @@ export function getAgentDisplayName(agentType: AgentType | string | null | undef
   }
   return AGENT_DISPLAY_NAMES[agentType] ?? 'CLI Agent';
 }
-
-export type WaitingType = 'input' | 'approval' | 'idle';
-
-export function getWaitingTypeLabel(waitingType?: WaitingType): string {
-  switch (waitingType) {
-    case 'approval':
-      return 'waiting for approval';
-    case 'idle':
-      return 'idle (no output)';
-    default:
-      return 'waiting for input';
-  }
-}
