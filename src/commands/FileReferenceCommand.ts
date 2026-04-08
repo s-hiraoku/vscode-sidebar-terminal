@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import { TerminalManager } from '../terminals/TerminalManager';
 import { extension as log } from '../utils/logger';
-import { VSCODE_COMMANDS } from '../constants';
 
 /**
  * ファイル参照コマンドのハンドラー
@@ -68,17 +67,8 @@ export class FileReferenceCommand {
       }
 
       connectedAgents.forEach((agent) => {
-        // サイドバーターミナルビューにフォーカス
-        void vscode.commands.executeCommand(VSCODE_COMMANDS.SECONDARY_TERMINAL_FOCUS);
-
-        // 特定のターミナルにフォーカス後、ファイル参照を送信
-        setTimeout(() => {
-          this.terminalManager.focusTerminal(agent.terminalId);
-          setTimeout(() => {
-            this.terminalManager.sendInput(text, agent.terminalId);
-            log(`📤 [DEBUG] Sent file reference to ${agent.agentType}: "${text}"`);
-          }, 100);
-        }, 50);
+        this.terminalManager.sendInput(text, agent.terminalId);
+        log(`📤 [DEBUG] Sent file reference to ${agent.agentType}: "${text}"`);
       });
 
       // 成功メッセージ（ステータスバーに表示、フォーカスを奪わない）
@@ -153,17 +143,8 @@ export class FileReferenceCommand {
       }
 
       connectedAgents.forEach((agent) => {
-        // サイドバーターミナルビューにフォーカス
-        void vscode.commands.executeCommand(VSCODE_COMMANDS.SECONDARY_TERMINAL_FOCUS);
-
-        // 特定のターミナルにフォーカス後、ファイル参照を送信
-        setTimeout(() => {
-          this.terminalManager.focusTerminal(agent.terminalId);
-          setTimeout(() => {
-            this.terminalManager.sendInput(text, agent.terminalId);
-            log(`📤 [DEBUG] Sent ${openFiles.length} file references to ${agent.agentType}`);
-          }, 100);
-        }, 50);
+        this.terminalManager.sendInput(text, agent.terminalId);
+        log(`📤 [DEBUG] Sent ${openFiles.length} file references to ${agent.agentType}`);
       });
 
       // 成功メッセージ（ステータスバーに表示）

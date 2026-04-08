@@ -149,13 +149,28 @@ describe('FocusProtectionService', () => {
       mockIsWebViewVisible.mockReturnValue(true);
 
       service.notifyFocusChanged(true);
-      // Wait longer than RECENT_FOCUS_WINDOW_MS (300ms)
-      vi.advanceTimersByTime(400);
+      // Wait longer than RECENT_FOCUS_WINDOW_MS (800ms)
+      vi.advanceTimersByTime(900);
 
       fireActiveTerminalChanged({ name: 'bash' });
       vi.advanceTimersByTime(200);
 
       expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
+    });
+
+    it('should restore focus when active terminal changes after 500ms delay', () => {
+      mockIsTerminalFocused.mockReturnValue(false);
+      mockIsWebViewVisible.mockReturnValue(true);
+
+      service.notifyFocusChanged(true);
+      vi.advanceTimersByTime(500);
+
+      fireActiveTerminalChanged({ name: 'bash' });
+      vi.advanceTimersByTime(200);
+
+      expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+        'secondaryTerminalContainer.secondaryTerminal.focus'
+      );
     });
 
     it('should NOT restore focus when WebView is not visible', () => {
