@@ -959,7 +959,7 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
       });
     });
 
-    it('detects waiting in the same output flush that fallback-connects an agent', () => {
+    it('does not emit waiting events when waiting-like output is received', () => {
       const waitingEvents: Array<{
         terminalId: string;
         isWaiting: boolean;
@@ -978,14 +978,10 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
         source: 'output',
       });
       expect(result?.state.status).toBe('connected');
-      expect(waitingEvents).toContainEqual({
-        terminalId: 'term1',
-        isWaiting: true,
-        waitingType: 'input',
-      });
+      expect(waitingEvents).toHaveLength(0);
     });
 
-    it('clears waiting state when the user submits new input', () => {
+    it('does not emit waiting state transitions when the user submits input after waiting-like output', () => {
       const waitingEvents: Array<{
         terminalId: string;
         isWaiting: boolean;
@@ -999,19 +995,9 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
       detectionService.handleOutputChunk('term1', 'Welcome to Claude Code!');
       detectionService.handleOutputChunk('term1', '❯');
 
-      expect(waitingEvents).toContainEqual({
-        terminalId: 'term1',
-        isWaiting: true,
-        waitingType: 'input',
-      });
-
       detectionService.handleInputChunk('term1', 'h');
 
-      expect(waitingEvents).toContainEqual({
-        terminalId: 'term1',
-        isWaiting: false,
-        waitingType: undefined,
-      });
+      expect(waitingEvents).toHaveLength(0);
     });
   });
 });
