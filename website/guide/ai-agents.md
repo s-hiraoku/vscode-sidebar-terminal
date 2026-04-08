@@ -8,11 +8,11 @@ Secondary Terminal is designed to work seamlessly with CLI-based AI agents. It a
 
 ## Supported Agents
 
-| Agent | Detection | Status |
-|-------|-----------|--------|
-| **Claude Code** | Automatic on `claude` command | Real-time connection indicator |
-| **Codex CLI** | Automatic on `codex` command | Real-time connection indicator |
-| **Gemini CLI** | Automatic on `gemini` command (v0.28.2+) | Real-time connection indicator |
+| Agent                  | Detection                                      | Status                         |
+| ---------------------- | ---------------------------------------------- | ------------------------------ |
+| **Claude Code**        | Automatic on `claude` command                  | Real-time connection indicator |
+| **Codex CLI**          | Automatic on `codex` command                   | Real-time connection indicator |
+| **Gemini CLI**         | Automatic on `gemini` command (v0.28.2+)       | Real-time connection indicator |
 | **GitHub Copilot CLI** | Automatic on `copilot` or `gh copilot` command | Real-time connection indicator |
 
 ## How Detection Works
@@ -22,16 +22,16 @@ When you run a supported CLI agent, Secondary Terminal:
 1. **Detects** the agent from terminal output using pattern matching
 2. **Shows status** in the terminal header with a color-coded indicator
 3. **Optimizes rendering** -- switches from 60fps to 250fps adaptive buffering for smooth AI streaming
-4. **Monitors state** -- tracks whether the agent is active, idle, or disconnected
+4. **Monitors state** -- tracks whether the agent is active or disconnected
 
 ## File Reference Shortcuts
 
 Quickly send file references to your AI agent:
 
-| Action | Shortcut | Result |
-|--------|----------|--------|
-| Current file | `Ctrl+Alt+L` / `Cmd+Alt+L` | Inserts `@filename` with the current editor file path |
-| All open files | `Ctrl+Alt+A` / `Cmd+Alt+A` | Inserts all open editor file paths |
+| Action         | Shortcut                   | Result                                                |
+| -------------- | -------------------------- | ----------------------------------------------------- |
+| Current file   | `Ctrl+Alt+L` / `Cmd+Alt+L` | Inserts `@filename` with the current editor file path |
+| All open files | `Ctrl+Alt+A` / `Cmd+Alt+A` | Inserts all open editor file paths                    |
 
 ## Image Paste (macOS)
 
@@ -43,45 +43,32 @@ On macOS, you can paste screenshots directly into Claude Code:
 
 The image is sent directly to the AI agent.
 
-## Agent Waiting Notifications
-
-Get notified when an AI agent is waiting for your input:
-
-### Sound Notifications
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `agentWaitingNotification.enabled` | `true` | Enable/disable sound notifications |
-| `agentWaitingNotification.soundFile` | - | Custom notification sound file path |
-| `agentWaitingNotification.volume` | `50` | Sound volume (0-100) |
-| `agentWaitingNotification.cooldownMs` | `5000` | Minimum time between notifications |
-
 ### OS-Native Notifications (v0.3.4+)
 
-Desktop notifications that work even when VS Code is not in the foreground. When an AI agent is waiting for input or completes processing, you'll get an OS-level notification and optionally VS Code will be brought to the front.
+Desktop notifications that work even when VS Code is not in the foreground. When an AI agent completes processing, you'll get an OS-level notification and optionally VS Code will be brought to the front.
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `nativeNotification.enabled` | `true` | Show OS-native desktop notifications |
-| `nativeNotification.activateWindow` | `true` | Bring VS Code window to foreground |
-| `nativeNotification.cooldownMs` | `10000` | Minimum time between native notifications (ms) |
+| Setting                             | Default | Description                                    |
+| ----------------------------------- | ------- | ---------------------------------------------- |
+| `nativeNotification.enabled`        | `true`  | Show OS-native desktop notifications           |
+| `nativeNotification.activateWindow` | `true`  | Bring VS Code window to foreground             |
+| `nativeNotification.cooldownMs`     | `10000` | Minimum time between native notifications (ms) |
 
 **Platform support:**
 
-| Platform | Notification | Window Activation |
-|----------|-------------|-------------------|
-| macOS | `osascript` (Notification Center) | AppleScript app activate |
-| Windows | PowerShell ToastNotification | PowerShell SetForegroundWindow |
-| Linux | `notify-send` | `wmctrl` (install separately if needed) |
+| Platform | Notification                      | Window Activation                       |
+| -------- | --------------------------------- | --------------------------------------- |
+| macOS    | `osascript` (Notification Center) | AppleScript app activate                |
+| Windows  | PowerShell ToastNotification      | PowerShell SetForegroundWindow          |
+| Linux    | `notify-send`                     | `wmctrl` (install separately if needed) |
 
 ### Toast Notifications
 
 Status bar messages inside VS Code:
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `agentToastNotification.enabled` | `true` | Show status bar toast notifications |
-| `agentToastNotification.cooldownMs` | `10000` | Minimum time between toast notifications (ms) |
+| Setting                             | Default | Description                                                            |
+| ----------------------------------- | ------- | ---------------------------------------------------------------------- |
+| `agentToastNotification.enabled`    | `true`  | Show status bar toast notifications when an agent completes processing |
+| `agentToastNotification.cooldownMs` | `10000` | Minimum time between toast notifications (ms)                          |
 
 ## Multi-Agent Workflows
 
@@ -106,8 +93,8 @@ This sends the current context to Copilot Chat in `#file:` format.
 
 AI agent rendering is optimized for high-throughput output:
 
-| Metric | Standard | AI Agent Mode |
-|--------|----------|---------------|
-| Buffer flush interval | 16ms (60fps) | 4ms (250fps) |
-| Rendering | Standard xterm.js | WebGL-accelerated with auto-fallback |
-| Scrollback | 2,000 lines | 2,000 lines (configurable) |
+| Metric                | Standard          | AI Agent Mode                        |
+| --------------------- | ----------------- | ------------------------------------ |
+| Buffer flush interval | 16ms (60fps)      | 4ms (250fps)                         |
+| Rendering             | Standard xterm.js | WebGL-accelerated with auto-fallback |
+| Scrollback            | 2,000 lines       | 2,000 lines (configurable)           |
