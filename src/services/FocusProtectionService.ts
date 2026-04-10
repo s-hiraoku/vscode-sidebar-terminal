@@ -34,6 +34,7 @@ export class FocusProtectionService implements vscode.Disposable {
   private static readonly RESTORE_DELAY_MS = 150;
   private static readonly COOLDOWN_MS = 500;
   private static readonly RECENT_FOCUS_WINDOW_MS = 600;
+  private static readonly RECENT_INTERACTION_WINDOW_MS = 200;
 
   private readonly _disposables = new DisposableStore();
   private readonly _deps: FocusProtectionDependencies;
@@ -41,6 +42,7 @@ export class FocusProtectionService implements vscode.Disposable {
   private _pendingTimer: ReturnType<typeof setTimeout> | undefined;
   private _lastRestoreTime = 0;
   private _lastFocusedTime = 0;
+  private _lastInteractionTime = 0;
 
   constructor(deps: FocusProtectionDependencies) {
     this._deps = deps;
@@ -78,6 +80,12 @@ export class FocusProtectionService implements vscode.Disposable {
   public notifyFocusChanged(focused: boolean): void {
     if (focused) {
       this._lastFocusedTime = Date.now();
+      this._clearPendingRestore();
+      return;
+    }
+
+    if (this._shouldRestoreAfterBlur()) {
+      this._scheduleFocusRestore();
     }
   }
 
@@ -91,7 +99,9 @@ export class FocusProtectionService implements vscode.Disposable {
    */
   public notifyInteraction(): void {
     if (!this._deps.isWebViewVisible()) return;
-    this._lastFocusedTime = Date.now();
+    const now = Date.now();
+    this._lastFocusedTime = now;
+    this._lastInteractionTime = now;
   }
 
   private _readSetting(): boolean {
@@ -101,6 +111,20 @@ export class FocusProtectionService implements vscode.Disposable {
   private _hadRecentFocus(): boolean {
     if (this._deps.isTerminalFocused()) return true;
     return Date.now() - this._lastFocusedTime < FocusProtectionService.RECENT_FOCUS_WINDOW_MS;
+  }
+
+  private _hadRecentInteraction(): boolean {
+    return (
+      Date.now() - this._lastInteractionTime < FocusProtectionService.RECENT_INTERACTION_WINDOW_MS
+    );
+  }
+
+  private _shouldRestoreAfterBlur(): boolean {
+    if (!this._enabled) return false;
+    if (!this._deps.isWebViewVisible()) return false;
+    if (this._deps.isTerminalFocused()) return false;
+    if (!this._hadRecentInteraction()) return false;
+    return this._hadRecentFocus();
   }
 
   /**
@@ -192,10 +216,18 @@ export class FocusProtectionService implements vscode.Disposable {
       return;
     }
 
+    this._scheduleFocusRestore();
+  }
+
+  private _clearPendingRestore(): void {
     if (this._pendingTimer !== undefined) {
       clearTimeout(this._pendingTimer);
       this._pendingTimer = undefined;
     }
+  }
+
+  private _scheduleFocusRestore(): void {
+    this._clearPendingRestore();
 
     const now = Date.now();
     if (now - this._lastRestoreTime < FocusProtectionService.COOLDOWN_MS) {
@@ -221,10 +253,7 @@ export class FocusProtectionService implements vscode.Disposable {
   }
 
   public dispose(): void {
-    if (this._pendingTimer !== undefined) {
-      clearTimeout(this._pendingTimer);
-      this._pendingTimer = undefined;
-    }
+    this._clearPendingRestore();
     this._disposables.dispose();
   }
 }

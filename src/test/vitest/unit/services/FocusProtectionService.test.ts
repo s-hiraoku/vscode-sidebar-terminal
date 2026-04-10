@@ -336,6 +336,36 @@ describe('FocusProtectionService', () => {
 
       expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
     });
+
+    it('should restore focus when blur happens immediately after recent interaction without active terminal change', () => {
+      mockIsTerminalFocused.mockReturnValue(true);
+      mockIsWebViewVisible.mockReturnValue(true);
+
+      service.notifyFocusChanged(true);
+      service.notifyInteraction();
+
+      mockIsTerminalFocused.mockReturnValue(false);
+      service.notifyFocusChanged(false);
+      vi.advanceTimersByTime(200);
+
+      expect(vscode.commands.executeCommand).toHaveBeenCalledWith('secondaryTerminal.focus');
+      expect(mockSendWebviewFocus).toHaveBeenCalledTimes(1);
+    });
+
+    it('should NOT restore focus on blur without recent interaction when active terminal does not change', () => {
+      mockIsTerminalFocused.mockReturnValue(true);
+      mockIsWebViewVisible.mockReturnValue(true);
+
+      service.notifyFocusChanged(true);
+      vi.advanceTimersByTime(250);
+
+      mockIsTerminalFocused.mockReturnValue(false);
+      service.notifyFocusChanged(false);
+      vi.advanceTimersByTime(200);
+
+      expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
+      expect(mockSendWebviewFocus).not.toHaveBeenCalled();
+    });
   });
 
   describe('sendWebviewFocus dependency', () => {
