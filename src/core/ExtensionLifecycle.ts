@@ -117,6 +117,15 @@ export class ExtensionLifecycle {
       this.focusProtectionService = new FocusProtectionService({
         isTerminalFocused: () => this.terminalManager?.isTerminalFocused() ?? false,
         isWebViewVisible: () => this.sidebarProvider?.isWebViewVisible() ?? false,
+        sendWebviewFocus: () => {
+          const activeId = this.terminalManager?.getActiveTerminalId();
+          if (this.sidebarProvider && activeId) {
+            void this.sidebarProvider.sendMessageToWebview({
+              command: 'focusTerminal',
+              terminalId: activeId,
+            });
+          }
+        },
       });
 
       // Wire terminal focus changes to focus protection service
@@ -128,6 +137,15 @@ export class ExtensionLifecycle {
         this.terminalManager.setTerminalFocused = (focused: boolean) => {
           originalSetFocused(focused);
           focusProtection.notifyFocusChanged(focused);
+        };
+
+        // Wire terminal input (keystrokes) to refresh the focus window so that
+        // long typing sessions (e.g. typing into Claude Code) don't let the
+        // recent-focus guard expire and defeat focus protection.
+        const originalSendInput = this.terminalManager.sendInput.bind(this.terminalManager);
+        this.terminalManager.sendInput = (data: string, terminalId?: string) => {
+          focusProtection.notifyInteraction();
+          originalSendInput(data, terminalId);
         };
       }
 

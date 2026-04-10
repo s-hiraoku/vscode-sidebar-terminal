@@ -107,6 +107,10 @@ vi.mock('../../../../terminals/TerminalManager', () => ({
     isTerminalFocused(): boolean {
       return false;
     }
+    sendInput(_data: string, _terminalId?: string): void {}
+    getActiveTerminalId(): string | undefined {
+      return undefined;
+    }
     onTerminalCreated(cb: (t: any) => void): { dispose: () => void } {
       mocks.onTerminalCreatedCallback = cb;
       return { dispose: vi.fn() };

@@ -2,7 +2,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('vscode', () => {
   const onDidChangeActiveTerminalListeners: Array<(terminal: unknown) => void> = [];
+  const onDidOpenTerminalListeners: Array<(terminal: unknown) => void> = [];
   const onDidChangeConfigurationListeners: Array<(e: unknown) => void> = [];
+
+  class ThemeIcon {
+    constructor(public id: string) {}
+  }
 
   return {
     window: {
@@ -15,7 +20,17 @@ vi.mock('vscode', () => {
           }),
         };
       }),
+      onDidOpenTerminal: vi.fn((listener: (terminal: unknown) => void) => {
+        onDidOpenTerminalListeners.push(listener);
+        return {
+          dispose: vi.fn(() => {
+            const idx = onDidOpenTerminalListeners.indexOf(listener);
+            if (idx >= 0) onDidOpenTerminalListeners.splice(idx, 1);
+          }),
+        };
+      }),
       _onDidChangeActiveTerminalListeners: onDidChangeActiveTerminalListeners,
+      _onDidOpenTerminalListeners: onDidOpenTerminalListeners,
     },
     workspace: {
       getConfiguration: vi.fn().mockReturnValue({
@@ -35,6 +50,7 @@ vi.mock('vscode', () => {
     commands: {
       executeCommand: vi.fn().mockResolvedValue(undefined),
     },
+    ThemeIcon,
   };
 });
 
@@ -43,6 +59,13 @@ import { FocusProtectionService } from '../../../../services/FocusProtectionServ
 
 function fireActiveTerminalChanged(terminal: unknown): void {
   const listeners = (vscode.window as any)._onDidChangeActiveTerminalListeners;
+  for (const listener of listeners) {
+    listener(terminal);
+  }
+}
+
+function fireOpenTerminal(terminal: unknown): void {
+  const listeners = (vscode.window as any)._onDidOpenTerminalListeners;
   for (const listener of listeners) {
     listener(terminal);
   }
@@ -59,6 +82,7 @@ describe('FocusProtectionService', () => {
   let service: FocusProtectionService;
   let mockIsTerminalFocused: ReturnType<typeof vi.fn<() => boolean>>;
   let mockIsWebViewVisible: ReturnType<typeof vi.fn<() => boolean>>;
+  let mockSendWebviewFocus: ReturnType<typeof vi.fn<() => void>>;
 
   beforeEach(() => {
     vi.useFakeTimers();
@@ -76,10 +100,12 @@ describe('FocusProtectionService', () => {
 
     mockIsTerminalFocused = vi.fn().mockReturnValue(false);
     mockIsWebViewVisible = vi.fn().mockReturnValue(true);
+    mockSendWebviewFocus = vi.fn();
 
     service = new FocusProtectionService({
       isTerminalFocused: mockIsTerminalFocused,
       isWebViewVisible: mockIsWebViewVisible,
+      sendWebviewFocus: mockSendWebviewFocus,
     });
   });
 
@@ -110,9 +136,7 @@ describe('FocusProtectionService', () => {
       fireActiveTerminalChanged({ name: 'bash' });
       vi.advanceTimersByTime(200);
 
-      expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-        'secondaryTerminalContainer.secondaryTerminal.focus'
-      );
+      expect(vscode.commands.executeCommand).toHaveBeenCalledWith('secondaryTerminal.focus');
     });
 
     it('should restore focus when terminal was recently focused (blur arrived first)', () => {
@@ -128,9 +152,7 @@ describe('FocusProtectionService', () => {
       fireActiveTerminalChanged({ name: 'bash' });
       vi.advanceTimersByTime(200);
 
-      expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-        'secondaryTerminalContainer.secondaryTerminal.focus'
-      );
+      expect(vscode.commands.executeCommand).toHaveBeenCalledWith('secondaryTerminal.focus');
     });
 
     it('should NOT restore focus when terminal was NOT recently focused', () => {
@@ -149,13 +171,27 @@ describe('FocusProtectionService', () => {
       mockIsWebViewVisible.mockReturnValue(true);
 
       service.notifyFocusChanged(true);
-      // Wait longer than RECENT_FOCUS_WINDOW_MS (800ms)
-      vi.advanceTimersByTime(900);
+      // Wait longer than RECENT_FOCUS_WINDOW_MS (600ms)
+      vi.advanceTimersByTime(700);
 
       fireActiveTerminalChanged({ name: 'bash' });
       vi.advanceTimersByTime(200);
 
       expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
+    });
+
+    it('should restore focus when recent focus was within 500ms (within 600ms window)', () => {
+      mockIsTerminalFocused.mockReturnValue(false);
+      mockIsWebViewVisible.mockReturnValue(true);
+
+      service.notifyFocusChanged(true);
+      // 500ms is within the 600ms window — still protected
+      vi.advanceTimersByTime(500);
+
+      fireActiveTerminalChanged({ name: 'bash' });
+      vi.advanceTimersByTime(200);
+
+      expect(vscode.commands.executeCommand).toHaveBeenCalledWith('secondaryTerminal.focus');
     });
 
     it('should NOT restore focus when WebView is not visible', () => {
@@ -263,6 +299,114 @@ describe('FocusProtectionService', () => {
       fireActiveTerminalChanged({ name: 'bash' });
       vi.advanceTimersByTime(200);
       expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('notifyInteraction (typing keeps focus window fresh)', () => {
+    it('should refresh recent-focus window when user interacts', () => {
+      mockIsTerminalFocused.mockReturnValue(false);
+      mockIsWebViewVisible.mockReturnValue(true);
+
+      // Initial focus 400ms ago
+      service.notifyFocusChanged(true);
+      vi.advanceTimersByTime(400);
+
+      // User is actively typing → interaction refreshes the window
+      service.notifyInteraction();
+      vi.advanceTimersByTime(400);
+
+      // 800ms since initial focus, but only 400ms since last interaction → still protected
+      fireActiveTerminalChanged({ name: 'bash' });
+      vi.advanceTimersByTime(200);
+
+      expect(vscode.commands.executeCommand).toHaveBeenCalledWith('secondaryTerminal.focus');
+    });
+
+    it('should NOT refresh window when terminal is not visible (avoid false positives)', () => {
+      mockIsTerminalFocused.mockReturnValue(false);
+      mockIsWebViewVisible.mockReturnValue(false);
+
+      // WebView hidden — interaction should not update the window
+      service.notifyInteraction();
+      vi.advanceTimersByTime(100);
+
+      mockIsWebViewVisible.mockReturnValue(true);
+      fireActiveTerminalChanged({ name: 'bash' });
+      vi.advanceTimersByTime(200);
+
+      expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('sendWebviewFocus dependency', () => {
+    it('should invoke sendWebviewFocus after executing the focus command', () => {
+      mockIsTerminalFocused.mockReturnValue(true);
+      mockIsWebViewVisible.mockReturnValue(true);
+
+      fireActiveTerminalChanged({ name: 'bash' });
+      vi.advanceTimersByTime(200);
+
+      expect(vscode.commands.executeCommand).toHaveBeenCalledWith('secondaryTerminal.focus');
+      expect(mockSendWebviewFocus).toHaveBeenCalledTimes(1);
+    });
+
+    it('should work without sendWebviewFocus dep (backward compatible)', () => {
+      service.dispose();
+      (vscode.window as any)._onDidChangeActiveTerminalListeners.length = 0;
+      service = new FocusProtectionService({
+        isTerminalFocused: mockIsTerminalFocused,
+        isWebViewVisible: mockIsWebViewVisible,
+        // sendWebviewFocus omitted
+      });
+
+      mockIsTerminalFocused.mockReturnValue(true);
+      mockIsWebViewVisible.mockReturnValue(true);
+
+      fireActiveTerminalChanged({ name: 'bash' });
+      vi.advanceTimersByTime(200);
+
+      expect(vscode.commands.executeCommand).toHaveBeenCalledWith('secondaryTerminal.focus');
+      // No error, no sendWebviewFocus call required
+    });
+  });
+
+  describe('diagnostic logging (onDidOpenTerminal / describeTerminal)', () => {
+    it('should register an onDidOpenTerminal listener', () => {
+      expect(vscode.window.onDidOpenTerminal).toHaveBeenCalledOnce();
+    });
+
+    it('should handle opening a terminal without creationOptions gracefully', () => {
+      expect(() => {
+        fireOpenTerminal({ name: 'bash' });
+      }).not.toThrow();
+    });
+
+    it('should handle active-terminal change with rich creationOptions gracefully', () => {
+      mockIsTerminalFocused.mockReturnValue(true);
+      mockIsWebViewVisible.mockReturnValue(true);
+
+      const richTerminal = {
+        name: 'GitLens',
+        processId: Promise.resolve(12345),
+        state: { isInteractedWith: false },
+        creationOptions: {
+          name: 'GitLens',
+          shellPath: '/bin/zsh',
+          shellArgs: ['-l'],
+          cwd: '/tmp/project',
+          env: { FOO: 'bar' },
+          iconPath: new (vscode as any).ThemeIcon('git'),
+          isTransient: true,
+          hideFromUser: false,
+        },
+      };
+
+      expect(() => {
+        fireActiveTerminalChanged(richTerminal);
+        vi.advanceTimersByTime(200);
+      }).not.toThrow();
+
+      expect(vscode.commands.executeCommand).toHaveBeenCalledWith('secondaryTerminal.focus');
     });
   });
 
