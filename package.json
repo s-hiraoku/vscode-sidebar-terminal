@@ -486,7 +486,7 @@
         },
         "secondaryTerminal.nativeNotification.activateWindow": {
           "type": "boolean",
-          "default": true,
+          "default": false,
           "description": "Bring VS Code window to foreground when a CLI agent completes processing"
         },
         "secondaryTerminal.nativeNotification.cooldownMs": {
