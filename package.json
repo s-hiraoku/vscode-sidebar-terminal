@@ -2,7 +2,7 @@
   "name": "vscode-sidebar-terminal",
   "displayName": "Secondary Terminal",
   "description": "Production-ready VS Code extension with TypeScript-compliant terminal in sidebar, ProcessState/InteractionState management, and comprehensive session management.",
-  "version": "0.6.1",
+  "version": "0.6.3",
   "publisher": "s-hiraoku",
   "sideEffects": false,
   "engines": {
@@ -486,7 +486,7 @@
         },
         "secondaryTerminal.nativeNotification.activateWindow": {
           "type": "boolean",
-          "default": true,
+          "default": false,
           "description": "Bring VS Code window to foreground when a CLI agent completes processing"
         },
         "secondaryTerminal.nativeNotification.cooldownMs": {

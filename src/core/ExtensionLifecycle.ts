@@ -117,12 +117,12 @@ export class ExtensionLifecycle {
       this.focusProtectionService = new FocusProtectionService({
         isTerminalFocused: () => this.terminalManager?.isTerminalFocused() ?? false,
         isWebViewVisible: () => this.sidebarProvider?.isWebViewVisible() ?? false,
-        sendWebviewFocus: () => {
-          const activeId = this.terminalManager?.getActiveTerminalId();
-          if (this.sidebarProvider && activeId) {
+        sendWebviewFocus: (terminalId?: string) => {
+          const targetId = terminalId ?? this.terminalManager?.getActiveTerminalId();
+          if (this.sidebarProvider && targetId) {
             void this.sidebarProvider.sendMessageToWebview({
               command: 'focusTerminal',
-              terminalId: activeId,
+              terminalId: targetId,
             });
           }
         },
@@ -144,7 +144,11 @@ export class ExtensionLifecycle {
         // recent-focus guard expire and defeat focus protection.
         const originalSendInput = this.terminalManager.sendInput.bind(this.terminalManager);
         this.terminalManager.sendInput = (data: string, terminalId?: string) => {
-          focusProtection.notifyInteraction();
+          // Pass the terminal ID so focus protection knows which terminal to
+          // restore when focus is stolen — important when multiple sidebar
+          // terminals exist.
+          const targetId = terminalId ?? this.terminalManager?.getActiveTerminalId();
+          focusProtection.notifyInteraction(targetId);
           originalSendInput(data, terminalId);
         };
       }
@@ -431,10 +435,15 @@ export class ExtensionLifecycle {
           if (event.status === 'connected') {
             this.telemetryService?.trackCliAgentDetected(event.type || 'unknown');
             log(`📊 [TELEMETRY] CLI Agent detected: ${event.type}`);
+            // Enable aggressive focus protection while a CLI agent is connected,
+            // because the agent's VS Code extension may call terminal.show()
+            // repeatedly during MCP tool operations.
+            this.focusProtectionService?.notifyCliAgentConnected(true);
           } else if (event.status === 'disconnected') {
             // Track disconnection with session duration (if available)
             this.telemetryService?.trackCliAgentDisconnected(event.type || 'unknown', 0);
             log(`📊 [TELEMETRY] CLI Agent disconnected: ${event.type}`);
+            this.focusProtectionService?.notifyCliAgentConnected(false);
           }
         });
 

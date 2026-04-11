@@ -9,8 +9,12 @@ export interface FocusProtectionDependencies {
    * Optional: send a focus command to the webview after executing the
    * view-focus command. Mirrors the two-step sequence used by
    * KeyboardShortcutService.focusTerminal() so that xterm.js regains DOM focus.
+   *
+   * @param terminalId - The sidebar terminal that should receive focus.
+   *   When provided, focus is restored to the specific terminal the user was
+   *   interacting with, not just whichever terminal happens to be active.
    */
-  sendWebviewFocus?: () => void;
+  sendWebviewFocus?: (terminalId?: string) => void;
 }
 
 /**
@@ -34,13 +38,28 @@ export class FocusProtectionService implements vscode.Disposable {
   private static readonly RESTORE_DELAY_MS = 150;
   private static readonly COOLDOWN_MS = 500;
   private static readonly RECENT_FOCUS_WINDOW_MS = 600;
+  private static readonly RECENT_INTERACTION_WINDOW_MS = 200;
+
+  /**
+   * When a CLI agent is connected, use a much longer focus window and shorter
+   * cooldown. The agent's VS Code extension calls terminal.show() during MCP
+   * tool operations which can happen at any time during a long-running task.
+   * 10 minutes covers even lengthy code-generation / multi-file edit sessions.
+   */
+  private static readonly CLI_AGENT_FOCUS_WINDOW_MS = 600_000;
+  /** Shorter cooldown because MCP tool calls can steal focus in rapid succession. */
+  private static readonly CLI_AGENT_COOLDOWN_MS = 150;
 
   private readonly _disposables = new DisposableStore();
   private readonly _deps: FocusProtectionDependencies;
   private _enabled: boolean;
+  private _cliAgentConnected = false;
   private _pendingTimer: ReturnType<typeof setTimeout> | undefined;
   private _lastRestoreTime = 0;
   private _lastFocusedTime = 0;
+  private _lastInteractionTime = 0;
+  /** The sidebar terminal that was most recently interacted with. */
+  private _lastInteractedTerminalId: string | undefined;
 
   constructor(deps: FocusProtectionDependencies) {
     this._deps = deps;
@@ -78,7 +97,23 @@ export class FocusProtectionService implements vscode.Disposable {
   public notifyFocusChanged(focused: boolean): void {
     if (focused) {
       this._lastFocusedTime = Date.now();
+      this._clearPendingRestore();
+      return;
     }
+
+    if (this._shouldRestoreAfterBlur()) {
+      this._scheduleFocusRestore();
+    }
+  }
+
+  /**
+   * Called when a CLI agent (e.g. Claude Code) connects or disconnects in the
+   * sidebar terminal. When connected, focus protection becomes more aggressive
+   * because the agent's VS Code extension may repeatedly call terminal.show()
+   * to steal focus during MCP tool operations.
+   */
+  public notifyCliAgentConnected(connected: boolean): void {
+    this._cliAgentConnected = connected;
   }
 
   /**
@@ -89,9 +124,14 @@ export class FocusProtectionService implements vscode.Disposable {
    * Only refreshes when the WebView is visible, to avoid false positives from
    * buffered messages arriving after the view has been hidden.
    */
-  public notifyInteraction(): void {
+  public notifyInteraction(terminalId?: string): void {
     if (!this._deps.isWebViewVisible()) return;
-    this._lastFocusedTime = Date.now();
+    const now = Date.now();
+    this._lastFocusedTime = now;
+    this._lastInteractionTime = now;
+    if (terminalId !== undefined) {
+      this._lastInteractedTerminalId = terminalId;
+    }
   }
 
   private _readSetting(): boolean {
@@ -100,7 +140,27 @@ export class FocusProtectionService implements vscode.Disposable {
 
   private _hadRecentFocus(): boolean {
     if (this._deps.isTerminalFocused()) return true;
-    return Date.now() - this._lastFocusedTime < FocusProtectionService.RECENT_FOCUS_WINDOW_MS;
+    const window = this._cliAgentConnected
+      ? FocusProtectionService.CLI_AGENT_FOCUS_WINDOW_MS
+      : FocusProtectionService.RECENT_FOCUS_WINDOW_MS;
+    return Date.now() - this._lastFocusedTime < window;
+  }
+
+  private _hadRecentInteraction(): boolean {
+    return (
+      Date.now() - this._lastInteractionTime < FocusProtectionService.RECENT_INTERACTION_WINDOW_MS
+    );
+  }
+
+  private _shouldRestoreAfterBlur(): boolean {
+    if (!this._enabled) return false;
+    if (!this._deps.isWebViewVisible()) return false;
+    if (this._deps.isTerminalFocused()) return false;
+    // When a CLI agent is connected, skip the interaction check — the agent's
+    // VS Code extension steals focus during background MCP operations when the
+    // user is not actively typing.
+    if (!this._cliAgentConnected && !this._hadRecentInteraction()) return false;
+    return this._hadRecentFocus();
   }
 
   /**
@@ -192,18 +252,32 @@ export class FocusProtectionService implements vscode.Disposable {
       return;
     }
 
+    this._scheduleFocusRestore();
+  }
+
+  private _clearPendingRestore(): void {
     if (this._pendingTimer !== undefined) {
       clearTimeout(this._pendingTimer);
       this._pendingTimer = undefined;
     }
+  }
+
+  private _scheduleFocusRestore(): void {
+    this._clearPendingRestore();
 
     const now = Date.now();
-    if (now - this._lastRestoreTime < FocusProtectionService.COOLDOWN_MS) {
+    const cooldown = this._cliAgentConnected
+      ? FocusProtectionService.CLI_AGENT_COOLDOWN_MS
+      : FocusProtectionService.COOLDOWN_MS;
+    if (now - this._lastRestoreTime < cooldown) {
       log('🛡️ [FOCUS_PROTECTION] skip: cooldown active');
       return;
     }
 
     log('🛡️ [FOCUS_PROTECTION] scheduling focus restoration');
+    // Capture the terminal ID at schedule time, not at fire time, because
+    // the active terminal may change between scheduling and execution.
+    const targetTerminalId = this._lastInteractedTerminalId;
     this._pendingTimer = setTimeout(() => {
       this._pendingTimer = undefined;
       this._lastRestoreTime = Date.now();
@@ -211,9 +285,10 @@ export class FocusProtectionService implements vscode.Disposable {
       // The view id is `secondaryTerminal` (see package.json contributes.views).
       // Mirrors the working sequence in KeyboardShortcutService.focusTerminal().
       void vscode.commands.executeCommand('secondaryTerminal.focus');
-      // Then ask the webview to push DOM focus back into xterm.js.
+      // Then ask the webview to push DOM focus back into the specific xterm.js
+      // terminal that the user was interacting with.
       try {
-        this._deps.sendWebviewFocus?.();
+        this._deps.sendWebviewFocus?.(targetTerminalId);
       } catch (err) {
         log('🛡️ [FOCUS_PROTECTION] sendWebviewFocus failed:', err);
       }
@@ -221,10 +296,7 @@ export class FocusProtectionService implements vscode.Disposable {
   }
 
   public dispose(): void {
-    if (this._pendingTimer !== undefined) {
-      clearTimeout(this._pendingTimer);
-      this._pendingTimer = undefined;
-    }
+    this._clearPendingRestore();
     this._disposables.dispose();
   }
 }
