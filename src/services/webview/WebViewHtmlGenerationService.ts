@@ -554,9 +554,6 @@ export class WebViewHtmlGenerationService {
             document.addEventListener('DOMContentLoaded', function() {
                 const script = document.getElementById('webview-main-script');
                 if (script) {
-                    script.addEventListener('load', function() {
-                        console.log('✅ webview.js loaded successfully');
-                    });
                     script.addEventListener('error', function(event) {
                         console.error('❌ webview.js failed to load', event);
                     });

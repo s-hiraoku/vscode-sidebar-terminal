@@ -487,8 +487,7 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
     }
 
     // Debug: Log output data for restored terminals
-    // eslint-disable-next-line no-console
-    console.log(
+    this.logger.debug(
       `[OUTPUT-DEBUG] Received output for ${terminalId}: length=${data.length}, first100chars="${data.substring(0, 100).replace(/\x1b/g, '\\x1b').replace(/\r/g, '\\r').replace(/\n/g, '\\n')}"`
     );
 
@@ -717,8 +716,7 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
     // Shell initialization sends prompts, clear sequences, etc. that would overwrite restored scrollback
     // Instead of filtering specific sequences, we discard ALL output during the 5-second protection window
     if (TerminalCreationService.isTerminalRestoring(terminalId)) {
-      // eslint-disable-next-line no-console
-      console.log(
+      this.logger.debug(
         `[OUTPUT-BLOCK] ⏭️ Blocking ALL output during restoration: ${terminalId}, length=${data.length}`
       );
       this.logger.info(

@@ -250,10 +250,8 @@ export class MessageLogger {
     // Use appropriate console method
     switch (entry.level) {
       case LogLevel.DEBUG:
-        console.debug(fullMessage, entry.data);
         break;
       case LogLevel.INFO:
-        console.info(fullMessage, entry.data);
         break;
       case LogLevel.WARN:
         console.warn(fullMessage, entry.data);

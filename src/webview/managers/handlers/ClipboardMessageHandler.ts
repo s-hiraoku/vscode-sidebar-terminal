@@ -10,6 +10,14 @@ import { MessageCommand } from '../messageTypes';
 export class ClipboardMessageHandler {
   constructor(private readonly logger: ManagerLogger) {}
 
+  private debug(message: string, ...args: unknown[]): void {
+    const loggerWithDebug = this.logger as ManagerLogger & {
+      debug?: (message: string, ...args: unknown[]) => void;
+    };
+
+    loggerWithDebug.debug?.(message, ...args);
+  }
+
   /**
    * Handle clipboard-related messages
    */
@@ -27,34 +35,34 @@ export class ClipboardMessageHandler {
    * Handle clipboard content paste operation
    */
   private handleClipboardContent(msg: MessageCommand, coordinator: IManagerCoordinator): void {
-    console.log('[CLIPBOARD] Received clipboardContent message:', msg);
+    this.debug('[CLIPBOARD] Received clipboardContent message:', msg);
 
     const terminalId = (msg as { terminalId?: string }).terminalId;
     const text = (msg as { text?: string }).text;
 
-    console.log('[CLIPBOARD] terminalId:', terminalId, 'text length:', text?.length);
+    this.debug('[CLIPBOARD] terminalId:', terminalId, 'text length:', text?.length);
 
     if (!terminalId || text === undefined) {
-      console.log('[CLIPBOARD] Invalid clipboardContent message - missing terminalId or text');
+      this.debug('[CLIPBOARD] Invalid clipboardContent message - missing terminalId or text');
       return;
     }
 
     const terminalInstance = coordinator.getTerminalInstance(terminalId);
-    console.log('[CLIPBOARD] terminalInstance:', terminalInstance);
+    this.debug('[CLIPBOARD] terminalInstance:', terminalInstance);
 
     if (!terminalInstance) {
       this.logger.warn(`📋 [CLIPBOARD] Terminal ${terminalId} not found for paste`);
-      console.log('[CLIPBOARD] Available terminals:', coordinator.getActiveTerminalId());
+      this.debug('[CLIPBOARD] Available terminals:', coordinator.getActiveTerminalId());
       return;
     }
 
     this.logger.info(`📋 [CLIPBOARD] Pasting ${text.length} characters to terminal ${terminalId}`);
-    console.log(
+    this.debug(
       '[CLIPBOARD] Calling terminal.paste() with text:',
       text.substring(0, 50) + (text.length > 50 ? '...' : '')
     );
 
     terminalInstance.terminal.paste(text);
-    console.log('[CLIPBOARD] Paste completed');
+    this.debug('[CLIPBOARD] Paste completed');
   }
 }

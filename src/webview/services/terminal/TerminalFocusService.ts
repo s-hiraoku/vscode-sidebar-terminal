@@ -8,6 +8,14 @@
 import { Terminal } from '@xterm/xterm';
 import { terminalLogger } from '../../utils/ManagerLogger';
 
+const debugLog = (message: string, data?: unknown): void => {
+  const loggerWithDebug = terminalLogger as typeof terminalLogger & {
+    debug?: (message: string, data?: unknown) => void;
+  };
+
+  loggerWithDebug.debug?.(message, data);
+};
+
 /**
  * Service for managing terminal focus and keyboard input
  */
@@ -68,18 +76,15 @@ export class TerminalFocusService {
     terminalId: string
   ): void {
     try {
-      // eslint-disable-next-line no-console
-      console.log(`[FOCUS-DEBUG] Attempting to focus ${terminalId}...`);
+      debugLog(`[FOCUS-DEBUG] Attempting to focus ${terminalId}...`);
 
       // Focus using xterm.js API (preferred method)
       terminal.focus();
-      // eslint-disable-next-line no-console
-      console.log(`[FOCUS-DEBUG] Called terminal.focus()`);
+      debugLog(`[FOCUS-DEBUG] Called terminal.focus()`);
 
       // Double-check with direct textarea focus
       textarea.focus();
-      // eslint-disable-next-line no-console
-      console.log(`[FOCUS-DEBUG] Called textarea.focus()`);
+      debugLog(`[FOCUS-DEBUG] Called textarea.focus()`);
 
       // Verify focus succeeded
       setTimeout(() => {
@@ -87,8 +92,7 @@ export class TerminalFocusService {
         const activeTag = document.activeElement?.tagName;
         const activeClass = document.activeElement?.className;
 
-        // eslint-disable-next-line no-console
-        console.log(`[FOCUS-DEBUG] Focus verification for ${terminalId}:`, {
+        debugLog(`[FOCUS-DEBUG] Focus verification for ${terminalId}:`, {
           hasFocus,
           activeElement: `${activeTag}.${activeClass}`,
           textareaInDOM: document.body.contains(textarea),
@@ -96,14 +100,12 @@ export class TerminalFocusService {
         });
 
         if (hasFocus) {
-          // eslint-disable-next-line no-console
-          console.log(`[FOCUS-DEBUG] Terminal focused successfully: ${terminalId}`);
+          debugLog(`[FOCUS-DEBUG] Terminal focused successfully: ${terminalId}`);
           terminalLogger.info(`Terminal successfully focused and ready for input: ${terminalId}`);
 
           // Test: Simulate a keystroke to verify input handler
           setTimeout(() => {
-            // eslint-disable-next-line no-console
-            console.log(`[FOCUS-DEBUG] Testing input by simulating 'a' key...`);
+            debugLog(`[FOCUS-DEBUG] Testing input by simulating 'a' key...`);
             const event = new KeyboardEvent('keydown', { key: 'a', code: 'KeyA' });
             textarea.dispatchEvent(event);
           }, 100);
@@ -117,8 +119,7 @@ export class TerminalFocusService {
 
           // One final focus attempt
           textarea.focus();
-          // eslint-disable-next-line no-console
-          console.log(`[FOCUS-DEBUG] Retried textarea.focus()`);
+          debugLog(`[FOCUS-DEBUG] Retried textarea.focus()`);
         }
       }, 10);
     } catch (error) {

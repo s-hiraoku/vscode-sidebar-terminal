@@ -14,6 +14,7 @@
  */
 
 import * as vscode from 'vscode';
+import { debug as logDebug } from '../utils/logger';
 
 /**
  * Telemetry event types
@@ -124,7 +125,7 @@ export class TelemetryService {
     // For development/debugging, you can log to output channel
     // In production, this would send to your telemetry backend
     if (process.env.NODE_ENV === 'development') {
-      console.log(`[Telemetry] ${eventName}:`, data);
+      logDebug(`[Telemetry] ${eventName}:`, data);
     }
   }
 
