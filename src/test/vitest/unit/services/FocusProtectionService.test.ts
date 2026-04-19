@@ -400,6 +400,67 @@ describe('FocusProtectionService', () => {
     });
   });
 
+  describe('terminal ID tracking (restore focus to the correct terminal)', () => {
+    it('should pass the last interacted terminal ID to sendWebviewFocus', () => {
+      mockIsTerminalFocused.mockReturnValue(true);
+      mockIsWebViewVisible.mockReturnValue(true);
+
+      // User interacts with terminal "3"
+      service.notifyInteraction('3');
+
+      fireActiveTerminalChanged({ name: 'Claude Code' });
+      vi.advanceTimersByTime(200);
+
+      expect(mockSendWebviewFocus).toHaveBeenCalledWith('3');
+    });
+
+    it('should pass undefined when no terminal ID was tracked', () => {
+      mockIsTerminalFocused.mockReturnValue(true);
+      mockIsWebViewVisible.mockReturnValue(true);
+
+      // No notifyInteraction with ID — legacy call without ID
+      service.notifyInteraction();
+
+      fireActiveTerminalChanged({ name: 'bash' });
+      vi.advanceTimersByTime(200);
+
+      expect(mockSendWebviewFocus).toHaveBeenCalledWith(undefined);
+    });
+
+    it('should track the most recent terminal ID across multiple interactions', () => {
+      mockIsTerminalFocused.mockReturnValue(true);
+      mockIsWebViewVisible.mockReturnValue(true);
+
+      service.notifyInteraction('1');
+      service.notifyInteraction('2');
+      service.notifyInteraction('5');
+
+      fireActiveTerminalChanged({ name: 'Claude Code' });
+      vi.advanceTimersByTime(200);
+
+      expect(mockSendWebviewFocus).toHaveBeenCalledWith('5');
+    });
+
+    it('should restore focus to correct terminal in CLI agent mode', () => {
+      mockIsTerminalFocused.mockReturnValue(false);
+      mockIsWebViewVisible.mockReturnValue(true);
+
+      service.notifyCliAgentConnected(true);
+
+      // User submits prompt in terminal "2", then focus is gained
+      service.notifyInteraction('2');
+      service.notifyFocusChanged(true);
+      vi.advanceTimersByTime(100);
+
+      // Claude Code steals focus
+      fireActiveTerminalChanged({ name: 'Claude Code' });
+      vi.advanceTimersByTime(200);
+
+      expect(vscode.commands.executeCommand).toHaveBeenCalledWith('secondaryTerminal.focus');
+      expect(mockSendWebviewFocus).toHaveBeenCalledWith('2');
+    });
+  });
+
   describe('diagnostic logging (onDidOpenTerminal / describeTerminal)', () => {
     it('should register an onDidOpenTerminal listener', () => {
       expect(vscode.window.onDidOpenTerminal).toHaveBeenCalledOnce();
@@ -437,6 +498,152 @@ describe('FocusProtectionService', () => {
       }).not.toThrow();
 
       expect(vscode.commands.executeCommand).toHaveBeenCalledWith('secondaryTerminal.focus');
+    });
+  });
+
+  describe('CLI agent connected mode (aggressive focus protection)', () => {
+    it('should restore focus without recent interaction when CLI agent is connected', () => {
+      mockIsTerminalFocused.mockReturnValue(false);
+      mockIsWebViewVisible.mockReturnValue(true);
+
+      // Focus was gained recently
+      service.notifyFocusChanged(true);
+      vi.advanceTimersByTime(100);
+
+      // CLI agent connected — no interaction required
+      service.notifyCliAgentConnected(true);
+
+      fireActiveTerminalChanged({ name: 'Claude Code' });
+      vi.advanceTimersByTime(200);
+
+      expect(vscode.commands.executeCommand).toHaveBeenCalledWith('secondaryTerminal.focus');
+    });
+
+    it('should use shorter cooldown when CLI agent is connected', () => {
+      mockIsTerminalFocused.mockReturnValue(true);
+      mockIsWebViewVisible.mockReturnValue(true);
+
+      service.notifyCliAgentConnected(true);
+
+      // First restore
+      fireActiveTerminalChanged({ name: 'Claude Code' });
+      vi.advanceTimersByTime(200);
+      expect(vscode.commands.executeCommand).toHaveBeenCalledTimes(1);
+
+      // After 200ms (less than normal 500ms cooldown, but enough for CLI agent mode)
+      vi.advanceTimersByTime(200);
+
+      // Second restore should work with shorter cooldown
+      fireActiveTerminalChanged({ name: 'Claude Code' });
+      vi.advanceTimersByTime(200);
+      expect(vscode.commands.executeCommand).toHaveBeenCalledTimes(2);
+    });
+
+    it('should extend recent focus window when CLI agent is connected', () => {
+      mockIsTerminalFocused.mockReturnValue(false);
+      mockIsWebViewVisible.mockReturnValue(true);
+
+      service.notifyCliAgentConnected(true);
+
+      // Focus gained, then long time passes (beyond normal 600ms window)
+      service.notifyFocusChanged(true);
+      vi.advanceTimersByTime(30_000); // 30 seconds — well beyond normal window
+
+      // With CLI agent connected, the extended window (10 min) still covers this
+      fireActiveTerminalChanged({ name: 'Claude Code' });
+      vi.advanceTimersByTime(200);
+
+      expect(vscode.commands.executeCommand).toHaveBeenCalledWith('secondaryTerminal.focus');
+    });
+
+    it('should protect during long CLI agent processing sessions', () => {
+      mockIsTerminalFocused.mockReturnValue(false);
+      mockIsWebViewVisible.mockReturnValue(true);
+
+      service.notifyCliAgentConnected(true);
+
+      // User submitted a prompt, then CLI agent processes for 5 minutes
+      service.notifyFocusChanged(true);
+      vi.advanceTimersByTime(300_000); // 5 minutes
+
+      // Claude Code steals focus during processing
+      fireActiveTerminalChanged({ name: 'Claude Code' });
+      vi.advanceTimersByTime(200);
+
+      expect(vscode.commands.executeCommand).toHaveBeenCalledWith('secondaryTerminal.focus');
+    });
+
+    it('should NOT extend recent focus window beyond CLI agent window', () => {
+      mockIsTerminalFocused.mockReturnValue(false);
+      mockIsWebViewVisible.mockReturnValue(true);
+
+      service.notifyCliAgentConnected(true);
+
+      service.notifyFocusChanged(true);
+      // Wait beyond CLI agent extended window (10 min = 600_000ms)
+      vi.advanceTimersByTime(700_000);
+
+      fireActiveTerminalChanged({ name: 'bash' });
+      vi.advanceTimersByTime(200);
+
+      expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
+    });
+
+    it('should revert to normal behavior when CLI agent disconnects', () => {
+      mockIsTerminalFocused.mockReturnValue(false);
+      mockIsWebViewVisible.mockReturnValue(true);
+
+      service.notifyCliAgentConnected(true);
+      service.notifyFocusChanged(true);
+
+      // Disconnect CLI agent
+      service.notifyCliAgentConnected(false);
+
+      // Wait beyond normal RECENT_FOCUS_WINDOW_MS (600ms)
+      // After disconnect, the normal window applies → focus should NOT be restored
+      vi.advanceTimersByTime(800);
+
+      fireActiveTerminalChanged({ name: 'bash' });
+      vi.advanceTimersByTime(200);
+
+      expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
+    });
+
+    it('should still respect disabled setting even with CLI agent connected', () => {
+      vi.mocked(vscode.workspace.getConfiguration).mockReturnValue({
+        get: vi.fn((key: string) => {
+          if (key === 'focusProtection') return false;
+          return undefined;
+        }),
+      } as any);
+
+      service.dispose();
+      (vscode.window as any)._onDidChangeActiveTerminalListeners.length = 0;
+      service = new FocusProtectionService({
+        isTerminalFocused: mockIsTerminalFocused,
+        isWebViewVisible: mockIsWebViewVisible,
+      });
+
+      service.notifyCliAgentConnected(true);
+      mockIsTerminalFocused.mockReturnValue(true);
+      mockIsWebViewVisible.mockReturnValue(true);
+
+      fireActiveTerminalChanged({ name: 'Claude Code' });
+      vi.advanceTimersByTime(200);
+
+      expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
+    });
+
+    it('should still require WebView visible even with CLI agent connected', () => {
+      mockIsTerminalFocused.mockReturnValue(true);
+      mockIsWebViewVisible.mockReturnValue(false);
+
+      service.notifyCliAgentConnected(true);
+
+      fireActiveTerminalChanged({ name: 'Claude Code' });
+      vi.advanceTimersByTime(200);
+
+      expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
     });
   });
 
