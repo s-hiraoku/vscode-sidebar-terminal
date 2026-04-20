@@ -1262,6 +1262,7 @@
     "vitest": "^4.0.16",
     "vscode-test": "^1.6.1",
     "webpack": "^5.103.0",
+    "webpack-bundle-analyzer": "^4.10.2",
     "webpack-cli": "^7.0.0"
   },
   "dependencies": {

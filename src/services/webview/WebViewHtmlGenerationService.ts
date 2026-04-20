@@ -53,8 +53,8 @@ export class WebViewHtmlGenerationService {
 
       const { webview, extensionUri } = options;
 
-      // Generate script URI
-      const scriptUri = this._generateScriptUri(webview, extensionUri);
+      // Generate script URIs
+      const scriptUris = this._generateScriptUris(webview, extensionUri);
 
       // Generate nonce for CSP
       const nonce = generateNonce();
@@ -72,7 +72,7 @@ export class WebViewHtmlGenerationService {
       const inlineScripts = this._generateInlineScripts(nonce);
 
       // Generate main script tags
-      const scriptTags = this._generateScriptTags(nonce, scriptUri);
+      const scriptTags = this._generateScriptTags(nonce, scriptUris);
 
       const html = `<!DOCTYPE html>
 <html lang="en">
@@ -200,12 +200,19 @@ export class WebViewHtmlGenerationService {
   /**
    * Generate script URI with error handling
    */
-  private _generateScriptUri(webview: vscode.Webview, extensionUri: vscode.Uri): vscode.Uri {
+  private _generateScriptUris(webview: vscode.Webview, extensionUri: vscode.Uri): vscode.Uri[] {
     try {
-      const webviewJsPath = vscode.Uri.joinPath(extensionUri, 'dist', 'webview.js');
-      return webview.asWebviewUri(webviewJsPath);
+      return [
+        'vendors.js',
+        'xterm-vendor.js',
+        'webview-services.js',
+        'webview-managers.js',
+        'webview.js',
+      ].map((fileName) =>
+        webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'dist', fileName))
+      );
     } catch (error) {
-      log('❌ [HtmlGeneration] Failed to generate script URI:', error);
+      log('❌ [HtmlGeneration] Failed to generate script URIs:', error);
       throw new Error(`Script URI generation failed: ${String(error)}`);
     }
   }
@@ -566,10 +573,13 @@ export class WebViewHtmlGenerationService {
   /**
    * Generate script tags for main webview script
    */
-  private _generateScriptTags(nonce: string, scriptUri: vscode.Uri): string {
-    return `
-        <script nonce="${nonce}" src="${scriptUri.toString()}" id="webview-main-script"></script>
-    `;
+  private _generateScriptTags(nonce: string, scriptUris: vscode.Uri[]): string {
+    return scriptUris
+      .map((scriptUri, index) => {
+        const id = index === scriptUris.length - 1 ? ' id="webview-main-script"' : '';
+        return `        <script nonce="${nonce}" src="${scriptUri.toString()}"${id}></script>`;
+      })
+      .join('\n');
   }
 
   /**

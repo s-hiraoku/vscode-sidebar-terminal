@@ -4,6 +4,9 @@
 const path = require('path');
 const webpack = require('webpack');
 const TerserPlugin = require('terser-webpack-plugin');
+const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
+
+const shouldAnalyzeBundle = process.env.ANALYZE_BUNDLE === 'true';
 
 /** @type {import('webpack').Configuration} */
 const extensionConfig = {
@@ -139,9 +142,40 @@ const webviewConfig = {
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: '[name].js',
+    chunkFilename: '[name].js',
   },
   optimization: {
     minimize: process.env.NODE_ENV === 'production',
+    splitChunks: {
+      chunks: 'all',
+      minSize: 20000,
+      cacheGroups: {
+        xterm: {
+          test: /[\\/]node_modules[\\/]@xterm[\\/]/,
+          name: 'xterm-vendor',
+          priority: 10,
+          enforce: true,
+        },
+        webviewManagers: {
+          test: /[\\/]src[\\/]webview[\\/]managers[\\/]/,
+          name: 'webview-managers',
+          priority: 5,
+          enforce: true,
+        },
+        webviewServices: {
+          test: /[\\/]src[\\/]webview[\\/]services[\\/]/,
+          name: 'webview-services',
+          priority: 4,
+          enforce: true,
+        },
+        vendors: {
+          test: /[\\/]node_modules[\\/]/,
+          name: 'vendors',
+          priority: -10,
+          enforce: true,
+        },
+      },
+    },
     ...(process.env.NODE_ENV === 'production' && {
       minimizer: [
         new TerserPlugin({
@@ -180,6 +214,18 @@ const webviewConfig = {
     new webpack.ProvidePlugin({
       process: 'process/browser',
     }),
+    ...(shouldAnalyzeBundle
+      ? [
+          new BundleAnalyzerPlugin({
+            analyzerMode: 'static',
+            openAnalyzer: false,
+            reportFilename: path.resolve(__dirname, 'report', 'webview-bundle-report.html'),
+            statsFilename: path.resolve(__dirname, 'report', 'webview-bundle-stats.json'),
+            generateStatsFile: true,
+            logLevel: 'info',
+          }),
+        ]
+      : []),
   ],
   devtool: 'nosources-source-map',
   performance: {

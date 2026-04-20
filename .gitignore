@@ -19,6 +19,10 @@ coverage/
 .nyc_output/
 logs/
 *.log
+
+# Bundle analyzer output
+report/webview-bundle-report.html
+report/webview-bundle-stats.json
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
