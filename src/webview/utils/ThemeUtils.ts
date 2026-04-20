@@ -2,6 +2,45 @@ import { THEME_CONSTANTS } from '../constants';
 import type { ThemeColors } from '../types/webview.types';
 import { webview as log } from '../../utils/logger';
 
+const DARK_THEME_HEX_MARKERS = ['1e1e1e', '2d2d30', '252526'] as const;
+const LIGHT_THEME_HEX_MARKERS = ['ffffff', 'f3f3f3', 'fffffe'] as const;
+const BRIGHTNESS_THRESHOLD = 128;
+
+function brightnessFromRgb(r: number, g: number, b: number): number {
+  return (r * 299 + g * 587 + b * 114) / 1000;
+}
+
+function brightnessFromHex(hex: string): number {
+  const r = parseInt(hex.substr(0, 2), 16);
+  const g = parseInt(hex.substr(2, 2), 16);
+  const b = parseInt(hex.substr(4, 2), 16);
+  return brightnessFromRgb(r, g, b);
+}
+
+function brightnessFromRgbString(bgColor: string): number | undefined {
+  const values = bgColor.match(/\d+/g);
+  if (!values || values.length < 3) return undefined;
+  return brightnessFromRgb(
+    parseInt(values[0] || '0'),
+    parseInt(values[1] || '0'),
+    parseInt(values[2] || '0')
+  );
+}
+
+function classifyBackgroundAsDark(bgColor: string | undefined | null): boolean {
+  if (!bgColor) return true;
+  if (bgColor.startsWith('#')) {
+    return brightnessFromHex(bgColor.substring(1)) < BRIGHTNESS_THRESHOLD;
+  }
+  if (bgColor.includes('rgb')) {
+    const brightness = brightnessFromRgbString(bgColor);
+    return brightness === undefined ? true : brightness < BRIGHTNESS_THRESHOLD;
+  }
+  if (DARK_THEME_HEX_MARKERS.some((marker) => bgColor.includes(marker))) return true;
+  if (LIGHT_THEME_HEX_MARKERS.some((marker) => bgColor.includes(marker))) return false;
+  return true;
+}
+
 /**
  * テーマ関連のユーティリティクラス
  */
@@ -11,7 +50,6 @@ export const ThemeUtils = {
    */
   detectTheme(): 'dark' | 'light' {
     const style = getComputedStyle(document.body);
-
     const bgColor =
       style.getPropertyValue('--vscode-editor-background') ||
       style.getPropertyValue('--vscode-panel-background') ||
@@ -19,44 +57,7 @@ export const ThemeUtils = {
 
     log('🎨 [THEME] Detected background color:', bgColor);
 
-    let isDark = true; // Default to dark
-
-    if (bgColor) {
-      if (bgColor.startsWith('#')) {
-        // Handle hex colors
-        const hex = bgColor.substring(1);
-        const r = parseInt(hex.substr(0, 2), 16);
-        const g = parseInt(hex.substr(2, 2), 16);
-        const b = parseInt(hex.substr(4, 2), 16);
-        const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-        isDark = brightness < 128;
-      } else if (bgColor.includes('rgb')) {
-        // Handle rgb/rgba colors
-        const values = bgColor.match(/\d+/g);
-        if (values && values.length >= 3) {
-          const r = parseInt(values[0] || '0');
-          const g = parseInt(values[1] || '0');
-          const b = parseInt(values[2] || '0');
-          const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-          isDark = brightness < 128;
-        }
-      } else if (
-        // Handle specific dark theme indicators
-        bgColor.includes('1e1e1e') ||
-        bgColor.includes('2d2d30') ||
-        bgColor.includes('252526')
-      ) {
-        isDark = true;
-      } else if (
-        // Handle light theme indicators
-        bgColor.includes('ffffff') ||
-        bgColor.includes('f3f3f3') ||
-        bgColor.includes('fffffe')
-      ) {
-        isDark = false;
-      }
-    }
-
+    const isDark = classifyBackgroundAsDark(bgColor);
     log('🎨 [THEME] Theme detected as:', isDark ? 'dark' : 'light');
     return isDark ? 'dark' : 'light';
   },

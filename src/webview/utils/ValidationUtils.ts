@@ -28,6 +28,42 @@ export interface ValidationOptions {
  * Centralized validation utilities class
  */
 
+function checkNumberRange(
+  value: number,
+  fieldName: string,
+  min: number,
+  max: number
+): ValidationResult | undefined {
+  if (value < min) {
+    return { isValid: false, error: `${fieldName} must be at least ${min}` };
+  }
+  if (value > max) {
+    return { isValid: false, error: `${fieldName} must be no more than ${max}` };
+  }
+  return undefined;
+}
+
+function checkStringLength(
+  value: string,
+  fieldName: string,
+  minLength: number,
+  maxLength: number
+): ValidationResult | undefined {
+  if (value.length < minLength) {
+    return {
+      isValid: false,
+      error: `${fieldName} must be at least ${minLength} characters long`,
+    };
+  }
+  if (value.length > maxLength) {
+    return {
+      isValid: false,
+      error: `${fieldName} must be no more than ${maxLength} characters long`,
+    };
+  }
+  return undefined;
+}
+
 export class ValidationUtils {
   /**
    * Validate string input
@@ -39,37 +75,22 @@ export class ValidationUtils {
   ): ValidationResult {
     const { required = true, allowEmpty = false, minLength = 0, maxLength = Infinity } = options;
 
-    // Check if value exists
     if (value === null || value === undefined) {
       return required
         ? { isValid: false, error: `${fieldName} is required` }
         : { isValid: true, value: '' };
     }
 
-    // Convert to string
     const stringValue = String(value);
 
-    // Check empty string
     if (!allowEmpty && stringValue.trim().length === 0) {
       return required
         ? { isValid: false, error: `${fieldName} cannot be empty` }
         : { isValid: true, value: '' };
     }
 
-    // Check length constraints
-    if (stringValue.length < minLength) {
-      return {
-        isValid: false,
-        error: `${fieldName} must be at least ${minLength} characters long`,
-      };
-    }
-
-    if (stringValue.length > maxLength) {
-      return {
-        isValid: false,
-        error: `${fieldName} must be no more than ${maxLength} characters long`,
-      };
-    }
+    const lengthError = checkStringLength(stringValue, fieldName, minLength, maxLength);
+    if (lengthError) return lengthError;
 
     return { isValid: true, value: stringValue };
   }
@@ -134,22 +155,15 @@ export class ValidationUtils {
     }
 
     const numValue = Number(value);
-
     if (isNaN(numValue)) {
       return { isValid: false, error: `${fieldName} must be a valid number` };
     }
-
     if (integer && !Number.isInteger(numValue)) {
       return { isValid: false, error: `${fieldName} must be an integer` };
     }
 
-    if (numValue < min) {
-      return { isValid: false, error: `${fieldName} must be at least ${min}` };
-    }
-
-    if (numValue > max) {
-      return { isValid: false, error: `${fieldName} must be no more than ${max}` };
-    }
+    const rangeError = checkNumberRange(numValue, fieldName, min, max);
+    if (rangeError) return rangeError;
 
     return { isValid: true, value: numValue };
   }
