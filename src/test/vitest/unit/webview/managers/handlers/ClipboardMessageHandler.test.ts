@@ -18,6 +18,7 @@ describe('ClipboardMessageHandler', () => {
     mockLogger = {
       info: vi.fn(),
       warn: vi.fn(),
+      debug: vi.fn(),
     } as unknown as ManagerLogger;
 
     mockTerminal = {

@@ -109,14 +109,10 @@ export class TerminalEventManager extends BaseManager {
       terminalLogger.info(`🔧 Setting up input handler for ${terminalId}...`);
 
       const inputDisposable = terminal.onData((data: string) => {
-        // 🔍 CRITICAL DEBUG: Log every keystroke to verify handler is called
-        console.log(`🔍 [INPUT-DEBUG] onData fired for ${terminalId}:`, {
+        terminalLogger.debug(`🔍 [INPUT-DEBUG] onData fired for ${terminalId}`, {
           dataLength: data.length,
-          data: data,
-          charCodes: Array.from(data).map((c) => c.charCodeAt(0)),
           timestamp: Date.now(),
         });
-        terminalLogger.debug(`⌨️ User input for ${terminalId}: ${data.length} chars`);
 
         // Send input to Extension
         const message = {
@@ -125,15 +121,16 @@ export class TerminalEventManager extends BaseManager {
           terminalId,
         };
 
-        console.log(`🔍 [INPUT-DEBUG] Sending to Extension:`, message);
+        terminalLogger.debug(`🔍 [INPUT-DEBUG] Sending input to Extension`, {
+          terminalId,
+          dataLength: data.length,
+        });
         this.coordinator?.postMessageToExtension(message);
-        console.log(`🔍 [INPUT-DEBUG] Message sent`);
       });
 
       this.disposables.push(inputDisposable);
 
-      // 🔍 CRITICAL DEBUG: Verify handler was registered
-      console.log(`🔍 [INPUT-DEBUG] Input handler registered for ${terminalId}`, {
+      terminalLogger.debug(`🔍 [INPUT-DEBUG] Input handler registered for ${terminalId}`, {
         hasCoordinator: !!this.coordinator,
         disposableCount: this.disposables.length,
       });

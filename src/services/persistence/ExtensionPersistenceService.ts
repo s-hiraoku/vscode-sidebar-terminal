@@ -23,11 +23,7 @@
 import * as vscode from 'vscode';
 import { TerminalManager } from '../../terminals/TerminalManager';
 import { safeProcessCwd } from '../../utils/common';
-
-// Direct console.log for reliable debugging output
-
-const log = (message: string, ...args: unknown[]) =>
-  console.log(`[EXT-PERSISTENCE] ${message}`, ...args);
+import { extension as logExtension } from '../../utils/logger';
 import {
   SessionStorageData,
   TerminalSessionData,
@@ -35,6 +31,13 @@ import {
   SessionRestoreResult,
   SessionDataTransformer,
 } from '../../shared/session.types';
+
+const PERSISTENCE_LOG_PREFIX = '[EXT-PERSISTENCE]';
+const log = (message: string, ...args: unknown[]) =>
+  logExtension(
+    message.includes(PERSISTENCE_LOG_PREFIX) ? message : `${PERSISTENCE_LOG_PREFIX} ${message}`,
+    ...args
+  );
 
 // ============================================================================
 // Types and Interfaces

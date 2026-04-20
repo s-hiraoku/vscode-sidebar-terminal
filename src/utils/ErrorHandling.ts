@@ -218,7 +218,7 @@ export class ErrorHandlingManager {
     const prefix = `[${report.context.category.toUpperCase()}]`;
     switch (report.context.severity) {
       case ErrorSeverity.INFO:
-        console.info(prefix, report.message);
+        log(prefix, report.message);
         break;
       case ErrorSeverity.WARNING:
         console.warn(prefix, report.message);

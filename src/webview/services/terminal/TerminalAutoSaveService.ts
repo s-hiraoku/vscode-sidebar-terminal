@@ -52,8 +52,7 @@ export class TerminalAutoSaveService {
     if (timer) {
       window.clearInterval(timer);
       TerminalAutoSaveService.periodicSaveTimers.delete(terminalId);
-      // eslint-disable-next-line no-console
-      console.log(`[AUTO-SAVE] Cleared periodic save timer for: ${terminalId}`);
+      terminalLogger.debug(`[AUTO-SAVE] Cleared periodic save timer for: ${terminalId}`);
     }
     // Dispose xterm.js event listeners to prevent accumulation
     const disposables = TerminalAutoSaveService.terminalListenerDisposables.get(terminalId);
@@ -81,8 +80,7 @@ export class TerminalAutoSaveService {
         TerminalAutoSaveService.lastHiddenAt = now;
         // Page is being hidden (possibly going to sleep)
         // Save all terminal scrollback immediately
-        // eslint-disable-next-line no-console
-        console.log('[AUTO-SAVE] Page hidden - saving all scrollback immediately');
+        terminalLogger.debug('[AUTO-SAVE] Page hidden - saving all scrollback immediately');
         TerminalAutoSaveService.saveAllScrollbackImmediately();
         return;
       }
@@ -92,15 +90,15 @@ export class TerminalAutoSaveService {
         const timeHidden = hiddenAt ? now - hiddenAt : 0;
         // Consider it a sleep/wake only if hidden for a long enough period
         const isLikelyWakeFromSleep = hiddenAt > 0 && timeHidden > 60000;
-        // eslint-disable-next-line no-console
-        console.log(
+        terminalLogger.debug(
           `[AUTO-SAVE] Page visible - hiddenDuration: ${timeHidden}ms, likelyWake: ${isLikelyWakeFromSleep}`
         );
 
         if (isLikelyWakeFromSleep) {
           // Request scrollback restoration from Extension
-          // eslint-disable-next-line no-console
-          console.log('[AUTO-SAVE] Likely wake from sleep - requesting scrollback refresh');
+          terminalLogger.debug(
+            '[AUTO-SAVE] Likely wake from sleep - requesting scrollback refresh'
+          );
           TerminalAutoSaveService.requestScrollbackRefresh();
         }
       }
@@ -113,8 +111,7 @@ export class TerminalAutoSaveService {
     });
 
     TerminalAutoSaveService.visibilityHandlerSetup = true;
-    // eslint-disable-next-line no-console
-    console.log('[AUTO-SAVE] Visibility change handler setup complete');
+    terminalLogger.debug('[AUTO-SAVE] Visibility change handler setup complete');
   }
 
   /**
@@ -150,8 +147,7 @@ export class TerminalAutoSaveService {
           beforeSleep: true,
         });
 
-        // eslint-disable-next-line no-console
-        console.log(
+        terminalLogger.debug(
           `[AUTO-SAVE] Saved scrollback before sleep for ${terminalId}: ${lines.length} lines`
         );
       } catch (error) {
@@ -187,8 +183,7 @@ export class TerminalAutoSaveService {
       terminalIds: Array.from(TerminalAutoSaveService.registeredTerminals.keys()),
     });
 
-    // eslint-disable-next-line no-console
-    console.log(
+    terminalLogger.debug(
       `[AUTO-SAVE] Requested scrollback refresh for ${TerminalAutoSaveService.registeredTerminals.size} terminals`
     );
   }
@@ -212,8 +207,7 @@ export class TerminalAutoSaveService {
       timestamp: Date.now(),
     });
 
-    // eslint-disable-next-line no-console
-    console.log('[AUTO-SAVE] Requested session save on webview unload');
+    terminalLogger.debug('[AUTO-SAVE] Requested session save on webview unload');
   }
 
   /**
@@ -230,8 +224,7 @@ export class TerminalAutoSaveService {
     TerminalAutoSaveService.registeredTerminals.clear();
     TerminalAutoSaveService.terminalListenerDisposables.clear();
     TerminalAutoSaveService.restoringTerminals.clear();
-    // eslint-disable-next-line no-console
-    console.log('[AUTO-SAVE] All static state disposed');
+    terminalLogger.debug('[AUTO-SAVE] All static state disposed');
   }
 
   /**
@@ -240,8 +233,7 @@ export class TerminalAutoSaveService {
    */
   public static markTerminalRestoring(terminalId: string): void {
     TerminalAutoSaveService.restoringTerminals.add(terminalId);
-    // eslint-disable-next-line no-console
-    console.log(`[AUTO-SAVE] Marked terminal as restoring: ${terminalId}`);
+    terminalLogger.debug(`[AUTO-SAVE] Marked terminal as restoring: ${terminalId}`);
   }
 
   /**
@@ -252,8 +244,7 @@ export class TerminalAutoSaveService {
     // 5 second protection period to allow restoration to settle
     setTimeout(() => {
       TerminalAutoSaveService.restoringTerminals.delete(terminalId);
-      // eslint-disable-next-line no-console
-      console.log(`[AUTO-SAVE] Restoration protection ended: ${terminalId}`);
+      terminalLogger.debug(`[AUTO-SAVE] Restoration protection ended: ${terminalId}`);
     }, 5000);
   }
 
@@ -291,8 +282,7 @@ export class TerminalAutoSaveService {
     const pushScrollbackToExtension = (): void => {
       // Skip auto-save if terminal is currently being restored
       if (TerminalAutoSaveService.isTerminalRestoring(terminalId)) {
-        // eslint-disable-next-line no-console
-        console.log(`[AUTO-SAVE] Skipped save during restoration: ${terminalId}`);
+        terminalLogger.debug(`[AUTO-SAVE] Skipped save during restoration: ${terminalId}`);
         return;
       }
 
@@ -303,8 +293,9 @@ export class TerminalAutoSaveService {
       saveTimer = window.setTimeout(() => {
         // Double-check restoration status before actually saving
         if (TerminalAutoSaveService.isTerminalRestoring(terminalId)) {
-          // eslint-disable-next-line no-console
-          console.log(`[AUTO-SAVE] Skipped delayed save during restoration: ${terminalId}`);
+          terminalLogger.debug(
+            `[AUTO-SAVE] Skipped delayed save during restoration: ${terminalId}`
+          );
           return;
         }
 

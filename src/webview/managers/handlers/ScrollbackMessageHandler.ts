@@ -182,8 +182,7 @@ export class ScrollbackMessageHandler implements IMessageHandler {
     coordinator: IManagerCoordinator,
     skipDuplicateCheck = false
   ): void {
-    // eslint-disable-next-line no-console
-    console.log('[SCROLLBACK-RESTORE] handleRestoreScrollback called', {
+    this.logger.debug('[SCROLLBACK-RESTORE] handleRestoreScrollback called', {
       terminalId: msg.terminalId,
       timestamp: Date.now(),
     });
@@ -207,8 +206,7 @@ export class ScrollbackMessageHandler implements IMessageHandler {
     // 🔒 Skip if already restored (prevents duplicate restoration)
     // Only check if not called from handleRestoreTerminalSessions (which handles its own check)
     if (!skipDuplicateCheck && this.restoredTerminals.has(terminalId)) {
-      // eslint-disable-next-line no-console
-      console.log(`[SCROLLBACK-RESTORE] ⏭️ Already restored: ${terminalId}, skipping`);
+      this.logger.debug(`[SCROLLBACK-RESTORE] ⏭️ Already restored: ${terminalId}, skipping`);
       this.logger.info(`⏭️ [RESTORE-DEBUG] Already restored: ${terminalId}, skipping`);
       return;
     }
@@ -249,16 +247,13 @@ export class ScrollbackMessageHandler implements IMessageHandler {
         restoredLines: normalizedScrollback.length,
         timestamp: Date.now(),
       });
-
-      // eslint-disable-next-line no-console
-      console.log(
+      this.logger.debug(
         `[SCROLLBACK-RESTORE] ✅ Restored ${normalizedScrollback.length} lines to terminal ${terminalId}`
       );
       this.logger.info(
         `✅ [RESTORE-DEBUG] Scrollback restored for terminal ${terminalId}: ${normalizedScrollback.length} lines`
       );
     } catch (error) {
-      // eslint-disable-next-line no-console
       console.error(`[SCROLLBACK-RESTORE] ❌ Error:`, error);
       this.logger.error(
         `❌ [RESTORE-DEBUG] Error restoring scrollback: ${error instanceof Error ? error.message : String(error)}`
@@ -501,19 +496,17 @@ export class ScrollbackMessageHandler implements IMessageHandler {
    * Restore scrollback content to xterm terminal
    */
   private restoreScrollbackToXterm(terminal: Terminal, scrollbackContent: ScrollbackLine[]): void {
-    // eslint-disable-next-line no-console
-    console.log(`[SCROLLBACK-RESTORE] restoreScrollbackToXterm: ${scrollbackContent.length} lines`);
+    this.logger.debug(
+      `[SCROLLBACK-RESTORE] restoreScrollbackToXterm: ${scrollbackContent.length} lines`
+    );
     this.logger.info(`Restoring ${scrollbackContent.length} lines to terminal`);
 
     if (!terminal) {
       throw new Error('Terminal instance not provided');
     }
 
-    // Debug: Log the actual content being written
-    // eslint-disable-next-line no-console
-    console.log(
-      '[SCROLLBACK-RESTORE] Content to restore:',
-      scrollbackContent.map((l) => l.content)
+    this.logger.debug(
+      `[SCROLLBACK-RESTORE] Restoring ${scrollbackContent.length} scrollback lines`
     );
 
     // Write each line to the terminal
@@ -523,8 +516,7 @@ export class ScrollbackMessageHandler implements IMessageHandler {
     for (let i = 0; i < scrollbackContent.length; i++) {
       const line = scrollbackContent[i];
       if (!line) continue;
-      // eslint-disable-next-line no-console
-      console.log(`[SCROLLBACK-RESTORE] Writing line ${i}: "${line.content.substring(0, 100)}..."`);
+      this.logger.debug(`[SCROLLBACK-RESTORE] Writing line ${i + 1}/${scrollbackContent.length}`);
 
       if (i < lastIndex) {
         // All lines except the last: add newline
@@ -534,9 +526,7 @@ export class ScrollbackMessageHandler implements IMessageHandler {
         terminal.write(line.content);
       }
     }
-
-    // eslint-disable-next-line no-console
-    console.log(
+    this.logger.debug(
       `[SCROLLBACK-RESTORE] ✅ Finished writing ${scrollbackContent.length} lines to terminal`
     );
     this.logger.info(`Restored ${scrollbackContent.length} lines to terminal`);
@@ -634,8 +624,7 @@ export class ScrollbackMessageHandler implements IMessageHandler {
     msg: MessageCommand,
     coordinator: IManagerCoordinator
   ): Promise<void> {
-    // eslint-disable-next-line no-console
-    console.log('[SCROLLBACK-RESTORE] handleRestoreTerminalSessions called', {
+    this.logger.debug('[SCROLLBACK-RESTORE] handleRestoreTerminalSessions called', {
       terminals: (msg as any).terminals?.length,
       timestamp: Date.now(),
     });
@@ -649,7 +638,6 @@ export class ScrollbackMessageHandler implements IMessageHandler {
     }>;
 
     if (!Array.isArray(terminals) || terminals.length === 0) {
-      // eslint-disable-next-line no-console
       console.warn('[SCROLLBACK-RESTORE] No terminals provided for restoration');
       this.logger.warn('⚠️ [RESTORE-SESSIONS] No terminals provided for restoration');
       return;
@@ -665,9 +653,7 @@ export class ScrollbackMessageHandler implements IMessageHandler {
         TerminalCreationService.markTerminalRestoring(terminalData.terminalId);
       }
     }
-
-    // eslint-disable-next-line no-console
-    console.log(`[SCROLLBACK-RESTORE] Processing ${terminals.length} terminals`);
+    this.logger.debug(`[SCROLLBACK-RESTORE] Processing ${terminals.length} terminals`);
     this.logger.info(`📦 [RESTORE-SESSIONS] Restoring ${terminals.length} terminals`);
 
     let successCount = 0;
@@ -675,16 +661,13 @@ export class ScrollbackMessageHandler implements IMessageHandler {
 
     for (const terminalData of terminals) {
       const { terminalId, scrollbackData, restoreScrollback } = terminalData;
-
-      // eslint-disable-next-line no-console
-      console.log(`[SCROLLBACK-RESTORE] Processing terminal: ${terminalId}`, {
+      this.logger.debug(`[SCROLLBACK-RESTORE] Processing terminal: ${terminalId}`, {
         hasScrollbackData: !!scrollbackData,
         scrollbackLength: scrollbackData?.length ?? 0,
         restoreScrollback,
       });
 
       if (!terminalId) {
-        // eslint-disable-next-line no-console
         console.warn('[SCROLLBACK-RESTORE] Terminal data missing terminalId');
         this.logger.warn('⚠️ [RESTORE-SESSIONS] Terminal data missing terminalId');
         failedCount++;
@@ -693,15 +676,13 @@ export class ScrollbackMessageHandler implements IMessageHandler {
 
       // 🔒 Skip if already restored (prevents duplicate restoration)
       if (this.restoredTerminals.has(terminalId)) {
-        // eslint-disable-next-line no-console
-        console.log(`[SCROLLBACK-RESTORE] ⏭️ Already restored: ${terminalId}, skipping`);
+        this.logger.debug(`[SCROLLBACK-RESTORE] ⏭️ Already restored: ${terminalId}, skipping`);
         this.logger.info(`⏭️ [RESTORE-SESSIONS] Already restored: ${terminalId}, skipping`);
         continue;
       }
 
       if (!restoreScrollback || !scrollbackData || scrollbackData.length === 0) {
-        // eslint-disable-next-line no-console
-        console.log(
+        this.logger.debug(
           `[SCROLLBACK-RESTORE] Skipping terminal ${terminalId} - no scrollback data or restoreScrollback=false`
         );
         this.logger.info(
@@ -717,9 +698,7 @@ export class ScrollbackMessageHandler implements IMessageHandler {
 
       for (let retryCount = 0; retryCount < maxRetries; retryCount++) {
         const terminalInstance = coordinator.getTerminalInstance(terminalId);
-
-        // eslint-disable-next-line no-console
-        console.log(
+        this.logger.debug(
           `[SCROLLBACK-RESTORE] Retry ${retryCount + 1}/${maxRetries} for ${terminalId}: terminalInstance=${!!terminalInstance}`
         );
 
@@ -740,9 +719,7 @@ export class ScrollbackMessageHandler implements IMessageHandler {
 
             // 🔓 Mark restoration complete (starts 5s protection period countdown)
             TerminalCreationService.markTerminalRestored(terminalId);
-
-            // eslint-disable-next-line no-console
-            console.log(
+            this.logger.debug(
               `[SCROLLBACK-RESTORE] ✅ Restored scrollback for terminal ${terminalId}: ${scrollbackData.length} lines`
             );
             this.logger.info(
@@ -752,7 +729,6 @@ export class ScrollbackMessageHandler implements IMessageHandler {
             restored = true;
             break; // Success - exit retry loop
           } catch (error) {
-            // eslint-disable-next-line no-console
             console.error(
               `[SCROLLBACK-RESTORE] ❌ Failed to restore terminal ${terminalId}:`,
               error
@@ -770,8 +746,7 @@ export class ScrollbackMessageHandler implements IMessageHandler {
 
         // Terminal not ready, retry after delay
         if (retryCount < maxRetries - 1) {
-          // eslint-disable-next-line no-console
-          console.log(
+          this.logger.debug(
             `[SCROLLBACK-RESTORE] ⏳ Terminal ${terminalId} not ready, waiting ${retryDelay}ms...`
           );
           this.logger.info(
@@ -782,7 +757,6 @@ export class ScrollbackMessageHandler implements IMessageHandler {
       }
 
       if (!restored) {
-        // eslint-disable-next-line no-console
         console.error(
           `[SCROLLBACK-RESTORE] ❌ Terminal ${terminalId} not available after ${maxRetries} retries`
         );
@@ -803,9 +777,7 @@ export class ScrollbackMessageHandler implements IMessageHandler {
       terminalsFailed: failedCount,
       timestamp: Date.now(),
     });
-
-    // eslint-disable-next-line no-console
-    console.log(
+    this.logger.debug(
       `[SCROLLBACK-RESTORE] ✅ Completed restoration: ${successCount} success, ${failedCount} failed`
     );
     this.logger.info(

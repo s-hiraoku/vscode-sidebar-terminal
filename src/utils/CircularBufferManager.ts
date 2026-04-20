@@ -1,4 +1,5 @@
 import { CircularBuffer } from './CircularBuffer';
+import { terminal as log } from './logger';
 
 /**
  * Callback function type for buffer flush events
@@ -95,7 +96,7 @@ export class CircularBufferManager {
       });
 
       if (this.options.debug) {
-        console.log(`📊 [CircularBufferManager] Created buffer for terminal: ${terminalId}`);
+        log(`📊 [CircularBufferManager] Created buffer for terminal: ${terminalId}`);
       }
     }
 
@@ -116,9 +117,7 @@ export class CircularBufferManager {
     const dataLength = buffer.getDataLength();
     if (dataLength >= this.options.maxDataSize || buffer.isFull()) {
       if (this.options.debug) {
-        console.log(
-          `📤 [CircularBufferManager] Immediate flush for ${terminalId}: ${dataLength} bytes`
-        );
+        log(`📤 [CircularBufferManager] Immediate flush for ${terminalId}: ${dataLength} bytes`);
       }
       this._flushBuffer(terminalId);
     }
@@ -152,7 +151,7 @@ export class CircularBufferManager {
     this.terminalMetadata.delete(terminalId);
 
     if (this.options.debug) {
-      console.log(`🗑️ [CircularBufferManager] Removed buffer for terminal: ${terminalId}`);
+      log(`🗑️ [CircularBufferManager] Removed buffer for terminal: ${terminalId}`);
     }
 
     // Stop global timer if no more buffers
@@ -236,7 +235,7 @@ export class CircularBufferManager {
     this.terminalMetadata.clear();
 
     if (this.options.debug) {
-      console.log('🗑️ [CircularBufferManager] Disposed');
+      log('🗑️ [CircularBufferManager] Disposed');
     }
   }
 
@@ -253,7 +252,7 @@ export class CircularBufferManager {
     }, this.options.flushInterval);
 
     if (this.options.debug) {
-      console.log(
+      log(
         `⏱️ [CircularBufferManager] Global timer started (${this.options.flushInterval}ms interval)`
       );
     }
@@ -268,7 +267,7 @@ export class CircularBufferManager {
       this.globalTimer = null;
 
       if (this.options.debug) {
-        console.log('⏹️ [CircularBufferManager] Global timer stopped');
+        log('⏹️ [CircularBufferManager] Global timer stopped');
       }
     }
   }
@@ -315,9 +314,7 @@ export class CircularBufferManager {
       this.flushCallback(terminalId, data);
 
       if (this.options.debug) {
-        console.log(
-          `📤 [CircularBufferManager] Flushed ${data.length} bytes for terminal: ${terminalId}`
-        );
+        log(`📤 [CircularBufferManager] Flushed ${data.length} bytes for terminal: ${terminalId}`);
       }
     } catch (error) {
       console.error(`❌ [CircularBufferManager] Error flushing buffer for ${terminalId}:`, error);

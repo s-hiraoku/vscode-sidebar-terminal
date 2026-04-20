@@ -5,6 +5,40 @@ All notable changes to the "Secondary Terminal" extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v0.6.3...v1.0.0) (2026-04-20)
+
+**First stable release.** Secondary Terminal graduates from 0.x to 1.0.0 after extensive real-world usage and maturity across all core features.
+
+### Highlights
+
+- Sidebar-native terminal with up to 10 concurrent sessions
+- AI agent detection for Claude Code, Codex CLI, Gemini CLI, and GitHub Copilot CLI
+- Split views (vertical/horizontal) with drag-to-resize
+- Session persistence with ANSI color preservation (up to 1000 scrollback lines)
+- Shell integration (OSC sequences), command status, and working directory tracking
+- Full IME support for Japanese, Chinese, and Korean input
+- 97 configuration options, 37 commands, 36 keybindings
+- Cross-platform: Windows, macOS, Linux (9 platform-specific builds)
+- Available on VS Code Marketplace and Open VSX Registry
+
+### Performance
+
+- Split WebView bundle via webpack code splitting: `webview.js` reduced from 1.86 MiB to 432 KiB (77% reduction)
+- Separate vendor chunks for `@xterm/*` (`xterm-vendor.js`), webview managers, and webview services for better browser cache utilization
+- Remove unused `webview-simple.js` build artifact (496 KiB) from distribution
+
+### Code Quality
+
+- Reduce ESLint warnings from 1,054 to 519 (50% reduction) through rule tuning and complexity refactors
+- Refactor `ThemeUtils.detectTheme`, `ValidationUtils.validateString`, and `ValidationUtils.validateNumber` to satisfy complexity budget
+- Verified activation events: VS Code 1.75+ auto-derives `onCommand:*` activations, so the current `onView:secondaryTerminal` + explicit `onCommand:secondaryTerminal.focusTerminal` is sufficient — no changes needed
+
+### Chore
+
+- Bump to 1.0.0 stable
+- Remove debug console logging from production code paths
+- Tighten package metadata (description, keywords)
+
 ### [0.6.3](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v0.6.1...v0.6.3) (2026-04-10)
 
 ### Fixed

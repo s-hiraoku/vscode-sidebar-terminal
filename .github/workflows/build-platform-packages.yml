@@ -2,10 +2,10 @@ name: Build Platform-Specific Packages
 
 on:
   push:
-    branches: [ main, for-publish ]
-    tags: [ 'v*' ]
+    branches: [main, for-publish]
+    tags: ['v*']
   pull_request:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
