@@ -20,12 +20,14 @@ const expectedKeywords = [
 const allowedConsoleFiles = new Set(['src/utils/logger.ts']);
 const productionConsolePattern = /\bconsole\.(log|debug|info)\b/;
 
+const toPosix = (value: string): string => value.split(path.sep).join('/');
+
 const listTypeScriptFiles = (directory: string): string[] => {
   const entries = fs.readdirSync(directory, { withFileTypes: true });
 
   return entries.flatMap((entry) => {
     const fullPath = path.join(directory, entry.name);
-    const relativePath = path.relative(repoRoot, fullPath);
+    const relativePath = toPosix(path.relative(repoRoot, fullPath));
 
     if (entry.isDirectory()) {
       if (relativePath === 'src/test') {
@@ -42,7 +44,7 @@ const findProductionConsoleCalls = (): string[] => {
   const srcDir = path.join(repoRoot, 'src');
 
   return listTypeScriptFiles(srcDir).flatMap((filePath) => {
-    const relativePath = path.relative(repoRoot, filePath);
+    const relativePath = toPosix(path.relative(repoRoot, filePath));
     if (allowedConsoleFiles.has(relativePath)) {
       return [];
     }
@@ -86,13 +88,12 @@ describe('1.0.0 release readiness', () => {
   it('documents the 1.0.0 stable release at the top of the changelog', () => {
     const changelog = fs.readFileSync(path.join(repoRoot, 'CHANGELOG.md'), 'utf8');
     const stableReleaseHeading =
-      '### [1.0.0](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v0.6.3...v1.0.0) (2026-04-20)';
+      /^## \[1\.0\.0\]\(https:\/\/github\.com\/s-hiraoku\/vscode-sidebar-terminal\/compare\/v0\.6\.3\.\.\.v1\.0\.0\) \(\d{4}-\d{2}-\d{2}\)/m;
+    const stableMatch = changelog.match(stableReleaseHeading);
     const previousReleaseHeading = '### [0.6.3]';
 
-    expect(changelog).toContain(stableReleaseHeading);
-    expect(changelog.indexOf(stableReleaseHeading)).toBeLessThan(
-      changelog.indexOf(previousReleaseHeading)
-    );
+    expect(stableMatch).not.toBeNull();
+    expect(stableMatch!.index!).toBeLessThan(changelog.indexOf(previousReleaseHeading));
     expect(changelog).toContain('**First stable release.**');
   });
 

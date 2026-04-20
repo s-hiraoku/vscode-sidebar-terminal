@@ -11,9 +11,9 @@ function brightnessFromRgb(r: number, g: number, b: number): number {
 }
 
 function brightnessFromHex(hex: string): number {
-  const r = parseInt(hex.substr(0, 2), 16);
-  const g = parseInt(hex.substr(2, 2), 16);
-  const b = parseInt(hex.substr(4, 2), 16);
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
   return brightnessFromRgb(r, g, b);
 }
 
@@ -87,33 +87,16 @@ export const ThemeUtils = {
    * 色の明度を計算
    */
   calculateBrightness(color: string): number {
-    // RGB値を抽出
-    let r: number, g: number, b: number;
-
-    if (color.startsWith('#')) {
-      const hex = color.substring(1);
-      r = parseInt(hex.substr(0, 2), 16);
-      g = parseInt(hex.substr(2, 2), 16);
-      b = parseInt(hex.substr(4, 2), 16);
-    } else if (color.includes('rgb')) {
-      const values = color.match(/\d+/g);
-      if (!values || values.length < 3) return 0;
-      r = parseInt(values[0] ?? '0');
-      g = parseInt(values[1] ?? '0');
-      b = parseInt(values[2] ?? '0');
-    } else {
-      return 0;
-    }
-
-    // 明度を計算（Y = 0.299*R + 0.587*G + 0.114*B）
-    return (r * 299 + g * 587 + b * 114) / 1000;
+    if (color.startsWith('#')) return brightnessFromHex(color.substring(1));
+    if (color.includes('rgb')) return brightnessFromRgbString(color) ?? 0;
+    return 0;
   },
 
   /**
    * 色が暗いかどうか判定
    */
   isDarkColor(color: string): boolean {
-    return this.calculateBrightness(color) < 128;
+    return this.calculateBrightness(color) < BRIGHTNESS_THRESHOLD;
   },
 
   /**
@@ -121,7 +104,7 @@ export const ThemeUtils = {
    */
   generateAccentColor(baseColor: string, factor: number = 0.2): string {
     const brightness = this.calculateBrightness(baseColor);
-    const isDark = brightness < 128;
+    const isDark = brightness < BRIGHTNESS_THRESHOLD;
 
     // 簡易的な色調整（実際の実装では色空間変換が望ましい）
     return isDark ? this.lightenColor(baseColor, factor) : this.darkenColor(baseColor, factor);

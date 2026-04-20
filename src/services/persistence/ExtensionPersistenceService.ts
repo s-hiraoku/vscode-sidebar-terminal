@@ -32,8 +32,12 @@ import {
   SessionDataTransformer,
 } from '../../shared/session.types';
 
+const PERSISTENCE_LOG_PREFIX = '[EXT-PERSISTENCE]';
 const log = (message: string, ...args: unknown[]) =>
-  logExtension(`[EXT-PERSISTENCE] ${message}`, ...args);
+  logExtension(
+    message.includes(PERSISTENCE_LOG_PREFIX) ? message : `${PERSISTENCE_LOG_PREFIX} ${message}`,
+    ...args
+  );
 
 // ============================================================================
 // Types and Interfaces
