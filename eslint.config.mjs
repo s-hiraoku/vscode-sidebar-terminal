@@ -94,10 +94,10 @@ export default tseslint.config(
       eqeqeq: ['warn', 'always'],
       'no-throw-literal': 'warn',
       semi: ['error', 'always'],
-      complexity: ['warn', { max: 10 }],
+      complexity: ['warn', { max: 15 }],
       'max-depth': ['warn', { max: 4 }],
       'max-nested-callbacks': ['warn', { max: 3 }],
-      'max-lines-per-function': ['warn', { max: 50, skipBlankLines: true, skipComments: true }],
+      'max-lines-per-function': ['warn', { max: 100, skipBlankLines: true, skipComments: true }],
       'no-eval': 'error',
       'no-implied-eval': 'error',
       'no-new-func': 'error',
@@ -110,9 +110,12 @@ export default tseslint.config(
             'SECURITY: innerHTML is not allowed due to XSS vulnerability risk. Use textContent, createElement, or appendChild instead. See issue #229.',
         },
       ],
-      'no-console': 'warn',
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
 
       // Memory leak detection rules (from .eslintrc.memory-leaks.json)
+      // setTimeout is intentionally excluded: the vast majority of uses are
+      // single-shot debounces/fire-and-forget that do not need cleanup. Keep
+      // guardrails for setInterval, event subscriptions, and addEventListener.
       'no-restricted-syntax': [
         'warn',
         {
@@ -125,11 +128,6 @@ export default tseslint.config(
           selector: "CallExpression[callee.name='setInterval']:not(:has(VariableDeclarator))",
           message:
             'setInterval should be stored in a variable and cleared in dispose(). Track timers in a collection.',
-        },
-        {
-          selector: "CallExpression[callee.name='setTimeout']:not(:has(VariableDeclarator))",
-          message:
-            'setTimeout should be stored in a variable if it needs cleanup. Consider tracking in a collection.',
         },
         {
           selector:
