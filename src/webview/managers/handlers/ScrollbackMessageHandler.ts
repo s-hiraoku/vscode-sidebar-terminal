@@ -254,7 +254,6 @@ export class ScrollbackMessageHandler implements IMessageHandler {
         `✅ [RESTORE-DEBUG] Scrollback restored for terminal ${terminalId}: ${normalizedScrollback.length} lines`
       );
     } catch (error) {
-      // eslint-disable-next-line no-console
       console.error(`[SCROLLBACK-RESTORE] ❌ Error:`, error);
       this.logger.error(
         `❌ [RESTORE-DEBUG] Error restoring scrollback: ${error instanceof Error ? error.message : String(error)}`
@@ -506,10 +505,8 @@ export class ScrollbackMessageHandler implements IMessageHandler {
       throw new Error('Terminal instance not provided');
     }
 
-    // Debug: Log the actual content being written
     this.logger.debug(
-      '[SCROLLBACK-RESTORE] Content to restore:',
-      scrollbackContent.map((l) => l.content)
+      `[SCROLLBACK-RESTORE] Restoring ${scrollbackContent.length} scrollback lines`
     );
 
     // Write each line to the terminal
@@ -519,9 +516,7 @@ export class ScrollbackMessageHandler implements IMessageHandler {
     for (let i = 0; i < scrollbackContent.length; i++) {
       const line = scrollbackContent[i];
       if (!line) continue;
-      this.logger.debug(
-        `[SCROLLBACK-RESTORE] Writing line ${i}: "${line.content.substring(0, 100)}..."`
-      );
+      this.logger.debug(`[SCROLLBACK-RESTORE] Writing line ${i + 1}/${scrollbackContent.length}`);
 
       if (i < lastIndex) {
         // All lines except the last: add newline
@@ -643,7 +638,6 @@ export class ScrollbackMessageHandler implements IMessageHandler {
     }>;
 
     if (!Array.isArray(terminals) || terminals.length === 0) {
-      // eslint-disable-next-line no-console
       console.warn('[SCROLLBACK-RESTORE] No terminals provided for restoration');
       this.logger.warn('⚠️ [RESTORE-SESSIONS] No terminals provided for restoration');
       return;
@@ -674,7 +668,6 @@ export class ScrollbackMessageHandler implements IMessageHandler {
       });
 
       if (!terminalId) {
-        // eslint-disable-next-line no-console
         console.warn('[SCROLLBACK-RESTORE] Terminal data missing terminalId');
         this.logger.warn('⚠️ [RESTORE-SESSIONS] Terminal data missing terminalId');
         failedCount++;
@@ -736,7 +729,6 @@ export class ScrollbackMessageHandler implements IMessageHandler {
             restored = true;
             break; // Success - exit retry loop
           } catch (error) {
-            // eslint-disable-next-line no-console
             console.error(
               `[SCROLLBACK-RESTORE] ❌ Failed to restore terminal ${terminalId}:`,
               error
@@ -765,7 +757,6 @@ export class ScrollbackMessageHandler implements IMessageHandler {
       }
 
       if (!restored) {
-        // eslint-disable-next-line no-console
         console.error(
           `[SCROLLBACK-RESTORE] ❌ Terminal ${terminalId} not available after ${maxRetries} retries`
         );

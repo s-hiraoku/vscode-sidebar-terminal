@@ -35,12 +35,13 @@ export class ClipboardMessageHandler {
    * Handle clipboard content paste operation
    */
   private handleClipboardContent(msg: MessageCommand, coordinator: IManagerCoordinator): void {
-    this.debug('[CLIPBOARD] Received clipboardContent message:', msg);
-
     const terminalId = (msg as { terminalId?: string }).terminalId;
     const text = (msg as { text?: string }).text;
 
-    this.debug('[CLIPBOARD] terminalId:', terminalId, 'text length:', text?.length);
+    this.debug('[CLIPBOARD] Received clipboardContent message', {
+      terminalId,
+      textLength: text?.length,
+    });
 
     if (!terminalId || text === undefined) {
       this.debug('[CLIPBOARD] Invalid clipboardContent message - missing terminalId or text');
@@ -48,21 +49,13 @@ export class ClipboardMessageHandler {
     }
 
     const terminalInstance = coordinator.getTerminalInstance(terminalId);
-    this.debug('[CLIPBOARD] terminalInstance:', terminalInstance);
-
     if (!terminalInstance) {
       this.logger.warn(`📋 [CLIPBOARD] Terminal ${terminalId} not found for paste`);
-      this.debug('[CLIPBOARD] Available terminals:', coordinator.getActiveTerminalId());
       return;
     }
 
     this.logger.info(`📋 [CLIPBOARD] Pasting ${text.length} characters to terminal ${terminalId}`);
-    this.debug(
-      '[CLIPBOARD] Calling terminal.paste() with text:',
-      text.substring(0, 50) + (text.length > 50 ? '...' : '')
-    );
-
     terminalInstance.terminal.paste(text);
-    this.debug('[CLIPBOARD] Paste completed');
+    this.debug('[CLIPBOARD] Paste completed', { terminalId, textLength: text.length });
   }
 }

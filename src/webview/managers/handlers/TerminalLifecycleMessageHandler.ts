@@ -486,10 +486,7 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
       return;
     }
 
-    // Debug: Log output data for restored terminals
-    this.logger.debug(
-      `[OUTPUT-DEBUG] Received output for ${terminalId}: length=${data.length}, first100chars="${data.substring(0, 100).replace(/\x1b/g, '\\x1b').replace(/\r/g, '\\r').replace(/\n/g, '\\n')}"`
-    );
+    this.logger.debug(`[OUTPUT-DEBUG] Received output for ${terminalId}: length=${data.length}`);
 
     const gate = this.ensureOutputGate(terminalId);
     this.markTerminalProcessing(terminalId, coordinator);
