@@ -10,12 +10,18 @@ const getDistPath = (fileName: string): string => path.join(distDir, fileName);
 const hasBuiltBundle = fs.existsSync(getDistPath('webview.js'));
 const describeIfBuilt = hasBuiltBundle ? describe : describe.skip;
 
+const expectDistFile = (fileName: string): fs.Stats => {
+  const artifactPath = getDistPath(fileName);
+  expect(fs.existsSync(artifactPath), `${fileName} should exist`).toBe(true);
+  const stats = fs.statSync(artifactPath);
+  expect(stats.isFile(), `${fileName} should be emitted as a file`).toBe(true);
+  return stats;
+};
+
 describeIfBuilt('webview release bundle artifacts', () => {
   it('keeps the main webview entry bundle at or below 1 MiB', () => {
-    const webviewBundle = getDistPath('webview.js');
-
-    expect(fs.existsSync(webviewBundle)).toBe(true);
-    expect(fs.statSync(webviewBundle).size).toBeLessThanOrEqual(oneMiB);
+    const webviewBundleStats = expectDistFile('webview.js');
+    expect(webviewBundleStats.size).toBeLessThanOrEqual(oneMiB);
   });
 
   it('does not ship the obsolete webview-simple build artifact', () => {
@@ -30,7 +36,7 @@ describeIfBuilt('webview release bundle artifacts', () => {
       'webview-services.js',
       'webview-managers.js',
     ]) {
-      expect(fs.existsSync(getDistPath(chunk))).toBe(true);
+      expectDistFile(chunk);
     }
   });
 });

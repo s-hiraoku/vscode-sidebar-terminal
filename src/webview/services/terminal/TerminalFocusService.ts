@@ -9,11 +9,7 @@ import { Terminal } from '@xterm/xterm';
 import { terminalLogger } from '../../utils/ManagerLogger';
 
 const debugLog = (message: string, data?: unknown): void => {
-  const loggerWithDebug = terminalLogger as typeof terminalLogger & {
-    debug?: (message: string, data?: unknown) => void;
-  };
-
-  loggerWithDebug.debug?.(message, data);
+  terminalLogger.debug(message, data);
 };
 
 /**

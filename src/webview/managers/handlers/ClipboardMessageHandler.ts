@@ -10,12 +10,8 @@ import { MessageCommand } from '../messageTypes';
 export class ClipboardMessageHandler {
   constructor(private readonly logger: ManagerLogger) {}
 
-  private debug(message: string, ...args: unknown[]): void {
-    const loggerWithDebug = this.logger as ManagerLogger & {
-      debug?: (message: string, ...args: unknown[]) => void;
-    };
-
-    loggerWithDebug.debug?.(message, ...args);
+  private debug(message: string, data?: unknown): void {
+    this.logger.debug(message, data);
   }
 
   /**
