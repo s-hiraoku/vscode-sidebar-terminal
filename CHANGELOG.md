@@ -27,6 +27,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Separate vendor chunks for `@xterm/*` (`xterm-vendor.js`), webview managers, and webview services for better browser cache utilization
 - Remove unused `webview-simple.js` build artifact (496 KiB) from distribution
 
+### Code Quality
+
+- Reduce ESLint warnings from 1,054 to 519 (50% reduction) through rule tuning and complexity refactors
+- Refactor `ThemeUtils.detectTheme`, `ValidationUtils.validateString`, and `ValidationUtils.validateNumber` to satisfy complexity budget
+- Verified activation events: VS Code 1.75+ auto-derives `onCommand:*` activations, so the current `onView:secondaryTerminal` + explicit `onCommand:secondaryTerminal.focusTerminal` is sufficient — no changes needed
+
 ### Chore
 
 - Bump to 1.0.0 stable
