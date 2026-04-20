@@ -21,6 +21,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cross-platform: Windows, macOS, Linux (9 platform-specific builds)
 - Available on VS Code Marketplace and Open VSX Registry
 
+### Performance
+
+- Split WebView bundle via webpack code splitting: `webview.js` reduced from 1.86 MiB to 432 KiB (77% reduction)
+- Separate vendor chunks for `@xterm/*` (`xterm-vendor.js`), webview managers, and webview services for better browser cache utilization
+- Remove unused `webview-simple.js` build artifact (496 KiB) from distribution
+
 ### Chore
 
 - Bump to 1.0.0 stable
