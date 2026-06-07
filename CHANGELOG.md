@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **webview:** dispose terminal auto-save listeners ([b3ddc2b](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/b3ddc2b3b924e9b61c1678395854dc63f48a7d14))
+- **webview:** dispose terminal auto-save listeners ([057a5bd](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/057a5bd23f5e8e08d78d5d906d47b4cad227505b))
 
 ## [1.0.0](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v0.6.3...v1.0.0) (2026-04-20)
 

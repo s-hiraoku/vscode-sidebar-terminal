@@ -95,6 +95,9 @@ describe('1.1.0 release readiness', () => {
     expect(releaseMatch).not.toBeNull();
     expect(releaseMatch!.index!).toBeLessThan(changelog.indexOf(previousReleaseHeading));
     expect(changelog).toContain('dispose terminal auto-save listeners');
+    expect(changelog).toContain(
+      'https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/057a5bd23f5e8e08d78d5d906d47b4cad227505b'
+    );
   });
 
   it('does not leave debug console output in production TypeScript paths', () => {
