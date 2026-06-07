@@ -38,6 +38,41 @@ export class TerminalAutoSaveService {
   // Track last hidden timestamp to detect sleep/wake
   private static lastHiddenAt = 0;
 
+  private static readonly handleVisibilityChange = (): void => {
+    const now = Date.now();
+
+    if (document.visibilityState === 'hidden') {
+      TerminalAutoSaveService.lastHiddenAt = now;
+      // Page is being hidden (possibly going to sleep)
+      // Save all terminal scrollback immediately
+      terminalLogger.debug('[AUTO-SAVE] Page hidden - saving all scrollback immediately');
+      TerminalAutoSaveService.saveAllScrollbackImmediately();
+      return;
+    }
+
+    if (document.visibilityState === 'visible') {
+      const hiddenAt = TerminalAutoSaveService.lastHiddenAt;
+      const timeHidden = hiddenAt ? now - hiddenAt : 0;
+      // Consider it a sleep/wake only if hidden for a long enough period
+      const isLikelyWakeFromSleep = hiddenAt > 0 && timeHidden > 60000;
+      terminalLogger.debug(
+        `[AUTO-SAVE] Page visible - hiddenDuration: ${timeHidden}ms, likelyWake: ${isLikelyWakeFromSleep}`
+      );
+
+      if (isLikelyWakeFromSleep) {
+        // Request scrollback restoration from Extension
+        terminalLogger.debug('[AUTO-SAVE] Likely wake from sleep - requesting scrollback refresh');
+        TerminalAutoSaveService.requestScrollbackRefresh();
+      }
+    }
+  };
+
+  private static readonly handlePageHide = (): void => {
+    // Ensure latest scrollback is pushed before the webview unloads.
+    TerminalAutoSaveService.saveAllScrollbackImmediately();
+    TerminalAutoSaveService.requestSessionSaveOnExit();
+  };
+
   private readonly coordinator: IManagerCoordinator;
 
   constructor(coordinator: IManagerCoordinator) {
@@ -73,42 +108,9 @@ export class TerminalAutoSaveService {
       return;
     }
 
-    document.addEventListener('visibilitychange', () => {
-      const now = Date.now();
-
-      if (document.visibilityState === 'hidden') {
-        TerminalAutoSaveService.lastHiddenAt = now;
-        // Page is being hidden (possibly going to sleep)
-        // Save all terminal scrollback immediately
-        terminalLogger.debug('[AUTO-SAVE] Page hidden - saving all scrollback immediately');
-        TerminalAutoSaveService.saveAllScrollbackImmediately();
-        return;
-      }
-
-      if (document.visibilityState === 'visible') {
-        const hiddenAt = TerminalAutoSaveService.lastHiddenAt;
-        const timeHidden = hiddenAt ? now - hiddenAt : 0;
-        // Consider it a sleep/wake only if hidden for a long enough period
-        const isLikelyWakeFromSleep = hiddenAt > 0 && timeHidden > 60000;
-        terminalLogger.debug(
-          `[AUTO-SAVE] Page visible - hiddenDuration: ${timeHidden}ms, likelyWake: ${isLikelyWakeFromSleep}`
-        );
-
-        if (isLikelyWakeFromSleep) {
-          // Request scrollback restoration from Extension
-          terminalLogger.debug(
-            '[AUTO-SAVE] Likely wake from sleep - requesting scrollback refresh'
-          );
-          TerminalAutoSaveService.requestScrollbackRefresh();
-        }
-      }
-    });
-
-    window.addEventListener('pagehide', () => {
-      // Ensure latest scrollback is pushed before the webview unloads.
-      TerminalAutoSaveService.saveAllScrollbackImmediately();
-      TerminalAutoSaveService.requestSessionSaveOnExit();
-    });
+    document.addEventListener('visibilitychange', TerminalAutoSaveService.handleVisibilityChange);
+    // eslint-disable-next-line no-restricted-syntax -- removed in disposeAll with the same static handler
+    window.addEventListener('pagehide', TerminalAutoSaveService.handlePageHide);
 
     TerminalAutoSaveService.visibilityHandlerSetup = true;
     terminalLogger.debug('[AUTO-SAVE] Visibility change handler setup complete');
@@ -125,7 +127,6 @@ export class TerminalAutoSaveService {
     };
 
     if (!windowWithApi.vscodeApi) {
-      // eslint-disable-next-line no-console
       console.warn('[AUTO-SAVE] vscodeApi not available for immediate save');
       return;
     }
@@ -151,7 +152,6 @@ export class TerminalAutoSaveService {
           `[AUTO-SAVE] Saved scrollback before sleep for ${terminalId}: ${lines.length} lines`
         );
       } catch (error) {
-        // eslint-disable-next-line no-console
         console.warn(
           `[AUTO-SAVE] Failed to save scrollback before sleep for ${terminalId}:`,
           error
@@ -171,7 +171,6 @@ export class TerminalAutoSaveService {
     };
 
     if (!windowWithApi.vscodeApi) {
-      // eslint-disable-next-line no-console
       console.warn('[AUTO-SAVE] vscodeApi not available for scrollback refresh request');
       return;
     }
@@ -196,7 +195,6 @@ export class TerminalAutoSaveService {
     };
 
     if (!windowWithApi.vscodeApi) {
-      // eslint-disable-next-line no-console
       console.warn('[AUTO-SAVE] vscodeApi not available for exit save request');
       return;
     }
@@ -224,6 +222,15 @@ export class TerminalAutoSaveService {
     TerminalAutoSaveService.registeredTerminals.clear();
     TerminalAutoSaveService.terminalListenerDisposables.clear();
     TerminalAutoSaveService.restoringTerminals.clear();
+    if (TerminalAutoSaveService.visibilityHandlerSetup) {
+      document.removeEventListener(
+        'visibilitychange',
+        TerminalAutoSaveService.handleVisibilityChange
+      );
+      window.removeEventListener('pagehide', TerminalAutoSaveService.handlePageHide);
+      TerminalAutoSaveService.visibilityHandlerSetup = false;
+    }
+    TerminalAutoSaveService.lastHiddenAt = 0;
     terminalLogger.debug('[AUTO-SAVE] All static state disposed');
   }
 

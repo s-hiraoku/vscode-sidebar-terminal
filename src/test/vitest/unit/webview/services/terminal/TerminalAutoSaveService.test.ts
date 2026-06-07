@@ -2,7 +2,7 @@
  * TerminalAutoSaveService Unit Tests
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { TerminalAutoSaveService } from '../../../../../../webview/services/terminal/TerminalAutoSaveService';
 
 // Mock dependencies
@@ -21,8 +21,13 @@ describe('TerminalAutoSaveService', () => {
   let mockTerminal: any;
   let mockSerializeAddon: any;
 
+  const resetStaticStateForTest = (): void => {
+    TerminalAutoSaveService.disposeAll();
+  };
+
   beforeEach(() => {
     vi.useFakeTimers();
+    resetStaticStateForTest();
     mockCoordinator = {
       postMessageToExtension: vi.fn(),
     };
@@ -37,13 +42,6 @@ describe('TerminalAutoSaveService', () => {
 
     service = new TerminalAutoSaveService(mockCoordinator);
 
-    // Reset static state
-    (TerminalAutoSaveService as any).restoringTerminals.clear();
-    (TerminalAutoSaveService as any).periodicSaveTimers.forEach((t: any) => clearInterval(t));
-    (TerminalAutoSaveService as any).periodicSaveTimers.clear();
-    (TerminalAutoSaveService as any).registeredTerminals.clear();
-    (TerminalAutoSaveService as any).visibilityHandlerSetup = false;
-
     // Mock vscodeApi
     (window as any).vscodeApi = {
       postMessage: vi.fn(),
@@ -51,8 +49,10 @@ describe('TerminalAutoSaveService', () => {
   });
 
   afterEach(() => {
+    resetStaticStateForTest();
     vi.useRealTimers();
     vi.clearAllMocks();
+    (window as any).vscodeApi = null;
   });
 
   describe('setupScrollbackAutoSave', () => {
@@ -167,6 +167,46 @@ describe('TerminalAutoSaveService', () => {
 
       // Should be removed from registeredTerminals too
       expect((TerminalAutoSaveService as any).registeredTerminals.has('t1')).toBe(false);
+    });
+
+    it('should remove global auto-save listeners when disposing all state', () => {
+      service.setupScrollbackAutoSave(mockTerminal, 't1', mockSerializeAddon);
+      vi.clearAllMocks();
+
+      TerminalAutoSaveService.disposeAll();
+      window.dispatchEvent(new Event('pagehide'));
+
+      expect((window as any).vscodeApi.postMessage).not.toHaveBeenCalled();
+    });
+
+    it('should allow global auto-save listeners to be registered again after disposeAll', () => {
+      const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
+      const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
+      const documentAddEventListenerSpy = vi.spyOn(document, 'addEventListener');
+      const documentRemoveEventListenerSpy = vi.spyOn(document, 'removeEventListener');
+
+      service.setupScrollbackAutoSave(mockTerminal, 't1', mockSerializeAddon);
+      TerminalAutoSaveService.disposeAll();
+      service.setupScrollbackAutoSave(mockTerminal, 't2', mockSerializeAddon);
+
+      expect(documentAddEventListenerSpy).toHaveBeenCalledWith(
+        'visibilitychange',
+        expect.any(Function)
+      );
+      expect(addEventListenerSpy).toHaveBeenCalledWith('pagehide', expect.any(Function));
+      expect(documentRemoveEventListenerSpy).toHaveBeenCalledWith(
+        'visibilitychange',
+        expect.any(Function)
+      );
+      expect(removeEventListenerSpy).toHaveBeenCalledWith('pagehide', expect.any(Function));
+      expect(
+        documentAddEventListenerSpy.mock.calls.filter(
+          ([eventName]) => eventName === 'visibilitychange'
+        )
+      ).toHaveLength(2);
+      expect(
+        addEventListenerSpy.mock.calls.filter(([eventName]) => eventName === 'pagehide')
+      ).toHaveLength(2);
     });
   });
 
