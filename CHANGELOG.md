@@ -5,6 +5,12 @@ All notable changes to the "Secondary Terminal" extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v1.0.0...v1.1.0) (2026-06-07)
+
+### Fixed
+
+- **webview:** dispose terminal auto-save listeners ([b3ddc2b](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/b3ddc2b3b924e9b61c1678395854dc63f48a7d14))
+
 ## [1.0.0](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v0.6.3...v1.0.0) (2026-04-20)
 
 **First stable release.** Secondary Terminal graduates from 0.x to 1.0.0 after extensive real-world usage and maturity across all core features.
