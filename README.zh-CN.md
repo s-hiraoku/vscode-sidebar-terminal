@@ -23,7 +23,7 @@
 
 1. **安装**: 在VS Code扩展视图中搜索 "Secondary Terminal"
 2. **打开**: 点击活动栏中的终端图标 (ST)
-3. **使用**: 运行 `claude`、`codex`、`gemini` 或 `copilot`，观察AI代理状态
+3. **使用**: 运行 `claude`、`codex`、`gemini`、`copilot` 或 `agy`，观察AI代理状态
 
 ## 功能
 

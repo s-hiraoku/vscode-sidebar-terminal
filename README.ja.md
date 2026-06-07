@@ -23,7 +23,7 @@
 
 1. **インストール**: VS Codeの拡張機能ビューで "Secondary Terminal" を検索
 2. **開く**: アクティビティバーのターミナルアイコン（ST）をクリック
-3. **使う**: `claude`、`codex`、`gemini`、`copilot` を実行するとAIエージェントステータスが表示
+3. **使う**: `claude`、`codex`、`gemini`、`copilot`、`agy` を実行するとAIエージェントステータスが表示
 
 [Open VSX](https://open-vsx.org/extension/s-hiraoku/vscode-sidebar-terminal) やCLI: `code --install-extension s-hiraoku.vscode-sidebar-terminal` でもインストール可能
 

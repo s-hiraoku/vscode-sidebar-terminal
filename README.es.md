@@ -23,7 +23,7 @@ Tu barra lateral, tu terminal, tus agentes IA -- todo en un solo lugar.
 
 1. **Instalar**: Busca "Secondary Terminal" en la vista de extensiones de VS Code
 2. **Abrir**: Haz clic en el icono de terminal (ST) en la barra de actividad
-3. **Usar**: Ejecuta `claude`, `codex`, `gemini` o `copilot` y observa el estado del agente IA
+3. **Usar**: Ejecuta `claude`, `codex`, `gemini`, `copilot` o `agy` y observa el estado del agente IA
 
 ## Caracteristicas
 

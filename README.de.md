@@ -23,7 +23,7 @@ Deine Seitenleiste, dein Terminal, deine KI-Agenten -- alles an einem Ort.
 
 1. **Installieren**: Suche "Secondary Terminal" in der VS Code Erweiterungsansicht
 2. **Öffnen**: Klicke auf das Terminal-Symbol (ST) in der Aktivitätsleiste
-3. **Verwenden**: Führe `claude`, `codex`, `gemini` oder `copilot` aus und beobachte den KI-Agenten-Status
+3. **Verwenden**: Führe `claude`, `codex`, `gemini`, `copilot` oder `agy` aus und beobachte den KI-Agenten-Status
 
 ## Funktionen
 

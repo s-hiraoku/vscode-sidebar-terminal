@@ -23,7 +23,7 @@
 
 1. **설치**: VS Code 확장 뷰에서 "Secondary Terminal" 검색
 2. **열기**: 활동 바의 터미널 아이콘 (ST) 클릭
-3. **사용**: `claude`, `codex`, `gemini` 또는 `copilot` 실행하여 AI 에이전트 상태 확인
+3. **사용**: `claude`, `codex`, `gemini`, `copilot` 또는 `agy` 실행하여 AI 에이전트 상태 확인
 
 ## 기능
 

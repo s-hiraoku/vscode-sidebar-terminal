@@ -168,7 +168,7 @@ npm run test:watch          # Watch mode for development
 - **Detection**: Pattern matching on terminal output (startup messages, CLI prompts)
 - **Status Tracking**: Connected → Active → Disconnected lifecycle
 - **File References**: `@filename` format for sharing code with AI agents
-- **Performance**: 250fps output processing during active AI sessions (vs 60fps normal)
+- **Performance**: 250 frames per second output processing during active AI sessions (versus 60 frames per second under normal conditions)
 
 ### Security Considerations
 
@@ -191,8 +191,8 @@ npm run test:watch          # Watch mode for development
 ### Performance Constraints
 
 - **Buffer Flush Intervals**:
-  - Normal: 16ms (~60fps)
-  - AI Agent Active: 4ms (~250fps)
+  - Normal: 16ms (about 60 frames per second)
+  - AI Agent Active: 4ms (about 250 frames per second)
   - Typing: Immediate processing
   - Large Output: Immediate for >1000 chars
 - **Memory Management**: Comprehensive cleanup on disposal required for all managers

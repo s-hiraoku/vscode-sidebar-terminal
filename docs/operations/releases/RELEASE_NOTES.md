@@ -448,4 +448,4 @@ All critical quality gates have been satisfied:
 **Compatibility**: VS Code 1.60.0+  
 **Status**: Production Ready ✅
 
-**Built for VS Code developers using Claude Code, GitHub Copilot, Gemini CLI, and Antigravity CLI**
+**Built for VS Code developers using Claude Code, GitHub Copilot, and Gemini CLI**
