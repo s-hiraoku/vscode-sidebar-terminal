@@ -22,6 +22,9 @@ jobs:
     runs-on: ubuntu-latest
     # Run for tag releases and PRs
     if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'pull_request'
+    env:
+      PLAYWRIGHT_USE_SYSTEM_CHROME: 'true'
+      PLAYWRIGHT_DISABLE_VIDEO: 'true'
 
     steps:
       - name: Checkout code
@@ -35,9 +38,6 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
 
       - name: Run E2E tests
         run: npm run test:e2e

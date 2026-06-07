@@ -36,7 +36,10 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 15
+    timeout-minutes: 30
+    env:
+      PLAYWRIGHT_USE_SYSTEM_CHROME: 'true'
+      PLAYWRIGHT_DISABLE_VIDEO: 'true'
 
     steps:
       - name: Checkout
@@ -69,9 +72,6 @@ jobs:
         shell: pwsh
         env:
           NODE_PTY_SKIP_DOWNLOAD_BINARY: 1
-
-      - name: Install Playwright Browsers
-        run: npx playwright install chromium
 
       - name: Run VRT Tests
         if: ${{ github.event.inputs.update_baselines != 'true' }}

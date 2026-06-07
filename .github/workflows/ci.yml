@@ -16,7 +16,7 @@ on:
       - 'LICENSE'
       - '.gitignore'
   schedule:
-    - cron: '25 7 * * 1'  # Weekly on Mondays at 7:25 AM UTC
+    - cron: '25 7 * * 1' # Weekly on Mondays at 7:25 AM UTC
   workflow_dispatch:
 
 # Cancel outdated runs when new commits are pushed
@@ -212,7 +212,10 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 15
+    timeout-minutes: 30
+    env:
+      PLAYWRIGHT_USE_SYSTEM_CHROME: 'true'
+      PLAYWRIGHT_DISABLE_VIDEO: 'true'
 
     steps:
       - name: Checkout
@@ -233,9 +236,6 @@ jobs:
 
       - name: Install dependencies
         run: npm ci --prefer-offline --no-audit
-
-      - name: Install Playwright Browsers
-        run: npx playwright install chromium
 
       - name: Run VRT Tests
         run: npm run test:vrt
