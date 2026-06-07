@@ -1,11 +1,13 @@
 # Project Context
 
 ## Purpose
-Secondary Terminal is a production-ready VS Code extension providing advanced terminal management in the sidebar with exceptional AI agent integration. The extension enables developers to manage up to 5 concurrent terminal instances with full ProcessState/InteractionState management, persistent session restoration, and optimized performance for modern CLI coding agents like Claude Code, Codex CLI, Gemini CLI, and GitHub Copilot.
+
+Secondary Terminal is a production-ready VS Code extension providing advanced terminal management in the sidebar with exceptional AI agent integration. The extension enables developers to manage up to 5 concurrent terminal instances with full ProcessState/InteractionState management, persistent session restoration, and optimized performance for modern CLI coding agents like Claude Code, Codex CLI, Gemini CLI, GitHub Copilot, and Antigravity CLI.
 
 **Key Goals:**
+
 - Provide VS Code-standard compliant terminal management with full ProcessState/InteractionState tracking
-- Enable seamless integration with CLI coding agents (Claude Code, Codex, Gemini, GitHub Copilot)
+- Enable seamless integration with CLI coding agents (Claude Code, Codex, Gemini, GitHub Copilot, Antigravity)
 - Support efficient multi-agent workflows with smart file reference sharing
 - Maintain production-grade quality with zero TypeScript compilation errors
 - Ensure persistent session restoration across VS Code restarts
@@ -13,22 +15,26 @@ Secondary Terminal is a production-ready VS Code extension providing advanced te
 ## Tech Stack
 
 ### Core Technologies
+
 - **TypeScript 5.3.3**: Strict typing with comprehensive interfaces and zero compilation errors
 - **Node.js >=18.0.0**: Backend runtime for extension host
 - **VS Code Extension API 1.74.0+**: Full VS Code extension development framework
 - **webpack 5.89.0**: Production bundling with optimized builds
 
 ### Terminal Technologies
+
 - **@homebridge/node-pty-prebuilt-multiarch 0.13.1**: Cross-platform PTY (pseudo-terminal) implementation
 - **xterm.js 5.5.0**: Full-featured terminal emulation in browser
 - **xterm.js addons**: fit, search, serialize, unicode11, web-links, webgl
 
 ### Build & Testing
+
 - **Vitest 3.x**: Test framework with comprehensive test suite (3,900+ tests), built-in assertions, mocking (vi.fn/vi.spyOn/vi.mock), and v8 coverage reporting (targeting 85%+ coverage)
 - **ESLint 8.56.0**: Code quality with @typescript-eslint plugins
 - **Prettier 3.1.1**: Code formatting
 
 ### CI/CD
+
 - **GitHub Actions**: Automated testing, multi-platform builds, marketplace publishing
 - **@vscode/vsce 3.6.0**: VS Code extension packaging and publishing
 - **Platform Targets**: Windows (x64, ARM64), macOS (x64, ARM64), Linux (x64, ARM64, ARMhf), Alpine (x64, ARM64)
@@ -36,6 +42,7 @@ Secondary Terminal is a production-ready VS Code extension providing advanced te
 ## Project Conventions
 
 ### Code Style
+
 - **TypeScript Strict Mode**: All code must compile with strict type checking
 - **ESLint Rules**: 0 errors tolerated, warnings acceptable if documented
 - **Prettier Formatting**: Automated formatting for consistency
@@ -47,12 +54,14 @@ Secondary Terminal is a production-ready VS Code extension providing advanced te
 ### Architecture Patterns
 
 #### Singleton TerminalManager Pattern
+
 - **Atomic Operations**: All terminal operations use atomic patterns to prevent race conditions
 - **ID Recycling System**: Terminal IDs 1-5 are recycled to maintain consistent UX
 - **Process Lifecycle**: Explicit lifecycle states (ProcessState/InteractionState from VS Code)
 - **Session Persistence**: Terminal states saved every 5 minutes with restoration support
 
 #### WebView Manager-Coordinator Pattern
+
 ```
 TerminalWebviewManager (Coordinator)
 ├── MessageManager     # Extension ↔ WebView communication
@@ -64,12 +73,14 @@ TerminalWebviewManager (Coordinator)
 ```
 
 #### Service-Oriented Architecture
+
 - **WebView HTML Generation Service**: Centralized HTML generation with CSP security
 - **Message Routing Service**: Plugin-based message handler architecture (20+ commands)
 - **Unified Provider Coordinator**: Reduced complexity by 33% through service extraction
 
 #### AI Agent Detection System
-- **Strategy Pattern**: Agent-specific detection logic (Claude, Copilot, Codex, Gemini)
+
+- **Strategy Pattern**: Agent-specific detection logic (Claude, Copilot, Codex, Gemini, Antigravity)
 - **Pattern Matching**: Regex patterns with word boundaries (NOT includes() for security)
 - **Real-time Detection**: Debounced output monitoring with status indicators
 - **Security**: URL substring sanitization using regex patterns
@@ -77,23 +88,27 @@ TerminalWebviewManager (Coordinator)
 ### Testing Strategy
 
 #### TDD Workflow
+
 1. **Red Phase**: Write failing test (`npm run tdd:red`)
 2. **Green Phase**: Minimal implementation (`npm run tdd:green`)
 3. **Refactor Phase**: Improve code quality (`npm run tdd:refactor`)
 4. **Quality Gate**: Verify TDD compliance (`npm run tdd:quality-gate`)
 
 #### Test Categories
+
 - **Unit Tests**: 3,900+ tests covering core functionality (fast, reliable)
 - **Integration Tests**: Component interaction and AI agent scenarios
 - **Performance Tests**: Buffer management, memory optimization, CPU usage
 - **Edge Cases**: Error handling, resource cleanup, concurrent operations
 
 #### Coverage Requirements
+
 - **Overall Coverage**: 85%+ target (currently achieving 70%+ lines)
 - **Critical Paths**: 90%+ for TerminalManager, session management, AI detection
 - **Pre-Release Gate**: `npm run pre-release:check` must pass before releases
 
 #### Test Execution
+
 ```bash
 npm run test:unit           # Unit tests only (fastest)
 npm run test:integration    # Integration tests
@@ -105,6 +120,7 @@ npm run test:watch          # Watch mode for development
 ### Git Workflow
 
 #### Branching Strategy
+
 - **main**: Production-ready code, protected branch
 - **for-publish**: Release preparation branch, CI/CD targets this
 - **feature/[name]**: Feature development branches
@@ -112,6 +128,7 @@ npm run test:watch          # Watch mode for development
 - **refactor/[name]**: Code refactoring branches
 
 #### Commit Conventions
+
 - **Format**: `type: brief description` (50 chars max)
 - **Types**: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `perf`, `ci`
 - **Breaking Changes**: Mark with `BREAKING:` prefix in commit body
@@ -121,6 +138,7 @@ npm run test:watch          # Watch mode for development
   - `refactor: extract WebView HTML generation service`
 
 #### Release Process (GitHub Actions)
+
 1. **Update Version**: `npm version patch --no-git-tag-version` (NO tag yet)
 2. **Commit Changes**: `git add -A && git commit -m "v{version}: Description"`
 3. **Push & Wait**: `git push` then verify CI passes
@@ -132,24 +150,28 @@ npm run test:watch          # Watch mode for development
 ## Domain Context
 
 ### VS Code Extension Development
+
 - **Extension Host**: Node.js runtime, access to file system, PTY processes
 - **WebView**: Browser environment, isolated with Content Security Policy (CSP)
 - **Message Passing**: Extension ↔ WebView communication via postMessage
 - **Activation Events**: `onView:secondaryTerminal`, `onCommand:secondaryTerminal.focusTerminal`
 
 ### Terminal Emulation
+
 - **PTY (Pseudo-Terminal)**: node-pty spawns shell processes with PTY interface
 - **xterm.js**: Renders terminal output in browser, handles input, cursor, ANSI codes
 - **Shell Integration**: Command tracking, working directory detection, history
 - **Session Persistence**: Serializes terminal state, restores scrollback (1000 lines)
 
 ### AI Agent Integration Patterns
+
 - **Detection**: Pattern matching on terminal output (startup messages, CLI prompts)
 - **Status Tracking**: Connected → Active → Disconnected lifecycle
 - **File References**: `@filename` format for sharing code with AI agents
 - **Performance**: 250fps output processing during active AI sessions (vs 60fps normal)
 
 ### Security Considerations
+
 - **CSP (Content Security Policy)**: Strict CSP for WebView HTML
 - **Nonce-based Script Loading**: Unique nonces for inline scripts
 - **URL Sanitization**: Regex patterns with word boundaries (NOT includes())
@@ -158,6 +180,7 @@ npm run test:watch          # Watch mode for development
 ## Important Constraints
 
 ### Technical Constraints
+
 - **VS Code API Version**: Minimum 1.74.0 for core features
 - **Node.js Version**: >=18.0.0 required for modern features
 - **Terminal Limit**: Maximum 5 terminals (configurable via settings)
@@ -166,6 +189,7 @@ npm run test:watch          # Watch mode for development
 - **Platform Support**: Windows, macOS (Intel & ARM), Linux (x64, ARM64, ARMhf), Alpine
 
 ### Performance Constraints
+
 - **Buffer Flush Intervals**:
   - Normal: 16ms (~60fps)
   - AI Agent Active: 4ms (~250fps)
@@ -175,12 +199,14 @@ npm run test:watch          # Watch mode for development
 - **WebView Bundle Size**: Keep under 1.5MB for fast loading
 
 ### Quality Constraints
+
 - **TypeScript**: Zero compilation errors tolerated
 - **ESLint**: Zero errors (warnings acceptable with documentation)
 - **Test Coverage**: 85%+ target, 70%+ minimum for release
 - **TDD Compliance**: 50%+ (targeting 85%)
 
 ### Known Issues & Workarounds
+
 - **Ubuntu CI Timeout**: Tests may timeout after 30min (known runner issue), tests pass on Windows/macOS
 - **CodeQL False Positives**: May report substring sanitization issues, use regex with word boundaries
 - **IME Composition**: Special handling required for Japanese/Chinese input in InputManager
@@ -188,6 +214,7 @@ npm run test:watch          # Watch mode for development
 ## External Dependencies
 
 ### VS Code APIs
+
 - **window.createTerminalRenderer**: Core terminal rendering API
 - **window.createWebviewViewProvider**: WebView panel creation
 - **workspace.getConfiguration**: Settings management
@@ -195,22 +222,26 @@ npm run test:watch          # Watch mode for development
 - **ExtensionContext.globalState**: Persistent storage for sessions
 
 ### Shell Integration
+
 - **System Shell Detection**: Automatic detection of bash, zsh, fish, powershell, cmd
 - **Working Directory**: PWD tracking via shell integration sequences
 - **Command Markers**: OSC sequences for command start/end detection
 
 ### AI Agent CLIs
+
 - **Claude Code**: `claude-code` command, detects "Claude Code" startup message
 - **Codex CLI**: `codex` command, OpenAI-powered development assistance
 - **GitHub Copilot**: `copilot` or `gh copilot`, detects "Welcome to GitHub Copilot CLI"
 - **Gemini CLI**: `gemini code`, detects ASCII art GEMINI graphics
-
+- **Antigravity CLI**: `agy` command, detects "Antigravity CLI" and "AGY CLI" startup text
 
 ### Build & Deployment
+
 - **VS Code Marketplace**: Publishing via vsce tool with VSCE_PAT token
 - **GitHub Releases**: Automated release creation with platform-specific VSIX files
 - **GitHub Actions**: CI/CD workflows for testing, building, publishing
 
 ### Testing Infrastructure
+
 - **Vitest**: Test framework with built-in assertion, mocking (vi.fn/vi.spyOn/vi.mock), and v8 coverage
 - **jsdom**: Browser environment simulation for WebView testing

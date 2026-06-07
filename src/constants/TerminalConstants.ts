@@ -113,6 +113,7 @@ export const TERMINAL_CONSTANTS = {
     CLAUDE_CODE: /Claude Code/i,
     GITHUB_COPILOT: /GitHub Copilot|copilot/i,
     GEMINI_CLI: /gemini|bard/i,
+    ANTIGRAVITY_CLI: /Antigravity CLI|AGY CLI/i,
     GENERAL_AI: /AI|Assistant|Chat/i,
   },
 } as const;

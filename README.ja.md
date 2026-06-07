@@ -16,7 +16,7 @@
 ## なぜ Secondary Terminal？
 
 - **サイドバーネイティブ** -- 編集中もターミナルを表示したまま。ボトムパネルの切り替えは不要。
-- **AIエージェント対応** -- Claude Code、Copilot、Gemini、Codexを自動検出。リアルタイム状態表示と250fps最適化レンダリング。
+- **AIエージェント対応** -- Claude Code、Copilot、Gemini、Codex、Antigravityを自動検出。リアルタイム状態表示と250fps最適化レンダリング。
 - **フル機能** -- 分割ビュー、セッション永続化、シェル統合、90以上の設定。本番環境で使えるターミナル。
 
 ## クイックスタート
@@ -31,7 +31,7 @@
 
 - **複数ターミナル** -- 最大10個の同時ターミナル、タブ管理、ドラッグ&ドロップ、名前変更
 - **分割ビュー** -- 垂直/水平分割とドラッグリサイズ
-- **AIエージェント検出** -- Claude Code、Codex CLI、Gemini CLI、GitHub Copilot CLI
+- **AIエージェント検出** -- Claude Code、Codex CLI、Gemini CLI、GitHub Copilot CLI、Antigravity CLI
 - **セッション永続化** -- ANSIカラー保持による自動保存/復元
 - **シェル統合** -- コマンドステータス、作業ディレクトリ、コマンド履歴
 - **ファイル参照** -- `Cmd+Alt+L` / `Ctrl+Alt+L` でターミナルにファイルパスを挿入

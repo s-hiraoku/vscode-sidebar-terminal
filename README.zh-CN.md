@@ -16,7 +16,7 @@
 ## 为什么选择 Secondary Terminal？
 
 - **侧边栏原生** -- 编辑时保持终端可见，无需切换底部面板。
-- **AI代理感知** -- 自动检测Claude Code、Copilot、Gemini、Codex，实时状态和250fps优化渲染。
+- **AI代理感知** -- 自动检测Claude Code、Copilot、Gemini、Codex、Antigravity，实时状态和250fps优化渲染。
 - **功能齐全** -- 分屏、会话持久化、Shell集成、90+设置项。生产级终端。
 
 ## 快速开始
@@ -29,7 +29,7 @@
 
 - **多终端** -- 最多10个并发终端，标签管理、拖放、重命名
 - **分屏视图** -- 垂直/水平分割，拖拽调整大小
-- **AI代理检测** -- Claude Code、Codex CLI、Gemini CLI、GitHub Copilot CLI
+- **AI代理检测** -- Claude Code、Codex CLI、Gemini CLI、GitHub Copilot CLI、Antigravity CLI
 - **会话持久化** -- 支持ANSI颜色保留的自动保存/恢复
 - **Shell集成** -- 命令状态、工作目录、命令历史
 - **文件引用** -- `Cmd+Alt+L` / `Ctrl+Alt+L` 插入文件路径到终端

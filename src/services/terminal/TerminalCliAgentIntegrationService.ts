@@ -1,6 +1,7 @@
 import { terminal as log } from '../../utils/logger';
 import { ICliAgentDetectionService } from '../../interfaces/CliAgentService';
 import { CliAgentDetectionService } from '../../services/CliAgentDetectionService';
+import type { AgentType } from '../../types/shared';
 
 /**
  * Service responsible for CLI Agent integration with terminals
@@ -152,7 +153,7 @@ export class TerminalCliAgentIntegrationService {
   getDisconnectedAgents(): Map<
     string,
     {
-      type: 'claude' | 'gemini' | 'codex' | 'copilot' | 'opencode';
+      type: AgentType;
       startTime: Date;
       terminalName?: string;
     }
@@ -161,7 +162,7 @@ export class TerminalCliAgentIntegrationService {
       return this._cliAgentService.getDisconnectedAgents() as Map<
         string,
         {
-          type: 'claude' | 'gemini' | 'codex' | 'copilot' | 'opencode';
+          type: AgentType;
           startTime: Date;
           terminalName?: string;
         }
@@ -188,7 +189,7 @@ export class TerminalCliAgentIntegrationService {
   /**
    * Get the connected agent type
    */
-  getConnectedAgentType(): 'claude' | 'gemini' | 'codex' | 'copilot' | 'opencode' | null {
+  getConnectedAgentType(): AgentType | null {
     try {
       const connectedAgent = this._cliAgentService.getConnectedAgent();
       if (!connectedAgent) {
@@ -200,7 +201,8 @@ export class TerminalCliAgentIntegrationService {
         type === 'gemini' ||
         type === 'codex' ||
         type === 'copilot' ||
-        type === 'opencode'
+        type === 'opencode' ||
+        type === 'antigravity'
       ) {
         return type;
       }

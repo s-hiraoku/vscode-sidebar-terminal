@@ -54,6 +54,7 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
     'codex',
     'copilot',
     'opencode',
+    'antigravity',
   ]);
 
   constructor(

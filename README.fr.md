@@ -16,7 +16,7 @@ Votre barre latérale, votre terminal, vos agents IA -- tout en un seul endroit.
 ## Pourquoi Secondary Terminal ?
 
 - **Terminal natif dans la barre latérale** -- Gardez votre terminal visible pendant l'édition.
-- **Compatible avec les agents IA** -- Détecte automatiquement Claude Code, Copilot, Gemini, Codex avec statut en temps réel et rendu optimisé à 250fps.
+- **Compatible avec les agents IA** -- Détecte automatiquement Claude Code, Copilot, Gemini, Codex et Antigravity avec statut en temps réel et rendu optimisé à 250fps.
 - **Complet** -- Vues divisées, persistance de session, intégration shell, 90+ paramètres. Un terminal de production.
 
 ## Démarrage rapide
@@ -29,7 +29,7 @@ Votre barre latérale, votre terminal, vos agents IA -- tout en un seul endroit.
 
 - **Terminaux multiples** -- Jusqu'à 10 terminaux simultanés avec onglets, glisser-déposer, renommage
 - **Vues divisées** -- Division verticale/horizontale avec redimensionnement
-- **Détection d'agents IA** -- Claude Code, Codex CLI, Gemini CLI, GitHub Copilot CLI
+- **Détection d'agents IA** -- Claude Code, Codex CLI, Gemini CLI, GitHub Copilot CLI, Antigravity CLI
 - **Persistance de session** -- Sauvegarde/restauration automatique avec préservation des couleurs ANSI
 - **Intégration shell** -- Statut des commandes, répertoire de travail, historique
 - **Références de fichiers** -- `Cmd+Alt+L` / `Ctrl+Alt+L` insère le chemin du fichier dans le terminal

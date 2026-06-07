@@ -16,14 +16,14 @@ Your sidebar, your terminal, your AI agents -- all in one place.
 ## Why Secondary Terminal?
 
 - **Sidebar-native terminal** -- Keep your terminal visible while editing. No more toggling the bottom panel.
-- **AI agent aware** -- Auto-detects Claude Code, Copilot, Gemini, Codex with real-time status and 250fps optimized rendering.
+- **AI agent aware** -- Auto-detects Claude Code, Copilot, Gemini, Codex, and Antigravity with real-time status and 250fps optimized rendering.
 - **Full-featured** -- Split views, session persistence, shell integration, 90+ configurable settings. A production terminal.
 
 ## Quick Start
 
 1. **Install**: Search "Secondary Terminal" in the VS Code Extensions view
 2. **Open**: Click the terminal icon (ST) in the activity bar
-3. **Use**: Run `claude`, `codex`, `gemini`, or `copilot` and watch the AI agent status appear
+3. **Use**: Run `claude`, `codex`, `gemini`, `copilot`, or `agy` and watch the AI agent status appear
 
 Also available on [Open VSX](https://open-vsx.org/extension/s-hiraoku/vscode-sidebar-terminal) and via CLI: `code --install-extension s-hiraoku.vscode-sidebar-terminal`
 
@@ -31,7 +31,7 @@ Also available on [Open VSX](https://open-vsx.org/extension/s-hiraoku/vscode-sid
 
 - **Multiple terminals** -- Up to 10 concurrent terminals with tabs, drag & drop, rename
 - **Split views** -- Vertical / horizontal splitting with drag-to-resize
-- **AI agent detection** -- Claude Code, Codex CLI, Gemini CLI, GitHub Copilot CLI
+- **AI agent detection** -- Claude Code, Codex CLI, Gemini CLI, GitHub Copilot CLI, Antigravity CLI
 - **OS-native notifications** -- Desktop alerts + window activation when AI agents need attention (macOS/Windows/Linux)
 - **Session persistence** -- Auto-save/restore with ANSI color preservation
 - **Shell integration** -- Command status, working directory, command history

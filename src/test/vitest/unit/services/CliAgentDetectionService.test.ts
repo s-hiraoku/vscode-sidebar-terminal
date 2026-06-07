@@ -687,6 +687,9 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
 
     it('should detect wrapped and prefixed launcher commands', () => {
       expect(detectionService.detectFromInput('term1', 'FOO=1 codex\r')?.type).toBe('codex');
+      expect(detectionService.detectFromInput('term1', 'env FOO=1 agy\r')?.type).toBe(
+        'antigravity'
+      );
       expect(detectionService.detectFromInput('term1', 'npx @openai/codex@latest\r')?.type).toBe(
         'codex'
       );
@@ -700,6 +703,30 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
       expect(detectionService.detectFromInput('term1', 'gh copilot suggest\r')?.type).toBe(
         'copilot'
       );
+    });
+
+    it('should detect Antigravity CLI startup from input commands', () => {
+      const agyResult = detectionService.detectFromInput('term1', 'agy\r');
+      const antigravityResult = detectionService.detectFromInput('term2', 'antigravity\r');
+
+      expect(agyResult).toMatchObject({
+        type: 'antigravity',
+        confidence: 1.0,
+        source: 'input',
+      });
+      expect(antigravityResult).toMatchObject({
+        type: 'antigravity',
+        confidence: 1.0,
+        source: 'input',
+      });
+      expect(detectionService.getAgentState('term1')).toEqual({
+        status: 'disconnected',
+        agentType: 'antigravity',
+      });
+      expect(detectionService.getAgentState('term2')).toEqual({
+        status: 'connected',
+        agentType: 'antigravity',
+      });
     });
   });
 
@@ -968,6 +995,40 @@ describe('🧪 CLI Agent Detection Service - Comprehensive Test Suite', () => {
       });
       expect(result?.state.status).toBe('connected');
       expect(statusChangeEvents).toHaveLength(1);
+    });
+
+    it('detects Antigravity CLI startup output', () => {
+      const result = detectionService.handleOutputChunk(
+        'term1',
+        'Welcome to Antigravity CLI\r\nUsing AGY CLI in this workspace'
+      );
+
+      expect(result?.detection).toMatchObject({
+        type: 'antigravity',
+        source: 'output',
+      });
+      expect(result?.state).toEqual({
+        status: 'connected',
+        agentType: 'antigravity',
+      });
+      expect(statusChangeEvents).toHaveLength(1);
+      expect(statusChangeEvents[0]?.type).toBe('antigravity');
+    });
+
+    it('keeps Antigravity agent state stable when waiting-like output is received', () => {
+      detectionService.handleInputChunk('term1', 'a');
+      detectionService.handleInputChunk('term1', 'g');
+      detectionService.handleInputChunk('term1', 'y');
+      const result = detectionService.handleInputChunk('term1', '\r');
+
+      expect(result).toMatchObject({
+        type: 'antigravity',
+        source: 'input',
+      });
+      expect(detectionService.getAgentState('term1')).toEqual({
+        status: 'connected',
+        agentType: 'antigravity',
+      });
     });
 
     it('keeps agent state stable when the user submits input after waiting-like output', () => {
