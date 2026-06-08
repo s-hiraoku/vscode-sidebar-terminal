@@ -16,14 +16,14 @@
 ## なぜ Secondary Terminal？
 
 - **サイドバーネイティブ** -- 編集中もターミナルを表示したまま。ボトムパネルの切り替えは不要。
-- **AIエージェント対応** -- Claude Code、Copilot、Gemini、Codexを自動検出。リアルタイム状態表示と250fps最適化レンダリング。
+- **AIエージェント対応** -- Claude Code、Copilot、Gemini、Codex、Antigravityを自動検出。リアルタイム状態表示と250fps最適化レンダリング。
 - **フル機能** -- 分割ビュー、セッション永続化、シェル統合、90以上の設定。本番環境で使えるターミナル。
 
 ## クイックスタート
 
 1. **インストール**: VS Codeの拡張機能ビューで "Secondary Terminal" を検索
 2. **開く**: アクティビティバーのターミナルアイコン（ST）をクリック
-3. **使う**: `claude`、`codex`、`gemini`、`copilot` を実行するとAIエージェントステータスが表示
+3. **使う**: `claude`、`codex`、`gemini`、`copilot`、`agy` を実行するとAIエージェントステータスが表示
 
 [Open VSX](https://open-vsx.org/extension/s-hiraoku/vscode-sidebar-terminal) やCLI: `code --install-extension s-hiraoku.vscode-sidebar-terminal` でもインストール可能
 
@@ -31,7 +31,7 @@
 
 - **複数ターミナル** -- 最大10個の同時ターミナル、タブ管理、ドラッグ&ドロップ、名前変更
 - **分割ビュー** -- 垂直/水平分割とドラッグリサイズ
-- **AIエージェント検出** -- Claude Code、Codex CLI、Gemini CLI、GitHub Copilot CLI
+- **AIエージェント検出** -- Claude Code、Codex CLI、Gemini CLI、GitHub Copilot CLI、Antigravity CLI
 - **セッション永続化** -- ANSIカラー保持による自動保存/復元
 - **シェル統合** -- コマンドステータス、作業ディレクトリ、コマンド履歴
 - **ファイル参照** -- `Cmd+Alt+L` / `Ctrl+Alt+L` でターミナルにファイルパスを挿入

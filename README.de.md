@@ -16,20 +16,20 @@ Deine Seitenleiste, dein Terminal, deine KI-Agenten -- alles an einem Ort.
 ## Warum Secondary Terminal?
 
 - **Seitenleisten-nativ** -- Terminal bleibt beim Editieren sichtbar. Kein Umschalten des unteren Panels.
-- **KI-Agenten-kompatibel** -- Erkennt automatisch Claude Code, Copilot, Gemini, Codex mit Echtzeit-Status und 250fps-optimiertem Rendering.
+- **KI-Agenten-kompatibel** -- Erkennt automatisch Claude Code, Copilot, Gemini, Codex und Antigravity mit Echtzeit-Status und 250fps-optimiertem Rendering.
 - **Vollausgestattet** -- Geteilte Ansichten, Sitzungspersistenz, Shell-Integration, 90+ Einstellungen. Ein Produktions-Terminal.
 
 ## Schnellstart
 
 1. **Installieren**: Suche "Secondary Terminal" in der VS Code Erweiterungsansicht
 2. **Öffnen**: Klicke auf das Terminal-Symbol (ST) in der Aktivitätsleiste
-3. **Verwenden**: Führe `claude`, `codex`, `gemini` oder `copilot` aus und beobachte den KI-Agenten-Status
+3. **Verwenden**: Führe `claude`, `codex`, `gemini`, `copilot` oder `agy` aus und beobachte den KI-Agenten-Status
 
 ## Funktionen
 
 - **Mehrere Terminals** -- Bis zu 10 gleichzeitige Terminals mit Tabs, Drag & Drop, Umbenennung
 - **Geteilte Ansichten** -- Vertikale/horizontale Teilung mit Größenanpassung
-- **KI-Agenten-Erkennung** -- Claude Code, Codex CLI, Gemini CLI, GitHub Copilot CLI
+- **KI-Agenten-Erkennung** -- Claude Code, Codex CLI, Gemini CLI, GitHub Copilot CLI, Antigravity CLI
 - **Sitzungspersistenz** -- Automatisches Speichern/Wiederherstellen mit ANSI-Farberhaltung
 - **Shell-Integration** -- Befehlsstatus, Arbeitsverzeichnis, Befehlsverlauf
 - **Dateireferenzen** -- `Cmd+Alt+L` / `Ctrl+Alt+L` fügt Dateipfad ins Terminal ein

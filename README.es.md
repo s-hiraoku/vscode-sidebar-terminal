@@ -16,20 +16,20 @@ Tu barra lateral, tu terminal, tus agentes IA -- todo en un solo lugar.
 ## Por que Secondary Terminal?
 
 - **Terminal nativo en barra lateral** -- Manten tu terminal visible mientras editas.
-- **Compatible con agentes IA** -- Detecta automaticamente Claude Code, Copilot, Gemini, Codex con estado en tiempo real y renderizado optimizado a 250fps.
+- **Compatible con agentes IA** -- Detecta automaticamente Claude Code, Copilot, Gemini, Codex y Antigravity con estado en tiempo real y renderizado optimizado a 250fps.
 - **Completo** -- Vistas divididas, persistencia de sesion, integracion de shell, 90+ ajustes. Un terminal de produccion.
 
 ## Inicio rapido
 
 1. **Instalar**: Busca "Secondary Terminal" en la vista de extensiones de VS Code
 2. **Abrir**: Haz clic en el icono de terminal (ST) en la barra de actividad
-3. **Usar**: Ejecuta `claude`, `codex`, `gemini` o `copilot` y observa el estado del agente IA
+3. **Usar**: Ejecuta `claude`, `codex`, `gemini`, `copilot` o `agy` y observa el estado del agente IA
 
 ## Caracteristicas
 
 - **Multiples terminales** -- Hasta 10 terminales simultaneos con pestanas, arrastrar y soltar, renombrar
 - **Vistas divididas** -- Division vertical/horizontal con redimensionamiento
-- **Deteccion de agentes IA** -- Claude Code, Codex CLI, Gemini CLI, GitHub Copilot CLI
+- **Deteccion de agentes IA** -- Claude Code, Codex CLI, Gemini CLI, GitHub Copilot CLI, Antigravity CLI
 - **Persistencia de sesion** -- Guardado/restauracion automatica con preservacion de colores ANSI
 - **Integracion de shell** -- Estado de comandos, directorio de trabajo, historial
 - **Referencias de archivos** -- `Cmd+Alt+L` / `Ctrl+Alt+L` inserta ruta de archivo en el terminal

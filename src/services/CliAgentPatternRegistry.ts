@@ -3,7 +3,8 @@
  *
  * Centralized registry for all CLI Agent detection patterns.
  * This eliminates code duplication by providing a single source of truth
- * for pattern definitions across Claude, Gemini, Codex, Copilot, and OpenCode agents.
+ * for pattern definitions across Claude, Gemini, Codex, Copilot, OpenCode,
+ * and Antigravity agents.
  *
  * Benefits:
  * - ~80% code reduction by eliminating duplicated pattern definitions
@@ -164,6 +165,21 @@ export class CliAgentPatternRegistry {
       terminationRegexPatterns: [/\[process exited with code \d+\]/i],
     });
 
+    // Google Antigravity CLI patterns
+    patterns.set('antigravity', {
+      type: 'antigravity',
+      commandPrefixes: ['agy ', 'agy', 'antigravity ', 'antigravity'],
+      startupPatterns: ['Welcome to Antigravity CLI', 'Using AGY CLI', 'Antigravity CLI'],
+      startupRegexPatterns: [
+        /\bAntigravity\s+CLI\b/i,
+        /\bAGY\s+CLI\b/i,
+        /\bGoogle\s+Antigravity\b/i,
+      ],
+      activityKeywords: ['antigravity', 'agy', 'google antigravity'],
+      terminationPatterns: [],
+      terminationRegexPatterns: [/\[process exited with code \d+\]/i],
+    });
+
     return patterns;
   }
 
@@ -226,6 +242,8 @@ export class CliAgentPatternRegistry {
         'command not found: codex',
         'command not found: copilot',
         'command not found: opencode',
+        'command not found: agy',
+        'command not found: antigravity',
       ],
       crashIndicators: [
         'segmentation fault',
@@ -450,6 +468,12 @@ export class CliAgentPatternRegistry {
       case '@sst/opencode':
       case 'sst/opencode':
         return 'opencode';
+      case 'agy':
+      case 'antigravity':
+      case '@google/antigravity-cli':
+      case 'google/antigravity-cli':
+      case 'antigravity-cli':
+        return 'antigravity';
       default:
         return null;
     }

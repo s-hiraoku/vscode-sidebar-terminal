@@ -25,12 +25,20 @@ describe('CliAgentPatternRegistry', () => {
       expect(registry.matchCommandInput('gh copilot suggest')).toBe('copilot');
     });
 
+    it('should match Antigravity CLI commands', () => {
+      expect(registry.matchCommandInput('agy')).toBe('antigravity');
+      expect(registry.matchCommandInput('agy --sandbox=false')).toBe('antigravity');
+      expect(registry.matchCommandInput('antigravity')).toBe('antigravity');
+    });
+
     it('should match wrapper commands and env-prefixed commands', () => {
       expect(registry.matchCommandInput('FOO=1 codex --help')).toBe('codex');
+      expect(registry.matchCommandInput('env FOO=1 agy')).toBe('antigravity');
       expect(registry.matchCommandInput('npx @openai/codex@latest')).toBe('codex');
       expect(registry.matchCommandInput('pnpm dlx @google/gemini-cli')).toBe('gemini');
       expect(registry.matchCommandInput('yarn dlx @anthropic-ai/claude-code')).toBe('claude');
       expect(registry.matchCommandInput('bunx opencode')).toBe('opencode');
+      expect(registry.matchCommandInput('npx @google/antigravity-cli')).toBe('antigravity');
     });
 
     it('should return null for normal shell commands', () => {
@@ -96,6 +104,12 @@ describe('CliAgentPatternRegistry', () => {
     it('should match OpenCode Base mode text', () => {
       expect(registry.matchStartupOutput('OpenCode Base')).toBe('opencode');
     });
+
+    it('should match Antigravity CLI startup text', () => {
+      expect(registry.matchStartupOutput('Welcome to Antigravity CLI')).toBe('antigravity');
+      expect(registry.matchStartupOutput('Using AGY CLI in this workspace')).toBe('antigravity');
+      expect(registry.matchStartupOutput('Google Antigravity is ready')).toBe('antigravity');
+    });
   });
 
   describe('isAgentActivity', () => {
@@ -159,6 +173,8 @@ describe('CliAgentPatternRegistry', () => {
         expect(registry.isTerminationPattern('command not found: codex')).toBe(true);
         expect(registry.isTerminationPattern('command not found: copilot')).toBe(true);
         expect(registry.isTerminationPattern('command not found: opencode')).toBe(true);
+        expect(registry.isTerminationPattern('command not found: agy')).toBe(true);
+        expect(registry.isTerminationPattern('command not found: antigravity')).toBe(true);
       });
     });
 
@@ -263,6 +279,7 @@ describe('CliAgentPatternRegistry', () => {
       expect(types).toContain('codex');
       expect(types).toContain('copilot');
       expect(types).toContain('opencode');
+      expect(types).toContain('antigravity');
     });
 
     it('should provide shell prompt patterns', () => {

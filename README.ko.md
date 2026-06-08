@@ -16,20 +16,20 @@
 ## 왜 Secondary Terminal인가?
 
 - **사이드바 네이티브** -- 편집 중에도 터미널 표시. 하단 패널 전환 불필요.
-- **AI 에이전트 인식** -- Claude Code, Copilot, Gemini, Codex 자동 감지. 실시간 상태와 250fps 최적화 렌더링.
+- **AI 에이전트 인식** -- Claude Code, Copilot, Gemini, Codex, Antigravity 자동 감지. 실시간 상태와 250fps 최적화 렌더링.
 - **풀 기능** -- 분할 뷰, 세션 영속성, Shell 통합, 90+ 설정. 프로덕션 터미널.
 
 ## 빠른 시작
 
 1. **설치**: VS Code 확장 뷰에서 "Secondary Terminal" 검색
 2. **열기**: 활동 바의 터미널 아이콘 (ST) 클릭
-3. **사용**: `claude`, `codex`, `gemini` 또는 `copilot` 실행하여 AI 에이전트 상태 확인
+3. **사용**: `claude`, `codex`, `gemini`, `copilot` 또는 `agy` 실행하여 AI 에이전트 상태 확인
 
 ## 기능
 
 - **다중 터미널** -- 최대 10개 동시 터미널, 탭 관리, 드래그 앤 드롭, 이름 변경
 - **분할 뷰** -- 수직/수평 분할, 드래그로 크기 조절
-- **AI 에이전트 감지** -- Claude Code, Codex CLI, Gemini CLI, GitHub Copilot CLI
+- **AI 에이전트 감지** -- Claude Code, Codex CLI, Gemini CLI, GitHub Copilot CLI, Antigravity CLI
 - **세션 영속성** -- ANSI 색상 보존을 지원하는 자동 저장/복원
 - **Shell 통합** -- 명령 상태, 작업 디렉토리, 명령 기록
 - **파일 참조** -- `Cmd+Alt+L` / `Ctrl+Alt+L`로 터미널에 파일 경로 삽입

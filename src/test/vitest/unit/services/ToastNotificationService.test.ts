@@ -62,6 +62,14 @@ describe('ToastNotificationService', () => {
       );
     });
 
+    it('should include Antigravity display name in completion message', () => {
+      service.showCompletedNotification('terminal-1', 'antigravity');
+      expect(mockSetStatusBarMessage).toHaveBeenCalledWith(
+        expect.stringContaining('Antigravity'),
+        expect.any(Number)
+      );
+    });
+
     it('should not show when disabled', () => {
       setDefaultConfig({ 'agentToastNotification.enabled': false });
       service.showCompletedNotification('terminal-1');

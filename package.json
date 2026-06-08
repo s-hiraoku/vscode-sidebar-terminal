@@ -1,7 +1,7 @@
 {
   "name": "vscode-sidebar-terminal",
   "displayName": "Secondary Terminal",
-  "description": "Sidebar terminal for VS Code with AI agent awareness (Claude Code, Copilot, Gemini, Codex), split views, session persistence, and full IME support.",
+  "description": "Sidebar terminal for VS Code with AI agent awareness (Claude Code, Copilot, Gemini, Codex, Antigravity), split views, session persistence, and full IME support.",
   "version": "1.1.0",
   "publisher": "s-hiraoku",
   "sideEffects": false,

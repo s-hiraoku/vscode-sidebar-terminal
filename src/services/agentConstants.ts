@@ -8,6 +8,7 @@ export const AGENT_DISPLAY_NAMES: Record<string, string> = {
   gemini: 'Gemini',
   codex: 'Codex',
   opencode: 'OpenCode',
+  antigravity: 'Antigravity',
 };
 
 export function getAgentDisplayName(agentType: AgentType | string | null | undefined): string {

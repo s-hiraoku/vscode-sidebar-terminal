@@ -236,7 +236,7 @@ export type TerminalTheme = 'auto' | 'dark' | 'light';
 /**
  * Canonical CLI agent type shared across extension and webview.
  */
-export type AgentType = 'claude' | 'gemini' | 'codex' | 'copilot' | 'opencode';
+export type AgentType = 'claude' | 'gemini' | 'codex' | 'copilot' | 'opencode' | 'antigravity';
 
 // ===== Terminal Profile System Types =====
 
@@ -972,7 +972,7 @@ export interface VsCodeMessage {
   // AI agent switching related properties
   action?: string; // Action for switchAiAgent command
   forceReconnect?: boolean; // Manual reset functionality
-  agentType?: 'claude' | 'gemini' | 'codex' | 'copilot' | 'opencode'; // Agent type for force reconnect
+  agentType?: AgentType; // Agent type for force reconnect
   isForceReconnect?: boolean; // Alternative property name for compatibility
 }
 

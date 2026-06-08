@@ -423,6 +423,7 @@ export class TerminalManager {
       'codex',
       'copilot',
       'opencode',
+      'antigravity',
     ];
     if (supportedAgentTypes.includes(type as AgentType)) {
       return type as AgentType;

@@ -80,7 +80,7 @@ describe('1.1.0 release readiness', () => {
 
     expect(packageJson.version).toBe('1.1.0');
     expect(packageJson.description).toBe(
-      'Sidebar terminal for VS Code with AI agent awareness (Claude Code, Copilot, Gemini, Codex), split views, session persistence, and full IME support.'
+      'Sidebar terminal for VS Code with AI agent awareness (Claude Code, Copilot, Gemini, Codex, Antigravity), split views, session persistence, and full IME support.'
     );
     expect(packageJson.keywords).toEqual(expectedKeywords);
   });
