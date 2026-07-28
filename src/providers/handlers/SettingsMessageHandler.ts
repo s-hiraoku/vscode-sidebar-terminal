@@ -83,6 +83,10 @@ export class SettingsMessageHandler {
       event.affectsConfiguration('secondaryTerminal.enableTerminalHeaderEnhancements') ||
       event.affectsConfiguration('secondaryTerminal.dynamicSplitDirection') ||
       event.affectsConfiguration('secondaryTerminal.panelLocation') ||
+      event.affectsConfiguration('secondaryTerminal.sendKeybindingsToShell') ||
+      event.affectsConfiguration('secondaryTerminal.commandsToSkipShell') ||
+      event.affectsConfiguration('secondaryTerminal.allowChords') ||
+      event.affectsConfiguration('secondaryTerminal.allowMnemonics') ||
       event.affectsConfiguration('editor.multiCursorModifier') ||
       event.affectsConfiguration('terminal.integrated.altClickMovesCursor') ||
       event.affectsConfiguration('secondaryTerminal.altClickMovesCursor')

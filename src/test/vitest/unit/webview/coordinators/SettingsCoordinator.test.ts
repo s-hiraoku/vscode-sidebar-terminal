@@ -21,6 +21,7 @@ function createMockDeps(): ISettingsCoordinatorDependencies {
     getAllTerminalInstances: vi.fn().mockReturnValue(new Map()),
     getAllTerminalContainers: vi.fn().mockReturnValue(new Map()),
     getSplitTerminals: vi.fn().mockReturnValue(new Map()),
+    updateKeybindingSettings: vi.fn(),
     setActiveBorderMode: vi.fn(),
     setTerminalHeaderEnhancementsEnabled: vi.fn(),
     updateTerminalBorders: vi.fn(),
@@ -74,6 +75,18 @@ describe('SettingsCoordinator', () => {
       expect(deps.setCurrentSettings).toHaveBeenCalledWith(
         expect.objectContaining({
           activeBorderMode: 'always',
+        })
+      );
+    });
+
+    it('should forward keybinding settings to the input manager', () => {
+      coordinator.applySettings({
+        commandsToSkipShell: ['-workbench.action.terminal.moveToLineStart'],
+      } as any);
+
+      expect(deps.updateKeybindingSettings).toHaveBeenCalledWith(
+        expect.objectContaining({
+          commandsToSkipShell: ['-workbench.action.terminal.moveToLineStart'],
         })
       );
     });
