@@ -82,7 +82,7 @@ describe('SettingsCoordinator', () => {
     it('should forward keybinding settings to the input manager', () => {
       coordinator.applySettings({
         commandsToSkipShell: ['-workbench.action.terminal.moveToLineStart'],
-      } as any);
+      });
 
       expect(deps.updateKeybindingSettings).toHaveBeenCalledWith(
         expect.objectContaining({

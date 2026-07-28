@@ -170,6 +170,8 @@ describe('SettingsSyncService', () => {
       mockUnifiedConfig.get.mockImplementation((section, key, def) => {
         if (key === 'sendKeybindingsToShell') return true;
         if (key === 'commandsToSkipShell') return ['-workbench.action.terminal.moveToLineStart'];
+        if (key === 'allowChords') return false;
+        if (key === 'allowMnemonics') return false;
         return def;
       });
 
@@ -177,6 +179,8 @@ describe('SettingsSyncService', () => {
 
       expect(settings.sendKeybindingsToShell).toBe(true);
       expect(settings.commandsToSkipShell).toEqual(['-workbench.action.terminal.moveToLineStart']);
+      expect(settings.allowChords).toBe(false);
+      expect(settings.allowMnemonics).toBe(false);
     });
   });
 
