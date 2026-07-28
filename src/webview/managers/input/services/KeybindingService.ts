@@ -59,6 +59,13 @@ export class KeybindingService {
     'workbench.action.terminal.focusNext',
     'workbench.action.terminal.focusPrevious',
     'workbench.action.terminal.toggleTerminal',
+    // Line/word editing: the webview resolves these itself and writes the matching
+    // readline sequence to the PTY, so xterm.js must not see the keystroke first
+    // (it drops Meta+Arrow entirely, which is why Cmd+Left/Right did nothing).
+    'workbench.action.terminal.moveToLineStart',
+    'workbench.action.terminal.moveToLineEnd',
+    'workbench.action.terminal.deleteWordLeft',
+    'workbench.action.terminal.deleteWordRight',
     'workbench.action.closePanel',
     'workbench.action.maximizePanel',
     'workbench.action.toggleDevTools',
@@ -310,8 +317,8 @@ export class KeybindingService {
             'ctrl+l': 'workbench.action.terminal.clear',
             'ctrl+backspace': 'workbench.action.terminal.deleteWordLeft',
             'ctrl+delete': 'workbench.action.terminal.deleteWordRight',
-            home: 'workbench.action.terminal.moveToLineStart',
-            end: 'workbench.action.terminal.moveToLineEnd',
+            // Home/End are intentionally not mapped: xterm.js already emits the
+            // real Home/End sequences, which full-screen apps (vim, less) need.
           }),
     };
   }

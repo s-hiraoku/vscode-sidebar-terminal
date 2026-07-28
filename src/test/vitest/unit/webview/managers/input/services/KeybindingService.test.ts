@@ -142,6 +142,57 @@ describe('KeybindingService', () => {
     });
   });
 
+  describe('Line and word editing', () => {
+    beforeEach(() => {
+      vi.stubGlobal('navigator', { platform: 'MacIntel' });
+    });
+
+    const macBindings: Array<[string, Partial<KeyboardEventInit>, string]> = [
+      [
+        'Cmd+Left',
+        { key: 'ArrowLeft', metaKey: true },
+        'workbench.action.terminal.moveToLineStart',
+      ],
+      [
+        'Cmd+Right',
+        { key: 'ArrowRight', metaKey: true },
+        'workbench.action.terminal.moveToLineEnd',
+      ],
+      [
+        'Cmd+Backspace',
+        { key: 'Backspace', metaKey: true },
+        'workbench.action.terminal.deleteWordLeft',
+      ],
+      ['Cmd+Delete', { key: 'Delete', metaKey: true }, 'workbench.action.terminal.deleteWordRight'],
+    ];
+
+    it.each(macBindings)('should resolve and dispatch %s', (_name, init, command) => {
+      const event = new KeyboardEvent('keydown', init);
+
+      expect(service.resolveKeybinding(event)).toBe(command);
+      expect(service.shouldSkipShell(event, command)).toBe(true);
+    });
+
+    it('should let users opt out via commandsToSkipShell', () => {
+      service.updateSettings({
+        commandsToSkipShell: ['-workbench.action.terminal.moveToLineStart'],
+      });
+
+      const event = new KeyboardEvent('keydown', { key: 'ArrowLeft', metaKey: true });
+
+      expect(service.shouldSkipShell(event, 'workbench.action.terminal.moveToLineStart')).toBe(
+        false
+      );
+    });
+
+    it('should leave Home/End to xterm on Windows/Linux', () => {
+      vi.stubGlobal('navigator', { platform: 'Win32' });
+
+      expect(service.resolveKeybinding(new KeyboardEvent('keydown', { key: 'Home' }))).toBeNull();
+      expect(service.resolveKeybinding(new KeyboardEvent('keydown', { key: 'End' }))).toBeNull();
+    });
+  });
+
   describe('State Management', () => {
     it('should manage chord mode', () => {
       service.setChordMode(true);
