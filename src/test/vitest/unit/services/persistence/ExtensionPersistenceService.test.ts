@@ -6,6 +6,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type * as vscode from 'vscode';
+import * as vscodeApi from 'vscode';
 
 import '../../../../shared/TestSetup';
 import { ExtensionPersistenceService } from '../../../../../services/persistence/ExtensionPersistenceService';
@@ -325,6 +326,47 @@ describe('ExtensionPersistenceService', () => {
       await (service as any).batchRestoreTerminals(sessionData);
 
       expect(terminalManager.updateTerminalHeader).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('restoreSession honours enablePersistentSessions', () => {
+    const stubConfig = (enablePersistentSessions: boolean): void => {
+      vi.spyOn(vscodeApi.workspace, 'getConfiguration').mockReturnValue({
+        get: (key: string, defaultValue?: unknown) =>
+          key === 'enablePersistentSessions' ? enablePersistentSessions : defaultValue,
+      } as unknown as vscode.WorkspaceConfiguration);
+    };
+
+    it('restores nothing when persistence is disabled', async () => {
+      stubConfig(false);
+      // No live terminals, so nothing else short-circuits the restore.
+      terminalManager.getTerminals.mockReturnValue([]);
+      workspaceState.get.mockReturnValue({
+        terminals: [
+          { id: 'terminal-1', name: 'Terminal 1', number: 1, cwd: '/tmp', isActive: true },
+        ],
+        activeTerminalId: 'terminal-1',
+        timestamp: Date.now(),
+        version: '4.0.0',
+      });
+
+      const result = await service.restoreSession();
+
+      // A session stored before the setting was turned off must not come back.
+      expect(result.message).toBe('Persistence disabled');
+      expect(result.success).toBe(false);
+      expect(terminalManager.createTerminal).not.toHaveBeenCalled();
+    });
+
+    it('still reads storage when persistence is enabled', async () => {
+      stubConfig(true);
+      terminalManager.getTerminals.mockReturnValue([]);
+      workspaceState.get.mockReturnValue(undefined);
+
+      const result = await service.restoreSession();
+
+      expect(workspaceState.get).toHaveBeenCalled();
+      expect(result.message).toBe('No session found');
     });
   });
 });

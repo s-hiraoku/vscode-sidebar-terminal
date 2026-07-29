@@ -289,6 +289,14 @@ export class ExtensionPersistenceService implements vscode.Disposable {
     try {
       const config = this.getPersistenceConfig();
 
+      // Sessions stored before the setting was turned off stay in workspaceState,
+      // so without this the corpse of an old session is restored forever.
+      if (!config.enablePersistentSessions) {
+        log('⏭️ Persistence disabled by config');
+        this.isRestoring = false;
+        return { success: false, message: 'Persistence disabled' };
+      }
+
       // Load session data
       const sessionData = this.context.workspaceState.get<SessionStorageData>(
         ExtensionPersistenceService.STORAGE_KEY
