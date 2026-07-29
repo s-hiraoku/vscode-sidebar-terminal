@@ -14,6 +14,7 @@
 
 import { IManagerCoordinator } from '../../../interfaces/ManagerInterfaces';
 import { EventHandlerRegistry } from '../../../utils/EventHandlerRegistry';
+import { isWorkbenchOwnedCommand } from '../services/WorkbenchCommands';
 
 /**
  * Keyboard event constants
@@ -97,6 +98,10 @@ export class KeyboardShortcutSetupHandler {
 
       // If should skip shell, handle as VS Code command
       if (shouldSkip && resolvedCommand) {
+        if (isWorkbenchOwnedCommand(resolvedCommand)) {
+          this.deps.logger(`Leaving ${resolvedCommand} to the workbench`);
+          return;
+        }
         event.preventDefault();
         event.stopPropagation();
         this.deps.handleVSCodeCommand(resolvedCommand, manager);
