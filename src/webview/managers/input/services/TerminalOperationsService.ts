@@ -35,7 +35,8 @@ export type ScrollDirection = 'up' | 'down' | 'top' | 'bottom' | 'previousComman
 export class TerminalOperationsService {
   constructor(
     private readonly logger: (message: string) => void,
-    private readonly emitInteractionEvent: TerminalInteractionEmitter
+    private readonly emitInteractionEvent: TerminalInteractionEmitter,
+    private readonly sendInput: (terminalId: string, data: string) => void
   ) {}
 
   /**
@@ -217,7 +218,7 @@ export class TerminalOperationsService {
     }
 
     // Send Ctrl+W or equivalent based on shell
-    this.emitInteractionEvent('input', activeTerminalId, { data: '\x17' }, manager);
+    this.sendInput(activeTerminalId, '\x17');
     this.logger('Delete word left');
   }
 
@@ -231,7 +232,7 @@ export class TerminalOperationsService {
     }
 
     // Send Alt+D or equivalent based on shell
-    this.emitInteractionEvent('input', activeTerminalId, { data: '\x1bd' }, manager);
+    this.sendInput(activeTerminalId, '\x1bd');
     this.logger('Delete word right');
   }
 
@@ -245,7 +246,7 @@ export class TerminalOperationsService {
     }
 
     // Send Ctrl+A (readline home)
-    this.emitInteractionEvent('input', activeTerminalId, { data: '\x01' }, manager);
+    this.sendInput(activeTerminalId, '\x01');
     this.logger('Move to line start');
   }
 
@@ -259,7 +260,7 @@ export class TerminalOperationsService {
     }
 
     // Send Ctrl+E (readline end)
-    this.emitInteractionEvent('input', activeTerminalId, { data: '\x05' }, manager);
+    this.sendInput(activeTerminalId, '\x05');
     this.logger('Move to line end');
   }
 

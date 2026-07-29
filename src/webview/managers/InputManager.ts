@@ -73,7 +73,8 @@ export class InputManager extends BaseManager implements IInputManager {
           terminalId,
           data,
           manager
-        )
+        ),
+      (terminalId: string, data: string) => this.queueInputData(terminalId, data, true)
     );
 
     // Initialize TerminalClipboardHandler
