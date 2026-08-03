@@ -154,7 +154,9 @@ export class TerminalCreationService implements Disposable {
     const focusService = new TerminalFocusService();
     const scrollbarService = new TerminalScrollbarService();
     const scrollIndicatorService = new TerminalScrollIndicatorService();
-    this.mouseTrackingService = new MouseTrackingService();
+    this.mouseTrackingService = new MouseTrackingService(
+      () => coordinator.getManagers().config.getCurrentSettings().legacyMouseWheelEncoding === true
+    );
 
     this.appearanceService = new TerminalAppearanceService({
       coordinator: coordinator as any,

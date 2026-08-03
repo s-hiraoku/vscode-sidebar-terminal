@@ -121,6 +121,7 @@ export interface PartialTerminalSettings {
   scrollback?: number;
   scrollSensitivity?: number;
   fastScrollSensitivity?: number;
+  legacyMouseWheelEncoding?: boolean;
   bellSound?: boolean;
   altClickMovesCursor?: boolean;
   multiCursorModifier?: string;

@@ -451,6 +451,11 @@
           "default": true,
           "description": "Enable file reference shortcuts: Use Cmd+Option+L (Mac) or Alt+Ctrl+L (Linux/Windows) to insert file references"
         },
+        "secondaryTerminal.legacyMouseWheelEncoding": {
+          "type": "boolean",
+          "default": false,
+          "description": "Encode mouse-tracking wheel events in the WebView instead of letting xterm.js do it. The WebView encoder ignores scroll sensitivity and pixel-precise trackpad deltas; enable only if wheel scrolling stops working in full-screen apps such as vim, tmux or zellij."
+        },
         "secondaryTerminal.focusProtection": {
           "type": "boolean",
           "default": true,

@@ -85,6 +85,11 @@ export class SettingsSyncService {
       // Scroll speed, shared with the integrated terminal
       scrollSensitivity: scrollSettings.scrollSensitivity,
       fastScrollSensitivity: scrollSettings.fastScrollSensitivity,
+      legacyMouseWheelEncoding: configService.get(
+        'secondaryTerminal',
+        'legacyMouseWheelEncoding',
+        false
+      ),
       // VS Code standard settings for Alt+Click functionality
       altClickMovesCursor: altClickSettings.altClickMovesCursor,
       multiCursorModifier: altClickSettings.multiCursorModifier,
