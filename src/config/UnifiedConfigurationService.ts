@@ -460,6 +460,31 @@ export class UnifiedConfigurationService implements Disposable {
   }
 
   /**
+   * Get scroll sensitivity settings (VS Code standard)
+   *
+   * Mirrors xtermTerminal.ts, which feeds these into xterm.js as
+   * scrollSensitivity / fastScrollSensitivity.
+   */
+  public getScrollSensitivitySettings(): {
+    scrollSensitivity: number;
+    fastScrollSensitivity: number;
+  } {
+    this.initialize();
+    return {
+      scrollSensitivity: this.get(
+        CONFIG_SECTIONS.TERMINAL_INTEGRATED,
+        CONFIG_KEYS.MOUSE_WHEEL_SCROLL_SENSITIVITY,
+        1
+      ),
+      fastScrollSensitivity: this.get(
+        CONFIG_SECTIONS.TERMINAL_INTEGRATED,
+        CONFIG_KEYS.FAST_SCROLL_SENSITIVITY,
+        5
+      ),
+    };
+  }
+
+  /**
    * Get font family with VS Code hierarchy
    * Priority: secondaryTerminal.fontFamily > terminal.integrated.fontFamily > editor.fontFamily > system default
    */

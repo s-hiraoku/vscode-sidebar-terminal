@@ -17,6 +17,7 @@ const { mockUnifiedConfig } = vi.hoisted(() => ({
     update: vi.fn().mockResolvedValue(undefined),
     isFeatureEnabled: vi.fn(),
     getAltClickSettings: vi.fn(),
+    getScrollSensitivitySettings: vi.fn(),
   },
 }));
 
@@ -130,6 +131,10 @@ describe('SettingsSyncService', () => {
         altClickMovesCursor: true,
         multiCursorModifier: 'alt',
       });
+      mockUnifiedConfig.getScrollSensitivitySettings.mockReturnValue({
+        scrollSensitivity: 3,
+        fastScrollSensitivity: 5,
+      });
       mockUnifiedConfig.get.mockImplementation((section, key, def) => {
         if (key === 'scrollback') return 5000;
         if (key === 'activeBorderMode') return 'all';
@@ -149,6 +154,8 @@ describe('SettingsSyncService', () => {
         cursorBlink: true,
         theme: 'dark',
         scrollback: 5000,
+        scrollSensitivity: 3,
+        fastScrollSensitivity: 5,
         altClickMovesCursor: true,
         multiCursorModifier: 'alt',
         enableCliAgentIntegration: true,
@@ -157,6 +164,22 @@ describe('SettingsSyncService', () => {
         dynamicSplitDirection: false,
         panelLocation: 'sidebar',
       });
+    });
+
+    it('forwards scroll sensitivity so the sidebar scrolls like the integrated terminal', () => {
+      mockUnifiedConfig.getCompleteTerminalSettings.mockReturnValue({});
+      mockUnifiedConfig.getAltClickSettings.mockReturnValue({});
+      mockUnifiedConfig.get.mockImplementation((_section, _key, def) => def);
+      mockUnifiedConfig.isFeatureEnabled.mockReturnValue(false);
+      mockUnifiedConfig.getScrollSensitivitySettings.mockReturnValue({
+        scrollSensitivity: 7,
+        fastScrollSensitivity: 9,
+      });
+
+      const settings = service.getCurrentSettings();
+
+      expect(settings.scrollSensitivity).toBe(7);
+      expect(settings.fastScrollSensitivity).toBe(9);
     });
   });
 

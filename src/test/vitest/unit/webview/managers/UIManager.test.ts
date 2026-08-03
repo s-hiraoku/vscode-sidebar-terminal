@@ -343,6 +343,23 @@ describe('UIManager', () => {
       expect(mockTerminal.options.scrollback).toBe(1000);
     });
 
+    it('should apply scroll sensitivity from settings', () => {
+      const mockTerminal = {
+        options: {},
+        refresh: vi.fn(),
+        rows: 24,
+        element: document.createElement('div'),
+      } as any;
+
+      uiManager.applyAllVisualSettings(mockTerminal, {
+        scrollSensitivity: 3,
+        fastScrollSensitivity: 8,
+      });
+
+      expect(mockTerminal.options.scrollSensitivity).toBe(3);
+      expect(mockTerminal.options.fastScrollSensitivity).toBe(8);
+    });
+
     it('should apply cursor blink from settings.cursorBlink', () => {
       const mockTerminal = {
         options: {},
