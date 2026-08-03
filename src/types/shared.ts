@@ -119,6 +119,8 @@ export interface PartialTerminalSettings {
   theme?: string;
   cursorBlink?: boolean;
   scrollback?: number;
+  scrollSensitivity?: number;
+  fastScrollSensitivity?: number;
   bellSound?: boolean;
   altClickMovesCursor?: boolean;
   multiCursorModifier?: string;
@@ -378,6 +380,8 @@ export const CONFIG_KEYS = {
 
   // terminal.integrated section
   ALT_CLICK_MOVES_CURSOR: 'altClickMovesCursor',
+  MOUSE_WHEEL_SCROLL_SENSITIVITY: 'mouseWheelScrollSensitivity',
+  FAST_SCROLL_SENSITIVITY: 'fastScrollSensitivity',
   SHELL_WINDOWS: 'shell.windows',
   SHELL_OSX: 'shell.osx',
   SHELL_LINUX: 'shell.linux',

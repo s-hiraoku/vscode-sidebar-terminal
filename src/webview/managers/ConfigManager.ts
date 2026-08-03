@@ -112,6 +112,8 @@ export class ConfigManager implements IConfigManager {
     fontFamily: 'Consolas, "Courier New", monospace',
     theme: 'auto',
     cursorBlink: true,
+    scrollSensitivity: 1,
+    fastScrollSensitivity: 5,
     enableCliAgentIntegration: true,
     enableTerminalHeaderEnhancements: true,
     // Terminal profiles (will be populated from VS Code settings)

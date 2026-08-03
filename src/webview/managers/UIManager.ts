@@ -525,6 +525,16 @@ export class UIManager extends BaseManager implements IUIManager {
       uiLogger.debug(`Applied scrollback: ${settings.scrollback}`);
     }
 
+    // Apply scroll speed
+    if (settings.scrollSensitivity !== undefined) {
+      terminal.options.scrollSensitivity = settings.scrollSensitivity;
+      uiLogger.debug(`Applied scroll sensitivity: ${settings.scrollSensitivity}`);
+    }
+    if (settings.fastScrollSensitivity !== undefined) {
+      terminal.options.fastScrollSensitivity = settings.fastScrollSensitivity;
+      uiLogger.debug(`Applied fast scroll sensitivity: ${settings.fastScrollSensitivity}`);
+    }
+
     // Bell sound is not supported in xterm.js options
     // Terminal bell handling would be implemented differently
   }

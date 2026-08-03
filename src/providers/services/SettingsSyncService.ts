@@ -74,6 +74,7 @@ export class SettingsSyncService {
     const configService = getUnifiedConfigurationService();
     const settings = configService.getCompleteTerminalSettings();
     const altClickSettings = configService.getAltClickSettings();
+    const scrollSettings = configService.getScrollSensitivitySettings();
 
     // Use unified service for all configuration access
     return {
@@ -81,6 +82,9 @@ export class SettingsSyncService {
       theme: settings.theme || 'auto',
       // Scrollback buffer size (secondaryTerminal.scrollback setting)
       scrollback: configService.get('secondaryTerminal', 'scrollback', 2000),
+      // Scroll speed, shared with the integrated terminal
+      scrollSensitivity: scrollSettings.scrollSensitivity,
+      fastScrollSensitivity: scrollSettings.fastScrollSensitivity,
       // VS Code standard settings for Alt+Click functionality
       altClickMovesCursor: altClickSettings.altClickMovesCursor,
       multiCursorModifier: altClickSettings.multiCursorModifier,
