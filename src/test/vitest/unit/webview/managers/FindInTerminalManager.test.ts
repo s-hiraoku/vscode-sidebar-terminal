@@ -273,6 +273,40 @@ describe('FindInTerminalManager', () => {
       expect(state.isVisible).toBe(true);
     });
 
+    // Cmd/Ctrl+Shift+F is Find in Files, and Cmd/Ctrl+Alt+F belongs to the
+    // workbench too - opening the terminal find panel steals both.
+    it.each([
+      ['Shift', { metaKey: true, shiftKey: true }],
+      ['Shift (uppercase key)', { metaKey: true, shiftKey: true, upper: true }],
+      ['Alt', { metaKey: true, altKey: true }],
+      ['Ctrl+Shift', { ctrlKey: true, shiftKey: true }],
+    ])('should ignore Cmd/Ctrl+%s+F', (_label, opts) => {
+      const { upper, ...modifiers } = opts as Record<string, boolean>;
+      const event = new KeyboardEvent('keydown', {
+        key: upper ? 'F' : 'f',
+        ...modifiers,
+        bubbles: true,
+        cancelable: true,
+      });
+
+      document.dispatchEvent(event);
+
+      expect(manager.getSearchState().isVisible).toBe(false);
+      expect(event.defaultPrevented).toBe(false);
+    });
+
+    it('should open search on Cmd+F even when the key arrives uppercased', () => {
+      const event = new KeyboardEvent('keydown', {
+        key: 'F',
+        metaKey: true,
+        bubbles: true,
+      });
+
+      document.dispatchEvent(event);
+
+      expect(manager.getSearchState().isVisible).toBe(true);
+    });
+
     it('should close search on Escape', () => {
       manager.showSearch();
 

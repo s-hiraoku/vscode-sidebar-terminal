@@ -242,8 +242,17 @@ export class FindInTerminalManager implements IFindInTerminalManager {
    * Keyboard event handler for search shortcuts
    */
   private handleKeydown(event: KeyboardEvent): void {
-    // Ctrl+F / Cmd+F - Open search
-    if ((event.ctrlKey || event.metaKey) && event.key === 'f') {
+    // Ctrl+F / Cmd+F - Open search.
+    // Shift and Alt must be excluded: those combinations belong to the
+    // workbench (Find in Files), and the key arrives lowercased on some
+    // platforms, so a bare `key === 'f'` swallows them.
+    const isFindShortcut =
+      (event.ctrlKey || event.metaKey) &&
+      !event.shiftKey &&
+      !event.altKey &&
+      event.key.toLowerCase() === 'f';
+
+    if (isFindShortcut) {
       event.preventDefault();
       this.showSearch();
       return;
