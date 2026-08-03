@@ -114,6 +114,7 @@ export class ConfigManager implements IConfigManager {
     cursorBlink: true,
     scrollSensitivity: 1,
     fastScrollSensitivity: 5,
+    legacyMouseWheelEncoding: false,
     enableCliAgentIntegration: true,
     enableTerminalHeaderEnhancements: true,
     // Terminal profiles (will be populated from VS Code settings)

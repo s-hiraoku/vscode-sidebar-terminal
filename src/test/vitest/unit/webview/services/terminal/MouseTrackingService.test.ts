@@ -221,16 +221,14 @@ describe('MouseTrackingService', () => {
   });
 
   describe('wheel event handling', () => {
-    beforeEach(() => {
+    // xterm.js encodes wheel reports itself, applying scroll sensitivity and
+    // accumulating pixel deltas into whole lines. The handler below does none
+    // of that, so it is off unless explicitly opted into.
+    it('does not intercept the wheel by default', () => {
       service.setup(mockTerminal as any, 't1', viewport, mockSendInput);
-      // Enable mouse mode to activate wheel handler
       mockTerminal._simulateCsi('h', [1006]);
-    });
 
-    it('should send SGR escape sequence on wheel down', () => {
       const screenElement = mockTerminal.element.querySelector('.xterm-screen')!;
-
-      // Simulate wheel event (happy-dom doesn't populate clientX/Y from constructor)
       const wheelEvent = new WheelEvent('wheel', {
         deltaY: 100,
         bubbles: true,
@@ -240,31 +238,60 @@ describe('MouseTrackingService', () => {
       Object.defineProperty(wheelEvent, 'clientY', { value: 50 });
       screenElement.dispatchEvent(wheelEvent);
 
-      // Should call sendInput with SGR wheel down sequence (button 65)
-      expect(mockSendInput).toHaveBeenCalled();
-      const call = (mockSendInput as any).mock.calls[0];
-      expect(call[0]).toBe('t1');
-      expect(call[1]).toMatch(/\x1b\[<65;\d+;\d+M/);
+      expect(mockSendInput).not.toHaveBeenCalled();
+      expect(wheelEvent.defaultPrevented).toBe(false);
+      // Native scrolling still has to be off, or the viewport scrolls itself
+      // instead of the sequence reaching the app.
+      expect(viewport.style.overflow).toBe('hidden');
     });
 
-    it('should send SGR escape sequence on wheel up', () => {
-      const screenElement = mockTerminal.element.querySelector('.xterm-screen')!;
-
-      // Simulate wheel event (happy-dom doesn't populate clientX/Y from constructor)
-      const wheelEvent = new WheelEvent('wheel', {
-        deltaY: -100,
-        bubbles: true,
-        cancelable: true,
+    describe('when legacy encoding is enabled', () => {
+      beforeEach(() => {
+        service = new MouseTrackingService(() => true);
+        service.setup(mockTerminal as any, 't1', viewport, mockSendInput);
+        // Enable mouse mode to activate wheel handler
+        mockTerminal._simulateCsi('h', [1006]);
       });
-      Object.defineProperty(wheelEvent, 'clientX', { value: 50 });
-      Object.defineProperty(wheelEvent, 'clientY', { value: 50 });
-      screenElement.dispatchEvent(wheelEvent);
 
-      // Should call sendInput with SGR wheel up sequence (button 64)
-      expect(mockSendInput).toHaveBeenCalled();
-      const call = (mockSendInput as any).mock.calls[0];
-      expect(call[0]).toBe('t1');
-      expect(call[1]).toMatch(/\x1b\[<64;\d+;\d+M/);
+      it('should send SGR escape sequence on wheel down', () => {
+        const screenElement = mockTerminal.element.querySelector('.xterm-screen')!;
+
+        // Simulate wheel event (happy-dom doesn't populate clientX/Y from constructor)
+        const wheelEvent = new WheelEvent('wheel', {
+          deltaY: 100,
+          bubbles: true,
+          cancelable: true,
+        });
+        Object.defineProperty(wheelEvent, 'clientX', { value: 50 });
+        Object.defineProperty(wheelEvent, 'clientY', { value: 50 });
+        screenElement.dispatchEvent(wheelEvent);
+
+        // Should call sendInput with SGR wheel down sequence (button 65)
+        expect(mockSendInput).toHaveBeenCalled();
+        const call = (mockSendInput as any).mock.calls[0];
+        expect(call[0]).toBe('t1');
+        expect(call[1]).toMatch(/\x1b\[<65;\d+;\d+M/);
+      });
+
+      it('should send SGR escape sequence on wheel up', () => {
+        const screenElement = mockTerminal.element.querySelector('.xterm-screen')!;
+
+        // Simulate wheel event (happy-dom doesn't populate clientX/Y from constructor)
+        const wheelEvent = new WheelEvent('wheel', {
+          deltaY: -100,
+          bubbles: true,
+          cancelable: true,
+        });
+        Object.defineProperty(wheelEvent, 'clientX', { value: 50 });
+        Object.defineProperty(wheelEvent, 'clientY', { value: 50 });
+        screenElement.dispatchEvent(wheelEvent);
+
+        // Should call sendInput with SGR wheel up sequence (button 64)
+        expect(mockSendInput).toHaveBeenCalled();
+        const call = (mockSendInput as any).mock.calls[0];
+        expect(call[0]).toBe('t1');
+        expect(call[1]).toMatch(/\x1b\[<64;\d+;\d+M/);
+      });
     });
   });
 

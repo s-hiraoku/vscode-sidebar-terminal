@@ -56,6 +56,17 @@ export class MouseTrackingService {
   private readonly terminals: Map<string, MouseTrackingState> = new Map();
 
   /**
+   * @param useLegacyWheelEncoding - Encode wheel reports here rather than
+   *   letting xterm.js do it. xterm.js applies scrollSensitivity, converts
+   *   pixel deltas to whole lines with carry-over, and honours the active
+   *   mouse protocol; attachWheelHandler does none of that and emits one
+   *   report per DOM event, which on a trackpad is dozens per flick.
+   *   Read on each mode change, so it takes effect the next time an
+   *   application turns mouse tracking on.
+   */
+  constructor(private readonly useLegacyWheelEncoding: () => boolean = () => false) {}
+
+  /**
    * Setup mouse tracking detection for a terminal
    *
    * @param terminal - xterm.js Terminal instance
@@ -109,10 +120,12 @@ export class MouseTrackingService {
               // First mouse mode enabled - disable native scrolling
               viewport.style.overflow = 'hidden';
 
-              // Attach wheel handler to screen element (where wheel events go)
-              const wheelTarget = screenElement || terminalElement || viewport;
-              state.wheelTarget = wheelTarget;
-              this.attachWheelHandler(terminal, terminalId, wheelTarget, state);
+              if (this.useLegacyWheelEncoding()) {
+                // Attach wheel handler to screen element (where wheel events go)
+                const wheelTarget = screenElement || terminalElement || viewport;
+                state.wheelTarget = wheelTarget;
+                this.attachWheelHandler(terminal, terminalId, wheelTarget, state);
+              }
 
               terminalLogger.info(
                 `[MouseTracking] Mode ${mode} enabled for ${terminalId}, native scroll disabled`
