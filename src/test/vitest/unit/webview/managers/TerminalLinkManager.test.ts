@@ -182,6 +182,42 @@ describe('TerminalLinkManager', () => {
       expect(detectedLinks[0]!.text).toBe('./src/file.ts');
     });
 
+    const detect = (line: string): ILink[] => {
+      const mockTerminal = createMockTerminal([line]);
+      let links: ILink[] = [];
+      vi.mocked(mockTerminal.registerLinkProvider).mockImplementation((provider) => {
+        provider.provideLinks(1, (l) => {
+          links = l!;
+        });
+        return { dispose: vi.fn() };
+      });
+      manager.registerTerminalLinkHandlers(mockTerminal, 'terminal-1');
+      return links;
+    };
+
+    it('should detect a bare relative path in full', () => {
+      // The leading segment was being dropped, leaving '/test/a.ts'.
+      const links = detect('edit libs/test/a.ts:12 please');
+
+      expect(links.map((l) => l.text)).toEqual(['libs/test/a.ts:12']);
+    });
+
+    it('should detect every bare relative path on the line', () => {
+      const links = detect('two libs/a.ts and pkg/b.ts');
+
+      expect(links.map((l) => l.text)).toEqual(['libs/a.ts', 'pkg/b.ts']);
+    });
+
+    it.each([
+      'see https://github.com/o/r/pull/123 now',
+      'http://x.io/a/b',
+      'git@github.com:o/r.git',
+    ])('should not claim any part of %s', (line) => {
+      // Claiming a slice of a URL shadows the web-links provider, which
+      // registers first and would otherwise make the whole URL clickable.
+      expect(detect(line)).toEqual([]);
+    });
+
     it('should detect relative file paths with ../', () => {
       const lines = ['../parent/file.ts'];
       const mockTerminal = createMockTerminal(lines);
@@ -254,27 +290,8 @@ describe('TerminalLinkManager', () => {
       expect(detectedLinks[0]!.text).toBe('/path/to/file.ts:10:5');
     });
 
-    it('should detect URL path portion starting from first slash', () => {
-      // The regex pattern (?:\.{0,2}\/|[A-Za-z]:\\) matches 0-2 dots + /
-      // For https://example.com/path, it matches starting at the first /
-      // (with 0 dots before it), then continues with /example.com/path
-      const lines = ['https://example.com/path'];
-      const mockTerminal = createMockTerminal(lines);
-      let detectedLinks: ILink[] = [];
-
-      vi.mocked(mockTerminal.registerLinkProvider).mockImplementation((provider) => {
-        provider.provideLinks(1, (links) => {
-          detectedLinks = links!;
-        });
-        return { dispose: vi.fn() };
-      });
-
-      manager.registerTerminalLinkHandlers(mockTerminal, 'terminal-1');
-
-      // The regex matches //example.com/path (0 dots + / + rest)
-      // This looks like a file path to the regex
-      expect(detectedLinks.length).toBe(1);
-      expect(detectedLinks[0]!.text).toBe('//example.com/path');
+    it('should leave URLs to the web-links provider', () => {
+      expect(detect('https://example.com/path')).toEqual([]);
     });
 
     it('should clean trailing punctuation from paths', () => {
