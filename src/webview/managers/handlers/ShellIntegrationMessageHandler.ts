@@ -50,6 +50,7 @@ export class ShellIntegrationMessageHandler implements IMessageHandler {
     registry.set('cwdUpdate', (msg, coord) => this.handleCwdUpdate(msg, coord));
     registry.set('commandHistory', (msg, coord) => this.handleCommandHistory(msg, coord));
     registry.set('find', (msg, coord) => this.handleFind(msg, coord));
+    registry.set('focusFind', (_msg, coord) => coord.findInTerminalManager?.showSearch());
 
     return registry;
   }

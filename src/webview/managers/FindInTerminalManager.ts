@@ -242,13 +242,6 @@ export class FindInTerminalManager implements IFindInTerminalManager {
    * Keyboard event handler for search shortcuts
    */
   private handleKeydown(event: KeyboardEvent): void {
-    // Ctrl+F / Cmd+F - Open search
-    if ((event.ctrlKey || event.metaKey) && event.key === 'f') {
-      event.preventDefault();
-      this.showSearch();
-      return;
-    }
-
     // Escape - Close search
     if (event.key === 'Escape' && this.isSearchVisible) {
       event.preventDefault();

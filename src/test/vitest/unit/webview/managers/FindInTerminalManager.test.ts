@@ -247,30 +247,25 @@ describe('FindInTerminalManager', () => {
   });
 
   describe('keyboard shortcuts', () => {
-    it('should open search on Ctrl+F', () => {
+    // Ctrl/Cmd+F arrives as the contributed secondaryTerminal.focusFind
+    // keybinding, scoped to secondaryTerminalFocus. Handling it here as well
+    // opened this panel on top of the workbench find widget, because a WebView
+    // cannot stop VS Code from resolving the chord itself.
+    it.each([
+      ['Ctrl+F', { ctrlKey: true }],
+      ['Cmd+F', { metaKey: true }],
+    ])('should not open search on %s', (_label, modifiers) => {
       const event = new KeyboardEvent('keydown', {
         key: 'f',
-        ctrlKey: true,
+        ...modifiers,
         bubbles: true,
+        cancelable: true,
       });
 
       document.dispatchEvent(event);
 
-      const state = manager.getSearchState();
-      expect(state.isVisible).toBe(true);
-    });
-
-    it('should open search on Cmd+F (Mac)', () => {
-      const event = new KeyboardEvent('keydown', {
-        key: 'f',
-        metaKey: true,
-        bubbles: true,
-      });
-
-      document.dispatchEvent(event);
-
-      const state = manager.getSearchState();
-      expect(state.isVisible).toBe(true);
+      expect(manager.getSearchState().isVisible).toBe(false);
+      expect(event.defaultPrevented).toBe(false);
     });
 
     it('should close search on Escape', () => {

@@ -165,6 +165,11 @@
         "icon": "$(add)"
       },
       {
+        "command": "secondaryTerminal.focusFind",
+        "title": "Find in Terminal",
+        "category": "Secondary Terminal"
+      },
+      {
         "command": "secondaryTerminal.clearTerminal",
         "title": "Clear Terminal",
         "category": "Secondary Terminal",
@@ -971,6 +976,12 @@
         "command": "secondaryTerminal.killTerminal",
         "key": "ctrl+shift+x",
         "mac": "cmd+shift+x",
+        "when": "secondaryTerminalFocus"
+      },
+      {
+        "command": "secondaryTerminal.focusFind",
+        "key": "ctrl+f",
+        "mac": "cmd+f",
         "when": "secondaryTerminalFocus"
       },
       {

@@ -96,6 +96,26 @@ describe('ShellIntegrationMessageHandler', () => {
     });
   });
 
+  describe('Find Panel', () => {
+    it('opens the find panel for the focusFind command', () => {
+      const showSearch = vi.fn();
+      const coordinator = { ...mockCoordinator, findInTerminalManager: { showSearch } } as never;
+
+      handler.handleMessage(
+        { command: 'focusFind', terminalId: 'terminal-1' } as never,
+        coordinator
+      );
+
+      expect(showSearch).toHaveBeenCalled();
+    });
+
+    it('does not throw when no find manager is present', () => {
+      expect(() =>
+        handler.handleMessage({ command: 'focusFind' } as never, mockCoordinator)
+      ).not.toThrow();
+    });
+  });
+
   describe('Shell Status Handling', () => {
     it('should handle shellStatus message', () => {
       const message: MessageCommand = {
