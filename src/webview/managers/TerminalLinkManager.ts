@@ -42,15 +42,15 @@ export class TerminalLinkManager extends BaseManager {
   // 'ctrlCmd' means Cmd/Ctrl is for multi-cursor, so Alt opens links
   private linkModifier: 'alt' | 'ctrlCmd' = 'alt';
 
-  // Matches: /path/to/file, ./relative/path, ../parent/path, C:\windows\path,
-  // and bare relative paths such as libs/test/a.ts.
+  // Matches: /path/to/file, ./relative/path, ../parent/path, ~/home/path,
+  // C:\windows\path, and bare relative paths such as libs/test/a.ts.
   //
   // The leading lookbehind keeps the pattern out of URLs. Without it a bare
   // segment inside https://github.com/o/r matches, and because this provider
   // registers after WebLinksAddon, xterm drops the intersecting web link and
   // the URL stops being clickable.
   private readonly filePathRegex =
-    /(?<![\w:/\\.])(?:[A-Za-z]:\\[^\s"'<>()[\]{}|]+|\.{0,2}\/[^\s"'<>()[\]{}|]+|[\w.-]+(?:\/[\w.-]+)+(?::\d+(?::\d+)?)?)/g;
+    /(?<![\w:/\\.~])(?:[A-Za-z]:\\[^\s"'<>()[\]{}|]+|~\/[^\s"'<>()[\]{}|]+|\.{0,2}\/[^\s"'<>()[\]{}|]+|[\w.-]+(?:\/[\w.-]+)+(?::\d+(?::\d+)?)?)/g;
 
   constructor(coordinator: IManagerCoordinator) {
     super('TerminalLinkManager', {

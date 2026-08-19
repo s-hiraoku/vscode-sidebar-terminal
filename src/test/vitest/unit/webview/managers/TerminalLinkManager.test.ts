@@ -195,6 +195,13 @@ describe('TerminalLinkManager', () => {
       return links;
     };
 
+    it.each([
+      ['open ~/something', '~/something'],
+      ['cfg ~/.config/nvim/init.lua', '~/.config/nvim/init.lua'],
+    ])('should keep the tilde in %s', (line, expected) => {
+      expect(detect(line).map((l) => l.text)).toEqual([expected]);
+    });
+
     it('should detect a bare relative path in full', () => {
       // The leading segment was being dropped, leaving '/test/a.ts'.
       const links = detect('edit libs/test/a.ts:12 please');
