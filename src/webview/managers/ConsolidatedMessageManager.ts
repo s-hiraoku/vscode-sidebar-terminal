@@ -222,7 +222,9 @@ export class ConsolidatedMessageManager implements IMessageManager {
     );
 
     // Shell Integration Messages
-    const shellIntegrationCommands = ['shellStatus', 'cwdUpdate', 'commandHistory', 'find'];
+    // Taken from the handler so its registry stays the single source of truth;
+    // a second hardcoded list here silently drops commands it does not know.
+    const shellIntegrationCommands = this.shellIntegrationHandler.getSupportedCommands();
     shellIntegrationCommands.forEach((cmd) =>
       registry.set(cmd, (msg, coord) => this.shellIntegrationHandler.handleMessage(msg, coord))
     );

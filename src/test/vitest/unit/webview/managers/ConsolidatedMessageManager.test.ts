@@ -89,6 +89,17 @@ describe('ConsolidatedMessageManager', () => {
   });
 
   describe('Message Routing', () => {
+    it('should route every command the shell integration handler declares', async () => {
+      // The dispatcher used to keep its own hardcoded list, so commands the
+      // handler supported were dropped before reaching it.
+      const showSearch = vi.fn();
+      const coordinator = { ...mockCoordinator, findInTerminalManager: { showSearch } } as never;
+
+      await messageManager.receiveMessage({ command: 'focusFind' } as never, coordinator);
+
+      expect(showSearch).toHaveBeenCalled();
+    });
+
     it('should handle init message', async () => {
       const message: MessageCommand = {
         command: 'init',
