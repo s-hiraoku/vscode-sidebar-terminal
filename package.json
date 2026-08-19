@@ -982,7 +982,7 @@
         "command": "secondaryTerminal.focusFind",
         "key": "ctrl+f",
         "mac": "cmd+f",
-        "when": "secondaryTerminalFocus"
+        "when": "secondaryTerminalFocus || focusedView == 'secondaryTerminal'"
       },
       {
         "command": "secondaryTerminal.clearTerminal",
