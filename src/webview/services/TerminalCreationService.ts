@@ -351,7 +351,12 @@ export class TerminalCreationService implements Disposable {
     // WebView, so those links look clickable but do nothing.
     const terminal = new Terminal({
       ...terminalConfig,
-      linkHandler: { activate: (_event, uri) => openUrl(uri) },
+      linkHandler: {
+        // file:// hyperlinks are dropped entirely without this, which lets the
+        // file path provider claim the text instead of the app's own link.
+        allowNonHttpProtocols: true,
+        activate: (_event, uri) => openUrl(uri),
+      },
     });
     terminalLogger.info(`✅ Terminal instance created: ${terminalId}`);
 

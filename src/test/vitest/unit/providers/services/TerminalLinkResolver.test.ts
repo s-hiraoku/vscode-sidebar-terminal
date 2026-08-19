@@ -25,7 +25,11 @@ vi.mock('fs', () => ({
 // Mock VS Code API
 vi.mock('vscode', () => ({
   Uri: {
-    parse: vi.fn((url) => ({ toString: () => url })),
+    parse: vi.fn((url: string) => {
+      const scheme = /^([a-zA-Z][\w+.-]*):/.exec(url)?.[1] ?? '';
+      const fsPath = scheme === 'file' ? decodeURIComponent(url.replace(/^file:\/\//, '')) : url;
+      return { toString: () => url, scheme, fsPath };
+    }),
     file: vi.fn((path) => ({ fsPath: path, scheme: 'file' })),
   },
   env: {
@@ -105,6 +109,21 @@ describe('TerminalLinkResolver', () => {
       });
 
       expect(vscode.env.openExternal).toHaveBeenCalled();
+    });
+
+    it('should open file:// URLs in the editor rather than externally', async () => {
+      // OSC 8 hyperlinks to files arrive as linkType 'url'; openExternal would
+      // hand them to the OS instead of the editor.
+      mockFs.stat.mockResolvedValue({ isFile: () => true });
+
+      await resolver.handleOpenTerminalLink({
+        command: 'openTerminalLink',
+        linkType: 'url',
+        url: 'file:///tmp/sample.ts',
+      });
+
+      expect(vscode.env.openExternal).not.toHaveBeenCalled();
+      expect(vscode.window.showTextDocument).toHaveBeenCalled();
     });
 
     it('should handle file links with line numbers', async () => {

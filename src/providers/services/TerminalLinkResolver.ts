@@ -45,12 +45,36 @@ export class TerminalLinkResolver {
 
     // Handle URL links
     if (linkType === 'url') {
+      // OSC 8 hyperlinks to files - what Claude Code emits for the paths it
+      // prints - arrive as file:// URLs. openExternal would hand those to the
+      // OS instead of opening them in the editor.
+      const fileUri = this._asFileUri(message.url);
+      if (fileUri) {
+        await this._handleFileLink({ ...message, filePath: fileUri.fsPath });
+        return;
+      }
+
       await this._handleUrlLink(message);
       return;
     }
 
     // Handle file links
     await this._handleFileLink(message);
+  }
+
+  /**
+   * Parse a link target as a file:// URI, or undefined when it is not one
+   */
+  private _asFileUri(url?: string): vscode.Uri | undefined {
+    if (!url) {
+      return undefined;
+    }
+    try {
+      const uri = vscode.Uri.parse(url);
+      return uri.scheme === 'file' ? uri : undefined;
+    } catch {
+      return undefined;
+    }
   }
 
   /**

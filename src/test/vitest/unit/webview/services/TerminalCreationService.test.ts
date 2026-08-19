@@ -212,6 +212,9 @@ describe('TerminalCreationService', () => {
       // which do nothing inside a WebView.
       const linkHandler = terminal?.options.linkHandler;
       expect(linkHandler).toBeDefined();
+      // xterm.js discards non-http OSC 8 links unless this is set, and the
+      // paths Claude Code prints are file:// hyperlinks.
+      expect(linkHandler!.allowNonHttpProtocols).toBe(true);
 
       const range = { start: { x: 1, y: 1 }, end: { x: 10, y: 1 } };
       linkHandler!.activate(new MouseEvent('click'), 'https://github.com/o/r/pull/670', range);
