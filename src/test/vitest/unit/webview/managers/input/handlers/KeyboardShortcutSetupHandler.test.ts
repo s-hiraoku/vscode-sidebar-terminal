@@ -156,6 +156,36 @@ describe('KeyboardShortcutSetupHandler', () => {
       );
     });
 
+    it('should let workbench-owned commands reach VS Code', () => {
+      const mockManager = {} as any;
+      (mockDeps.resolveKeybinding as ReturnType<typeof vi.fn>).mockReturnValue(
+        'workbench.action.showCommands'
+      );
+      (mockDeps.shouldSkipShell as ReturnType<typeof vi.fn>).mockReturnValue(true);
+      handler.setupKeyboardShortcuts(mockManager);
+
+      const registerCall = (mockDeps.eventRegistry.register as ReturnType<typeof vi.fn>).mock
+        .calls[0];
+      const shortcutHandler = registerCall![3] as (event: KeyboardEvent) => void;
+
+      const event = new dom.window.KeyboardEvent('keydown', {
+        key: 'P',
+        metaKey: true,
+        shiftKey: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      const preventSpy = vi.spyOn(event, 'preventDefault');
+      const stopSpy = vi.spyOn(event, 'stopPropagation');
+      shortcutHandler(event);
+
+      // The webview cannot open the command palette; swallowing the key means
+      // nothing happens at all.
+      expect(preventSpy).not.toHaveBeenCalled();
+      expect(stopSpy).not.toHaveBeenCalled();
+      expect(mockDeps.handleVSCodeCommand).not.toHaveBeenCalled();
+    });
+
     it('should fall through to legacy shortcuts when no VS Code command matches', () => {
       const mockManager = {
         profileManager: { showProfileSelector: vi.fn() },
