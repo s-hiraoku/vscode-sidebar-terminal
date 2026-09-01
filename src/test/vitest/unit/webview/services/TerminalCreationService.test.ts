@@ -205,6 +205,29 @@ describe('TerminalCreationService', () => {
   });
 
   describe('createTerminal()', () => {
+    it('should route OSC 8 hyperlinks to the extension', async () => {
+      const terminal = await service.createTerminal('terminal-1', 'Test Terminal');
+
+      // Without a linkHandler xterm.js falls back to confirm() + window.open(),
+      // which do nothing inside a WebView.
+      const linkHandler = terminal?.options.linkHandler;
+      expect(linkHandler).toBeDefined();
+      // xterm.js discards non-http OSC 8 links unless this is set, and the
+      // paths Claude Code prints are file:// hyperlinks.
+      expect(linkHandler!.allowNonHttpProtocols).toBe(true);
+
+      const range = { start: { x: 1, y: 1 }, end: { x: 10, y: 1 } };
+      linkHandler!.activate(new MouseEvent('click'), 'https://github.com/o/r/pull/670', range);
+
+      expect(mockCoordinator.postMessageToExtension).toHaveBeenCalledWith(
+        expect.objectContaining({
+          command: 'openTerminalLink',
+          linkType: 'url',
+          url: 'https://github.com/o/r/pull/670',
+        })
+      );
+    });
+
     it('should create terminal with basic configuration', async () => {
       // Arrange
       const terminalId = 'terminal-1';

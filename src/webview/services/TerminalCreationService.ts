@@ -328,7 +328,36 @@ export class TerminalCreationService implements Disposable {
     serializeAddon: SerializeAddon;
     searchAddon: SearchAddon | undefined;
   }> {
-    const terminal = new Terminal(terminalConfig);
+    const openUrl = (uri: string): void => {
+      try {
+        this.coordinator?.postMessageToExtension({
+          command: 'openTerminalLink',
+          linkType: 'url',
+          url: uri,
+          terminalId,
+          timestamp: Date.now(),
+        });
+      } catch {
+        try {
+          window.open(uri, '_blank');
+        } catch {
+          // swallow; extension path is primary
+        }
+      }
+    };
+
+    // OSC 8 hyperlinks are activated through options.linkHandler. Without one
+    // xterm.js falls back to confirm() plus window.open(), both inert inside a
+    // WebView, so those links look clickable but do nothing.
+    const terminal = new Terminal({
+      ...terminalConfig,
+      linkHandler: {
+        // file:// hyperlinks are dropped entirely without this, which lets the
+        // file path provider claim the text instead of the app's own link.
+        allowNonHttpProtocols: true,
+        activate: (_event, uri) => openUrl(uri),
+      },
+    });
     terminalLogger.info(`✅ Terminal instance created: ${terminalId}`);
 
     const loadedAddons = await this.addonManager.loadAllAddons(terminal, terminalId, {
@@ -336,23 +365,7 @@ export class TerminalCreationService implements Disposable {
       enableSearchAddon: terminalConfig.enableSearchAddon,
       enableUnicode11: terminalConfig.enableUnicode11,
       linkModifier,
-      linkHandler: (_event, uri) => {
-        try {
-          this.coordinator?.postMessageToExtension({
-            command: 'openTerminalLink',
-            linkType: 'url',
-            url: uri,
-            terminalId,
-            timestamp: Date.now(),
-          });
-        } catch {
-          try {
-            window.open(uri, '_blank');
-          } catch {
-            // swallow; extension path is primary
-          }
-        }
-      },
+      linkHandler: (_event, uri) => openUrl(uri),
     });
 
     const { fitAddon, serializeAddon, searchAddon } = loadedAddons;

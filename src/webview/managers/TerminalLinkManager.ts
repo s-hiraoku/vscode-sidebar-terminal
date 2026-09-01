@@ -42,9 +42,15 @@ export class TerminalLinkManager extends BaseManager {
   // 'ctrlCmd' means Cmd/Ctrl is for multi-cursor, so Alt opens links
   private linkModifier: 'alt' | 'ctrlCmd' = 'alt';
 
-  // Simple regex to match file paths
-  // Matches: /path/to/file, ./relative/path, ../parent/path, C:\windows\path
-  private readonly filePathRegex = /(?:\.{0,2}\/|[A-Za-z]:\\)[^\s"'<>()[\]{}|]+/g;
+  // Matches: /path/to/file, ./relative/path, ../parent/path, ~/home/path,
+  // C:\windows\path, and bare relative paths such as libs/test/a.ts.
+  //
+  // The leading lookbehind keeps the pattern out of URLs. Without it a bare
+  // segment inside https://github.com/o/r matches, and because this provider
+  // registers after WebLinksAddon, xterm drops the intersecting web link and
+  // the URL stops being clickable.
+  private readonly filePathRegex =
+    /(?<![\w:/\\.~])(?:[A-Za-z]:\\[^\s"'<>()[\]{}|]+|~\/[^\s"'<>()[\]{}|]+|\.{0,2}\/[^\s"'<>()[\]{}|]+|[\w.-]+(?:\/[\w.-]+)+(?::\d+(?::\d+)?)?)/g;
 
   constructor(coordinator: IManagerCoordinator) {
     super('TerminalLinkManager', {
@@ -256,13 +262,9 @@ export class TerminalLinkManager extends BaseManager {
    * Check if a string looks like a valid file path
    */
   private isValidFilePath(path: string): boolean {
-    // Must start with /, ./, ../, or drive letter
-    const hasPathPrefix = /^(\/|\.\.?\/|[A-Za-z]:\\)/.test(path);
-    if (!hasPathPrefix) return false;
-
-    // Must have at least one path separator
-    const hasPathSeparator = path.includes('/') || path.includes('\\');
-    return hasPathSeparator;
+    // A bare relative path such as libs/test/a.ts has no prefix, so a separator
+    // is what distinguishes a path from an ordinary word.
+    return path.includes('/') || path.includes('\\');
   }
 
   /**
