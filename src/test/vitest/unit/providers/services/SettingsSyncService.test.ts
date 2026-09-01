@@ -154,9 +154,33 @@ describe('SettingsSyncService', () => {
         enableCliAgentIntegration: true,
         enableTerminalHeaderEnhancements: false,
         activeBorderMode: 'all',
+        sendKeybindingsToShell: false,
+        commandsToSkipShell: [],
+        allowChords: true,
+        allowMnemonics: true,
         dynamicSplitDirection: false,
         panelLocation: 'sidebar',
       });
+    });
+
+    it('should forward VS Code keybinding settings to the WebView', () => {
+      mockUnifiedConfig.getCompleteTerminalSettings.mockReturnValue({});
+      mockUnifiedConfig.getAltClickSettings.mockReturnValue({});
+      mockUnifiedConfig.isFeatureEnabled.mockReturnValue(false);
+      mockUnifiedConfig.get.mockImplementation((section, key, def) => {
+        if (key === 'sendKeybindingsToShell') return true;
+        if (key === 'commandsToSkipShell') return ['-workbench.action.terminal.moveToLineStart'];
+        if (key === 'allowChords') return false;
+        if (key === 'allowMnemonics') return false;
+        return def;
+      });
+
+      const settings = service.getCurrentSettings();
+
+      expect(settings.sendKeybindingsToShell).toBe(true);
+      expect(settings.commandsToSkipShell).toEqual(['-workbench.action.terminal.moveToLineStart']);
+      expect(settings.allowChords).toBe(false);
+      expect(settings.allowMnemonics).toBe(false);
     });
   });
 

@@ -90,6 +90,15 @@ export class SettingsSyncService {
         'terminalHeaderEnhancements'
       ),
       activeBorderMode: configService.get('secondaryTerminal', 'activeBorderMode', 'multipleOnly'),
+      // VS Code keybinding system settings
+      sendKeybindingsToShell: configService.get(
+        'secondaryTerminal',
+        'sendKeybindingsToShell',
+        false
+      ),
+      commandsToSkipShell: configService.get('secondaryTerminal', 'commandsToSkipShell', []),
+      allowChords: configService.get('secondaryTerminal', 'allowChords', true),
+      allowMnemonics: configService.get('secondaryTerminal', 'allowMnemonics', true),
       // Dynamic split direction settings (Issue #148)
       dynamicSplitDirection: configService.isFeatureEnabled('dynamicSplitDirection'),
       panelLocation: configService.get('secondaryTerminal', 'panelLocation', 'auto'),

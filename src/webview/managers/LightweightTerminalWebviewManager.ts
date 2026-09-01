@@ -395,6 +395,13 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       getAllTerminalInstances: () => this.terminalLifecycleManager.getAllTerminalInstances(),
       getAllTerminalContainers: () => this.terminalLifecycleManager.getAllTerminalContainers(),
       getSplitTerminals: () => this.splitManager.getTerminals(),
+      updateKeybindingSettings: (settings) =>
+        this.inputManager.updateKeybindingSettings({
+          sendKeybindingsToShell: settings.sendKeybindingsToShell,
+          commandsToSkipShell: settings.commandsToSkipShell,
+          allowChords: settings.allowChords,
+          allowMnemonics: settings.allowMnemonics,
+        }),
       setActiveBorderMode: (mode) =>
         this.uiManager.setActiveBorderMode(mode as import('../../types/shared').ActiveBorderMode),
       setTerminalHeaderEnhancementsEnabled: (enabled) =>

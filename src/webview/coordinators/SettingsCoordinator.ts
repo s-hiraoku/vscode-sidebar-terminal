@@ -31,6 +31,9 @@ export interface ISettingsCoordinatorDependencies {
   getAllTerminalContainers(): Map<string, HTMLElement>;
   getSplitTerminals(): Map<string, TerminalInstance>;
 
+  // InputManager delegation
+  updateKeybindingSettings(settings: PartialTerminalSettings): void;
+
   // UI Manager delegation
   setActiveBorderMode(mode: string): void;
   setTerminalHeaderEnhancementsEnabled(enabled: boolean): void;
@@ -89,6 +92,8 @@ export class SettingsCoordinator {
         this.deps.configManagerApplySettings(newSettings, instances);
         log(`⚙️ [SETTINGS] ConfigManager updated with theme: ${newSettings.theme}`);
       }
+
+      this.deps.updateKeybindingSettings(newSettings);
 
       this.deps.setActiveBorderMode(activeBorderMode);
       this.deps.setTerminalHeaderEnhancementsEnabled(

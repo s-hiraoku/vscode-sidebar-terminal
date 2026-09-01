@@ -5,6 +5,7 @@ describe('TerminalOperationsService', () => {
   let service: TerminalOperationsService;
   let mockLogger: any;
   let mockEmit: any;
+  let mockSendInput: any;
   let mockManager: any;
   let mockTerminal: any;
 
@@ -13,8 +14,9 @@ describe('TerminalOperationsService', () => {
 
     mockLogger = vi.fn();
     mockEmit = vi.fn();
+    mockSendInput = vi.fn();
 
-    service = new TerminalOperationsService(mockLogger, mockEmit);
+    service = new TerminalOperationsService(mockLogger, mockEmit, mockSendInput);
 
     mockTerminal = {
       scrollLines: vi.fn(),
@@ -124,14 +126,27 @@ describe('TerminalOperationsService', () => {
   });
 
   describe('Navigation/Deletion operations', () => {
-    it('deleteWordLeft should emit input event with Ctrl+W', () => {
-      service.deleteWordLeft(mockManager);
-      expect(mockEmit).toHaveBeenCalledWith('input', 'term-1', { data: '\x17' }, mockManager);
+    // These write readline sequences straight to the PTY. The terminalInteraction
+    // channel cannot carry them: the extension only handles create-terminal,
+    // kill-terminal and switch-next/previous, and drops everything else.
+    it.each([
+      ['deleteWordLeft', '\x17'],
+      ['deleteWordRight', '\x1bd'],
+      ['moveToLineStart', '\x01'],
+      ['moveToLineEnd', '\x05'],
+    ])('%s writes %j to the terminal', (method, sequence) => {
+      (service as unknown as Record<string, (m: unknown) => void>)[method]!(mockManager);
+
+      expect(mockSendInput).toHaveBeenCalledWith('term-1', sequence);
+      expect(mockEmit).not.toHaveBeenCalled();
     });
 
-    it('moveToLineStart should emit input event with Ctrl+A', () => {
+    it('sends nothing when there is no active terminal', () => {
+      mockManager.getActiveTerminalId.mockReturnValue(null);
+
       service.moveToLineStart(mockManager);
-      expect(mockEmit).toHaveBeenCalledWith('input', 'term-1', { data: '\x01' }, mockManager);
+
+      expect(mockSendInput).not.toHaveBeenCalled();
     });
   });
 });
