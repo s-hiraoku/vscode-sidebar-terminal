@@ -574,6 +574,38 @@ describe('UnifiedConfigurationService', () => {
     });
   });
 
+  describe('Scroll Sensitivity Configuration', () => {
+    const stubTerminalIntegrated = (values: Record<string, number>) => {
+      const terminalIntegratedConfig = {
+        get: vi.fn((key: string, def: unknown) => values[key] ?? def),
+      };
+      (vscode.workspace.getConfiguration as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+        (section?: string) =>
+          section === CONFIG_SECTIONS.TERMINAL_INTEGRATED
+            ? terminalIntegratedConfig
+            : mockWorkspaceConfiguration
+      );
+    };
+
+    it('should read sensitivity from terminal.integrated', () => {
+      stubTerminalIntegrated({ mouseWheelScrollSensitivity: 3, fastScrollSensitivity: 8 });
+
+      expect(service.getScrollSensitivitySettings()).toEqual({
+        scrollSensitivity: 3,
+        fastScrollSensitivity: 8,
+      });
+    });
+
+    it('should fall back to the VS Code defaults', () => {
+      stubTerminalIntegrated({});
+
+      expect(service.getScrollSensitivitySettings()).toEqual({
+        scrollSensitivity: 1,
+        fastScrollSensitivity: 5,
+      });
+    });
+  });
+
   describe('Alt+Click Configuration', () => {
     it('should get Alt+Click settings', () => {
       const terminalIntegratedConfig = { get: vi.fn() };

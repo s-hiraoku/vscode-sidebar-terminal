@@ -17,6 +17,7 @@ const { mockUnifiedConfig } = vi.hoisted(() => ({
     update: vi.fn().mockResolvedValue(undefined),
     isFeatureEnabled: vi.fn(),
     getAltClickSettings: vi.fn(),
+    getScrollSensitivitySettings: vi.fn(),
   },
 }));
 
@@ -130,7 +131,12 @@ describe('SettingsSyncService', () => {
         altClickMovesCursor: true,
         multiCursorModifier: 'alt',
       });
+      mockUnifiedConfig.getScrollSensitivitySettings.mockReturnValue({
+        scrollSensitivity: 3,
+        fastScrollSensitivity: 5,
+      });
       mockUnifiedConfig.get.mockImplementation((section, key, def) => {
+        if (key === 'legacyMouseWheelEncoding') return false;
         if (key === 'scrollback') return 5000;
         if (key === 'activeBorderMode') return 'all';
         if (key === 'panelLocation') return 'sidebar';
@@ -149,6 +155,9 @@ describe('SettingsSyncService', () => {
         cursorBlink: true,
         theme: 'dark',
         scrollback: 5000,
+        scrollSensitivity: 3,
+        fastScrollSensitivity: 5,
+        legacyMouseWheelEncoding: false,
         altClickMovesCursor: true,
         multiCursorModifier: 'alt',
         enableCliAgentIntegration: true,
@@ -166,6 +175,10 @@ describe('SettingsSyncService', () => {
     it('should forward VS Code keybinding settings to the WebView', () => {
       mockUnifiedConfig.getCompleteTerminalSettings.mockReturnValue({});
       mockUnifiedConfig.getAltClickSettings.mockReturnValue({});
+      mockUnifiedConfig.getScrollSensitivitySettings.mockReturnValue({
+        scrollSensitivity: 1,
+        fastScrollSensitivity: 5,
+      });
       mockUnifiedConfig.isFeatureEnabled.mockReturnValue(false);
       mockUnifiedConfig.get.mockImplementation((section, key, def) => {
         if (key === 'sendKeybindingsToShell') return true;
@@ -181,6 +194,34 @@ describe('SettingsSyncService', () => {
       expect(settings.commandsToSkipShell).toEqual(['-workbench.action.terminal.moveToLineStart']);
       expect(settings.allowChords).toBe(false);
       expect(settings.allowMnemonics).toBe(false);
+    });
+
+    it('forwards scroll sensitivity so the sidebar scrolls like the integrated terminal', () => {
+      mockUnifiedConfig.getCompleteTerminalSettings.mockReturnValue({});
+      mockUnifiedConfig.getAltClickSettings.mockReturnValue({});
+      mockUnifiedConfig.get.mockImplementation((_section, _key, def) => def);
+      mockUnifiedConfig.isFeatureEnabled.mockReturnValue(false);
+      mockUnifiedConfig.getScrollSensitivitySettings.mockReturnValue({
+        scrollSensitivity: 7,
+        fastScrollSensitivity: 9,
+      });
+
+      const settings = service.getCurrentSettings();
+
+      expect(settings.scrollSensitivity).toBe(7);
+      expect(settings.fastScrollSensitivity).toBe(9);
+    });
+
+    it('forwards the legacy wheel encoding opt-in', () => {
+      mockUnifiedConfig.getCompleteTerminalSettings.mockReturnValue({});
+      mockUnifiedConfig.getAltClickSettings.mockReturnValue({});
+      mockUnifiedConfig.getScrollSensitivitySettings.mockReturnValue({});
+      mockUnifiedConfig.isFeatureEnabled.mockReturnValue(false);
+      mockUnifiedConfig.get.mockImplementation((_section, key, def) =>
+        key === 'legacyMouseWheelEncoding' ? true : def
+      );
+
+      expect(service.getCurrentSettings().legacyMouseWheelEncoding).toBe(true);
     });
   });
 
