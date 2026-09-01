@@ -138,6 +138,11 @@ export class KeyboardShortcutService {
     );
 
     // Search Operations - Note: 'secondaryTerminal.find' is registered in ExtensionLifecycle.ts
+    this._disposables.add(
+      vscode.commands.registerCommand('secondaryTerminal.focusFind', () => {
+        this.focusFind();
+      })
+    );
 
     this._disposables.add(
       vscode.commands.registerCommand('secondaryTerminal.runRecentCommand', () => {
@@ -363,6 +368,17 @@ export class KeyboardShortcutService {
 
   /**
    * Open find box (VS Code standard: Ctrl+F)
+   */
+  public focusFind(): void {
+    const activeTerminal = this._terminalManager.getActiveTerminalId();
+    if (!activeTerminal) return;
+
+    this.sendWebviewCommand('focusFind', { terminalId: activeTerminal });
+    log(`🔍 [KEYBOARD] Opened find panel for: ${activeTerminal}`);
+  }
+
+  /**
+   * Prompt for a search term and search the terminal
    */
   public async find(): Promise<void> {
     const activeTerminal = this._terminalManager.getActiveTerminalId();
