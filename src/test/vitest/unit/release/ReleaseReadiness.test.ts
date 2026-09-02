@@ -68,7 +68,7 @@ const findProductionConsoleCalls = (): string[] => {
   });
 };
 
-describe('1.1.0 release readiness', () => {
+describe('1.2.0 release readiness', () => {
   it('uses stable release package metadata', () => {
     const packageJson = JSON.parse(
       fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8')
@@ -78,25 +78,25 @@ describe('1.1.0 release readiness', () => {
       keywords: string[];
     };
 
-    expect(packageJson.version).toBe('1.1.0');
+    expect(packageJson.version).toBe('1.2.0');
     expect(packageJson.description).toBe(
       'Sidebar terminal for VS Code with AI agent awareness (Claude Code, Copilot, Gemini, Codex, Antigravity), split views, session persistence, and full IME support.'
     );
     expect(packageJson.keywords).toEqual(expectedKeywords);
   });
 
-  it('documents the 1.1.0 release at the top of the changelog', () => {
+  it('documents the 1.2.0 release at the top of the changelog', () => {
     const changelog = fs.readFileSync(path.join(repoRoot, 'CHANGELOG.md'), 'utf8');
     const releaseHeading =
-      /^## \[1\.1\.0\]\(https:\/\/github\.com\/s-hiraoku\/vscode-sidebar-terminal\/compare\/v1\.0\.0\.\.\.v1\.1\.0\) \(\d{4}-\d{2}-\d{2}\)/m;
+      /^## \[1\.2\.0\]\(https:\/\/github\.com\/s-hiraoku\/vscode-sidebar-terminal\/compare\/v1\.1\.0\.\.\.v1\.2\.0\) \(\d{4}-\d{2}-\d{2}\)/m;
     const releaseMatch = changelog.match(releaseHeading);
-    const previousReleaseHeading = '## [1.0.0]';
+    const previousReleaseHeading = '## [1.1.0]';
 
     expect(releaseMatch).not.toBeNull();
     expect(releaseMatch!.index!).toBeLessThan(changelog.indexOf(previousReleaseHeading));
-    expect(changelog).toContain('dispose terminal auto-save listeners');
+    expect(changelog).toContain('add Antigravity CLI detection');
     expect(changelog).toContain(
-      'https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/057a5bd23f5e8e08d78d5d906d47b4cad227505b'
+      'https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/c565d67390dc888f94d2e7f3a338ffdec2ff1ac7'
     );
   });
 
