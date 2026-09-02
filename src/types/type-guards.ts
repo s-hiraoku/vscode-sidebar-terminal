@@ -65,14 +65,7 @@ export type VSCodeEventHandler<T = unknown> = (event: T) => void | Promise<void>
  * Configuration value types
  */
 export type ConfigurationValue =
-  | string
-  | number
-  | boolean
-  | string[]
-  | number[]
-  | Record<string, unknown>
-  | null
-  | undefined;
+  string | number | boolean | string[] | number[] | Record<string, unknown> | null | undefined;
 
 /**
  * Message handler function type

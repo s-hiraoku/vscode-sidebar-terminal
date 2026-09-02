@@ -100,8 +100,7 @@ describe('PanelLocationController', () => {
   it.skip('initializes listeners and reacts to configuration changes', async () => {
     const webviewView = {} as vscode.WebviewView;
     let capturedListener:
-      | ((event: { affectsConfiguration: (section: string) => boolean }) => void)
-      | undefined;
+      ((event: { affectsConfiguration: (section: string) => boolean }) => void) | undefined;
     const configListener = vi.fn().mockImplementation((listener: typeof capturedListener) => {
       capturedListener = listener;
       return { dispose: vi.fn() };

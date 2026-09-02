@@ -168,8 +168,7 @@ export class TerminalDomService {
           }
 
           const tabManager = this.dependencies.coordinator.getManagers?.()?.tabs as
-            | ITabManager
-            | undefined;
+            ITabManager | undefined;
           if (tabManager) {
             if (typeof tabManager.handleTerminalRenamed === 'function') {
               tabManager.handleTerminalRenamed(clickedTerminalId, updates.newName);

@@ -138,8 +138,7 @@ export class DIContainer implements vscode.Disposable {
     if (!registration && this._parentContainer) {
       // Get registration from parent
       const parentRegistration = this._parentContainer._services.get(token.id) as
-        | ServiceRegistration<T>
-        | undefined;
+        ServiceRegistration<T> | undefined;
 
       // For scoped services, handle them in the current scope (not delegate to parent)
       if (parentRegistration?.lifetime === ServiceLifetime.Scoped) {

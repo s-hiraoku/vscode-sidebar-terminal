@@ -191,9 +191,7 @@ export class ScrollbackMessageHandler implements IMessageHandler {
     const terminalId = msg.terminalId as string;
     // Handle both old and new message formats
     const scrollbackContent = (msg.scrollback || msg.scrollbackContent) as
-      | string
-      | string[]
-      | ScrollbackLine[];
+      string | string[] | ScrollbackLine[];
 
     if (!terminalId || !scrollbackContent) {
       this.logger.error('Invalid scrollback restore request', {

@@ -190,9 +190,7 @@ export class FocusProtectionService implements vscode.Disposable {
     };
 
     const opts = terminal.creationOptions as
-      | vscode.TerminalOptions
-      | vscode.ExtensionTerminalOptions
-      | undefined;
+      vscode.TerminalOptions | vscode.ExtensionTerminalOptions | undefined;
     if (opts) {
       const terminalOpts = opts as vscode.TerminalOptions;
       const extOpts = opts as vscode.ExtensionTerminalOptions;
