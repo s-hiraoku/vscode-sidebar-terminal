@@ -50,9 +50,7 @@ export class SplitHandler implements IMessageHandler {
   private handleSplit(msg: MessageCommand, coordinator: IManagerCoordinator): void {
     try {
       const direction = (msg as { direction?: string }).direction as
-        | 'horizontal'
-        | 'vertical'
-        | undefined;
+        'horizontal' | 'vertical' | undefined;
       this.logger.info(`🔀 [WEBVIEW] ==================== SPLIT COMMAND ====================`);
       this.logger.info(
         `🔀 [WEBVIEW] Received split command with direction: ${direction || 'auto'}`
@@ -136,9 +134,7 @@ export class SplitHandler implements IMessageHandler {
   private handleRelayoutTerminals(msg: MessageCommand, coordinator: IManagerCoordinator): void {
     try {
       const direction = (msg as { direction?: string }).direction as
-        | 'horizontal'
-        | 'vertical'
-        | undefined;
+        'horizontal' | 'vertical' | undefined;
       this.logger.info(`🔄 [WEBVIEW] ==================== RELAYOUT COMMAND ====================`);
       this.logger.info(
         `🔄 [WEBVIEW] Received relayout command with direction: ${direction || 'auto'}`

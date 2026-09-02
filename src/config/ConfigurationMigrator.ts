@@ -286,8 +286,7 @@ export class ConfigurationMigrator {
 
     try {
       const backup = (await this._extensionContext.globalState.get('configurationBackup')) as
-        | LegacyConfigurationBackup
-        | undefined;
+        LegacyConfigurationBackup | undefined;
 
       if (!backup) {
         log('❌ [ConfigMigrator] No backup found for rollback');

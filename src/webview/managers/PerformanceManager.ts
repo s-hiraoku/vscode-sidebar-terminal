@@ -14,8 +14,7 @@ import { DOMUtils } from '../utils/DOMUtils';
 const ENABLE_WEBVIEW_DEBUG_LOGS = Boolean(
   typeof globalThis !== 'undefined' &&
   (((globalThis as Record<string, unknown>).SECONDARY_TERMINAL_DEBUG_LOGS as
-    | boolean
-    | undefined) === true ||
+    boolean | undefined) === true ||
     (typeof localStorage !== 'undefined' &&
       typeof localStorage.getItem === 'function' &&
       localStorage.getItem('SECONDARY_TERMINAL_DEBUG_LOGS') === 'true'))

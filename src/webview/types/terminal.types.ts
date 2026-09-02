@@ -51,13 +51,7 @@ export type TerminalEventType =
 
 // Terminal interaction event types
 export type TerminalInteractionType =
-  | 'click'
-  | 'double-click'
-  | 'right-click'
-  | 'key-press'
-  | 'paste'
-  | 'drag'
-  | 'drop';
+  'click' | 'double-click' | 'right-click' | 'key-press' | 'paste' | 'drag' | 'drop';
 
 // Terminal configuration
 export interface TerminalConfig {

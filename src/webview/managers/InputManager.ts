@@ -156,9 +156,7 @@ export class InputManager extends BaseManager implements IInputManager {
       getTerminalInstance: (terminalId: string) => {
         // This will be called with manager context; use coordinator
         return this.coordinator.getTerminalInstance?.(terminalId) as
-          | { terminal: { hasSelection(): boolean } }
-          | null
-          | undefined;
+          { terminal: { hasSelection(): boolean } } | null | undefined;
       },
     });
 
