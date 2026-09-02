@@ -5,6 +5,21 @@ All notable changes to the "Secondary Terminal" extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v1.1.0...v1.2.0) (2026-09-02)
+
+### Added
+
+- add Antigravity CLI detection ([#653](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/653)) ([c565d67](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/c565d67390dc888f94d2e7f3a338ffdec2ff1ac7))
+
+### Fixed
+
+- Cmd+Left/Right line navigation in the terminal (and apply keybinding settings) ([cb6f76b](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/cb6f76b91ca9c7ca1e13393d4b99c6004a21ecf8))
+- **find:** scope Ctrl/Cmd+F to the focused terminal ([1f134c6](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/1f134c6a7dabb730f59799d8bb1e7ad9d5f5e80a))
+- **keybindings:** stop swallowing workbench keybindings ([5638bcb](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/5638bcb227b661f48e33d0d7512b55059c5a91d6))
+- **links:** detect bare relative paths and activate OSC 8 hyperlinks ([1139887](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/113988702527acaf91092b912f7e52158b773a5d)), closes [#670](https://github.com/s-hiraoku/vscode-sidebar-terminal/issues/670)
+- **persistence:** honour enablePersistentSessions when restoring ([316c998](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/316c998fc56d2cecbe67624644f364219c0d7b42))
+- **scrolling:** honour scroll sensitivity and let xterm encode wheel reports ([a7aa4e9](https://github.com/s-hiraoku/vscode-sidebar-terminal/commit/a7aa4e93702b25eadbff94fa6f0dbceec28c9a97))
+
 ## [1.1.0](https://github.com/s-hiraoku/vscode-sidebar-terminal/compare/v1.0.0...v1.1.0) (2026-06-07)
 
 ### Fixed
