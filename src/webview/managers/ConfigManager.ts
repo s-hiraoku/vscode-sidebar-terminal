@@ -36,6 +36,7 @@ const AllowedValues = {
   CURSOR_STYLE: ['block', 'underline', 'bar'] as const,
   ACTIVE_BORDER_MODE: ['none', 'always', 'multipleOnly'] as const,
   PANEL_LOCATION: ['auto', 'sidebar', 'panel'] as const,
+  GPU_ACCELERATION: ['auto', 'on', 'off'] as const,
 } as const;
 
 /**
@@ -115,6 +116,7 @@ export class ConfigManager implements IConfigManager {
     scrollSensitivity: 1,
     fastScrollSensitivity: 5,
     legacyMouseWheelEncoding: false,
+    gpuAcceleration: 'auto',
     enableCliAgentIntegration: true,
     enableTerminalHeaderEnhancements: true,
     // Terminal profiles (will be populated from VS Code settings)
@@ -271,6 +273,12 @@ export class ConfigManager implements IConfigManager {
           terminal.options.altClickMovesCursor =
             validatedSettings.altClickMovesCursor &&
             validatedSettings.multiCursorModifier === 'alt';
+        }
+
+        // GPU acceleration turned off: drop WebGL right away (Issue #702).
+        // Turning it back on applies to terminals created afterwards.
+        if (validatedSettings.gpuAcceleration === 'off') {
+          terminalData.renderingOptimizer?.disableWebGL?.(terminal, terminalId);
         }
 
         log(`⚙️ [CONFIG] Settings applied to terminal ${terminalId}`);
@@ -434,6 +442,11 @@ export class ConfigManager implements IConfigManager {
         settings.panelLocation,
         AllowedValues.PANEL_LOCATION,
         this.DEFAULTS.panelLocation
+      ),
+      gpuAcceleration: Validators.stringInList(
+        settings.gpuAcceleration,
+        AllowedValues.GPU_ACCELERATION,
+        this.DEFAULTS.gpuAcceleration
       ),
 
       // Optional string settings (can be empty)

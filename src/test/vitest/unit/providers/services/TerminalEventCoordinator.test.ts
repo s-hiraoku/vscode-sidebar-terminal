@@ -187,6 +187,27 @@ describe('TerminalEventCoordinator', () => {
       vi.useRealTimers();
     });
 
+    // Issue #702: GPU acceleration changes must reach the WebView
+    it.each(['secondaryTerminal.gpuAcceleration', 'terminal.integrated.gpuAcceleration'])(
+      'should send settings update when %s changes',
+      async (changedKey) => {
+        vi.useFakeTimers();
+        coordinator.initialize();
+        const configHandler = (vscode.workspace.onDidChangeConfiguration as any).mock.calls[0][0];
+
+        configHandler({ affectsConfiguration: (key: string) => key === changedKey });
+
+        vi.advanceTimersByTime(100);
+
+        expect(mockSendMessage).toHaveBeenCalledWith(
+          expect.objectContaining({
+            command: 'settingsResponse',
+          })
+        );
+        vi.useRealTimers();
+      }
+    );
+
     it('should send font settings update', async () => {
       vi.useFakeTimers();
       coordinator.initialize();

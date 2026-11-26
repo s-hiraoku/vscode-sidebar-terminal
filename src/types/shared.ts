@@ -39,6 +39,12 @@ export {
 export type ActiveBorderMode = 'none' | 'always' | 'multipleOnly';
 
 /**
+ * GPU acceleration (WebGL renderer) mode for the WebView terminal.
+ * 'auto' follows VS Code's terminal.integrated.gpuAcceleration (Issue #702).
+ */
+export type GpuAccelerationMode = 'auto' | 'on' | 'off';
+
+/**
  * Base terminal configuration interface
  * Foundation type for all terminal configurations
  */
@@ -122,6 +128,8 @@ export interface PartialTerminalSettings {
   scrollSensitivity?: number;
   fastScrollSensitivity?: number;
   legacyMouseWheelEncoding?: boolean;
+  /** Resolved GPU acceleration mode; 'off' forces the DOM renderer (Issue #702) */
+  gpuAcceleration?: GpuAccelerationMode;
   bellSound?: boolean;
   altClickMovesCursor?: boolean;
   multiCursorModifier?: string;

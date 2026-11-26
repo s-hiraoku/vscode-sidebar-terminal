@@ -252,7 +252,9 @@ export class TerminalEventCoordinator implements vscode.Disposable {
         event.affectsConfiguration('secondaryTerminal.theme') ||
         event.affectsConfiguration('secondaryTerminal.cursorBlink') ||
         event.affectsConfiguration('secondaryTerminal.enableTerminalHeaderEnhancements') ||
-        event.affectsConfiguration('secondaryTerminal.activeBorderMode')
+        event.affectsConfiguration('secondaryTerminal.activeBorderMode') ||
+        event.affectsConfiguration('secondaryTerminal.gpuAcceleration') ||
+        event.affectsConfiguration('terminal.integrated.gpuAcceleration')
       ) {
         this._pendingSettingsUpdate = true;
       }

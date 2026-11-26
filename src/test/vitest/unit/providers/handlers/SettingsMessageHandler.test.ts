@@ -153,6 +153,13 @@ describe('SettingsMessageHandler', () => {
       expect(handler.isSettingsChangeAffectingWebView(event as any)).toBe(true);
     });
 
+    it.each(['secondaryTerminal.gpuAcceleration', 'terminal.integrated.gpuAcceleration'])(
+      'should return true for %s changes',
+      (key) => {
+        expect(handler.isSettingsChangeAffectingWebView(makeEvent(key) as any)).toBe(true);
+      }
+    );
+
     it('should return true for dynamicSplitDirection changes', () => {
       const event = makeEvent('secondaryTerminal.dynamicSplitDirection');
       expect(handler.isSettingsChangeAffectingWebView(event as any)).toBe(true);

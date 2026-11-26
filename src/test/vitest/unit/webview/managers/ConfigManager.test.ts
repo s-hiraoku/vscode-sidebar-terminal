@@ -6,7 +6,7 @@
  * Vitest Migration: Converted from Mocha/Chai to Vitest
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ConfigManager } from '../../../../../webview/managers/ConfigManager';
 import { PartialTerminalSettings, WebViewFontSettings } from '../../../../../types/shared';
 
@@ -336,6 +336,43 @@ describe('ConfigManager', () => {
       expect(() => {
         configManager.applySettings({ scrollback: 1000 }, terminals as any);
       }).not.toThrow();
+    });
+  });
+
+  // Issue #702: GPU acceleration (WebGL renderer) setting
+  describe('GPU Acceleration Setting', () => {
+    it('should default gpuAcceleration to auto', () => {
+      expect(configManager.getCurrentSettings().gpuAcceleration).toBe('auto');
+    });
+
+    it('should keep a valid gpuAcceleration value', () => {
+      configManager.applySettings({ gpuAcceleration: 'off' }, new Map());
+      expect(configManager.getCurrentSettings().gpuAcceleration).toBe('off');
+    });
+
+    it('should fall back to auto for an invalid gpuAcceleration value', () => {
+      configManager.applySettings({ gpuAcceleration: 'canvas' as any }, new Map());
+      expect(configManager.getCurrentSettings().gpuAcceleration).toBe('auto');
+    });
+
+    it('should switch existing terminals to the DOM renderer when set to off', () => {
+      const mockTerminal = { options: {} as Record<string, unknown> };
+      const renderingOptimizer = { disableWebGL: vi.fn() };
+      const terminals = new Map([['term-1', { terminal: mockTerminal, renderingOptimizer }]]);
+
+      configManager.applySettings({ gpuAcceleration: 'off' }, terminals as any);
+
+      expect(renderingOptimizer.disableWebGL).toHaveBeenCalledWith(mockTerminal, 'term-1');
+    });
+
+    it('should leave existing renderers alone when not set to off', () => {
+      const mockTerminal = { options: {} as Record<string, unknown> };
+      const renderingOptimizer = { disableWebGL: vi.fn() };
+      const terminals = new Map([['term-1', { terminal: mockTerminal, renderingOptimizer }]]);
+
+      configManager.applySettings({ gpuAcceleration: 'auto' }, terminals as any);
+
+      expect(renderingOptimizer.disableWebGL).not.toHaveBeenCalled();
     });
   });
 
