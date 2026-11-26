@@ -240,6 +240,17 @@ export class RenderingOptimizer implements Disposable {
   }
 
   /**
+   * Switch a terminal that is using WebGL back to the DOM renderer.
+   * Used when the user turns GPU acceleration off (Issue #702).
+   */
+  public disableWebGL(terminal: Terminal, terminalId: string): void {
+    if (!this.webglAddon) {
+      return;
+    }
+    this.fallbackToDOMRenderer(terminal, terminalId);
+  }
+
+  /**
    * Wait for the terminal's theme to be applied before enabling WebGL.
    * Checks that the terminal element has a non-default background color set.
    * Times out after 500ms to avoid blocking terminal creation.

@@ -15,6 +15,7 @@ import { WebViewFontSettings, WebViewSettingsPayload } from '../../types/shared'
 import { TerminalInitializationStateMachine } from './TerminalInitializationStateMachine';
 import { getUnifiedConfigurationService } from '../../config/UnifiedConfigurationService';
 import { DisposableStore } from '../../utils/DisposableStore';
+import { resolveGpuAcceleration } from '../../utils/gpuAcceleration';
 
 /**
  * Terminal Event Coordinator
@@ -252,7 +253,9 @@ export class TerminalEventCoordinator implements vscode.Disposable {
         event.affectsConfiguration('secondaryTerminal.theme') ||
         event.affectsConfiguration('secondaryTerminal.cursorBlink') ||
         event.affectsConfiguration('secondaryTerminal.enableTerminalHeaderEnhancements') ||
-        event.affectsConfiguration('secondaryTerminal.activeBorderMode')
+        event.affectsConfiguration('secondaryTerminal.activeBorderMode') ||
+        event.affectsConfiguration('secondaryTerminal.gpuAcceleration') ||
+        event.affectsConfiguration('terminal.integrated.gpuAcceleration')
       ) {
         this._pendingSettingsUpdate = true;
       }
@@ -378,6 +381,11 @@ export class TerminalEventCoordinator implements vscode.Disposable {
       activeBorderMode: configService.get('sidebarTerminal', 'activeBorderMode', 'multipleOnly'),
       dynamicSplitDirection: configService.isFeatureEnabled('dynamicSplitDirection'),
       panelLocation: configService.get('sidebarTerminal', 'panelLocation', 'auto'),
+      // Issue #702: must be part of the payload so a GPU-only change isn't deduplicated away
+      gpuAcceleration: resolveGpuAcceleration(
+        configService.get<string>('secondaryTerminal', 'gpuAcceleration', 'auto'),
+        configService.get<string>('terminal.integrated', 'gpuAcceleration', 'auto')
+      ),
     };
   }
 

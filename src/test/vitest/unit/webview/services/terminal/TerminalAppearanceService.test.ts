@@ -52,6 +52,28 @@ describe('TerminalAppearanceService', () => {
     expect(result.linkModifier).toBe('ctrlCmd');
   });
 
+  // Issue #702: the WebGL renderer ignores font settings on some Linux/Wayland setups
+  it('disables GPU acceleration when the resolved gpuAcceleration setting is off', () => {
+    const result = service.prepareTerminalConfig(undefined, {
+      getCurrentSettings: vi.fn().mockReturnValue({ theme: 'dark', gpuAcceleration: 'off' }),
+      getCurrentFontSettings: vi.fn().mockReturnValue(undefined),
+    });
+
+    expect(result.terminalConfig.enableGpuAcceleration).toBe(false);
+  });
+
+  it.each(['auto', 'on', undefined])(
+    'keeps GPU acceleration enabled when gpuAcceleration is %s',
+    (gpuAcceleration) => {
+      const result = service.prepareTerminalConfig(undefined, {
+        getCurrentSettings: vi.fn().mockReturnValue({ theme: 'dark', gpuAcceleration }),
+        getCurrentFontSettings: vi.fn().mockReturnValue(undefined),
+      });
+
+      expect(result.terminalConfig.enableGpuAcceleration).toBe(true);
+    }
+  );
+
   it('applies visual settings and updates terminal backgrounds after open', () => {
     const terminal = {} as any;
     const container = document.createElement('div');

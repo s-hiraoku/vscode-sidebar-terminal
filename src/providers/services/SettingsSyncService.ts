@@ -4,6 +4,7 @@ import { getUnifiedConfigurationService } from '../../config/UnifiedConfiguratio
 import { showSuccess, showError } from '../../utils/feedback';
 import { provider as log } from '../../utils/logger';
 import { TERMINAL_CONSTANTS } from '../../constants/SystemConstants';
+import { resolveGpuAcceleration } from '../../utils/gpuAcceleration';
 
 /**
  * SettingsSyncService
@@ -111,6 +112,11 @@ export class SettingsSyncService {
       // Dynamic split direction settings (Issue #148)
       dynamicSplitDirection: configService.isFeatureEnabled('dynamicSplitDirection'),
       panelLocation: configService.get('secondaryTerminal', 'panelLocation', 'auto'),
+      // GPU acceleration / WebGL renderer (Issue #702)
+      gpuAcceleration: resolveGpuAcceleration(
+        configService.get<string>('secondaryTerminal', 'gpuAcceleration', 'auto'),
+        configService.get<string>('terminal.integrated', 'gpuAcceleration', 'auto')
+      ),
     };
   }
 

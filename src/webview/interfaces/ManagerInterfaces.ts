@@ -24,6 +24,7 @@ export interface IRenderingOptimizer {
     terminalId: string
   ): void;
   detectDevice(event: WheelEvent): void;
+  disableWebGL?(terminal: Terminal, terminalId: string): void;
   dispose(): void;
 }
 

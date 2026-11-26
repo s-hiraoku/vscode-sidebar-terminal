@@ -6,6 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as vscode from 'vscode';
 
 import { SettingsSyncService } from '../../../../../providers/services/SettingsSyncService';
+import { resolveGpuAcceleration } from '../../../../../utils/gpuAcceleration';
 
 const { mockUnifiedConfig } = vi.hoisted(() => ({
   mockUnifiedConfig: {
@@ -169,6 +170,7 @@ describe('SettingsSyncService', () => {
         allowMnemonics: true,
         dynamicSplitDirection: false,
         panelLocation: 'sidebar',
+        gpuAcceleration: 'auto',
       });
     });
 
@@ -222,6 +224,51 @@ describe('SettingsSyncService', () => {
       );
 
       expect(service.getCurrentSettings().legacyMouseWheelEncoding).toBe(true);
+    });
+
+    // Issue #702: WebGL rendering breaks font settings on some Linux/Wayland setups
+    it('should turn GPU acceleration off when VS Code terminal.integrated.gpuAcceleration is off', () => {
+      mockUnifiedConfig.getCompleteTerminalSettings.mockReturnValue({});
+      mockUnifiedConfig.getAltClickSettings.mockReturnValue({});
+      mockUnifiedConfig.getScrollSensitivitySettings.mockReturnValue({});
+      mockUnifiedConfig.isFeatureEnabled.mockReturnValue(false);
+      mockUnifiedConfig.get.mockImplementation((section, key, def) =>
+        section === 'terminal.integrated' && key === 'gpuAcceleration' ? 'off' : def
+      );
+
+      expect(service.getCurrentSettings().gpuAcceleration).toBe('off');
+    });
+
+    it('should let secondaryTerminal.gpuAcceleration override the VS Code setting', () => {
+      mockUnifiedConfig.getCompleteTerminalSettings.mockReturnValue({});
+      mockUnifiedConfig.getAltClickSettings.mockReturnValue({});
+      mockUnifiedConfig.getScrollSensitivitySettings.mockReturnValue({});
+      mockUnifiedConfig.isFeatureEnabled.mockReturnValue(false);
+      mockUnifiedConfig.get.mockImplementation((section, key, def) => {
+        if (key !== 'gpuAcceleration') return def;
+        return section === 'secondaryTerminal' ? 'off' : 'on';
+      });
+
+      expect(service.getCurrentSettings().gpuAcceleration).toBe('off');
+    });
+  });
+
+  describe('resolveGpuAcceleration', () => {
+    it('should follow VS Code when the extension setting is auto', () => {
+      expect(resolveGpuAcceleration('auto', 'off')).toBe('off');
+      expect(resolveGpuAcceleration('auto', 'on')).toBe('on');
+      expect(resolveGpuAcceleration('auto', 'auto')).toBe('auto');
+    });
+
+    it('should prefer an explicit extension setting over VS Code', () => {
+      expect(resolveGpuAcceleration('off', 'on')).toBe('off');
+      expect(resolveGpuAcceleration('on', 'off')).toBe('on');
+    });
+
+    it('should treat unknown or missing values as auto', () => {
+      expect(resolveGpuAcceleration(undefined, undefined)).toBe('auto');
+      expect(resolveGpuAcceleration('bogus', 'canvas')).toBe('auto');
+      expect(resolveGpuAcceleration(undefined, 'off')).toBe('off');
     });
   });
 

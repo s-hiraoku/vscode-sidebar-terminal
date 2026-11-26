@@ -87,6 +87,8 @@ export class SettingsMessageHandler {
       event.affectsConfiguration('secondaryTerminal.commandsToSkipShell') ||
       event.affectsConfiguration('secondaryTerminal.allowChords') ||
       event.affectsConfiguration('secondaryTerminal.allowMnemonics') ||
+      event.affectsConfiguration('secondaryTerminal.gpuAcceleration') ||
+      event.affectsConfiguration('terminal.integrated.gpuAcceleration') ||
       event.affectsConfiguration('editor.multiCursorModifier') ||
       event.affectsConfiguration('terminal.integrated.altClickMovesCursor') ||
       event.affectsConfiguration('secondaryTerminal.altClickMovesCursor')

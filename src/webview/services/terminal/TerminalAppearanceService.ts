@@ -61,6 +61,10 @@ export class TerminalAppearanceService {
       theme: resolvedTheme,
     };
     const terminalConfig = TerminalConfigService.mergeConfig(configWithFonts);
+    // Issue #702: honour secondaryTerminal.gpuAcceleration / terminal.integrated.gpuAcceleration
+    if (currentSettings?.gpuAcceleration === 'off') {
+      terminalConfig.enableGpuAcceleration = false;
+    }
 
     const multiCursorModifier = currentSettings?.multiCursorModifier ?? 'alt';
     const linkModifier: 'alt' | 'ctrlCmd' = multiCursorModifier === 'alt' ? 'alt' : 'ctrlCmd';

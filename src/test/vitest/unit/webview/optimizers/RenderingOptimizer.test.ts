@@ -266,6 +266,31 @@ describe('RenderingOptimizer', () => {
     });
   });
 
+  // Issue #702: allow switching a live terminal to the DOM renderer
+  describe('disableWebGL', () => {
+    it('should dispose the WebGL addon and refresh with the DOM renderer', () => {
+      vi.useFakeTimers();
+      mockTerminal.clearSelection = vi.fn();
+      const mockAddon = { dispose: vi.fn(), onContextLoss: vi.fn() };
+      (optimizer as any).webglAddon = mockAddon;
+
+      optimizer.disableWebGL(mockTerminal, 'test-terminal');
+
+      expect(mockAddon.dispose).toHaveBeenCalled();
+      expect((optimizer as any).webglAddon).toBeNull();
+      vi.advanceTimersByTime(50);
+      expect(mockTerminal.refresh).toHaveBeenCalledWith(0, mockTerminal.rows - 1);
+      vi.useRealTimers();
+    });
+
+    it('should do nothing when WebGL is not active', () => {
+      mockTerminal.clearSelection = vi.fn();
+
+      expect(() => optimizer.disableWebGL(mockTerminal, 'test-terminal')).not.toThrow();
+      expect(mockTerminal.clearSelection).not.toHaveBeenCalled();
+    });
+  });
+
   describe('Dispose', () => {
     it('should dispose all resources', () => {
       class MockResizeObserver {
