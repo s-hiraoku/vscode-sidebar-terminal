@@ -207,6 +207,7 @@ export interface WebViewSettingsPayload {
   readonly activeBorderMode: ActiveBorderMode;
   readonly dynamicSplitDirection: boolean;
   readonly panelLocation: 'auto' | 'sidebar' | 'panel';
+  readonly gpuAcceleration: GpuAccelerationMode;
 }
 
 /**

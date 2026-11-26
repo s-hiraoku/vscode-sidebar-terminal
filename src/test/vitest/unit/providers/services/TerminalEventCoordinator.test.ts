@@ -189,21 +189,41 @@ describe('TerminalEventCoordinator', () => {
 
     // Issue #702: GPU acceleration changes must reach the WebView
     it.each(['secondaryTerminal.gpuAcceleration', 'terminal.integrated.gpuAcceleration'])(
-      'should send settings update when %s changes',
+      'should send the resolved GPU mode when %s changes',
       async (changedKey) => {
         vi.useFakeTimers();
         coordinator.initialize();
         const configHandler = (vscode.workspace.onDidChangeConfiguration as any).mock.calls[0][0];
+        const [section, key] = [
+          changedKey.slice(0, changedKey.lastIndexOf('.')),
+          changedKey.slice(changedKey.lastIndexOf('.') + 1),
+        ];
 
-        configHandler({ affectsConfiguration: (key: string) => key === changedKey });
-
+        configHandler({ affectsConfiguration: (k: string) => k === changedKey });
         vi.advanceTimersByTime(100);
 
-        expect(mockSendMessage).toHaveBeenCalledWith(
+        expect(mockSendMessage).toHaveBeenLastCalledWith(
           expect.objectContaining({
             command: 'settingsResponse',
+            settings: expect.objectContaining({ gpuAcceleration: 'auto' }),
           })
         );
+
+        // A GPU-only change on the same coordinator must not be deduplicated away
+        mockUnifiedConfig.get.mockImplementation((s: string, k: string, def: unknown) =>
+          s === section && k === key ? 'off' : def
+        );
+        configHandler({ affectsConfiguration: (k: string) => k === changedKey });
+        vi.advanceTimersByTime(100);
+
+        expect(mockSendMessage).toHaveBeenLastCalledWith(
+          expect.objectContaining({
+            command: 'settingsResponse',
+            settings: expect.objectContaining({ gpuAcceleration: 'off' }),
+          })
+        );
+
+        mockUnifiedConfig.get.mockImplementation((_s: string, _k: string, def: unknown) => def);
         vi.useRealTimers();
       }
     );

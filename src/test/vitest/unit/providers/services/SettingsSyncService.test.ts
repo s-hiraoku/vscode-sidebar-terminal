@@ -5,10 +5,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as vscode from 'vscode';
 
-import {
-  SettingsSyncService,
-  resolveGpuAcceleration,
-} from '../../../../../providers/services/SettingsSyncService';
+import { SettingsSyncService } from '../../../../../providers/services/SettingsSyncService';
+import { resolveGpuAcceleration } from '../../../../../utils/gpuAcceleration';
 
 const { mockUnifiedConfig } = vi.hoisted(() => ({
   mockUnifiedConfig: {
